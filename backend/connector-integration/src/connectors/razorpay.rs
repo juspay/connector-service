@@ -1,9 +1,11 @@
+pub mod tests;
 pub mod test;
 pub mod transformers;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
+    connector_flow::{AcceptDispute, Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
     connector_types::{
-        ConnectorServiceTrait, ConnectorWebhookSecrets, EventType, IncomingWebhook,
+        AcceptDisputeData, AcceptDisputeV2, ConnectorServiceTrait, ConnectorWebhookSecrets,
+        DisputeFlowData, DisputeResponseData, EventType, IncomingWebhook,
         PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
@@ -65,6 +67,7 @@ impl PaymentVoidV2 for Razorpay {}
 impl RefundSyncV2 for Razorpay {}
 impl RefundV2 for Razorpay {}
 impl PaymentCapture for Razorpay {}
+impl AcceptDisputeV2 for Razorpay {}
 
 impl Razorpay {
     pub const fn new() -> &'static Self {
@@ -731,4 +734,9 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
+}
+
+impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Razorpay
+{
 }
