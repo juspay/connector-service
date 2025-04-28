@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 
-use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void};
+use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void, DefendDispute};
 use crate::connector_types::{
-    MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-    PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, WebhookDetailsResponse,
+    MultipleCaptureRequestData, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, 
+    RefundsResponseData, WebhookDetailsResponse, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData, PaymentVoidData
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -13,7 +13,7 @@ use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
     PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
-    RefundsSyncResponse,
+    RefundsSyncResponse, DisputeDefendRequest, DisputeDefendResponse, RefundsSyncResponse
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
@@ -801,7 +801,33 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
         })
     }
 }
-impl ForeignTryFrom<(PaymentsVoidRequest, Connectors)> for PaymentFlowData {
+
+impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from((value, connectors): (DisputeDefendRequest, Connectors))
+    -> Result<Self, error_stack::Report<Self::Error>>{
+        Ok(Self {
+            dispute_id: value.dispute_id,
+            connector_request_reference_id: value.connector_dispute_id,
+            status: hyperswitch_common_enums::DisputeStatus::DisputeChallenged,
+            connectors,
+            defense_reason_code: value.defense_reason_code,
+        })
+    }        
+}
+
+impl ForeignTryFrom<DisputeDefendRequest> for DisputeDefendData {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(value: DisputeDefendRequest) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            dispute_id: value.dispute_id,
+            connector_dispute_id: value.connector_dispute_id,
+            defense_reason_code: value.defense_reason_code,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::AuthType> for ConnectorAuthType {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -959,6 +985,43 @@ pub fn generate_payment_authorize_response(
         }
     };
     Ok(response)
+}
+
+pub fn generate_defend_dispute_response(
+    router_data_v2: RouterDataV2<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeDefendResponseData,
+    >,
+) -> Result<DisputeDefendResponse, error_stack::Report<ApplicationErrorResponse>> {
+
+    let dispute_response = router_data_v2.response;
+
+    let grpc_status = if router_data_v2.resource_common_data.status == hyperswitch_common_enums::DisputeStatus::DisputeWon {
+        grpc_api_types::payments::DisputeStatus::DisputeWon
+    } else {
+        grpc_api_types::payments::DisputeStatus::DisputeLost
+    };
+
+    match dispute_response{
+        Ok(response) => {
+            Ok(DisputeDefendResponse {
+                dispute_status: grpc_status.into(),
+                connector_status: response.connector_status,
+                error_code: None,
+                error_message: None,
+            })
+        }
+        Err(e) => {
+            Ok(DisputeDefendResponse {
+                dispute_status: grpc_status.into(),
+                connector_status: None,
+                error_code: Some(e.code),
+                error_message: Some(e.message),
+            })
+        }
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::PaymentsSyncRequest> for PaymentsSyncData {

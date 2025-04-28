@@ -1,13 +1,14 @@
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, Void},
+    connector_flow::{Authorize, Capture, Refund, Void, DefendDispute},
     connector_types::{
         EventType, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData,
+        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, DisputeDefendData, DisputeFlowData, DisputeDefendResponseData
     },
 };
 use error_stack::ResultExt;
 use hyperswitch_api_models::enums::{self, AttemptStatus, RefundStatus};
 
+use hyperswitch_common_enums::DisputeStatus;
 use hyperswitch_common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, request::Method, types::MinorUnit,
 };
@@ -1664,6 +1665,92 @@ impl
         })
     }
 }
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDefendDisputeRequest {
+    dispute_psp_reference: String,
+    merchant_account_code: Secret<String>,
+    defense_reason_code: String,
+}
+
+impl
+    TryFrom<&RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData>> for AdyenDefendDisputeRequest
+{
+    type Error = Error;
+    fn try_from(item: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData>
+    ) -> Result<Self, Self::Error> {
+        let auth_type = AdyenAuthType::try_from(&item.connector_auth_type)?;
+        let merchant_account_code = auth_type.merchant_account.clone();
+        Ok(Self {
+            dispute_psp_reference: item.request.connector_dispute_id.clone(),
+            merchant_account_code,
+            defense_reason_code: item.request.defense_reason_code.clone(),
+        })
+    }
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeResponse {
+    pub dispute_service_result: DisputeServiceResult,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisputeServiceResult{
+    error_message: Option<String>,
+    success: bool,
+}
+
+impl<F, Req>
+    ForeignTryFrom<(
+        AdyenDisputeResponse,
+        RouterDataV2<F, DisputeFlowData, Req, DisputeDefendResponseData>,
+        u16,
+    )> for RouterDataV2<F, DisputeFlowData, Req, DisputeDefendResponseData>
+{
+    type Error = Error;
+    fn foreign_try_from(
+        (response, data, http_code): (
+            AdyenDisputeResponse,
+            RouterDataV2<F, DisputeFlowData, Req, DisputeDefendResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+
+
+        if response.dispute_service_result.success {
+            Ok(Self{
+                response: Ok(DisputeDefendResponseData {
+                    dispute_status: DisputeStatus::DisputeWon,
+                    connector_status: None
+                }),
+                resource_common_data: DisputeFlowData {
+                    status: hyperswitch_common_enums::DisputeStatus::DisputeWon,
+                    ..data.resource_common_data
+                },
+                ..data
+            })
+        }else {
+            Ok(Self{
+                response: Err(ErrorResponse {
+                    code: response.dispute_service_result.error_message.clone().unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                    message: response.dispute_service_result.error_message.clone().unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                    reason: response.dispute_service_result.error_message.clone(),
+                    status_code: http_code,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                }),
+                resource_common_data: DisputeFlowData {
+                    status: hyperswitch_common_enums::DisputeStatus::DisputeLost,
+                    ..data.resource_common_data
+                },
+                ..data
+                })
+            }
+        }
+    }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -10,6 +10,7 @@ service PaymentService {
   rpc IncomingWebhook(IncomingWebhookRequest) returns (IncomingWebhookResponse);
   rpc Refund(RefundsRequest) returns (RefundsResponse);
   rpc PaymentCapture(PaymentsCaptureRequest) returns (PaymentsCaptureResponse);
+  rpc DefendDispute(DisputeDefendRequest) returns (DisputeDefendResponse);
 }
 
 message PaymentsAuthorizeRequest {
@@ -100,6 +101,21 @@ message PaymentsVoidResponse {
   AttemptStatus status = 8;
   optional string error_code = 4;
   optional string error_message = 5;
+}
+
+message DisputeDefendRequest {
+  string defense_reason_code = 1;
+  string dispute_id = 2;
+  string connector_dispute_id =3;
+  Connector connector = 35;
+  AuthType auth_creds = 34;
+}
+
+message DisputeDefendResponse {
+  DisputeStatus dispute_status = 1;
+  optional string connector_status = 2;
+  optional string error_code = 3;
+  optional string error_message = 4;
 }
 
 message IncomingWebhookRequest {
@@ -460,6 +476,16 @@ enum CaptureMethod {
   MANUAL_MULTIPLE = 2;
   SCHEDULED = 3;
   SEQUENTIAL_AUTOMATIC = 4;
+}
+
+enum DisputeStatus {
+  DISPUTE_OPENED = 0;
+  DISPUTE_EXPIRED = 1;
+  DISPUTE_ACCEPTED = 2;
+  DISPUTE_CANCELLED = 3;
+  DISPUTE_CHALLENGED = 4;
+  DISPUTE_WON = 5;
+  DISPUTE_LOST = 6;
 }
 
 enum FutureUsage {

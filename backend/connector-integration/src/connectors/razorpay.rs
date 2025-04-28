@@ -1,14 +1,14 @@
 pub mod test;
 pub mod transformers;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void, DefendDispute},
     connector_types::{
         ConnectorServiceTrait, ConnectorWebhookSecrets, EventType, IncomingWebhook,
         PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        RequestDetails, ValidationTrait, WebhookDetailsResponse,
+        RequestDetails, ValidationTrait, WebhookDetailsResponse, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData, DefendDisputeV2
     },
 };
 use hyperswitch_common_utils::{
@@ -65,6 +65,7 @@ impl PaymentVoidV2 for Razorpay {}
 impl RefundSyncV2 for Razorpay {}
 impl RefundV2 for Razorpay {}
 impl PaymentCapture for Razorpay {}
+impl DefendDisputeV2 for Razorpay {}
 
 impl Razorpay {
     pub const fn new() -> &'static Self {
@@ -732,3 +733,5 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
         self.build_error_response(res, event_builder)
     }
 }
+
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData> for Razorpay {}

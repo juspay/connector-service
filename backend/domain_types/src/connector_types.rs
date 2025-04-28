@@ -1,4 +1,4 @@
-use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void};
+use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void, DefendDispute};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
@@ -49,11 +49,13 @@ pub trait ConnectorServiceTrait:
     + RefundV2
     + PaymentCapture
     + RefundSyncV2
+    + DefendDisputeV2
 {
 }
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    + DefendDisputeV2
 {
 }
 
@@ -93,6 +95,47 @@ pub trait RefundV2:
 pub trait PaymentCapture:
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
+}
+
+
+
+pub trait DefendDisputeV2: ConnectorIntegrationV2<
+DefendDispute,
+DisputeFlowData,
+DisputeDefendData,
+DisputeDefendResponseData,
+>{}
+
+#[derive(Default, Debug, Clone)]
+pub struct DisputeDefendData {
+    pub dispute_id: String,
+    pub connector_dispute_id: String,
+    pub defense_reason_code: String,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DisputeDefendResponseData {
+    pub dispute_status: hyperswitch_api_models::enums::DisputeStatus,
+    pub connector_status: Option<String>,
+}
+
+
+#[derive(Debug, Clone)]
+pub struct DisputeFlowData {
+    // pub merchant_id: hyperswitch_common_utils::id_type::MerchantId,
+    // pub payment_id: String,
+    // pub attempt_id: String,
+    // pub payment_method: hyperswitch_common_enums::enums::PaymentMethod,
+    // pub connector_meta_data: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
+    // pub amount_captured: Option<i64>,
+    // minor amount for amount framework
+    // pub minor_amount_captured: Option<MinorUnit>,
+    /// Contains a reference ID that should be sent in the connector request
+    pub connector_request_reference_id: String,
+    pub dispute_id: String,
+    pub status: hyperswitch_common_enums::DisputeStatus,
+    pub connectors : Connectors,
+    pub defense_reason_code: String,
 }
 
 #[derive(Debug, Clone)]
@@ -246,6 +289,18 @@ pub struct RefundFlowData {
     pub status: hyperswitch_common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DefendDisputeRequestData {
+    pub dispute_id: String,
+    pub connector_dispute_id: String,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DefendDisputeResponse {
+    pub dispute_status: hyperswitch_common_enums::DisputeStatus,
+    pub connector_status: Option<String>,
 }
 
 #[derive(Debug, Clone)]
