@@ -84,6 +84,7 @@ where
         tracing::info!(request=?masked_request, "request of connector");
         masked_request
     });
+    println!("$$$ REQUEST {:?} ", req);
 
     let result = match connector_request {
         Some(request) => {
@@ -102,6 +103,8 @@ where
                     );
                 });
             tracing::info!(?response, "response from connector");
+
+            println!("$$$ RESPONSE {:?} ", response);
             match response {
                 Ok(body) => {
                     tracing::Span::current().record("url", tracing::field::display(url));
@@ -189,6 +192,7 @@ pub async fn call_connector_api(
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
+    println!("$$$ url {:?} ", url);
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
 
     let client = create_client(
@@ -214,6 +218,7 @@ pub async fn call_connector_api(
         }
         .add_headers(headers)
     };
+    println!("$$$ request {:?} ", request);
 
     let send_request = async {
         request.send().await.map_err(|error| {
@@ -230,6 +235,8 @@ pub async fn call_connector_api(
     };
 
     let response = send_request.await;
+    println!("$$$ response {:?} ", response);
+
     handle_response(response).await
 }
 
@@ -387,6 +394,8 @@ fn get_client_builder(
 async fn handle_response(
     response: CustomResult<reqwest::Response, ApiClientError>,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
+    println!("$$$ in handle response  ");
+
     response
         .async_map(|resp| async {
             let status_code = resp.status().as_u16();

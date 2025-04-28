@@ -21,3 +21,6 @@ pub struct Capture;
 
 #[derive(Debug, Clone)]
 pub struct AcceptDispute;
+
+#[derive(Debug, Clone)]
+pub struct SubmitEvidence;

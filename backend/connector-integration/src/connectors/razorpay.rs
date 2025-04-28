@@ -2,15 +2,17 @@ pub mod tests;
 pub mod test;
 pub mod transformers;
 use domain_types::{
-    connector_flow::{AcceptDispute, Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
+    connector_flow::{
+        AcceptDispute, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SubmitEvidence, Void,
+    },
     connector_types::{
         AcceptDisputeData, AcceptDisputeV2, ConnectorServiceTrait, ConnectorWebhookSecrets,
-        DisputeFlowData, DisputeResponseData, EventType, IncomingWebhook,
-        PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        RequestDetails, ValidationTrait, WebhookDetailsResponse,
+        DisputeFlowData, DisputeResponseData, EventType, IncomingWebhook, PaymentAuthorizeV2,
+        PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData, RequestDetails,
+        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait, WebhookDetailsResponse,
     },
 };
 use hyperswitch_common_utils::{
@@ -68,6 +70,7 @@ impl RefundSyncV2 for Razorpay {}
 impl RefundV2 for Razorpay {}
 impl PaymentCapture for Razorpay {}
 impl AcceptDisputeV2 for Razorpay {}
+impl SubmitEvidenceV2 for Razorpay {}
 
 impl Razorpay {
     pub const fn new() -> &'static Self {
@@ -493,6 +496,7 @@ impl IncomingWebhook for Razorpay {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
+        println!("$$$ webhook body {:?} ", request.body);
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
             report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                 .attach_printable(format!("error while decoing webhook body {err}"))
@@ -737,6 +741,11 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
 }
 
 impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Razorpay
+{
+}
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Razorpay
 {
 }
