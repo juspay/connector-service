@@ -1,0 +1,144 @@
+<mxfile host="Electron" modified="2025-04-29T14:48:09.763Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.5.1 Chrome/124.0.6367.207 Electron/30.0.6 Safari/537.36" etag="C7ei3pGBhyIU6GbYKBvN" version="24.5.1" type="device" pages="2">
+  <diagram name="Forward Flow" id="zNg3Aau0LLt6i5txw9q3">
+    <mxGraphModel dx="1114" dy="878" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-3" value="&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; Application" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="110" y="400" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="454.5" as="sourcePoint" />
+            <mxPoint x="440" y="454.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8FBcHUOcr_9tCSjZ70nX-1" value="1. Unified Spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="77LK5jHJWwRt8eCr4mNc-6">
+          <mxGeometry x="-0.1" y="4" relative="1" as="geometry">
+            <mxPoint y="-5" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-4" value="Connector Service SDK" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="230" y="445" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1" source="77LK5jHJWwRt8eCr4mNc-5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="770" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8FBcHUOcr_9tCSjZ70nX-2" value="2. Processor Spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="77LK5jHJWwRt8eCr4mNc-17">
+          <mxGeometry x="-0.1369" y="-2" relative="1" as="geometry">
+            <mxPoint y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-5" value="Connector Service" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="440" y="400" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-13" value="Payment Processor" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="770" y="400" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-14" value="Payment Processor" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="780" y="410" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-15" value="Payment Processor" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="790" y="420" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="77LK5jHJWwRt8eCr4mNc-16" value="Payment Processor (Stripe/Adyen/RazorPay)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="430" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="KaSqC20wKFClXjZU3t2r-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;startArrow=classic;startFill=1;endArrow=none;endFill=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="650" y="499.5" as="sourcePoint" />
+            <mxPoint x="770" y="499.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="KaSqC20wKFClXjZU3t2r-2" value="3. Processor Spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="KaSqC20wKFClXjZU3t2r-1">
+          <mxGeometry x="-0.1369" y="-2" relative="1" as="geometry">
+            <mxPoint x="8" y="8" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-JKf6ZwvoglUBvfw2Pc-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;startArrow=classic;startFill=1;endArrow=none;endFill=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="484.5" as="sourcePoint" />
+            <mxPoint x="440" y="484.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e-JKf6ZwvoglUBvfw2Pc-2" value="4. Unified Spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="e-JKf6ZwvoglUBvfw2Pc-1">
+          <mxGeometry x="-0.1" y="4" relative="1" as="geometry">
+            <mxPoint y="15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="GxRgIf9gcBDF62sFEL4m-1" value="Payment/Sync flows" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=19;" vertex="1" parent="1">
+          <mxGeometry x="380" y="310" width="346" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Webhook Flow" id="F8ODjwI8AwgB4yu7YBrK">
+    <mxGraphModel dx="1114" dy="878" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-0" />
+        <mxCell id="q6p28R05sHDo9MqIgnQl-1" parent="q6p28R05sHDo9MqIgnQl-0" />
+        <mxCell id="q6p28R05sHDo9MqIgnQl-2" value="&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; Application" style="rounded=0;whiteSpace=wrap;html=1;align=left;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="110" y="400" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-4" value="Connector Service SDK" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="230" y="440" width="90" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-6" value="Connector Service" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="480" y="400" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-7" value="Payment Processor" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="770" y="400" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-8" value="Payment Processor" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="780" y="410" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-9" value="Payment Processor" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="790" y="420" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeWidth=2;" edge="1" parent="q6p28R05sHDo9MqIgnQl-1" source="q6p28R05sHDo9MqIgnQl-11" target="q6p28R05sHDo9MqIgnQl-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="905" y="640" />
+              <mxPoint x="215" y="640" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="287G574ln-CVxchtDRvX-0" value="1. Processor webhook spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="q6p28R05sHDo9MqIgnQl-10">
+          <mxGeometry x="-0.1209" relative="1" as="geometry">
+            <mxPoint x="-17" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-11" value="Payment Processor (Stripe/Adyen/RazorPay)" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="800" y="430" width="210" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="q6p28R05sHDo9MqIgnQl-16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.005;entryY=0.332;entryDx=0;entryDy=0;strokeWidth=2;entryPerimeter=0;" edge="1" parent="q6p28R05sHDo9MqIgnQl-1" target="q6p28R05sHDo9MqIgnQl-6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="320" y="446" as="sourcePoint" />
+            <mxPoint x="460" y="445" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="287G574ln-CVxchtDRvX-2" value="2. Processor webhook spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="q6p28R05sHDo9MqIgnQl-16">
+          <mxGeometry x="-0.15" y="3" relative="1" as="geometry">
+            <mxPoint x="9" y="-12" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="287G574ln-CVxchtDRvX-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;startArrow=classic;startFill=1;endArrow=none;endFill=0;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="q6p28R05sHDo9MqIgnQl-1" source="q6p28R05sHDo9MqIgnQl-4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="340" y="479.5" as="sourcePoint" />
+            <mxPoint x="480" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="287G574ln-CVxchtDRvX-3" value="3. Unified spec" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="287G574ln-CVxchtDRvX-1">
+          <mxGeometry x="-0.0333" y="-4" relative="1" as="geometry">
+            <mxPoint y="17" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="EFN_iAPXMAUf9mylzPbP-0" value="Webhook/Async flows" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=19;" vertex="1" parent="q6p28R05sHDo9MqIgnQl-1">
+          <mxGeometry x="380" y="310" width="346" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

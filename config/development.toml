@@ -1,0 +1,24 @@
+
+[log.console]
+enabled = true
+level = "DEBUG"
+log_format = "default"
+
+[server]
+host = "127.0.0.1"
+port = 8000
+type = "grpc"
+
+[metrics]
+host = "127.0.0.1"
+port = 8080
+
+[proxy]
+# http_url = "http proxy url"                   # Proxy all HTTP traffic via this proxy
+# https_url = "https proxy url"                 # Proxy all HTTPS traffic via this proxy
+idle_pool_connection_timeout = 90               # Timeout for idle pool connections (defaults to 90s)
+bypass_proxy_urls = ["localhost", "local"]
+
+[connectors]
+adyen.base_url = "https://checkout-test.adyen.com/"
+razorpay.base_url = "https://api.razorpay.com/"

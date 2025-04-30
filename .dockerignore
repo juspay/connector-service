@@ -1,0 +1,29 @@
+# Ignore build artifacts
+target/
+**/target/
+
+# sccache cache
+.sccache/
+sccache/
+
+# Cargo Chef recipe file
+recipe.json
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# Docker-related
+Dockerfile*
+.dockerignore
+
+# Miscellaneous
+Cargo.lock
+
+# Example
+examples/

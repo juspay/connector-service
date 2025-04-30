@@ -1,0 +1,57 @@
+name: Pull Request Convention Checks
+
+on:
+  # This is a dangerous event trigger as it causes the workflow to run in the
+  # context of the target repository.
+  # Avoid checking out the head of the pull request or building code from the
+  # pull request whenever this trigger is used.
+  # Since we do not have a checkout step in this workflow, this is an
+  # acceptable use of this trigger.
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - reopened
+      - ready_for_review
+      - synchronize
+
+  merge_group:
+    types:
+      - checks_requested
+
+env:
+  # Allow more retries for network requests in cargo (downloading crates) and
+  # rustup (installing toolchains). This should help to reduce flaky CI failures
+  # from transient network timeouts or other issues.
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  pr_title_conventional_commit_check:
+    name: Verify PR title follows conventional commit standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cocogitto
+          checksum: true
+
+      - name: Verify PR title follows conventional commit standards
+        if: ${{ github.event_name == 'pull_request_target' }}
+        shell: bash
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: cog verify "$TITLE"
+
+      - name: Verify commit message follows conventional commit standards
+        if: ${{ github.event_name == 'merge_group' }}
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.merge_group.head_commit.message }}
+        run: cog verify "$COMMIT_MESSAGE"

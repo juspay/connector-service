@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = [
+  "backend/grpc-api-types",
+  "backend/connector-integration",
+  "backend/external-services",
+  "backend/grpc-server", 
+  "sdk/rust-grpc-client"
+]
+exclude = [
+  "examples/example-rs",
+  "examples/example-tui",
+  "examples/example-cli"
+]
+
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

@@ -1,0 +1,8 @@
+{
+  "connector": "razorpay",
+  "auth": {
+    "api_key": "",
+    "key1": "",
+    "auth_type": "body_key"
+  }
+}

@@ -1,0 +1,10 @@
+{
+    "mcpServers": {
+      "payments": {
+        "name": "payments",
+        "version": "1.0.0",
+        "description": "Real payments operations",
+        "command": "sh ./payments.sh"
+      }
+    }
+  }
