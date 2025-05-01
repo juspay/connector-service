@@ -1,10 +1,10 @@
-use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void};
+use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
 use hyperswitch_api_models::enums::Currency;
 use hyperswitch_common_utils::types::MinorUnit;
-use hyperswitch_domain_models::router_data::ConnectorAuthType;
+use hyperswitch_domain_models::{router_data::ConnectorAuthType, router_response_types::MandateReference};
 use hyperswitch_domain_models::router_request_types::{ResponseId, SyncRequestType};
 use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
@@ -48,6 +48,7 @@ pub trait ConnectorServiceTrait:
     + IncomingWebhook
     + RefundV2
     + PaymentCapture
+    + SetupMandateV2
     + RefundSyncV2
 {
 }
@@ -90,8 +91,18 @@ pub trait RefundV2:
 {
 }
 
+pub trait RefundSyncV2:
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+}
+
 pub trait PaymentCapture:
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+}
+
+pub trait SetupMandateV2:
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
 {
 }
 
@@ -201,6 +212,7 @@ pub enum PaymentsResponseData {
         redirection_data:
             Box<Option<hyperswitch_domain_models::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
+        mandate_reference: Box<Option<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
@@ -219,11 +231,6 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
-}
-
-pub trait RefundSyncV2:
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-{
 }
 
 #[derive(Debug, Default, Clone)]
@@ -438,4 +445,32 @@ pub struct PaymentsCaptureData {
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SetupMandateRequestData {
+    pub currency: hyperswitch_common_enums::Currency,
+    pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
+    pub amount: Option<i64>,
+    pub confirm: bool,
+    pub statement_descriptor_suffix: Option<String>,
+    pub customer_acceptance: Option<hyperswitch_domain_models::mandates::CustomerAcceptance>,
+    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
+    pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
+    pub off_session: Option<bool>,
+    pub setup_mandate_details: Option<hyperswitch_domain_models::mandates::MandateData>,
+    pub router_return_url: Option<String>,
+    pub webhook_url: Option<String>,
+    pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
+    pub email: Option<hyperswitch_common_utils::pii::Email>,
+    pub customer_name: Option<String>,
+    pub return_url: Option<String>,
+    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
+    pub request_incremental_authorization: bool,
+    pub metadata: Option<serde_json::Value>,
+    pub complete_authorize_url: Option<String>,
+    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub minor_amount: Option<MinorUnit>,
+    pub shipping_cost: Option<MinorUnit>,
+    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
 }

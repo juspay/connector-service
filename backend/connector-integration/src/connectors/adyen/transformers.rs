@@ -571,8 +571,8 @@ impl
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         let shopper_interaction = AdyenShopperInteraction::from(item.router_data);
         let shopper_reference = build_shopper_reference(
-            &item.router_data.customer_id,
-            item.router_data.merchant_id.clone(),
+            &item.router_data.request.customer_id.clone(),
+            item.router_data.resource_common_data.merchant_id.clone(),
         );
         let (recurring_processing_model, store_payment_method, _) =
             get_recurring_processing_model(item.router_data)?;
@@ -921,6 +921,7 @@ impl
             network_txn_id: None,
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
+            mandate_reference: Box::new(None),
         };
 
         Ok(Self {
@@ -968,14 +969,14 @@ pub fn get_adyen_response(
     } else {
         None
     };
-    let _mandate_reference = response
+    let mandate_reference = response
         .additional_data
         .as_ref()
         .and_then(|data| data.recurring_detail_reference.to_owned())
-        .map(|mandate_id| MandateReference {
+        .map(|mandate_id| { MandateReference {
             connector_mandate_id: Some(mandate_id.expose()),
             payment_method_id: None,
-        });
+        }});
     let network_txn_id = response.additional_data.and_then(|additional_data| {
         additional_data
             .network_tx_reference
@@ -989,6 +990,7 @@ pub fn get_adyen_response(
         network_txn_id,
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
+        mandate_reference: Box::new(mandate_reference),
     };
     Ok((status, error, payments_response_data))
 }
@@ -1058,6 +1060,7 @@ pub fn get_redirection_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
+        mandate_reference: Box::new(None),
     };
     Ok((status, error, payments_response_data))
 }
@@ -1708,6 +1711,7 @@ impl<F, Req>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
+                mandate_reference: Box::new(None),
             }),
             resource_common_data: PaymentFlowData {
                 // From the docs, the only value returned is "received", outcome of refund is available

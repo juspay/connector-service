@@ -10,6 +10,7 @@ service PaymentService {
   rpc IncomingWebhook(IncomingWebhookRequest) returns (IncomingWebhookResponse);
   rpc Refund(RefundsRequest) returns (RefundsResponse);
   rpc PaymentCapture(PaymentsCaptureRequest) returns (PaymentsCaptureResponse);
+  rpc SetupMandate(SetupMandateRequest) returns (SetupMandateResponse);
 }
 
 message PaymentsAuthorizeRequest {
@@ -111,6 +112,54 @@ message IncomingWebhookResponse {
   EventType event_type = 1;
   WebhookResponseContent content = 2;
   bool source_verified = 3;
+}
+
+message SetupMandateRequest {
+  Currency currency = 15;
+  Connector connector = 35;
+  PaymentMethod payment_method = 2;
+  PaymentMethodData payment_method_data = 14;
+  optional string connector_customer = 1;
+  PaymentAddress address = 3;
+  AuthenticationType auth_type = 4;
+  optional bytes connector_meta_data = 5;
+  optional AccessToken access_token = 6;
+  optional string session_token = 7;
+  optional PaymentMethodToken payment_method_token = 8;
+  string connector_request_reference_id = 9;
+  optional int64 order_tax_amount = 11;
+  optional string email = 12;
+  optional string customer_name = 13;
+  optional CaptureMethod capture_method = 16;
+  optional string return_url = 17;
+  optional string webhook_url = 18;
+  optional string complete_authorize_url = 19;
+  optional FutureUsage setup_future_usage = 20;
+  optional bool off_session = 21;
+  optional CustomerAcceptance customer_acceptance = 22;
+  optional BrowserInformation browser_info = 23;
+  optional string order_category = 24;
+  bool enrolled_for_3ds = 25;
+  optional PaymentExperience payment_experience = 26;
+  optional PaymentMethodType payment_method_type = 27;
+  bool request_incremental_authorization = 28;
+  optional AuthenticationData authentication_data = 29;
+  optional bool request_extended_authorization = 30;
+  int64 minor_amount = 31;
+  optional string merchant_order_reference_id = 32;
+  optional int64 shipping_cost = 33;
+}
+
+message SetupMandateResponse {
+  ResponseId resource_id = 1;
+  MandateReference mandate_reference = 4;
+  AttemptStatus status = 8;
+  optional RedirectForm redirection_data = 2;
+  optional string network_txn_id = 5;
+  optional string connector_response_reference_id = 6;
+  optional bool incremental_authorization_allowed = 7;
+  optional string error_code = 9;
+  optional string error_message = 10;
 }
 
 enum EventType {
