@@ -21,10 +21,11 @@ use domain_types::{
 };
 use external_services;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, IncomingWebhookRequest, IncomingWebhookResponse,
-    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
-    PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
-    PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse, DisputesSyncResponse,
+    payment_service_server::PaymentService, DisputesSyncResponse, IncomingWebhookRequest,
+    IncomingWebhookResponse, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
+    PaymentsCaptureRequest, PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse,
+    PaymentsVoidRequest, PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest,
+    RefundsSyncResponse,
 };
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -506,7 +507,13 @@ impl PaymentService for Payments {
                 .await?
             }
             domain_types::connector_types::EventType::Dispute => {
-                get_disputes_webhook_content(connector_data, request_details, webhook_secrets,  Some(connector_auth_details)).await?
+                get_disputes_webhook_content(
+                    connector_data,
+                    request_details,
+                    webhook_secrets,
+                    Some(connector_auth_details),
+                )
+                .await?
             }
         };
 
@@ -701,13 +708,12 @@ async fn get_refunds_webhook_content(
     })
 }
 
-
 async fn get_disputes_webhook_content(
     connector_data: ConnectorData,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
-)-> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
+) -> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
     let webhook_details = connector_data
         .connector
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)

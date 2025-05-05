@@ -3,18 +3,19 @@ use std::{collections::HashMap, str::FromStr};
 
 use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void};
 use crate::connector_types::{
-    MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-    PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-    WebhookDetailsResponse, DisputeWebhookDetailsResponse
+    DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData,
+    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+    RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+   
+    WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
-    PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
-    RefundsSyncResponse, DisputesSyncResponse,
+    DisputesSyncResponse, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
+    PaymentsCaptureResponse, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
+    RefundsResponse, RefundsSyncResponse,
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
@@ -1390,7 +1391,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputesSyncResponse {
         let grpc_status = grpc_api_types::payments::DisputeStatus::foreign_from(value.status);
         Ok(Self {
             dispute_id: value.dispute_id,
-            stage:grpc_api_types::payments::DisputeStage::foreign_from(value.stage).into(),
+            stage: grpc_api_types::payments::DisputeStage::foreign_from(value.stage).into(),
             status: grpc_status.into(),
             connector_response_reference_id: value.connector_response_reference_id,
             error_code: value.error_code,
