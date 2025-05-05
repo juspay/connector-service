@@ -1,4 +1,4 @@
-pub mod tests;
+pub mod test;
 pub mod transformers;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
