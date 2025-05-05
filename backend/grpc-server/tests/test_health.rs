@@ -16,6 +16,9 @@ async fn test_health() {
             .expect("Failed to call health check")
             .into_inner();
 
-        assert_eq!(response.status(), grpc_api_types::health_check::health_check_response::ServingStatus::Serving);
+        assert_eq!(
+            response.status(),
+            grpc_api_types::health_check::health_check_response::ServingStatus::Serving
+        );
     });
 }

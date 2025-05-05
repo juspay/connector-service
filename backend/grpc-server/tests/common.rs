@@ -79,11 +79,6 @@ where
     Ok((serve_future, client))
 }
 
-
-
-
-
-
 #[macro_export]
 macro_rules! grpc_test {
     ($client:ident, $c_type:ty, $body:block) => {
@@ -92,13 +87,11 @@ macro_rules! grpc_test {
         let (server_fut, mut $client) = common::server_and_client_stub::<$c_type>(server)
             .await
             .expect("Failed to create the server client pair");
-        let response = async {
-            $body
-        };
+        let response = async { $body };
 
         tokio::select! {
             _ = server_fut => panic!("Server failed"),
             _ = response => {}
         }
-    }
+    };
 }

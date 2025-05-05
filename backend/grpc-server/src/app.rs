@@ -1,5 +1,5 @@
-use crate::{configs, error::ConfigurationError, logger, metrics, utils};
 use crate::consts;
+use crate::{configs, error::ConfigurationError, logger, metrics, utils};
 use axum::http;
 use grpc_api_types::{
     health_check::health_server,
@@ -172,7 +172,6 @@ impl Service {
                     .latency_unit(tower_http::LatencyUnit::Micros)
                     .level(tracing::Level::ERROR),
             );
-
 
         let request_id_layer = tower_http::request_id::SetRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
