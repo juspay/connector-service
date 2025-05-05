@@ -1,4 +1,3 @@
-pub mod tests;
 pub mod test;
 pub mod transformers;
 use domain_types::{

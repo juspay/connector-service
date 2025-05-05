@@ -643,7 +643,7 @@ impl PaymentService for Payments {
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
         info!("$$$ DISPUTE_FLOW: initiated");
-
+        let metadata = request.metadata().clone();
         let payload = request.into_inner();
         let connector =
             domain_types::connector_types::ConnectorEnum::foreign_try_from(payload.connector)
@@ -661,7 +661,6 @@ impl PaymentService for Payments {
             DisputeResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let auth_creds = payload.auth_creds.clone();
         let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
             .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
 
@@ -671,14 +670,7 @@ impl PaymentService for Payments {
                     tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
                 })?;
 
-        let auth_creds = auth_creds.ok_or(tonic::Status::invalid_argument(
-            "Missing auth_creds in request".to_string(),
-        ))?;
-
-        let connector_auth_details =
-            ConnectorAuthType::foreign_try_from(auth_creds).map_err(|e| {
-                tonic::Status::invalid_argument(format!("Invalid auth_creds in request: {}", e))
-            })?;
+        let connector_auth_details = auth_from_metadata(&metadata)?;
 
         let router_data: RouterDataV2<
             AcceptDispute,
@@ -712,7 +704,7 @@ impl PaymentService for Payments {
         request: tonic::Request<SubmitEvidenceRequest>,
     ) -> Result<tonic::Response<SubmitEvidenceResponse>, tonic::Status> {
         info!("$$$ DISPUTE_FLOW: initiated");
-
+        let metadata = request.metadata().clone();
         let payload = request.into_inner();
         let connector =
             domain_types::connector_types::ConnectorEnum::foreign_try_from(payload.connector)
@@ -730,7 +722,6 @@ impl PaymentService for Payments {
             DisputeResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let auth_creds = payload.auth_creds.clone();
         let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
             .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
 
@@ -740,14 +731,7 @@ impl PaymentService for Payments {
                     tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
                 })?;
 
-        let auth_creds = auth_creds.ok_or(tonic::Status::invalid_argument(
-            "Missing auth_creds in request".to_string(),
-        ))?;
-
-        let connector_auth_details =
-            ConnectorAuthType::foreign_try_from(auth_creds).map_err(|e| {
-                tonic::Status::invalid_argument(format!("Invalid auth_creds in request: {}", e))
-            })?;
+        let connector_auth_details = auth_from_metadata(&metadata)?;
 
         let router_data: RouterDataV2<
             SubmitEvidence,

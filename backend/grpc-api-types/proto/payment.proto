@@ -1017,7 +1017,6 @@ message AcceptDisputeRequest {
   optional string dispute_id = 1;
   string connector_dispute_id = 3;
   Connector connector = 35;
-  AuthType auth_creds = 34;
   string merchant_account_id = 2;
 }
 
@@ -1041,7 +1040,6 @@ enum DisputeStatus {
 
 message SubmitEvidenceRequest {
   Connector connector = 35;
-  AuthType auth_creds = 34;
   string merchant_account_id = 36;
   string dispute_id = 1;
   string connector_dispute_id = 2;

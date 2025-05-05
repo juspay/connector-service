@@ -3,8 +3,8 @@ use domain_types::{
     connector_flow::{AcceptDispute, Authorize, Capture, Refund, SubmitEvidence, Void},
     connector_types::{
         AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, SubmitEvidenceData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        RefundFlowData, RefundsData, RefundsResponseData, SubmitEvidenceData,
     },
 };
 use error_stack::ResultExt;
@@ -1778,7 +1778,7 @@ impl<F, Req>
         let success = response
             .dispute_service_result
             .as_ref()
-            .map_or(false, |r| r.success);
+            .is_some_and(|r| r.success);
 
         if success {
             let status = hyperswitch_common_enums::DisputeStatus::DisputeAccepted;
@@ -1976,7 +1976,7 @@ impl<F, Req>
         let success = response
             .dispute_service_result
             .as_ref()
-            .map_or(false, |r| r.success);
+            .is_some_and(|r| r.success);
 
         if success {
             let status = hyperswitch_common_enums::DisputeStatus::DisputeChallenged;
