@@ -1282,7 +1282,7 @@ pub enum DisputeStatus {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct  AdyenAdditionalDataWH {
+pub struct AdyenAdditionalDataWH {
     pub dispute_status: Option<DisputeStatus>,
     pub chargeback_reason_code: Option<String>,
 }
@@ -3885,14 +3885,16 @@ pub(crate) fn get_dispute_stage_and_status(
 pub(crate) fn get_dispute_stage_and_status(
     code: WebhookEventCode,
     dispute_status: Option<DisputeStatus>,
-) -> (hyperswitch_common_enums::DisputeStage, hyperswitch_common_enums::DisputeStatus) {
+) -> (
+    hyperswitch_common_enums::DisputeStage,
+    hyperswitch_common_enums::DisputeStatus,
+) {
     use hyperswitch_common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
 
     match code {
-        WebhookEventCode::NotificationOfChargeback => (
-            DisputeStage::PreDispute,
-            HSDisputeStatus::DisputeOpened,
-        ),
+        WebhookEventCode::NotificationOfChargeback => {
+            (DisputeStage::PreDispute, HSDisputeStatus::DisputeOpened)
+        }
         WebhookEventCode::Chargeback => {
             let status = match dispute_status {
                 Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
@@ -3908,10 +3910,9 @@ pub(crate) fn get_dispute_stage_and_status(
             };
             (DisputeStage::Dispute, status)
         }
-        WebhookEventCode::SecondChargeback => (
-            DisputeStage::PreArbitration,
-            HSDisputeStatus::DisputeLost,
-        ),
+        WebhookEventCode::SecondChargeback => {
+            (DisputeStage::PreArbitration, HSDisputeStatus::DisputeLost)
+        }
         WebhookEventCode::PrearbitrationWon => {
             let status = match dispute_status {
                 Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeOpened,
@@ -3919,13 +3920,9 @@ pub(crate) fn get_dispute_stage_and_status(
             };
             (DisputeStage::PreArbitration, status)
         }
-        WebhookEventCode::PrearbitrationLost => (
-            DisputeStage::PreArbitration,
-            HSDisputeStatus::DisputeLost,
-        ),
-        _ => (
-            DisputeStage::Dispute,
-            HSDisputeStatus::DisputeOpened,
-        ),
+        WebhookEventCode::PrearbitrationLost => {
+            (DisputeStage::PreArbitration, HSDisputeStatus::DisputeLost)
+        }
+        _ => (DisputeStage::Dispute, HSDisputeStatus::DisputeOpened),
     }
 }

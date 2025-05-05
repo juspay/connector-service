@@ -455,7 +455,13 @@ impl PaymentService for Payments {
             .await
             .map_err(|e| e.into_grpc_status())?,
             domain_types::connector_types::EventType::Dispute => {
-                get_disputes_webhook_content(connector_data, request_details, webhook_secrets,  Some(connector_auth_details)).await?
+                get_disputes_webhook_content(
+                    connector_data,
+                    request_details,
+                    webhook_secrets,
+                    Some(connector_auth_details),
+                )
+                .await?
             }
         };
 
@@ -741,7 +747,7 @@ async fn get_disputes_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
-)-> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
+) -> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
     let webhook_details = connector_data
         .connector
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)

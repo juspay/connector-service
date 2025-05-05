@@ -8,6 +8,11 @@ use crate::connector_types::{
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
     RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
     SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse, DisputeWebhookDetailsResponse
+    DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData,
+    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+    RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+   
+    WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -1522,7 +1527,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputesSyncResponse {
         let grpc_status = grpc_api_types::payments::DisputeStatus::foreign_from(value.status);
         Ok(Self {
             dispute_id: value.dispute_id,
-            stage:grpc_api_types::payments::DisputeStage::foreign_from(value.stage).into(),
+            stage: grpc_api_types::payments::DisputeStage::foreign_from(value.stage).into(),
             status: grpc_status.into(),
             connector_response_reference_id: value.connector_response_reference_id,
             error_code: value.error_code,

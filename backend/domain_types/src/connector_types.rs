@@ -325,12 +325,11 @@ pub struct RefundWebhookDetailsResponse {
 pub struct DisputeWebhookDetailsResponse {
     pub dispute_id: String,
     pub status: hyperswitch_common_enums::DisputeStatus,
-    pub stage : hyperswitch_common_enums::DisputeStage,
+    pub stage: hyperswitch_common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HttpMethod {

@@ -429,28 +429,33 @@ impl IncomingWebhook for Adyen {
     }
 
     fn process_dispute_webhook(
-            &self,
-            request: RequestDetails,
-            _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-            _connector_account_details: Option<ConnectorAuthType>,
-        ) -> Result<domain_types::connector_types::DisputeWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                     .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         let (stage, status) = transformers::get_dispute_stage_and_status(
-                notif.event_code,
-                notif.additional_data.dispute_status,
-            );
-        Ok(domain_types::connector_types::DisputeWebhookDetailsResponse {
-            dispute_id: notif.psp_reference.clone(),
-            stage,
-            status,
-            connector_response_reference_id: Some(notif.psp_reference.clone()),
-            error_code: notif.reason.clone(),
-            error_message: notif.reason,
-        })
+            notif.event_code,
+            notif.additional_data.dispute_status,
+        );
+        Ok(
+            domain_types::connector_types::DisputeWebhookDetailsResponse {
+                dispute_id: notif.psp_reference.clone(),
+                stage,
+                status,
+                connector_response_reference_id: Some(notif.psp_reference.clone()),
+                error_code: notif.reason.clone(),
+                error_message: notif.reason,
+            },
+        )
     }
 }
 
