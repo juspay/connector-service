@@ -1263,6 +1263,28 @@ pub enum WebhookEventCode {
     RefundFailed,
     RefundReversed,
     CancelOrRefund,
+    NotificationOfChargeback,
+    Chargeback,
+    ChargebackReversed,
+    SecondChargeback,
+    PrearbitrationWon,
+    PrearbitrationLost,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum DisputeStatus {
+    Undefended,
+    Pending,
+    Lost,
+    Accepted,
+    Won,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct  AdyenAdditionalDataWH {
+    pub dispute_status: Option<DisputeStatus>,
+    pub chargeback_reason_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1275,6 +1297,7 @@ pub struct AdyenNotificationRequestItemWH {
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
+    pub additional_data: AdyenAdditionalDataWH,
 }
 
 fn is_success_scenario(is_success: &str) -> bool {
@@ -1341,6 +1364,12 @@ pub(crate) fn get_adyen_webhook_event_type(code: WebhookEventCode) -> EventType 
         | WebhookEventCode::RefundFailed
         | WebhookEventCode::RefundReversed
         | WebhookEventCode::CancelOrRefund => EventType::Refund,
+        WebhookEventCode::NotificationOfChargeback
+        | WebhookEventCode::Chargeback
+        | WebhookEventCode::ChargebackReversed
+        | WebhookEventCode::SecondChargeback
+        | WebhookEventCode::PrearbitrationWon
+        | WebhookEventCode::PrearbitrationLost => EventType::Dispute,
     }
 }
 
@@ -2536,5 +2565,1367 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                 ..router_data
             }),
         }
+    }
+}
+
+<<<<<<< HEAD
+impl
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+        &Card,
+    )> for SetupMandateRequest
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData,
+                    PaymentsResponseData,
+                >,
+            >,
+            &Card,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, card_data) = value;
+        let amount = get_amount_data_for_setup_mandate(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let shopper_reference = build_shopper_reference(
+            &item.router_data.request.customer_id.clone(),
+            item.router_data.resource_common_data.merchant_id.clone(),
+        );
+        let (recurring_processing_model, store_payment_method, _) =
+            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+
+        let return_url = item
+            .router_data
+            .request
+            .router_return_url
+            .clone()
+            .ok_or_else(Box::new(move || {
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "return_url",
+                }
+            }))?;
+
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+
+        let card_holder_name = item.router_data.request.customer_name.clone();
+
+        let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
+
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
+        ));
+
+        Ok(SetupMandateRequest(AdyenPaymentRequest {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item.router_data.connector_request_reference_id.clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: None,
+            additional_data,
+            mpi_data: None,
+            telephone_number: None,
+            shopper_name: None,
+            shopper_email: None,
+            shopper_locale: None,
+            social_security_number: None,
+            billing_address,
+            delivery_address: None,
+            country_code: None,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: item.router_data.request.statement_descriptor.clone(),
+            shopper_ip: None,
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store: None,
+            splits: None,
+            device_fingerprint: None,
+        }))
+    }
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    > for SetupMandateRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item
+            .router_data
+            .request
+            .mandate_id
+            .to_owned()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
+        {
+            Some(_mandate_ref) => Err(
+                hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+                    "payment_method".into(),
+                ),
+            )?,
+            None => match item.router_data.request.payment_method_data.clone() {
+                PaymentMethodData::Card(ref card) => SetupMandateRequest::try_from((item, card)),
+                PaymentMethodData::Wallet(_)
+                | PaymentMethodData::PayLater(_)
+                | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::BankDebit(_)
+                | PaymentMethodData::BankTransfer(_)
+                | PaymentMethodData::CardRedirect(_)
+                | PaymentMethodData::Voucher(_)
+                | PaymentMethodData::GiftCard(_)
+                | PaymentMethodData::Crypto(_)
+                | PaymentMethodData::MandatePayment
+                | PaymentMethodData::Reward
+                | PaymentMethodData::RealTimePayment(_)
+                | PaymentMethodData::Upi(_)
+                | PaymentMethodData::OpenBanking(_)
+                | PaymentMethodData::CardToken(_) => Err(
+                    hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+                        "payment method".into(),
+                    ),
+                )?,
+            },
+        }
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+    type Error = Error;
+    fn try_from(
+        value: ResponseRouterData<SetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let pmt = router_data.request.payment_method_type;
+        let is_manual_capture = false;
+        let (status, error, payment_response_data) = match response {
+            SetupMandateResponse(AdyenPaymentResponse::Response(response)) => {
+                get_adyen_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            SetupMandateResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
+                get_redirection_response(*response, is_manual_capture, http_code, pmt)?
+            }
+        };
+
+        Ok(Self {
+            response: error.map_or_else(|| Ok(payment_response_data), Err),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
+    }
+}
+
+fn get_amount_data_for_setup_mandate(
+    item: &AdyenRouterData<
+        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    >,
+) -> Amount {
+    Amount {
+        currency: item.router_data.request.currency,
+        value: MinorUnit::new(item.router_data.request.amount.unwrap_or(0)),
+    }
+}
+
+impl
+    From<
+        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    > for AdyenShopperInteraction
+{
+    fn from(
+        item: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> Self {
+        match item.request.off_session {
+            Some(true) => Self::ContinuedAuthentication,
+            _ => Self::Ecommerce,
+        }
+    }
+}
+
+fn get_recurring_processing_model_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> Result<RecurringDetails, Error> {
+    let customer_id = item
+        .request
+        .customer_id
+        .clone()
+        .ok_or_else(Box::new(move || {
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "customer_id",
+            }
+        }))?;
+
+    match (item.request.setup_future_usage, item.request.off_session) {
+        (Some(hyperswitch_common_enums::enums::FutureUsage::OffSession), _) => {
+            let shopper_reference = format!(
+                "{}_{}",
+                item.merchant_id.get_string_repr(),
+                customer_id.get_string_repr()
+            );
+            let store_payment_method = is_mandate_payment_for_setup_mandate(item);
+            Ok((
+                Some(AdyenRecurringModel::UnscheduledCardOnFile),
+                Some(store_payment_method),
+                Some(shopper_reference),
+            ))
+        }
+        (_, Some(true)) => Ok((
+            Some(AdyenRecurringModel::UnscheduledCardOnFile),
+            None,
+            Some(format!(
+                "{}_{}",
+                item.merchant_id.get_string_repr(),
+                customer_id.get_string_repr()
+            )),
+        )),
+        _ => Ok((None, None, None)),
+    }
+}
+
+fn get_additional_data_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> Option<AdditionalData> {
+    let (authorisation_type, manual_capture) = match item.request.capture_method {
+        Some(hyperswitch_common_enums::enums::CaptureMethod::Manual)
+        | Some(enums::CaptureMethod::ManualMultiple) => {
+            (Some(AuthType::PreAuth), Some("true".to_string()))
+        }
+        _ => (None, None),
+    };
+    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+
+    let execute_three_d = if matches!(
+        item.resource_common_data.auth_type,
+        hyperswitch_common_enums::enums::AuthenticationType::ThreeDs
+    ) {
+        Some("true".to_string())
+    } else {
+        None
+    };
+
+    if authorisation_type.is_none()
+        && manual_capture.is_none()
+        && execute_three_d.is_none()
+        && riskdata.is_none()
+    {
+        //without this if-condition when the above 3 values are None, additionalData will be serialized to JSON like this -> additionalData: {}
+        //returning None, ensures that additionalData key will not be present in the serialized JSON
+        None
+    } else {
+        Some(AdditionalData {
+            authorisation_type,
+            manual_capture,
+            execute_three_d,
+            network_tx_reference: None,
+            recurring_detail_reference: None,
+            recurring_shopper_reference: None,
+            recurring_processing_model: None,
+            riskdata,
+            ..AdditionalData::default()
+        })
+    }
+}
+
+fn is_mandate_payment_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> bool {
+    (item.request.setup_future_usage
+        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+        || item
+            .request
+            .mandate_id
+            .as_ref()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+            .is_some()
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeAcceptRequest {
+    pub dispute_psp_reference: String,
+    pub merchant_account_code: String,
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        >,
+    > for AdyenDisputeAcceptRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            dispute_psp_reference: item.router_data.connector_dispute_id.clone(),
+            merchant_account_code: auth.merchant_account.peek().to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeAcceptResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisputeServiceResult {
+    pub success: bool,
+    pub error_message: Option<String>,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenDisputeAcceptResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeAccepted;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: router_data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    ..router_data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..router_data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: router_data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..router_data
+            })
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeSubmitEvidenceRequest {
+    defense_documents: Vec<DefenseDocuments>,
+    merchant_account_code: Secret<String>,
+    dispute_psp_reference: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefenseDocuments {
+    content: Secret<String>,
+    content_type: Option<String>,
+    defense_document_type_code: String,
+}
+
+fn get_defence_documents(item: SubmitEvidenceData) -> Option<Vec<DefenseDocuments>> {
+    let mut defense_documents: Vec<DefenseDocuments> = Vec::new();
+    if let Some(shipping_documentation) = item.shipping_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(shipping_documentation).into(),
+            content_type: item.shipping_documentation_provider_file_id,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(receipt) = item.receipt {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(receipt).into(),
+            content_type: item.receipt_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(invoice_showing_distinct_transactions) = item.invoice_showing_distinct_transactions
+    {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(invoice_showing_distinct_transactions).into(),
+            content_type: item.invoice_showing_distinct_transactions_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_communication) = item.customer_communication {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_communication).into(),
+            content_type: item.customer_communication_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(refund_policy) = item.refund_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(refund_policy).into(),
+            content_type: item.refund_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(recurring_transaction_agreement) = item.recurring_transaction_agreement {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(recurring_transaction_agreement).into(),
+            content_type: item.recurring_transaction_agreement_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(uncategorized_file) = item.uncategorized_file {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(uncategorized_file).into(),
+            content_type: item.uncategorized_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(cancellation_policy) = item.cancellation_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(cancellation_policy).into(),
+            content_type: item.cancellation_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_signature) = item.customer_signature {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_signature).into(),
+            content_type: item.customer_signature_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(service_documentation) = item.service_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(service_documentation).into(),
+            content_type: item.service_documentation_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+
+    if defense_documents.is_empty() {
+        None
+    } else {
+        Some(defense_documents)
+    }
+}
+
+fn get_content(item: Vec<u8>) -> String {
+    STANDARD.encode(item)
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        >,
+    > for AdyenDisputeSubmitEvidenceRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            defense_documents: get_defence_documents(item.router_data.request.clone()).ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "Missing Defence Documents",
+                },
+            )?,
+            merchant_account_code: auth.merchant_account.peek().to_string().into(),
+            dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenSubmitEvidenceResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenSubmitEvidenceResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeChallenged;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: router_data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    ..router_data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..router_data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: router_data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..router_data
+            })
+        }
+    }
+}
+
+impl
+    TryFrom<(
+        AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+        &Card,
+    )> for SetupMandateRequest
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            AdyenRouterData<
+                RouterDataV2<
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData,
+                    PaymentsResponseData,
+                >,
+            >,
+            &Card,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, card_data) = value;
+        let amount = get_amount_data_for_setup_mandate(&item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
+        let shopper_reference = build_shopper_reference(
+            &item.router_data.request.customer_id.clone(),
+            item.router_data.resource_common_data.merchant_id.clone(),
+        );
+        let (recurring_processing_model, store_payment_method, _) =
+            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
+
+        let return_url = item
+            .router_data
+            .request
+            .router_return_url
+            .clone()
+            .ok_or_else(Box::new(move || {
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "return_url",
+                }
+            }))?;
+
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+
+        let card_holder_name = item.router_data.request.customer_name.clone();
+
+        let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
+
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
+        ));
+
+        Ok(SetupMandateRequest(AdyenPaymentRequest {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item.router_data.connector_request_reference_id.clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: None,
+            additional_data,
+            mpi_data: None,
+            telephone_number: None,
+            shopper_name: None,
+            shopper_email: None,
+            shopper_locale: None,
+            social_security_number: None,
+            billing_address,
+            delivery_address: None,
+            country_code: None,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: item.router_data.request.statement_descriptor.clone(),
+            shopper_ip: None,
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store: None,
+            splits: None,
+            device_fingerprint: None,
+        }))
+    }
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    > for SetupMandateRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item
+            .router_data
+            .request
+            .mandate_id
+            .to_owned()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
+        {
+            Some(_mandate_ref) => Err(
+                hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+                    "payment_method".into(),
+                ),
+            )?,
+            None => match item.router_data.request.payment_method_data.clone() {
+                PaymentMethodData::Card(ref card) => SetupMandateRequest::try_from((item, card)),
+                PaymentMethodData::Wallet(_)
+                | PaymentMethodData::PayLater(_)
+                | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::BankDebit(_)
+                | PaymentMethodData::BankTransfer(_)
+                | PaymentMethodData::CardRedirect(_)
+                | PaymentMethodData::Voucher(_)
+                | PaymentMethodData::GiftCard(_)
+                | PaymentMethodData::Crypto(_)
+                | PaymentMethodData::MandatePayment
+                | PaymentMethodData::Reward
+                | PaymentMethodData::RealTimePayment(_)
+                | PaymentMethodData::Upi(_)
+                | PaymentMethodData::OpenBanking(_)
+                | PaymentMethodData::CardToken(_) => Err(
+                    hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+                        "payment method".into(),
+                    ),
+                )?,
+            },
+        }
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+    type Error = Error;
+    fn try_from(
+        value: ResponseRouterData<SetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let pmt = router_data.request.payment_method_type;
+        let is_manual_capture = false;
+        let (status, error, payment_response_data) = match response {
+            SetupMandateResponse(AdyenPaymentResponse::Response(response)) => {
+                get_adyen_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            SetupMandateResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
+                get_redirection_response(*response, is_manual_capture, http_code, pmt)?
+            }
+        };
+
+        Ok(Self {
+            response: error.map_or_else(|| Ok(payment_response_data), Err),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
+    }
+}
+
+fn get_amount_data_for_setup_mandate(
+    item: &AdyenRouterData<
+        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    >,
+) -> Amount {
+    Amount {
+        currency: item.router_data.request.currency,
+        value: MinorUnit::new(item.router_data.request.amount.unwrap_or(0)),
+    }
+}
+
+impl
+    From<
+        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    > for AdyenShopperInteraction
+{
+    fn from(
+        item: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> Self {
+        match item.request.off_session {
+            Some(true) => Self::ContinuedAuthentication,
+            _ => Self::Ecommerce,
+        }
+    }
+}
+
+fn get_recurring_processing_model_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> Result<RecurringDetails, Error> {
+    let customer_id = item
+        .request
+        .customer_id
+        .clone()
+        .ok_or_else(Box::new(move || {
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "customer_id",
+            }
+        }))?;
+
+    match (item.request.setup_future_usage, item.request.off_session) {
+        (Some(hyperswitch_common_enums::enums::FutureUsage::OffSession), _) => {
+            let shopper_reference = format!(
+                "{}_{}",
+                item.merchant_id.get_string_repr(),
+                customer_id.get_string_repr()
+            );
+            let store_payment_method = is_mandate_payment_for_setup_mandate(item);
+            Ok((
+                Some(AdyenRecurringModel::UnscheduledCardOnFile),
+                Some(store_payment_method),
+                Some(shopper_reference),
+            ))
+        }
+        (_, Some(true)) => Ok((
+            Some(AdyenRecurringModel::UnscheduledCardOnFile),
+            None,
+            Some(format!(
+                "{}_{}",
+                item.merchant_id.get_string_repr(),
+                customer_id.get_string_repr()
+            )),
+        )),
+        _ => Ok((None, None, None)),
+    }
+}
+
+fn get_additional_data_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> Option<AdditionalData> {
+    let (authorisation_type, manual_capture) = match item.request.capture_method {
+        Some(hyperswitch_common_enums::enums::CaptureMethod::Manual)
+        | Some(enums::CaptureMethod::ManualMultiple) => {
+            (Some(AuthType::PreAuth), Some("true".to_string()))
+        }
+        _ => (None, None),
+    };
+    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+
+    let execute_three_d = if matches!(
+        item.resource_common_data.auth_type,
+        hyperswitch_common_enums::enums::AuthenticationType::ThreeDs
+    ) {
+        Some("true".to_string())
+    } else {
+        None
+    };
+
+    if authorisation_type.is_none()
+        && manual_capture.is_none()
+        && execute_three_d.is_none()
+        && riskdata.is_none()
+    {
+        //without this if-condition when the above 3 values are None, additionalData will be serialized to JSON like this -> additionalData: {}
+        //returning None, ensures that additionalData key will not be present in the serialized JSON
+        None
+    } else {
+        Some(AdditionalData {
+            authorisation_type,
+            manual_capture,
+            execute_three_d,
+            network_tx_reference: None,
+            recurring_detail_reference: None,
+            recurring_shopper_reference: None,
+            recurring_processing_model: None,
+            riskdata,
+            ..AdditionalData::default()
+        })
+    }
+}
+
+fn is_mandate_payment_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> bool {
+    (item.request.setup_future_usage
+        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+        || item
+            .request
+            .mandate_id
+            .as_ref()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+            .is_some()
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeAcceptRequest {
+    pub dispute_psp_reference: String,
+    pub merchant_account_code: String,
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        >,
+    > for AdyenDisputeAcceptRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            dispute_psp_reference: item.router_data.connector_dispute_id.clone(),
+            merchant_account_code: auth.merchant_account.peek().to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeAcceptResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisputeServiceResult {
+    pub success: bool,
+    pub error_message: Option<String>,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenDisputeAcceptResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeAccepted;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: router_data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    ..router_data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..router_data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: router_data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..router_data
+            })
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeSubmitEvidenceRequest {
+    defense_documents: Vec<DefenseDocuments>,
+    merchant_account_code: Secret<String>,
+    dispute_psp_reference: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefenseDocuments {
+    content: Secret<String>,
+    content_type: Option<String>,
+    defense_document_type_code: String,
+}
+
+fn get_defence_documents(item: SubmitEvidenceData) -> Option<Vec<DefenseDocuments>> {
+    let mut defense_documents: Vec<DefenseDocuments> = Vec::new();
+    if let Some(shipping_documentation) = item.shipping_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(shipping_documentation).into(),
+            content_type: item.shipping_documentation_provider_file_id,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(receipt) = item.receipt {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(receipt).into(),
+            content_type: item.receipt_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(invoice_showing_distinct_transactions) = item.invoice_showing_distinct_transactions
+    {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(invoice_showing_distinct_transactions).into(),
+            content_type: item.invoice_showing_distinct_transactions_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_communication) = item.customer_communication {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_communication).into(),
+            content_type: item.customer_communication_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(refund_policy) = item.refund_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(refund_policy).into(),
+            content_type: item.refund_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(recurring_transaction_agreement) = item.recurring_transaction_agreement {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(recurring_transaction_agreement).into(),
+            content_type: item.recurring_transaction_agreement_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(uncategorized_file) = item.uncategorized_file {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(uncategorized_file).into(),
+            content_type: item.uncategorized_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(cancellation_policy) = item.cancellation_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(cancellation_policy).into(),
+            content_type: item.cancellation_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_signature) = item.customer_signature {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_signature).into(),
+            content_type: item.customer_signature_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(service_documentation) = item.service_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(service_documentation).into(),
+            content_type: item.service_documentation_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+
+    if defense_documents.is_empty() {
+        None
+    } else {
+        Some(defense_documents)
+    }
+}
+
+fn get_content(item: Vec<u8>) -> String {
+    STANDARD.encode(item)
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        >,
+    > for AdyenDisputeSubmitEvidenceRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            defense_documents: get_defence_documents(item.router_data.request.clone()).ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "Missing Defence Documents",
+                },
+            )?,
+            merchant_account_code: auth.merchant_account.peek().to_string().into(),
+            dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenSubmitEvidenceResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenSubmitEvidenceResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeChallenged;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: router_data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    ..router_data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..router_data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: router_data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..router_data
+            })
+        }
+    }
+}
+
+pub(crate) fn get_dispute_stage_and_status(
+    code: WebhookEventCode,
+    dispute_status: Option<DisputeStatus>,
+) -> (hyperswitch_common_enums::DisputeStage, hyperswitch_common_enums::DisputeStatus) {
+    use hyperswitch_common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
+
+    match code {
+        WebhookEventCode::NotificationOfChargeback => (
+            DisputeStage::PreDispute,
+            HSDisputeStatus::DisputeOpened,
+        ),
+        WebhookEventCode::Chargeback => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
+                Some(DisputeStatus::Lost) | None => HSDisputeStatus::DisputeLost,
+                Some(_) => HSDisputeStatus::DisputeOpened,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::ChargebackReversed => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeChallenged,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::SecondChargeback => (
+            DisputeStage::PreArbitration,
+            HSDisputeStatus::DisputeLost,
+        ),
+        WebhookEventCode::PrearbitrationWon => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeOpened,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::PreArbitration, status)
+        }
+        WebhookEventCode::PrearbitrationLost => (
+            DisputeStage::PreArbitration,
+            HSDisputeStatus::DisputeLost,
+        ),
+        _ => (
+            DisputeStage::Dispute,
+            HSDisputeStatus::DisputeOpened,
+        ),
+    }
+}
+
+
+pub(crate) fn get_dispute_stage_and_status(
+    code: WebhookEventCode,
+    dispute_status: Option<DisputeStatus>,
+) -> (hyperswitch_common_enums::DisputeStage, hyperswitch_common_enums::DisputeStatus) {
+    use hyperswitch_common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
+
+    match code {
+        WebhookEventCode::NotificationOfChargeback => (
+            DisputeStage::PreDispute,
+            HSDisputeStatus::DisputeOpened,
+        ),
+        WebhookEventCode::Chargeback => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
+                Some(DisputeStatus::Lost) | None => HSDisputeStatus::DisputeLost,
+                Some(_) => HSDisputeStatus::DisputeOpened,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::ChargebackReversed => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeChallenged,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::SecondChargeback => (
+            DisputeStage::PreArbitration,
+            HSDisputeStatus::DisputeLost,
+        ),
+        WebhookEventCode::PrearbitrationWon => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeOpened,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::PreArbitration, status)
+        }
+        WebhookEventCode::PrearbitrationLost => (
+            DisputeStage::PreArbitration,
+            HSDisputeStatus::DisputeLost,
+        ),
+        _ => (
+            DisputeStage::Dispute,
+            HSDisputeStatus::DisputeOpened,
+        ),
     }
 }

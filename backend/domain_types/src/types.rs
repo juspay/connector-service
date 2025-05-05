@@ -7,7 +7,7 @@ use crate::connector_types::{
     MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
     RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-    SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+    SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse, DisputeWebhookDetailsResponse
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -16,7 +16,7 @@ use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, MandateReference,
     PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
     PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
-    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse,
+    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse, DisputesSyncResponse,
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
@@ -1165,6 +1165,34 @@ pub fn generate_payment_void_response(
     }
 }
 
+impl ForeignFrom<hyperswitch_common_enums::DisputeStatus>
+    for grpc_api_types::payments::DisputeStatus
+{
+    fn foreign_from(status: hyperswitch_common_enums::DisputeStatus) -> Self {
+        match status {
+            hyperswitch_common_enums::DisputeStatus::DisputeOpened => Self::DisputeOpened,
+            hyperswitch_common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
+            hyperswitch_common_enums::DisputeStatus::DisputeAccepted => Self::DisputeAccepted,
+            hyperswitch_common_enums::DisputeStatus::DisputeCancelled => Self::DisputeCancelled,
+            hyperswitch_common_enums::DisputeStatus::DisputeChallenged => Self::DisputeChallenged,
+            hyperswitch_common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
+            hyperswitch_common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
+        }
+    }
+}
+
+impl ForeignFrom<hyperswitch_common_enums::DisputeStage>
+    for grpc_api_types::payments::DisputeStage
+{
+    fn foreign_from(status: hyperswitch_common_enums::DisputeStage) -> Self {
+        match status {
+            hyperswitch_common_enums::DisputeStage::PreDispute => Self::PreDispute,
+            hyperswitch_common_enums::DisputeStage::Dispute => Self::ActiveDispute,
+            hyperswitch_common_enums::DisputeStage::PreArbitration => Self::PreArbitration,
+        }
+    }
+}
+
 pub fn generate_payment_sync_response(
     router_data_v2: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
 ) -> Result<PaymentsSyncResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -1478,6 +1506,24 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundsSyncResponse {
         Ok(Self {
             connector_refund_id: value.connector_refund_id,
             status: status.into(),
+            connector_response_reference_id: value.connector_response_reference_id,
+            error_code: value.error_code,
+            error_message: value.error_message,
+        })
+    }
+}
+
+impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputesSyncResponse {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: DisputeWebhookDetailsResponse,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let grpc_status = grpc_api_types::payments::DisputeStatus::foreign_from(value.status);
+        Ok(Self {
+            dispute_id: value.dispute_id,
+            stage:grpc_api_types::payments::DisputeStage::foreign_from(value.stage).into(),
+            status: grpc_status.into(),
             connector_response_reference_id: value.connector_response_reference_id,
             error_code: value.error_code,
             error_message: value.error_message,

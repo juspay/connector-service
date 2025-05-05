@@ -128,6 +128,37 @@ message PaymentsVoidResponse {
   optional string error_message = 5;
 }
 
+enum DisputeStage {
+  PRE_DISPUTE = 0;
+  ACTIVE_DISPUTE = 1;
+  PRE_ARBITRATION = 2;
+}
+
+message TimeStamp {
+  int64 seconds = 1; // seconds since epoch
+  int32 nanos = 2;   // additional nanoseconds
+}
+
+enum DisputeStatus {
+  DISPUTE_OPENED = 0;
+  DISPUTE_EXPIRED = 1;
+  DISPUTE_ACCEPTED = 2;
+  DISPUTE_CANCELLED = 3;
+  DISPUTE_CHALLENGED = 4;
+  DISPUTE_WON = 5;     // dispute has been successfully challenged by the merchant
+  DISPUTE_LOST = 6;    // dispute has been unsuccessfully challenged
+}
+
+
+message DisputesSyncResponse {
+  string dispute_id = 2;
+  DisputeStatus status = 17;
+  DisputeStage stage = 19;
+  optional string connector_response_reference_id = 3;
+  optional string error_code = 4;
+  optional string error_message = 5;
+}
+
 message IncomingWebhookRequest {
   RequestDetails request_details = 2;
   optional ConnectorWebhookSecrets webhook_secrets = 3;
@@ -189,12 +220,14 @@ message SetupMandateResponse {
 enum EventType {
   PAYMENT = 0;
   REFUND = 1;
+  DISPUTE = 2;
 }
 
 message WebhookResponseContent {
   oneof content {
     PaymentsSyncResponse payments_response = 1;
     RefundsSyncResponse refunds_response = 2;
+    DisputesSyncResponse disputes_response = 3;
   }
 }
 

@@ -36,7 +36,7 @@ use grpc_api_types::payments::{
     PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
     PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
     PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
-    SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
+    DisputesSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
@@ -454,6 +454,9 @@ impl PaymentService for Payments {
             )
             .await
             .map_err(|e| e.into_grpc_status())?,
+            domain_types::connector_types::EventType::Dispute => {
+                get_disputes_webhook_content(connector_data, request_details, webhook_secrets,  Some(connector_auth_details)).await?
+            }
         };
 
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
@@ -729,6 +732,34 @@ async fn get_refunds_webhook_content(
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(
             grpc_api_types::payments::webhook_response_content::Content::RefundsResponse(response),
+        ),
+    })
+}
+
+async fn get_disputes_webhook_content(
+    connector_data: ConnectorData,
+    request_details: domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<ConnectorAuthType>,
+)-> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
+    let webhook_details = connector_data
+        .connector
+        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .map_err(|e| {
+            tonic::Status::internal(format!(
+                "Connector processing error in process_disputes_webhook: {}",
+                e
+            ))
+        })?;
+
+    // Generate response
+    let response = DisputesSyncResponse::foreign_try_from(webhook_details).map_err(|e| {
+        tonic::Status::internal(format!("Error while constructing response: {}", e))
+    })?;
+
+    Ok(grpc_api_types::payments::WebhookResponseContent {
+        content: Some(
+            grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response),
         ),
     })
 }
