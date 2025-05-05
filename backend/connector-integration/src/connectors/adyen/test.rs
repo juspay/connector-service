@@ -73,12 +73,12 @@ mod tests {
                     external_latency: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
-                    api_key: Secret::new(api_key.into()),
-                    key1: Secret::new(key1.into()),
+                    api_key: Secret::new(api_key),
+                    key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(
-                        (hyperswitch_domain_models::payment_method_data::Card {
+                        hyperswitch_domain_models::payment_method_data::Card {
                             card_number: hyperswitch_cards::CardNumber::from_str(
                                 "5123456789012346",
                             )
@@ -87,15 +87,14 @@ mod tests {
                             card_exp_month: Secret::new("03".into()),
                             card_exp_year: Secret::new("2030".into()),
                             ..Default::default()
-                        })
-                        .into(),
+                        },
                     ),
-                    amount: 1000 as i64,
+                    amount: 1000,
                     order_tax_amount: None,
-                    email: Some("test@example.com".to_string())
-                        .map(|email_str| Email::try_from(email_str))
-                        .transpose()
-                        .expect("Failed to parse email"),
+                    email: Some(
+                        Email::try_from("test@example.com".to_string())
+                            .expect("Failed to parse email"),
+                    ),
                     customer_name: None,
                     currency: hyperswitch_common_enums::Currency::USD,
                     confirm: true,
@@ -112,8 +111,8 @@ mod tests {
                         hyperswitch_domain_models::router_request_types::BrowserInformation {
                             color_depth: None,
                             java_enabled: Some(false),
-                            screen_height: Some(1080 as u32),
-                            screen_width: Some(1920 as u32),
+                            screen_height: Some(1080),
+                            screen_width: Some(1920),
                             user_agent: Some(
                                 "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                             ),
@@ -234,11 +233,11 @@ mod tests {
                     external_latency: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
-                    api_key: Secret::new(api_key.into()),
-                    key1: Secret::new(key1.into()),
+                    api_key: Secret::new(api_key),
+                    key1: Secret::new(key1),
                 },
                 request: PaymentsAuthorizeData {
-                    payment_method_data: PaymentMethodData::Card(Default::default()).into(),
+                    payment_method_data: PaymentMethodData::Card(Default::default()),
                     amount: 0,
                     order_tax_amount: None,
                     email: None,
