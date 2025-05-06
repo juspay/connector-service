@@ -687,8 +687,22 @@ impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, D
         &self,
         req: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let _connector_dispute_id = req.request.connector_dispute_id.clone();
-        Ok("https://ca-test.adyen.com/ca/services/DisputeService/v30/acceptDispute".to_string())
+        let dispute_base_url = req
+            .resource_common_data
+            .connectors
+            .adyen
+            .dispute_base_url
+            .clone()
+            .ok_or(
+                hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
+                    field_name: "contact",
+                },
+            )?;
+
+        Ok(format!(
+            "{}ca/services/DisputeService/v30/acceptDispute",
+            dispute_base_url
+        ))
     }
 
     fn get_request_body(
