@@ -116,7 +116,6 @@ message IncomingWebhookResponse {
 
 message SetupMandateRequest {
   Currency currency = 15;
-  Connector connector = 35;
   PaymentMethod payment_method = 2;
   PaymentMethodData payment_method_data = 14;
   optional string connector_customer = 1;
