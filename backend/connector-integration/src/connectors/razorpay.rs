@@ -8,7 +8,7 @@ use domain_types::{
         PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        RequestDetails, ValidationTrait, WebhookDetailsResponse,
+        RequestDetails, ResponseId, ValidationTrait, WebhookDetailsResponse,
     },
 };
 use hyperswitch_common_utils::{
@@ -26,7 +26,7 @@ use error_stack::{report, ResultExt};
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::{ResponseId, SyncRequestType},
+    router_request_types::SyncRequestType,
 };
 use hyperswitch_interfaces::{
     api::{self, CaptureSyncMethod, ConnectorCommon},
