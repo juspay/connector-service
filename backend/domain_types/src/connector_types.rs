@@ -1,8 +1,11 @@
-use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void};
+use crate::connector_flow::{
+    self, AcceptDispute, Authorize, Capture, PSync, RSync, Refund, SubmitEvidence, Void,
+};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
 use hyperswitch_api_models::enums::Currency;
+use hyperswitch_common_enums::DisputeStatus;
 use hyperswitch_common_utils::types::MinorUnit;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use hyperswitch_domain_models::router_request_types::{ResponseId, SyncRequestType};
@@ -54,6 +57,8 @@ pub trait ConnectorServiceTrait:
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    + AcceptDisputeV2
+    + SubmitEvidenceV2
 {
 }
 
@@ -92,6 +97,16 @@ pub trait RefundV2:
 
 pub trait PaymentCapture:
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+}
+
+pub trait AcceptDisputeV2:
+    ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+{
+}
+
+pub trait SubmitEvidenceV2:
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
 {
 }
 
@@ -438,4 +453,93 @@ pub struct PaymentsCaptureData {
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AcceptDisputeData {
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub merchant_account_id: String,
+    pub dispute_status: DisputeStatus,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisputeFlowData {
+    pub status: DisputeStatus,
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub connectors: Connectors,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisputeResponseData {
+    pub connector_dispute_id: String,
+    pub dispute_status: DisputeStatus,
+    pub connector_dispute_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SubmitEvidenceData {
+    pub merchant_account_id: String,
+    pub dispute_status: DisputeStatus,
+
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub access_activity_log: Option<String>,
+    pub billing_address: Option<String>,
+
+    pub cancellation_policy: Option<Vec<u8>>,
+    pub cancellation_policy_file_type: Option<String>,
+    pub cancellation_policy_provider_file_id: Option<String>,
+    pub cancellation_policy_disclosure: Option<String>,
+    pub cancellation_rebuttal: Option<String>,
+
+    pub customer_communication: Option<Vec<u8>>,
+    pub customer_communication_file_type: Option<String>,
+    pub customer_communication_provider_file_id: Option<String>,
+    pub customer_email_address: Option<String>,
+    pub customer_name: Option<String>,
+    pub customer_purchase_ip: Option<String>,
+
+    pub customer_signature: Option<Vec<u8>>,
+    pub customer_signature_file_type: Option<String>,
+    pub customer_signature_provider_file_id: Option<String>,
+
+    pub product_description: Option<String>,
+
+    pub receipt: Option<Vec<u8>>,
+    pub receipt_file_type: Option<String>,
+    pub receipt_provider_file_id: Option<String>,
+
+    pub refund_policy: Option<Vec<u8>>,
+    pub refund_policy_file_type: Option<String>,
+    pub refund_policy_provider_file_id: Option<String>,
+    pub refund_policy_disclosure: Option<String>,
+    pub refund_refusal_explanation: Option<String>,
+
+    pub service_date: Option<String>,
+    pub service_documentation: Option<Vec<u8>>,
+    pub service_documentation_file_type: Option<String>,
+    pub service_documentation_provider_file_id: Option<String>,
+
+    pub shipping_address: Option<String>,
+    pub shipping_carrier: Option<String>,
+    pub shipping_date: Option<String>,
+    pub shipping_documentation: Option<Vec<u8>>,
+    pub shipping_documentation_file_type: Option<String>,
+    pub shipping_documentation_provider_file_id: Option<String>,
+    pub shipping_tracking_number: Option<String>,
+
+    pub invoice_showing_distinct_transactions: Option<Vec<u8>>,
+    pub invoice_showing_distinct_transactions_file_type: Option<String>,
+    pub invoice_showing_distinct_transactions_provider_file_id: Option<String>,
+
+    pub recurring_transaction_agreement: Option<Vec<u8>>,
+    pub recurring_transaction_agreement_file_type: Option<String>,
+    pub recurring_transaction_agreement_provider_file_id: Option<String>,
+
+    pub uncategorized_file: Option<Vec<u8>>,
+    pub uncategorized_file_type: Option<String>,
+    pub uncategorized_file_provider_file_id: Option<String>,
+    pub uncategorized_text: Option<String>,
 }
