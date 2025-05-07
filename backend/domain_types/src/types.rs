@@ -1632,7 +1632,7 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
             }))
         })?;
 
-        let setup_future_usage = value.setup_future_usage.clone().ok_or_else(|| {
+        let setup_future_usage = value.setup_future_usage.ok_or_else(|| {
             error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_SETUP_FUTURE_USAGE".to_owned(),
                 error_identifier: 400,
@@ -1673,7 +1673,7 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
             ),
             mandate_id: None,
             setup_future_usage: Some(hyperswitch_common_enums::FutureUsage::foreign_try_from(
-                setup_future_usage.clone(),
+                setup_future_usage,
             )?),
             off_session: Some(false),
             setup_mandate_details: Some(setup_mandate_details),
