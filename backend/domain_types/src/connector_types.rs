@@ -4,8 +4,10 @@ use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
 use hyperswitch_api_models::enums::Currency;
 use hyperswitch_common_utils::types::MinorUnit;
-use hyperswitch_domain_models::{router_data::ConnectorAuthType, router_response_types::MandateReference};
 use hyperswitch_domain_models::router_request_types::{ResponseId, SyncRequestType};
+use hyperswitch_domain_models::{
+    router_data::ConnectorAuthType, router_response_types::MandateReference,
+};
 use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,

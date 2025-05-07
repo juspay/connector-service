@@ -973,10 +973,10 @@ pub fn get_adyen_response(
         .additional_data
         .as_ref()
         .and_then(|data| data.recurring_detail_reference.to_owned())
-        .map(|mandate_id| { MandateReference {
+        .map(|mandate_id| MandateReference {
             connector_mandate_id: Some(mandate_id.expose()),
             payment_method_id: None,
-        }});
+        });
     let network_txn_id = response.additional_data.and_then(|additional_data| {
         additional_data
             .network_tx_reference

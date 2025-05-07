@@ -38,7 +38,7 @@ use domain_types::{
         PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundSyncV2, RefundV2, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, SetupMandateRequestData, SetupMandateV2, 
+        RefundsResponseData, RequestDetails, SetupMandateRequestData, SetupMandateV2,
         ValidationTrait, WebhookDetailsResponse,
     },
 };

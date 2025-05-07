@@ -722,7 +722,7 @@ impl<F, Req>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None)
+                    mandate_reference: Box::new(None),
                 };
                 let error = None;
 

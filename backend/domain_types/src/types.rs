@@ -1,10 +1,9 @@
-use std::borrow::Cow;
-use std::{collections::HashMap, str::FromStr};
 use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
 use crate::connector_types::{
     MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, SetupMandateRequestData, WebhookDetailsResponse,
+    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, SetupMandateRequestData,
+    WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -22,6 +21,8 @@ use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
     router_request_types::ResponseId,
 };
+use std::borrow::Cow;
+use std::{collections::HashMap, str::FromStr};
 
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Connectors {
@@ -1813,7 +1814,7 @@ pub fn generate_setup_mandate_response(
                     status: grpc_status as i32,
                     mandate_reference: Some(MandateReference {
                         connector_mandate_id: mandate_reference.and_then(|m| m.connector_mandate_id),
-                    }), 
+                    }),
                     error_message: None,
                     error_code: None,
                 }

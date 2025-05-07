@@ -8,7 +8,8 @@ use domain_types::{
         PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        RequestDetails, SetupMandateRequestData, SetupMandateV2, ValidationTrait, WebhookDetailsResponse,
+        RequestDetails, SetupMandateRequestData, SetupMandateV2, ValidationTrait,
+        WebhookDetailsResponse,
     },
 };
 use hyperswitch_common_utils::{
