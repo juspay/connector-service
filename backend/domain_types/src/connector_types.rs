@@ -1,4 +1,4 @@
-use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, Void};
+use crate::connector_flow::{self, Authorize, Capture, DefendDispute, PSync, RSync, Refund, Void};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
@@ -49,6 +49,7 @@ pub trait ConnectorServiceTrait:
     + RefundV2
     + PaymentCapture
     + RefundSyncV2
+    + DefendDisputeV2
 {
 }
 
@@ -438,4 +439,43 @@ pub struct PaymentsCaptureData {
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
+}
+
+pub trait DefendDisputeV2:
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData>
+{
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DisputeDefendData {
+    pub dispute_id: String,
+    pub connector_dispute_id: String,
+    pub defense_reason_code: String,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DisputeDefendResponseData {
+    pub dispute_status: hyperswitch_api_models::enums::DisputeStatus,
+    pub connector_status: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisputeFlowData {
+    pub connector_request_reference_id: String,
+    pub dispute_id: String,
+    pub status: hyperswitch_common_enums::DisputeStatus,
+    pub connectors: Connectors,
+    pub defense_reason_code: String,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DefendDisputeRequestData {
+    pub dispute_id: String,
+    pub connector_dispute_id: String,
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DefendDisputeResponse {
+    pub dispute_status: hyperswitch_common_enums::DisputeStatus,
+    pub connector_status: Option<String>,
 }

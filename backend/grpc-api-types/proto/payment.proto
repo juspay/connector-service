@@ -10,6 +10,29 @@ service PaymentService {
   rpc IncomingWebhook(IncomingWebhookRequest) returns (IncomingWebhookResponse);
   rpc Refund(RefundsRequest) returns (RefundsResponse);
   rpc PaymentCapture(PaymentsCaptureRequest) returns (PaymentsCaptureResponse);
+  rpc DefendDispute(DisputeDefendRequest) returns (DisputeDefendResponse);
+}
+
+message DisputeDefendRequest {
+  string defense_reason_code = 1;
+  string connector_dispute_id =3;
+}
+
+message DisputeDefendResponse {
+  DisputeStatus dispute_status = 1;
+  optional string connector_status = 2;
+  optional string error_code = 3;
+  optional string error_message = 4;
+}
+
+enum DisputeStatus {
+  DISPUTE_OPENED = 0;
+  DISPUTE_EXPIRED = 1;
+  DISPUTE_ACCEPTED = 2;
+  DISPUTE_CANCELLED = 3;
+  DISPUTE_CHALLENGED = 4;
+  DISPUTE_WON = 5;
+  DISPUTE_LOST = 6;
 }
 
 message PaymentsAuthorizeRequest {
