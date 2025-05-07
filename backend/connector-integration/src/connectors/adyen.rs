@@ -696,11 +696,7 @@ impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, D
             .adyen
             .dispute_base_url
             .clone()
-            .ok_or(
-                hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
-                    field_name: "contact",
-                },
-            )?;
+            .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
 
         Ok(format!(
             "{}ca/services/DisputeService/v30/acceptDispute",
@@ -800,11 +796,7 @@ impl
             .adyen
             .dispute_base_url
             .clone()
-            .ok_or(
-                hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
-                    field_name: "contact",
-                },
-            )?;
+            .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
 
         Ok(format!(
             "{}ca/services/DisputeService/v30/supplyDefenseDocument",

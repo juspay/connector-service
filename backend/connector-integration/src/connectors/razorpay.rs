@@ -495,7 +495,6 @@ impl IncomingWebhook for Razorpay {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
-        println!("$$$ webhook body {:?} ", request.body);
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
             report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                 .attach_printable(format!("error while decoing webhook body {err}"))

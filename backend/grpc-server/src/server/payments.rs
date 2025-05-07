@@ -642,15 +642,10 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
-        info!("$$$ DISPUTE_FLOW: initiated");
+        info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
-        let connector =
-            domain_types::connector_types::ConnectorEnum::foreign_try_from(payload.connector)
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid connector: {}", e))
-                })?;
-
+        let connector = connector_from_metadata(&metadata)?;
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -703,15 +698,10 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<SubmitEvidenceRequest>,
     ) -> Result<tonic::Response<SubmitEvidenceResponse>, tonic::Status> {
-        info!("$$$ DISPUTE_FLOW: initiated");
+        info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
-        let connector =
-            domain_types::connector_types::ConnectorEnum::foreign_try_from(payload.connector)
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid connector: {}", e))
-                })?;
-
+        let connector = connector_from_metadata(&metadata)?;
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
         let connector_integration: BoxedConnectorIntegrationV2<

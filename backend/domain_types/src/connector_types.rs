@@ -483,7 +483,7 @@ pub struct SubmitEvidenceData {
     pub merchant_account_id: String,
     pub dispute_status: DisputeStatus,
 
-    pub dispute_id: String,
+    pub dispute_id: Option<String>,
     pub connector_dispute_id: String,
     pub access_activity_log: Option<String>,
     pub billing_address: Option<String>,

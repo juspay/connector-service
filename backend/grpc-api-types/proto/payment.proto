@@ -1016,7 +1016,6 @@ message PaymentsCaptureResponse {
 message AcceptDisputeRequest {
   optional string dispute_id = 1;
   string connector_dispute_id = 3;
-  Connector connector = 35;
   string merchant_account_id = 2;
 }
 
@@ -1039,9 +1038,8 @@ enum DisputeStatus {
 }
 
 message SubmitEvidenceRequest {
-  Connector connector = 35;
   string merchant_account_id = 36;
-  string dispute_id = 1;
+  optional string dispute_id = 1;
   string connector_dispute_id = 2;
   optional string access_activity_log = 3;
   optional string billing_address = 4;
