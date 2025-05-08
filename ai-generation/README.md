@@ -70,4 +70,8 @@ Our approach leverages a set of structured documents to guide the AI in the code
 *   **Support for Other Flows**: Extend the AI's capabilities to support other payment flows beyond authorize (e.g., capture, refund, void).
 *   **Optimize Knowledge Base**:
     *   Improve how the knowledge base is searched (e.g., by indexing error types).
-    *   Refine how the knowledge base is updated (e.g., by implementing a more granular file structure for errors). 
+    *   Refine how the knowledge base is updated (e.g., by implementing a more granular file structure for errors).
+
+## Team
+* [**Sweta Sharma**](https://github.com/Sweta-Kumari-Sharma) 
+* [**Chaitak Gorai**](https://github.com/chaitak-gorai)
