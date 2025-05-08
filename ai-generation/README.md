@@ -7,7 +7,9 @@ To generate, build, and test connector code autonomously, without any manual int
 ## Workflow Diagram 
 ![ai-connector-integration](https://github.com/user-attachments/assets/b6097266-19bc-4b07-b306-e4fc879e6c5c)
 
-## Demo Video 
+## Working Demo Video 
+* https://drive.google.com/file/d/1bCeZXIVSSO3FyzYcKVc8bisbDP8DK3Cp/view?usp=sharing
+## Detailed Explanation Video 
 * https://drive.google.com/file/d/1LM_ojHJX4FVAAGtB0trDk6dWxDMIjw3M/view?usp=sharing
 
 ## Phases
@@ -17,7 +19,6 @@ The broader project encompasses several migration and integration strategies:
 1.  **Migration from Hyperswitch (Current Focus)**
 2.  Migration from Euler
 3.  Third-party reference (e.g., Active Merchant)
-4.  Integration from scratch
 
 Currently, we are focused on the first phase: **Migration from Hyperswitch**.
 
@@ -38,7 +39,7 @@ Our approach leverages a set of structured documents to guide the AI in the code
 ## How to Use
 
 1.  **Install Cursor**: Ensure you have Cursor installed and set up.
-2.  **Checkout to this branch** for the context files https://github.com/juspay/connector-service/tree/ai-connector-integration or download from https://drive.google.com/file/d/1WJF-xYSKbc5fMLBwwvtl4I9ENxIo7TU8/view?usp=sharing
+2.  **Checkout to this branch** for the context files [branch](https://github.com/juspay/connector-service/tree/ai-connector-integration) or download from [drive](https://drive.google.com/drive/folders/1NoMmVH4QO8x6SzGNYSdyZb6UQzduN9Pg?usp=sharing) and keep the files under `memory_bank`.
 3.  **Provide Context Files**: Add the following files as context to the AI assistant within Cursor:
     *   `build_workflow.md`
     *   `connector_integration_guide.md`
@@ -62,7 +63,8 @@ Our approach leverages a set of structured documents to guide the AI in the code
 4.  **Experimental Stage**: This is an ongoing project, and the tools and methodologies are subject to refinement.
 
 ## Cost
-We have used Cursor Pro subscription with $20 per month
+* We have used Cursor Pro subscription with $20 per month.
+* This subscription has limited 500 request per month where 25 calls in a chat is considered as one request.
 
 ## Benefits (10x Improvement)
 
