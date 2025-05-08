@@ -18,6 +18,7 @@ use std::collections::HashMap;
 pub enum ConnectorEnum {
     Adyen,
     Razorpay,
+    Checkout,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -27,6 +28,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
         match connector {
             2 => Ok(Self::Adyen),
             68 => Ok(Self::Razorpay),
+            69 => Ok(Self::Checkout),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,

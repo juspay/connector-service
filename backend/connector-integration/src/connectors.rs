@@ -1,6 +1,7 @@
 pub mod adyen;
+pub mod razorpay;
+pub mod checkout;
 
 pub use self::adyen::Adyen;
-
-pub mod razorpay;
 pub use self::razorpay::Razorpay;
+pub use self::checkout::Checkout;
