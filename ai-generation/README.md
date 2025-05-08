@@ -39,7 +39,7 @@ Our approach leverages a set of structured documents to guide the AI in the code
 ## How to Use
 
 1.  **Install Cursor**: Ensure you have Cursor installed and set up.
-2.  Checkout to this branch for the context files https://github.com/juspay/connector-service/tree/ai-connector-integration
+2.  **Checkout to this branch** for the context files https://github.com/juspay/connector-service/tree/ai-connector-integration
 3.  **Provide Context Files**: Add the following files as context to the AI assistant within Cursor:
     *   `build_workflow.md`
     *   `connector_integration_guide.md`
