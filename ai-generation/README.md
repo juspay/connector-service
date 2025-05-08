@@ -1,15 +1,11 @@
 # Connector Integration AI
 
-This project focuses on automating the generation, building, and testing of connector code, eliminating manual intervention. 
-In this hackathon, our primary goal is to streamline the migration of authorize flows from various connectors to Hyperswitch.
-
-## Workflow Diagram 
-![ai-connector-integration](https://github.com/user-attachments/assets/b6097266-19bc-4b07-b306-e4fc879e6c5c)
-
-
 ## Problem Statement
 
 To generate, build, and test connector code autonomously, without any manual intervention. This project specifically addresses the migration of authorize flows from any existing connector to Hyperswitch.
+
+## Workflow Diagram 
+![ai-connector-integration](https://github.com/user-attachments/assets/b6097266-19bc-4b07-b306-e4fc879e6c5c)
 
 ## Phases
 
