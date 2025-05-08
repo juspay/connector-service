@@ -39,7 +39,8 @@ Our approach leverages a set of structured documents to guide the AI in the code
 ## How to Use
 
 1.  **Install Cursor**: Ensure you have Cursor installed and set up.
-2.  **Provide Context Files**: Add the following files as context to the AI assistant within Cursor:
+2.  Checkout to this branch for the context files https://github.com/juspay/connector-service/tree/ai-connector-integration
+3.  **Provide Context Files**: Add the following files as context to the AI assistant within Cursor:
     *   `build_workflow.md`
     *   `connector_integration_guide.md`
     *   The `connector.rs` file from the Hyperswitch documentation/repository for the connector being migrated.
@@ -48,7 +49,7 @@ Our approach leverages a set of structured documents to guide the AI in the code
         *   `types.rs` (of the connector)
         *   `connector.rs` (of the connector)
         *   Relevant `connector_types.rs` (Hyperswitch core types if needed)
-3.  **Paste the Prompt**: Use the following prompt structure (replace `{{prompt}}` with your specific instructions):
+4.  **Paste the Prompt**: Use the following prompt structure (replace `{{prompt}}` with your specific instructions):
 
     ```
     Run the workflow for integrating {{authorize}} flow for connector {{paypal}} with reference from hyperswitch. Follow each steps mentioned in build_workflow.md.
