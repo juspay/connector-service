@@ -72,6 +72,9 @@ Our approach leverages a set of structured documents to guide the AI in the code
     *   Improve how the knowledge base is searched (e.g., by indexing error types).
     *   Refine how the knowledge base is updated (e.g., by implementing a more granular file structure for errors).
 
+## Demo Video 
+* https://drive.google.com/file/d/1LM_ojHJX4FVAAGtB0trDk6dWxDMIjw3M/view?usp=sharing
+
 ## Team
 * [**Sweta Sharma**](https://github.com/Sweta-Kumari-Sharma) 
 * [**Chaitak Gorai**](https://github.com/chaitak-gorai)
