@@ -66,7 +66,7 @@ Our approach leverages a set of structured documents to guide the AI in the code
 ## Next Steps
 
 *   **End-to-End API Testing**: Implement connector API testing for comprehensive end-to-end validation.
-*   **MCP for Type Extraction**: Explore using a Meta-programming Code Processor (MCP) to automatically extract and structure types from Hyperswitch.
+*   **MCP for Type Extraction**: Explore using a Model Context Protocol (MCP) to automatically extract and structure types from Hyperswitch.
 *   **Support for Other Flows**: Extend the AI's capabilities to support other payment flows beyond authorize (e.g., capture, refund, void).
 *   **Optimize Knowledge Base**:
     *   Improve how the knowledge base is searched (e.g., by indexing error types).
