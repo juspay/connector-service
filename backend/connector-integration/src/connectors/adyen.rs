@@ -1,11 +1,11 @@
 mod test;
 pub mod transformers;
 
+use crate::types::ResponseRouterData;
 use hyperswitch_common_utils::{
     errors::CustomResult,
     ext_traits::{ByteSliceExt, OptionExt},
     request::RequestContent,
-    types::{AmountConvertor, MinorUnit},
 };
 
 use crate::{with_error_response_body, with_response_body};
@@ -13,10 +13,11 @@ use crate::{with_error_response_body, with_response_body};
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::{ResponseId, SyncRequestType},
+    router_request_types::SyncRequestType,
 };
 
 use error_stack::{report, ResultExt};
+use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
     api::{self, CaptureSyncMethod, ConnectorCommon},
     configs::Connectors,
@@ -27,6 +28,7 @@ use hyperswitch_interfaces::{
 };
 use hyperswitch_masking::{Mask, Maskable};
 
+use super::macros;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
     connector_types::{
@@ -35,10 +37,13 @@ use domain_types::{
         PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundSyncV2, RefundV2, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, ValidationTrait, WebhookDetailsResponse,
+        RefundsResponseData, RequestDetails, ResponseId, ValidationTrait, WebhookDetailsResponse,
     },
 };
-use transformers::{self as adyen, AdyenNotificationRequestItemWH, ForeignTryFrom};
+use transformers::{
+    self as adyen, AdyenNotificationRequestItemWH, AdyenPaymentRequest, AdyenPaymentResponse,
+    ForeignTryFrom,
+};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -53,19 +58,38 @@ impl RefundSyncV2 for Adyen {}
 impl RefundV2 for Adyen {}
 impl PaymentCapture for Adyen {}
 
-#[derive(Clone)]
-pub struct Adyen {
-    #[allow(dead_code)]
-    pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
-}
-
-impl Adyen {
-    pub const fn new() -> &'static Self {
-        &Self {
-            amount_converter: &hyperswitch_common_utils::types::MinorUnitForConnector,
+macros::create_all_prerequisites!(
+    connector_name: Adyen,
+    api: [
+        (
+            flow: Authorize,
+            request_body: AdyenPaymentRequest,
+            response_body: AdyenPaymentResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+        )
+    ],
+    amount_converters: [],
+    member_functions: {
+        pub fn build_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
+        }
+        pub fn connector_base_url<'a>(
+            &self,
+            req: &'a RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.adyen.base_url
         }
     }
-}
+);
 
 impl ConnectorCommon for Adyen {
     fn id(&self) -> &'static str {
@@ -112,100 +136,54 @@ impl ConnectorCommon for Adyen {
     }
 }
 
-const ADYEN_API_VERSION: &str = "v68";
-
-impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-    for Adyen
+impl TryFrom<ResponseRouterData<PaymentsResponseData, Self>>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-    where
-        Self: ConnectorIntegrationV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-    {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
-        Ok(header)
-    }
+    type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}/payments",
-            req.resource_common_data.connectors.adyen.base_url, ADYEN_API_VERSION
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data =
-            adyen::AdyenRouterData::try_from((req.request.minor_amount, req))?;
-        let connector_req = adyen::AdyenPaymentRequest::try_from(&connector_router_data)?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: adyen::AdyenPaymentResponse = res
-            .response
-            .parse_struct("AdyenPaymentResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_response_body!(event_builder, response);
-
-        RouterDataV2::foreign_try_from((
+    fn try_from(
+        value: ResponseRouterData<PaymentsResponseData, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
             response,
-            data.clone(),
-            res.status_code,
-            data.request.capture_method,
-            false,
-            data.request.payment_method_type,
-        ))
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
+            router_data,
+            http_code: _,
+        } = value;
 
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-
-    fn get_5xx_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+        Ok(Self {
+            response: Ok(response),
+            ..router_data
+        })
     }
 }
+
+const ADYEN_API_VERSION: &str = "v68";
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenPaymentRequest),
+    curl_response: AdyenPaymentResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}/payments", self.connector_base_url(req), ADYEN_API_VERSION))
+        }
+    }
+);
 
 impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Adyen
@@ -385,7 +363,7 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let connector_router_data =
-            adyen::AdyenRouterData::try_from((req.request.minor_amount_to_capture, req))?;
+            adyen::AdyenRouterData1::try_from((req.request.minor_amount_to_capture, req))?;
         let connector_req = adyen::AdyenCaptureRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -613,7 +591,7 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let refund_router_data =
-            adyen::AdyenRouterData::try_from((req.request.minor_refund_amount, req))?;
+            adyen::AdyenRouterData1::try_from((req.request.minor_refund_amount, req))?;
         let connector_req = adyen::AdyenRefundRequest::try_from(&refund_router_data)?;
 
         Ok(Some(RequestContent::Json(Box::new(connector_req))))

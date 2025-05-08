@@ -5,7 +5,8 @@ use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void};
 use crate::connector_types::{
     MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, WebhookDetailsResponse,
+    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+    WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -20,7 +21,6 @@ use hyperswitch_common_utils::pii::Email;
 use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
 };
 
 #[derive(Clone, serde::Deserialize, Debug)]

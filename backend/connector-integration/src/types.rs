@@ -24,3 +24,9 @@ impl ConnectorData {
         }
     }
 }
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}

@@ -991,6 +991,7 @@ version = "0.1.0"
 dependencies = [
  "api_models",
  "base64 0.21.7",
+ "bytes",
  "cards",
  "common_enums",
  "common_utils",
@@ -999,6 +1000,8 @@ dependencies = [
  "hyperswitch_domain_models",
  "hyperswitch_interfaces",
  "masking",
+ "paste",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_qs",
@@ -2900,6 +2903,12 @@ dependencies = [
  "smallvec",
  "windows-targets 0.52.6",
 ]
+
+[[package]]
+name = "paste"
+version = "1.0.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
 name = "pathdiff"

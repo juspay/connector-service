@@ -23,3 +23,6 @@ strum = { version = "0.26", features = ["derive"] }
 time = "0.3.35"
 url = "2.5.0"
 hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
+paste = "1.0"
+reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
+bytes = "1.6.0"
