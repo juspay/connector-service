@@ -4,8 +4,8 @@ This project focuses on automating the generation, building, and testing of conn
 In this hackathon, our primary goal is to streamline the migration of authorize flows from various connectors to Hyperswitch.
 
 ## Workflow Diagram 
+![ai-connector-integration](https://github.com/user-attachments/assets/b6097266-19bc-4b07-b306-e4fc879e6c5c)
 
-https://drive.google.com/file/d/1cionH_5jAdE5_gC2Dnq8x7Yq14uoaNEZ/view?usp=sharing
 
 ## Problem Statement
 
