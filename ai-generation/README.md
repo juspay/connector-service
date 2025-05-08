@@ -3,6 +3,10 @@
 This project focuses on automating the generation, building, and testing of connector code, eliminating manual intervention. 
 In this hackathon, our primary goal is to streamline the migration of authorize flows from various connectors to Hyperswitch.
 
+## Workflow Diagram 
+
+https://drive.google.com/file/d/1cionH_5jAdE5_gC2Dnq8x7Yq14uoaNEZ/view?usp=sharing
+
 ## Problem Statement
 
 To generate, build, and test connector code autonomously, without any manual intervention. This project specifically addresses the migration of authorize flows from any existing connector to Hyperswitch.
@@ -47,7 +51,7 @@ Our approach leverages a set of structured documents to guide the AI in the code
 3.  **Paste the Prompt**: Use the following prompt structure (replace `{{prompt}}` with your specific instructions):
 
     ```
-    {{prompt}}
+    Run the workflow for integrating {{authorize}} flow for connector {{paypal}} with reference from hyperswitch. Follow each steps mentioned in build_workflow.md.
     ```
 
 ## Disclaimer
