@@ -289,6 +289,16 @@ pub struct RefundWebhookDetailsResponse {
     pub error_message: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct DisputeWebhookDetailsResponse {
+    pub dispute_id: String,
+    pub status: hyperswitch_common_enums::DisputeStatus,
+    pub stage: hyperswitch_common_enums::DisputeStage,
+    pub connector_response_reference_id: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HttpMethod {
     Options,
@@ -321,6 +331,7 @@ pub struct ConnectorWebhookSecrets {
 pub enum EventType {
     Payment,
     Refund,
+    Dispute,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::EventType> for EventType {
@@ -332,6 +343,7 @@ impl ForeignTryFrom<grpc_api_types::payments::EventType> for EventType {
         match value {
             grpc_api_types::payments::EventType::Payment => Ok(Self::Payment),
             grpc_api_types::payments::EventType::Refund => Ok(Self::Refund),
+            grpc_api_types::payments::EventType::Dispute => Ok(Self::Dispute),
         }
     }
 }
@@ -343,6 +355,7 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::EventType {
         match value {
             EventType::Payment => Ok(Self::Payment),
             EventType::Refund => Ok(Self::Refund),
+            EventType::Dispute => Ok(Self::Dispute),
         }
     }
 }
@@ -426,6 +439,14 @@ pub trait IncomingWebhook {
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
         Err(ConnectorError::NotImplemented("process_refund_webhook".to_string()).into())
+    }
+    fn process_dispute_webhook(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
+        Err(ConnectorError::NotImplemented("process_dispute_webhook".to_string()).into())
     }
 }
 #[derive(Debug, Default, Clone)]

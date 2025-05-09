@@ -1201,6 +1201,28 @@ pub enum WebhookEventCode {
     RefundFailed,
     RefundReversed,
     CancelOrRefund,
+    NotificationOfChargeback,
+    Chargeback,
+    ChargebackReversed,
+    SecondChargeback,
+    PrearbitrationWon,
+    PrearbitrationLost,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum DisputeStatus {
+    Undefended,
+    Pending,
+    Lost,
+    Accepted,
+    Won,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenAdditionalDataWH {
+    pub dispute_status: Option<DisputeStatus>,
+    pub chargeback_reason_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1213,6 +1235,7 @@ pub struct AdyenNotificationRequestItemWH {
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
+    pub additional_data: AdyenAdditionalDataWH,
 }
 
 fn is_success_scenario(is_success: &str) -> bool {
@@ -1279,6 +1302,12 @@ pub(crate) fn get_adyen_webhook_event_type(code: WebhookEventCode) -> EventType 
         | WebhookEventCode::RefundFailed
         | WebhookEventCode::RefundReversed
         | WebhookEventCode::CancelOrRefund => EventType::Refund,
+        WebhookEventCode::NotificationOfChargeback
+        | WebhookEventCode::Chargeback
+        | WebhookEventCode::ChargebackReversed
+        | WebhookEventCode::SecondChargeback
+        | WebhookEventCode::PrearbitrationWon
+        | WebhookEventCode::PrearbitrationLost => EventType::Dispute,
     }
 }
 
@@ -1749,5 +1778,50 @@ impl<F, Req>
             },
             ..data
         })
+    }
+}
+
+pub(crate) fn get_dispute_stage_and_status(
+    code: WebhookEventCode,
+    dispute_status: Option<DisputeStatus>,
+) -> (
+    hyperswitch_common_enums::DisputeStage,
+    hyperswitch_common_enums::DisputeStatus,
+) {
+    use hyperswitch_common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
+
+    match code {
+        WebhookEventCode::NotificationOfChargeback => {
+            (DisputeStage::PreDispute, HSDisputeStatus::DisputeOpened)
+        }
+        WebhookEventCode::Chargeback => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
+                Some(DisputeStatus::Lost) | None => HSDisputeStatus::DisputeLost,
+                Some(_) => HSDisputeStatus::DisputeOpened,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::ChargebackReversed => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeChallenged,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::SecondChargeback => {
+            (DisputeStage::PreArbitration, HSDisputeStatus::DisputeLost)
+        }
+        WebhookEventCode::PrearbitrationWon => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeOpened,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::PreArbitration, status)
+        }
+        WebhookEventCode::PrearbitrationLost => {
+            (DisputeStage::PreArbitration, HSDisputeStatus::DisputeLost)
+        }
+        _ => (DisputeStage::Dispute, HSDisputeStatus::DisputeOpened),
     }
 }
