@@ -20,3 +20,6 @@ pub use self::checkout::Checkout;
 
 pub mod paypal;
 pub use self::paypal::Paypal;
+
+pub mod jpmorgan;
+pub use self::jpmorgan::Jpmorgan;

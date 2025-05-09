@@ -117,22 +117,38 @@ warning: unused import: `CheckoutPaymentsResponse`
 36 | use self::transformers::{CheckoutPaymentRequest, CheckoutPaymentsResponse};
    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^
 
-error[E0117]: only traits defined in the current crate can be implemented for types defined outside of the cr\nate
-   --> backend/connector-integration/src/connectors/checkout/transformers.rs:109:1
+error[E0117]: only traits defined in the current crate can be implemented for ty
+pes defined outside of the cr
+ate
+                                --> backend/connector-integration/src/connectors
+/checkout/transformers.rs:109:1
     |
-109 | impl TryFrom<(CheckoutPaymentsResponse, &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData\n, PaymentsResponseData>)> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsRespons\neData...
-    | ^^^^^--------------------------------------------------------------------------------------------------\n-------------------------^^^^^-------------------------------------------------------------------------------\n------
-    |      |
+109 | impl TryFrom<(CheckoutPaymentsResponse, &RouterDataV2<Authorize, Pay
+mentFlowData, PaymentsAuthori
+zeData, PaymentsResponseData>, u16)> for RouterDataV2<Authorize, PaymentFlowData
+, PaymentsAuthorizeData, PaymentsResponseData...
+                                                              | ^^^^^-----------
+--------------------------------------------------------------------------------
+-------
+------------------------------------^^^^^---------------------------------------
+----------------------------------------------
+                                                              |      |
 
-                              |
-    |      |
-
-                              `RouterDataV2` is not defined in the current crate
-    |      this is not defined in the current crate because this is a foreign trait
+       
+                                         |
+                                 |      |
+                                                          
+                                         `RouterDataV2` is not defined in the cu
+rrent crate                      |      this is not defined in the current crate
+ because this is a foreign trait
     |
-    = note: impl doesn't have any local type before any uncovered type parameters
-    = note: for more information see https://doc.rust-lang.org/reference/items/implementations.html#orphan-ru\nles
-    = note: define and implement a trait or new type instead
+    = note: impl doesn't have any local type before any uncovered type parameter
+s
+    = note: for more information see https://doc.rust-lang.org/reference/items/i
+mplementations.html#orphan-ru
+les
+                                 = note: define and implement a trait or new typ
+e instead
 
 error[E0063]: missing fields `charge_id` and `mandate_reference` in initializer of `hyperswitch_domain_models\n::router_response_types::PaymentsResponseData`
    --> backend/connector-integration/src/connectors/checkout/transformers.rs:121:38
