@@ -2,14 +2,16 @@ use crate::connector_flow::{self, Authorize, Capture, DefendDispute, PSync, RSyn
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
+use error_stack::ResultExt;
 use hyperswitch_api_models::enums::Currency;
-use hyperswitch_common_utils::types::MinorUnit;
+use hyperswitch_common_utils::{errors, types::MinorUnit};
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
-use hyperswitch_domain_models::router_request_types::{ResponseId, SyncRequestType};
+use hyperswitch_domain_models::router_request_types::SyncRequestType;
 use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
 };
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // snake case for enum variants
@@ -49,7 +51,7 @@ pub trait ConnectorServiceTrait:
     + RefundV2
     + PaymentCapture
     + RefundSyncV2
-    + DefendDisputeV2
+    + DisputeDefend
 {
 }
 
@@ -133,7 +135,7 @@ pub struct PaymentVoidData {
     pub cancellation_reason: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData {
     pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
@@ -195,10 +197,31 @@ pub struct PaymentsSyncData {
     pub amount: MinorUnit,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub enum ResponseId {
+    ConnectorTransactionId(String),
+    EncodedData(String),
+    #[default]
+    NoResponseId,
+}
+impl ResponseId {
+    pub fn get_connector_transaction_id(
+        &self,
+    ) -> errors::CustomResult<String, errors::ValidationError> {
+        match self {
+            Self::ConnectorTransactionId(txn_id) => Ok(txn_id.to_string()),
+            _ => Err(errors::ValidationError::IncorrectValueProvided {
+                field_name: "connector_transaction_id",
+            })
+            .attach_printable("Expected connector transaction ID not found"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PaymentsResponseData {
     TransactionResponse {
-        resource_id: hyperswitch_domain_models::router_request_types::ResponseId,
+        resource_id: ResponseId,
         redirection_data:
             Box<Option<hyperswitch_domain_models::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
@@ -207,7 +230,7 @@ pub enum PaymentsResponseData {
         incremental_authorization_allowed: Option<bool>,
     },
     SessionResponse {
-        session_token: hyperswitch_api_models::payments::SessionToken,
+        session_token: String,
     },
 }
 
@@ -441,7 +464,7 @@ pub struct PaymentsCaptureData {
     pub connector_metadata: Option<serde_json::Value>,
 }
 
-pub trait DefendDisputeV2:
+pub trait DisputeDefend:
     ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData>
 {
 }
@@ -466,16 +489,4 @@ pub struct DisputeFlowData {
     pub status: hyperswitch_common_enums::DisputeStatus,
     pub connectors: Connectors,
     pub defense_reason_code: String,
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct DefendDisputeRequestData {
-    pub dispute_id: String,
-    pub connector_dispute_id: String,
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct DefendDisputeResponse {
-    pub dispute_status: hyperswitch_common_enums::DisputeStatus,
-    pub connector_status: Option<String>,
 }

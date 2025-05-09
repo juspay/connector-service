@@ -14,14 +14,13 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData,
+        RefundsResponseData, ResponseId,
     },
 };
 use hyperswitch_domain_models::{
     payment_method_data::{Card, PaymentMethodData},
     router_data::{ConnectorAuthType, RouterData},
     router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
     router_response_types::RedirectForm,
 };
 use hyperswitch_interfaces::errors;

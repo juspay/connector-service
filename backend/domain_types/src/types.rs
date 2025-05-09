@@ -6,7 +6,8 @@ use crate::connector_types::{
     DisputeDefendData, DisputeDefendResponseData, DisputeFlowData, MultipleCaptureRequestData,
     PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
     PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, WebhookDetailsResponse,
+    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+    WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -21,7 +22,6 @@ use hyperswitch_common_utils::pii::Email;
 use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
 };
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -1581,6 +1581,25 @@ impl ForeignTryFrom<DisputeDefendRequest> for DisputeDefendData {
     }
 }
 
+impl ForeignTryFrom<&hyperswitch_common_enums::DisputeStatus> for grpc_api_types::payments::DisputeStatus {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(value: &hyperswitch_common_enums::DisputeStatus) ->
+    Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            hyperswitch_common_enums::DisputeStatus::DisputeWon => Ok(Self::DisputeWon),
+            hyperswitch_common_enums::DisputeStatus::DisputeLost => Ok(Self::DisputeLost),
+            _ => Err(ApplicationErrorResponse::InternalServerError(
+                ApiError {
+                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
+                    error_identifier: 500,
+                    error_message: "Invalid response type received from connector".to_owned(),
+                    error_object: None,
+                }
+            ))?,
+        }
+    }
+}
+
 pub fn generate_defend_dispute_response(
     router_data_v2: RouterDataV2<
         DefendDispute,
@@ -1591,13 +1610,7 @@ pub fn generate_defend_dispute_response(
 ) -> Result<DisputeDefendResponse, error_stack::Report<ApplicationErrorResponse>> {
     let dispute_response = router_data_v2.response;
 
-    let grpc_status = if router_data_v2.resource_common_data.status
-        == hyperswitch_common_enums::DisputeStatus::DisputeWon
-    {
-        grpc_api_types::payments::DisputeStatus::DisputeWon
-    } else {
-        grpc_api_types::payments::DisputeStatus::DisputeLost
-    };
+    let grpc_status = grpc_api_types::payments::DisputeStatus::foreign_try_from(&router_data_v2.resource_common_data.status)?;
 
     match dispute_response {
         Ok(response) => Ok(DisputeDefendResponse {

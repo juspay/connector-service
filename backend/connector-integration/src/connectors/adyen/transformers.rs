@@ -3,7 +3,7 @@ use domain_types::{
     connector_types::{
         DisputeDefendData, DisputeDefendResponseData, DisputeFlowData, EventType, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        RefundFlowData, RefundsData, RefundsResponseData,
+        RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
 };
 use error_stack::ResultExt;
@@ -16,9 +16,8 @@ use hyperswitch_common_utils::{
 
 use hyperswitch_domain_models::{
     payment_method_data::{Card, PaymentMethodData},
-    router_data::{ConnectorAuthType, ErrorResponse, RouterData},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
     router_response_types::{MandateReference, RedirectForm},
 };
 use hyperswitch_interfaces::{
@@ -29,6 +28,10 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
+
+use crate::types::ResponseRouterData;
+
+use super::AdyenRouterData;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -474,12 +477,12 @@ pub struct AdyenVoidRequest {
 }
 
 #[derive(Debug, Serialize)]
-pub struct AdyenRouterData<T> {
+pub struct AdyenRouterData1<T> {
     pub amount: MinorUnit,
     pub router_data: T,
 }
 
-impl<T> TryFrom<(MinorUnit, T)> for AdyenRouterData<T> {
+impl<T> TryFrom<(MinorUnit, T)> for AdyenRouterData1<T> {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
     fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -491,12 +494,12 @@ impl<T> TryFrom<(MinorUnit, T)> for AdyenRouterData<T> {
 
 fn get_amount_data(
     item: &AdyenRouterData<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     >,
 ) -> Amount {
     Amount {
         currency: item.router_data.request.currency,
-        value: item.amount.to_owned(),
+        value: item.router_data.request.minor_amount.to_owned(),
     }
 }
 
@@ -548,8 +551,8 @@ impl TryFrom<(&Card, Option<String>)> for AdyenPaymentMethod {
 
 impl
     TryFrom<(
-        &AdyenRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        AdyenRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
         &Card,
     )> for AdyenPaymentRequest
@@ -557,8 +560,8 @@ impl
     type Error = Error;
     fn try_from(
         value: (
-            &AdyenRouterData<
-                &RouterDataV2<
+            AdyenRouterData<
+                RouterDataV2<
                     Authorize,
                     PaymentFlowData,
                     PaymentsAuthorizeData,
@@ -569,15 +572,15 @@ impl
         ),
     ) -> Result<Self, Self::Error> {
         let (item, card_data) = value;
-        let amount = get_amount_data(item);
+        let amount = get_amount_data(&item);
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let shopper_interaction = AdyenShopperInteraction::from(item.router_data);
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let shopper_reference = build_shopper_reference(
             &item.router_data.customer_id,
             item.router_data.merchant_id.clone(),
         );
         let (recurring_processing_model, store_payment_method, _) =
-            get_recurring_processing_model(item.router_data)?;
+            get_recurring_processing_model(&item.router_data)?;
 
         let return_url = item
             .router_data
@@ -600,7 +603,7 @@ impl
 
         let card_holder_name = item.router_data.request.customer_name.clone();
 
-        let additional_data = get_additional_data(item.router_data);
+        let additional_data = get_additional_data(&item.router_data);
 
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
@@ -641,15 +644,15 @@ impl
 
 impl
     TryFrom<
-        &AdyenRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        AdyenRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     > for AdyenPaymentRequest
 {
     type Error = Error;
     fn try_from(
-        item: &AdyenRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        item: AdyenRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         match item
@@ -664,7 +667,7 @@ impl
                     "payment_method".into(),
                 ),
             )?,
-            None => match item.router_data.request.payment_method_data {
+            None => match item.router_data.request.payment_method_data.clone() {
                 PaymentMethodData::Card(ref card) => AdyenPaymentRequest::try_from((item, card)),
                 PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
@@ -703,12 +706,6 @@ impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsRespo
             reference: item.request.connector_transaction_id.clone(),
         })
     }
-}
-
-pub struct ResponseRouterData<Flow, R, Request, Response> {
-    pub response: R,
-    pub data: RouterData<Flow, Request, Response>,
-    pub http_code: u16,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -838,6 +835,40 @@ fn get_adyen_payment_status(
         | AdyenStatus::PresentToShopper => AttemptStatus::AuthenticationPending,
         AdyenStatus::Error | AdyenStatus::Refused => AttemptStatus::Failure,
         AdyenStatus::Pending => AttemptStatus::Pending,
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+{
+    type Error = Error;
+    fn try_from(
+        value: ResponseRouterData<AdyenPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let is_manual_capture = false;
+        let pmt = router_data.request.payment_method_type;
+        let (status, error, payment_response_data) = match response {
+            AdyenPaymentResponse::Response(response) => {
+                get_adyen_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            AdyenPaymentResponse::RedirectionResponse(response) => {
+                get_redirection_response(*response, is_manual_capture, http_code, pmt)?
+            }
+        };
+
+        Ok(Self {
+            response: error.map_or_else(|| Ok(payment_response_data), Err),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
     }
 }
 
@@ -1570,12 +1601,12 @@ pub struct AdyenRefundResponse {
 
 impl
     TryFrom<
-        &AdyenRouterData<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        &AdyenRouterData1<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
     > for AdyenRefundRequest
 {
     type Error = Error;
     fn try_from(
-        item: &AdyenRouterData<
+        item: &AdyenRouterData1<
             &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1585,7 +1616,7 @@ impl
             merchant_account: auth_type.merchant_account,
             amount: Amount {
                 currency: item.router_data.request.currency,
-                value: item.amount,
+                value: item.router_data.request.minor_refund_amount,
             },
             merchant_refund_reason: item.router_data.request.reason.clone(),
             reference: item.router_data.request.refund_id.clone(),
@@ -1638,14 +1669,14 @@ pub struct AdyenCaptureRequest {
 
 impl
     TryFrom<
-        &AdyenRouterData<
+        &AdyenRouterData1<
             &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     > for AdyenCaptureRequest
 {
     type Error = Error;
     fn try_from(
-        item: &AdyenRouterData<
+        item: &AdyenRouterData1<
             &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
@@ -1661,7 +1692,7 @@ impl
             reference,
             amount: Amount {
                 currency: item.router_data.request.currency,
-                value: item.amount.to_owned(),
+                value: item.router_data.request.minor_amount_to_capture.to_owned(),
             },
         })
     }
