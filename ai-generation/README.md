@@ -22,6 +22,18 @@ The broader project encompasses several migration and integration strategies:
 
 Currently, we are focused on the first phase: **Migration from Hyperswitch**.
 
+
+## Achievement in above demo
+* Integrated Authorize flow for connector Checkout
+* We were able to build the project successsfully with two error fixes with manual intervention.
+
+## Auto generated things by AI
+* Workflow that we are feeding to the AI is auto generated.
+* Connector support to UCS.
+* Integration of Authorize flow.
+* Debugging and generating error tracks.
+* logging each step being followed in the workflow.
+
 ## Approach
 
 Our approach leverages a set of structured documents to guide the AI in the code generation and troubleshooting process:
