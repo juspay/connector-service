@@ -8,7 +8,7 @@ To generate, build, and test connector code autonomously, without any manual int
 ![ai-connector-integration](https://github.com/user-attachments/assets/b6097266-19bc-4b07-b306-e4fc879e6c5c)
 
 ## Working Demo Video 
-* https://drive.google.com/file/d/1bCeZXIVSSO3FyzYcKVc8bisbDP8DK3Cp/view?usp=sharing
+* https://drive.google.com/file/d/1GKobc_MdTOtpsu2BOau_cHRQFOdEXv5r/view?usp=sharing
 ## Detailed Explanation Video 
 * https://drive.google.com/file/d/1LM_ojHJX4FVAAGtB0trDk6dWxDMIjw3M/view?usp=sharing
 
