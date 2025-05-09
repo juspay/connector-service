@@ -23,3 +23,6 @@ pub use self::paypal::Paypal;
 
 pub mod jpmorgan;
 pub use self::jpmorgan::Jpmorgan;
+
+pub mod airwallex;
+pub use self::airwallex::Airwallex;

@@ -44,6 +44,7 @@ pub struct Connectors {
     pub checkout: ConnectorParams,
     pub paypal: ConnectorParams,
     pub jpmorgan: ConnectorParams,
+    pub airwallex: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
