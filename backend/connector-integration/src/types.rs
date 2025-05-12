@@ -1,6 +1,6 @@
-use domain_types::connector_types::{BoxedConnector, ConnectorEnum};
+use domain_types::connector_types::{BoxedConnector, ConnectorEnum, ConnectorServiceTrait};
 
-use crate::connectors::{Adyen, Elavon, Fiserv, Razorpay, Checkout, Paypal, Jpmorgan, Airwallex};
+use crate::connectors::{Adyen, Elavon, Fiserv, Razorpay, Checkout, Xendit};
 
 #[derive(Clone)]
 pub struct ConnectorData {
@@ -24,11 +24,57 @@ impl ConnectorData {
             ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
             ConnectorEnum::Elavon => Box::new(Elavon::new()),
             ConnectorEnum::Checkout => Box::new(Checkout::new()),
-            ConnectorEnum::Paypal => Box::new(Paypal::new()),
-            ConnectorEnum::Jpmorgan => Box::new(Jpmorgan::new()),
-            ConnectorEnum::Airwallex => Box::new(Airwallex::new()),
+            ConnectorEnum::Xendit => Box::new(Xendit::new()),
         }
     }
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
+}
+
+pub struct ResponseRouterData<Response, RouterData> {
+    pub response: Response,
+    pub router_data: RouterData,
+    pub http_code: u16,
 }
 
 pub struct ResponseRouterData<Response, RouterData> {

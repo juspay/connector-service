@@ -42,9 +42,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub checkout: ConnectorParams,
-    pub paypal: ConnectorParams,
-    pub jpmorgan: ConnectorParams,
-    pub airwallex: ConnectorParams,
+    pub xendit: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
