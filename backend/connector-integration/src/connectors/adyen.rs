@@ -9,8 +9,7 @@ use hyperswitch_common_utils::{
 };
 
 use crate::{
-    utils::convert_setup_mandate_router_data_to_authorize_router_data, with_error_response_body,
-    with_response_body,
+    with_error_response_body, with_response_body,
 };
 
 use hyperswitch_domain_models::{
@@ -719,11 +718,9 @@ impl
             PaymentsResponseData,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let authorize_router_data =
-            &convert_setup_mandate_router_data_to_authorize_router_data(req);
         let connector_router_data = adyen::AdyenRouterData::try_from((
-            authorize_router_data.request.minor_amount,
-            authorize_router_data,
+            req.request.minor_amount.unwrap(),
+            req,
         ))?;
         let connector_req = adyen::AdyenPaymentRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))

@@ -1715,6 +1715,8 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
+            statement_descriptor: None,
+            merchant_order_reference_id: None,
         })
     }
 }
