@@ -12,6 +12,8 @@ use crate::{
     with_error_response_body, with_response_body,
 };
 
+use hyperswitch_common_utils::types::MinorUnit;
+
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -697,7 +699,7 @@ impl
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let connector_router_data = adyen::AdyenRouterData1::try_from((
-            req.request.minor_amount.unwrap(),
+            req.request.minor_amount.unwrap_or_else(|| MinorUnit::new(0)),
             req,
         ))?;
         let connector_req = adyen::AdyenPaymentRequest::try_from(&connector_router_data)?;

@@ -1907,7 +1907,7 @@ fn get_amount_data_for_setup_mandate(
 ) -> Amount {
     Amount {
         currency: item.router_data.request.currency,
-        value: MinorUnit::new(item.router_data.request.amount.to_owned().unwrap()),
+        value: MinorUnit::new(item.router_data.request.amount.unwrap_or(0)),
     }
 }
 
