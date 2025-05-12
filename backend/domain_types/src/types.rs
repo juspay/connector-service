@@ -2,7 +2,7 @@ use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupManda
 use crate::connector_types::{
     MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, SetupMandateRequestData,
+    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
@@ -19,7 +19,6 @@ use hyperswitch_domain_models::mandates::MandateData;
 use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
 };
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
