@@ -2,8 +2,8 @@ use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupManda
 use crate::connector_types::{
     MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
-    WebhookDetailsResponse,
+    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+    SetupMandateRequestData, WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};

@@ -8,7 +8,7 @@ use domain_types::{
         PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        RequestDetails, ResponseId, SetupMandateRequestData, SetupMandateV2, ValidationTrait, 
+        RequestDetails, ResponseId, SetupMandateRequestData, SetupMandateV2, ValidationTrait,
         WebhookDetailsResponse,
     },
 };

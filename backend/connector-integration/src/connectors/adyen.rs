@@ -8,9 +8,7 @@ use hyperswitch_common_utils::{
     request::RequestContent,
 };
 
-use crate::{
-    with_error_response_body, with_response_body,
-};
+use crate::{with_error_response_body, with_response_body};
 
 use hyperswitch_common_utils::types::MinorUnit;
 
@@ -41,7 +39,7 @@ use domain_types::{
         PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundSyncV2, RefundV2, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, ResponseId, SetupMandateRequestData, SetupMandateV2, 
+        RefundsResponseData, RequestDetails, ResponseId, SetupMandateRequestData, SetupMandateV2,
         ValidationTrait, WebhookDetailsResponse,
     },
 };
@@ -699,7 +697,9 @@ impl
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let connector_router_data = adyen::AdyenRouterData1::try_from((
-            req.request.minor_amount.unwrap_or_else(|| MinorUnit::new(0)),
+            req.request
+                .minor_amount
+                .unwrap_or_else(|| MinorUnit::new(0)),
             req,
         ))?;
         let connector_req = adyen::AdyenPaymentRequest::try_from(&connector_router_data)?;

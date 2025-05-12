@@ -1,8 +1,9 @@
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
-        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
 };
 use error_stack::ResultExt;
@@ -1759,7 +1760,12 @@ impl<F, Req>
 impl
     TryFrom<(
         &AdyenRouterData1<
-            &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+            &RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
         >,
         &Card,
     )> for AdyenPaymentRequest
@@ -1852,14 +1858,24 @@ impl
 impl
     TryFrom<
         &AdyenRouterData1<
-            &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+            &RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
         >,
     > for AdyenPaymentRequest
 {
     type Error = Error;
     fn try_from(
         item: &AdyenRouterData1<
-            &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+            &RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         match item
@@ -1911,8 +1927,10 @@ fn get_amount_data_for_setup_mandate(
     }
 }
 
-impl From<&RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>>
-    for AdyenShopperInteraction
+impl
+    From<
+        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    > for AdyenShopperInteraction
 {
     fn from(
         item: &RouterDataV2<
@@ -1930,7 +1948,12 @@ impl From<&RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, 
 }
 
 fn get_recurring_processing_model_for_setup_mandate(
-    item: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
 ) -> Result<RecurringDetails, Error> {
     let customer_id = item
         .request
@@ -1970,7 +1993,12 @@ fn get_recurring_processing_model_for_setup_mandate(
 }
 
 fn get_additional_data_for_setup_mandate(
-    item: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
 ) -> Option<AdditionalData> {
     let (authorisation_type, manual_capture) = match item.request.capture_method {
         Some(hyperswitch_common_enums::enums::CaptureMethod::Manual)
@@ -2014,7 +2042,12 @@ fn get_additional_data_for_setup_mandate(
 }
 
 fn is_mandate_payment_for_setup_mandate(
-    item: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
 ) -> bool {
     (item.request.setup_future_usage
         == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
