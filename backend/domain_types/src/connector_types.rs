@@ -1,10 +1,13 @@
-use crate::connector_flow::{self, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
+use crate::connector_flow::{
+    self, Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void,
+};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
 use error_stack::ResultExt;
 use hyperswitch_api_models::enums::Currency;
 
+use hyperswitch_common_enums::DisputeStatus;
 use hyperswitch_common_utils::{errors, types::MinorUnit};
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use hyperswitch_domain_models::router_request_types::SyncRequestType;
@@ -53,6 +56,7 @@ pub trait ConnectorServiceTrait:
     + RefundV2
     + PaymentCapture
     + SetupMandateV2
+    + AcceptDispute
     + RefundSyncV2
 {
 }
@@ -107,6 +111,11 @@ pub trait PaymentCapture:
 
 pub trait SetupMandateV2:
     ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+}
+
+pub trait AcceptDispute:
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
 {
 }
 
@@ -506,4 +515,21 @@ pub struct SetupMandateRequestData {
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AcceptDisputeData {}
+
+#[derive(Debug, Clone)]
+pub struct DisputeFlowData {
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub connectors: Connectors,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisputeResponseData {
+    pub connector_dispute_id: String,
+    pub dispute_status: DisputeStatus,
+    pub connector_dispute_status: Option<String>,
 }

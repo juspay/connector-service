@@ -1,7 +1,8 @@
-use crate::connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
+use crate::connector_flow::{Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
 use crate::connector_types::{
-    MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-    PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+    AcceptDisputeData, DisputeFlowData, DisputeResponseData, MultipleCaptureRequestData,
+    PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
     RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
     SetupMandateRequestData, WebhookDetailsResponse,
 };
@@ -9,9 +10,9 @@ use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    MandateReference, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
-    PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
-    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse,
+    AcceptDisputeResponse, MandateReference, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
+    PaymentsCaptureResponse, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
+    RefundsResponse, RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse,
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
@@ -33,6 +34,7 @@ pub struct Connectors {
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
+    pub dispute_base_url: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -1267,6 +1269,70 @@ impl ForeignTryFrom<(grpc_api_types::payments::RefundsRequest, Connectors)> for 
     }
 }
 
+impl ForeignFrom<hyperswitch_common_enums::DisputeStatus>
+    for grpc_api_types::payments::DisputeStatus
+{
+    fn foreign_from(status: hyperswitch_common_enums::DisputeStatus) -> Self {
+        match status {
+            hyperswitch_common_enums::DisputeStatus::DisputeOpened => Self::DisputeOpened,
+            hyperswitch_common_enums::DisputeStatus::DisputeAccepted => Self::DisputeAccepted,
+            hyperswitch_common_enums::DisputeStatus::DisputeCancelled => Self::DisputeCancelled,
+            hyperswitch_common_enums::DisputeStatus::DisputeChallenged => Self::DisputeChallenged,
+            hyperswitch_common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
+            hyperswitch_common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
+            hyperswitch_common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
+        }
+    }
+}
+
+pub fn generate_accept_dispute_response(
+    router_data_v2: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+) -> Result<AcceptDisputeResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let dispute_response = router_data_v2.response;
+
+    match dispute_response {
+        Ok(response) => {
+            let grpc_status =
+                grpc_api_types::payments::DisputeStatus::foreign_from(response.dispute_status);
+
+            Ok(AcceptDisputeResponse {
+                dispute_status: grpc_status.into(),
+                connector_dispute_id: Some(response.connector_dispute_id),
+                connector_dispute_status: None,
+                error_message: None,
+                error_code: None,
+            })
+        }
+        Err(e) => {
+            let grpc_dispute_status = grpc_api_types::payments::DisputeStatus::default();
+
+            Ok(AcceptDisputeResponse {
+                dispute_status: grpc_dispute_status as i32,
+                connector_dispute_id: e.connector_transaction_id,
+                connector_dispute_status: None,
+                error_message: Some(e.message),
+                error_code: Some(e.code),
+            })
+        }
+    }
+}
+
+impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)>
+    for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors): (grpc_api_types::payments::AcceptDisputeRequest, Connectors),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: None,
+            connectors,
+            connector_dispute_id: value.connector_dispute_id,
+        })
+    }
+}
+
 pub fn generate_refund_sync_response(
     router_data_v2: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
 ) -> Result<RefundsSyncResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -1385,6 +1451,16 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundsRequest> for RefundsData {
             merchant_account_id: None,
             capture_method: None,
         })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::AcceptDisputeRequest> for AcceptDisputeData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        _value: grpc_api_types::payments::AcceptDisputeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(AcceptDisputeData {})
     }
 }
 
