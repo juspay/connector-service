@@ -1,5 +1,5 @@
 use domain_types::{
-    connector_flow::{AcceptDispute, Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Accept, Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
         AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
@@ -2065,18 +2065,18 @@ pub struct AdyenDisputeAcceptRequest {
     pub merchant_account_code: String,
 }
 
-impl TryFrom<&RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>
+impl TryFrom<&RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>
     for AdyenDisputeAcceptRequest
 {
     type Error = Error;
 
     fn try_from(
-        item: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        item: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> Result<Self, Self::Error> {
         let auth = AdyenAuthType::try_from(&item.connector_auth_type)?;
 
         Ok(Self {
-            dispute_psp_reference: item.request.connector_dispute_id.clone(),
+            dispute_psp_reference: item.connector_dispute_id.clone(),
             merchant_account_code: auth.merchant_account.peek().to_string(),
         })
     }
@@ -2127,7 +2127,6 @@ impl<F, Req>
 
             Ok(Self {
                 resource_common_data: DisputeFlowData {
-                    status,
                     ..data.resource_common_data
                 },
                 response: Ok(dispute_response_data),

@@ -1,4 +1,4 @@
-use crate::connector_flow::{self, AcceptDispute, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
+use crate::connector_flow::{self, Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
@@ -54,7 +54,7 @@ pub trait ConnectorServiceTrait:
     + RefundV2
     + PaymentCapture
     + SetupMandateV2
-    + AcceptDisputeV2
+    + AcceptDispute
     + RefundSyncV2
 {
 }
@@ -112,8 +112,13 @@ pub trait SetupMandateV2:
 {
 }
 
-pub trait AcceptDisputeV2:
-    ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+pub trait SetupMandateV2:
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+}
+
+pub trait AcceptDispute:
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
 {
 }
 
@@ -516,16 +521,10 @@ pub struct SetupMandateRequestData {
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct AcceptDisputeData {
-    pub dispute_id: Option<String>,
-    pub connector_dispute_id: String,
-    pub merchant_account_id: String,
-    pub dispute_status: DisputeStatus,
-}
+pub struct AcceptDisputeData {}
 
 #[derive(Debug, Clone)]
 pub struct DisputeFlowData {
-    pub status: DisputeStatus,
     pub dispute_id: Option<String>,
     pub connector_dispute_id: String,
     pub connectors: Connectors,

@@ -1,4 +1,4 @@
-use crate::connector_flow::{AcceptDispute, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
+use crate::connector_flow::{Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
 use crate::connector_types::{
     AcceptDisputeData, DisputeFlowData, DisputeResponseData, MultipleCaptureRequestData,
     PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -34,6 +34,7 @@ pub struct Connectors {
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
+    pub dispute_base_url: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -1285,12 +1286,7 @@ impl ForeignFrom<hyperswitch_common_enums::DisputeStatus>
 }
 
 pub fn generate_accept_dispute_response(
-    router_data_v2: RouterDataV2<
-        AcceptDispute,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    >,
+    router_data_v2: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
 ) -> Result<AcceptDisputeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let dispute_response = router_data_v2.response;
 
@@ -1300,7 +1296,7 @@ pub fn generate_accept_dispute_response(
                 grpc_api_types::payments::DisputeStatus::foreign_from(response.dispute_status);
 
             Ok(AcceptDisputeResponse {
-                dispute_status: grpc_status as i32,
+                dispute_status: grpc_status.into(),
                 connector_dispute_id: Some(response.connector_dispute_id),
                 connector_dispute_status: None,
                 error_message: None,
@@ -1308,13 +1304,10 @@ pub fn generate_accept_dispute_response(
             })
         }
         Err(e) => {
-            let grpc_attempt_status = e
-                .attempt_status
-                .map(grpc_api_types::payments::AttemptStatus::foreign_from)
-                .unwrap_or_default();
+            let grpc_dispute_status = grpc_api_types::payments::DisputeStatus::default();
 
             Ok(AcceptDisputeResponse {
-                dispute_status: grpc_attempt_status as i32,
+                dispute_status: grpc_dispute_status as i32,
                 connector_dispute_id: e.connector_transaction_id,
                 connector_dispute_status: None,
                 error_message: Some(e.message),
@@ -1333,7 +1326,6 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
         (value, connectors): (grpc_api_types::payments::AcceptDisputeRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
-            status: hyperswitch_common_enums::DisputeStatus::DisputeAccepted,
             dispute_id: None,
             connectors,
             connector_dispute_id: value.connector_dispute_id,
@@ -1466,14 +1458,9 @@ impl ForeignTryFrom<grpc_api_types::payments::AcceptDisputeRequest> for AcceptDi
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::AcceptDisputeRequest,
+        _value: grpc_api_types::payments::AcceptDisputeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(AcceptDisputeData {
-            dispute_id: value.dispute_id,
-            connector_dispute_id: value.connector_dispute_id,
-            merchant_account_id: value.merchant_account_id,
-            dispute_status: hyperswitch_common_enums::DisputeStatus::DisputeAccepted,
-        })
+        Ok(AcceptDisputeData {})
     }
 }
 

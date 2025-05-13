@@ -5,7 +5,7 @@ use crate::{
 use connector_integration::types::ConnectorData;
 use domain_types::types::generate_payment_void_response;
 use domain_types::{
-    connector_flow::{AcceptDispute, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
         AcceptDisputeData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
@@ -770,20 +770,16 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
-        info!("$$$ DISPUTE_FLOW: initiated");
+        info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
-        let connector =
-            domain_types::connector_types::ConnectorEnum::foreign_try_from(payload.connector)
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid connector: {}", e))
-                })?;
+        let connector = connector_from_metadata(&metadata)?;
 
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
-            AcceptDispute,
+            Accept,
             DisputeFlowData,
             AcceptDisputeData,
             DisputeResponseData,
@@ -801,7 +797,7 @@ impl PaymentService for Payments {
         let connector_auth_details = auth_from_metadata(&metadata)?;
 
         let router_data: RouterDataV2<
-            AcceptDispute,
+            Accept,
             DisputeFlowData,
             AcceptDisputeData,
             DisputeResponseData,

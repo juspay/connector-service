@@ -32,15 +32,15 @@ use hyperswitch_masking::{Mask, Maskable};
 
 use super::macros;
 use domain_types::{
-    connector_flow::{AcceptDispute, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
-        AcceptDisputeData, AcceptDisputeV2, ConnectorServiceTrait, ConnectorWebhookSecrets,
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
         DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
         PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId, SetupMandateRequestData, SetupMandateV2,
-       
+        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
+        ResponseId, SetupMandateRequestData, SetupMandateV2,
         ValidationTrait, WebhookDetailsResponse,
     },
 };
@@ -63,6 +63,7 @@ impl RefundV2 for Adyen {}
 impl PaymentCapture for Adyen {}
 impl SetupMandateV2 for Adyen {}
 impl AcceptDisputeV2 for Adyen {}
+impl AcceptDispute for Adyen {}
 
 macros::create_all_prerequisites!(
     connector_name: Adyen,
@@ -641,136 +642,317 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
 }
 
 impl
-    ConnectorIntegrationV2<
+    TryFrom<(
+        &AdyenRouterData1<
+            &RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+        &Card,
+    )> for AdyenPaymentRequest
+{
+    type Error = Error;
+    fn try_from(
+        value: (
+            &AdyenRouterData1<
+                &RouterDataV2<
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData,
+                    PaymentsResponseData,
+                >,
+            >,
+            &Card,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (item, card_data) = value;
+        let amount = get_amount_data_for_setup_mandate(item);
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let shopper_interaction = AdyenShopperInteraction::from(item.router_data);
+        let shopper_reference = build_shopper_reference(
+            &item.router_data.request.customer_id.clone(),
+            item.router_data.resource_common_data.merchant_id.clone(),
+        );
+        let (recurring_processing_model, store_payment_method, _) =
+            get_recurring_processing_model_for_setup_mandate(item.router_data)?;
+
+        let return_url = item
+            .router_data
+            .request
+            .router_return_url
+            .clone()
+            .ok_or_else(Box::new(move || {
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "return_url",
+                }
+            }))?;
+
+        let billing_address = get_address_info(
+            item.router_data
+                .resource_common_data
+                .address
+                .get_payment_billing(),
+        )
+        .and_then(Result::ok);
+
+        let card_holder_name = item.router_data.request.customer_name.clone();
+
+        let additional_data = get_additional_data_for_setup_mandate(item.router_data);
+
+        let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
+            AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
+        ));
+
+        Ok(AdyenPaymentRequest {
+            amount,
+            merchant_account: auth_type.merchant_account,
+            payment_method,
+            reference: item.router_data.connector_request_reference_id.clone(),
+            return_url,
+            shopper_interaction,
+            recurring_processing_model,
+            browser_info: None,
+            additional_data,
+            mpi_data: None,
+            telephone_number: None,
+            shopper_name: None,
+            shopper_email: None,
+            shopper_locale: None,
+            social_security_number: None,
+            billing_address,
+            delivery_address: None,
+            country_code: None,
+            line_items: None,
+            shopper_reference,
+            store_payment_method,
+            channel: None,
+            shopper_statement: item.router_data.request.statement_descriptor.clone(),
+            shopper_ip: None,
+            merchant_order_reference: item.router_data.request.merchant_order_reference_id.clone(),
+            store: None,
+            splits: None,
+            device_fingerprint: None,
+        })
+    }
+}
+
+impl
+    TryFrom<
+        &AdyenRouterData1<
+            &RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    > for AdyenPaymentRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: &AdyenRouterData1<
+            &RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        match item
+            .router_data
+            .request
+            .mandate_id
+            .to_owned()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
+        {
+            Some(_mandate_ref) => Err(
+                hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+                    "payment_method".into(),
+                ),
+            )?,
+            None => match item.router_data.request.payment_method_data {
+                PaymentMethodData::Card(ref card) => AdyenPaymentRequest::try_from((item, card)),
+                PaymentMethodData::Wallet(_)
+                | PaymentMethodData::PayLater(_)
+                | PaymentMethodData::BankRedirect(_)
+                | PaymentMethodData::BankDebit(_)
+                | PaymentMethodData::BankTransfer(_)
+                | PaymentMethodData::CardRedirect(_)
+                | PaymentMethodData::Voucher(_)
+                | PaymentMethodData::GiftCard(_)
+                | PaymentMethodData::Crypto(_)
+                | PaymentMethodData::MandatePayment
+                | PaymentMethodData::Reward
+                | PaymentMethodData::RealTimePayment(_)
+                | PaymentMethodData::Upi(_)
+                | PaymentMethodData::OpenBanking(_)
+                | PaymentMethodData::CardToken(_) => Err(
+                    hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+                        "payment method".into(),
+                    ),
+                )?,
+            },
+        }
+    }
+}
+
+fn get_amount_data_for_setup_mandate(
+    item: &AdyenRouterData1<
+        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    >,
+) -> Amount {
+    Amount {
+        currency: item.router_data.request.currency,
+        value: MinorUnit::new(item.router_data.request.amount.unwrap_or(0)),
+    }
+}
+
+impl
+    From<
+        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    > for AdyenShopperInteraction
+{
+    fn from(
+        item: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> Self {
+        match item.request.off_session {
+            Some(true) => Self::ContinuedAuthentication,
+            _ => Self::Ecommerce,
+        }
+    }
+}
+
+fn get_recurring_processing_model_for_setup_mandate(
+    item: &RouterDataV2<
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData,
         PaymentsResponseData,
-    > for Adyen
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-    where
-        Self: ConnectorIntegrationV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        >,
-    {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
-        Ok(header)
-    }
+    >,
+) -> Result<RecurringDetails, Error> {
+    let customer_id = item
+        .request
+        .customer_id
+        .clone()
+        .ok_or_else(Box::new(move || {
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "customer_id",
+            }
+        }))?;
 
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}/payments",
-            req.resource_common_data.connectors.adyen.base_url, ADYEN_API_VERSION
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data = adyen::AdyenRouterData1::try_from((
-            req.request
-                .minor_amount
-                .unwrap_or_else(|| MinorUnit::new(0)),
-            req,
-        ))?;
-        let connector_req = adyen::AdyenPaymentRequest::try_from(&connector_router_data)?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: adyen::AdyenPaymentResponse = res
-            .response
-            .parse_struct("AdyenPaymentResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_response_body!(event_builder, response);
-
-        RouterDataV2::foreign_try_from((
-            response,
-            data.clone(),
-            res.status_code,
-            data.request.capture_method,
-            false,
-            data.request.payment_method_type,
-        ))
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-
-    fn get_5xx_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
+    match (item.request.setup_future_usage, item.request.off_session) {
+        (Some(hyperswitch_common_enums::enums::FutureUsage::OffSession), _) => {
+            let shopper_reference = format!(
+                "{}_{}",
+                item.merchant_id.get_string_repr(),
+                customer_id.get_string_repr()
+            );
+            let store_payment_method = is_mandate_payment_for_setup_mandate(item);
+            Ok((
+                Some(AdyenRecurringModel::UnscheduledCardOnFile),
+                Some(store_payment_method),
+                Some(shopper_reference),
+            ))
+        }
+        (_, Some(true)) => Ok((
+            Some(AdyenRecurringModel::UnscheduledCardOnFile),
+            None,
+            Some(format!(
+                "{}_{}",
+                item.merchant_id.get_string_repr(),
+                customer_id.get_string_repr()
+            )),
+        )),
+        _ => Ok((None, None, None)),
     }
 }
 
-impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+fn get_additional_data_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> Option<AdditionalData> {
+    let (authorisation_type, manual_capture) = match item.request.capture_method {
+        Some(hyperswitch_common_enums::enums::CaptureMethod::Manual)
+        | Some(enums::CaptureMethod::ManualMultiple) => {
+            (Some(AuthType::PreAuth), Some("true".to_string()))
+        }
+        _ => (None, None),
+    };
+    let riskdata = item.request.metadata.clone().and_then(get_risk_data);
+
+    let execute_three_d = if matches!(
+        item.resource_common_data.auth_type,
+        hyperswitch_common_enums::enums::AuthenticationType::ThreeDs
+    ) {
+        Some("true".to_string())
+    } else {
+        None
+    };
+
+    if authorisation_type.is_none()
+        && manual_capture.is_none()
+        && execute_three_d.is_none()
+        && riskdata.is_none()
+    {
+        //without this if-condition when the above 3 values are None, additionalData will be serialized to JSON like this -> additionalData: {}
+        //returning None, ensures that additionalData key will not be present in the serialized JSON
+        None
+    } else {
+        Some(AdditionalData {
+            authorisation_type,
+            manual_capture,
+            execute_three_d,
+            network_tx_reference: None,
+            recurring_detail_reference: None,
+            recurring_shopper_reference: None,
+            recurring_processing_model: None,
+            riskdata,
+            ..AdditionalData::default()
+        })
+    }
+}
+
+fn is_mandate_payment_for_setup_mandate(
+    item: &RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    >,
+) -> bool {
+    (item.request.setup_future_usage
+        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+        || item
+            .request
+            .mandate_id
+            .as_ref()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+            .is_some()
+}
+
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Adyen
 {
     fn get_headers(
         &self,
-        req: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
     where
-        Self: ConnectorIntegrationV2<
-            AcceptDispute,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        >,
+        Self:
+            ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     {
         let mut headers = vec![(
             headers::CONTENT_TYPE.to_string(),
@@ -784,15 +966,29 @@ impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, D
 
     fn get_url(
         &self,
-        req: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let _connector_dispute_id = req.request.connector_dispute_id.clone();
-        Ok("https://ca-test.adyen.com/ca/services/DisputeService/v30/acceptDispute".to_string())
+        let dispute_base_url = req
+            .resource_common_data
+            .connectors
+            .adyen
+            .dispute_base_url
+            .clone()
+            .ok_or_else(|| {
+                report!(errors::ConnectorError::FailedToObtainIntegrationUrl).attach_printable(
+                    "Missing Adyen dispute_base_url while constructing acceptDispute URL",
+                )
+            })?;
+
+        Ok(format!(
+            "{}ca/services/DisputeService/v30/acceptDispute",
+            dispute_base_url
+        ))
     }
 
     fn get_request_body(
         &self,
-        req: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let adyen_req = adyen::AdyenDisputeAcceptRequest::try_from(req)?;
 
@@ -801,11 +997,11 @@ impl ConnectorIntegrationV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, D
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         errors::ConnectorError,
     > {
         let response: adyen::AdyenDisputeAcceptResponse = res
