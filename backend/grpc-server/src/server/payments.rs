@@ -5,12 +5,14 @@ use crate::{
 use connector_integration::types::ConnectorData;
 use domain_types::types::generate_payment_void_response;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{AcceptDispute, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        AcceptDisputeData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
+    types::generate_accept_dispute_response,
 };
 use domain_types::{
     types::{
@@ -21,10 +23,11 @@ use domain_types::{
 };
 use external_services;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, IncomingWebhookRequest, IncomingWebhookResponse,
-    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
-    PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
-    PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
+    payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
+    IncomingWebhookRequest, IncomingWebhookResponse, PaymentsAuthorizeRequest,
+    PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsCaptureResponse,
+    PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
+    RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
     SetupMandateRequest, SetupMandateResponse,
 };
 use hyperswitch_domain_models::{
@@ -762,6 +765,66 @@ impl PaymentService for Payments {
             .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
 
         Ok(tonic::Response::new(setup_mandate_response))
+    }
+    async fn accept_dispute(
+        &self,
+        request: tonic::Request<AcceptDisputeRequest>,
+    ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
+        info!("$$$ DISPUTE_FLOW: initiated");
+        let metadata = request.metadata().clone();
+        let payload = request.into_inner();
+        let connector =
+            domain_types::connector_types::ConnectorEnum::foreign_try_from(payload.connector)
+                .map_err(|e| {
+                    tonic::Status::invalid_argument(format!("Invalid connector: {}", e))
+                })?;
+
+        let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            AcceptDispute,
+            DisputeFlowData,
+            AcceptDisputeData,
+            DisputeResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
+            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+
+        let dispute_flow_data =
+            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+                .map_err(|e| {
+                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
+                })?;
+
+        let connector_auth_details = auth_from_metadata(&metadata)?;
+
+        let router_data: RouterDataV2<
+            AcceptDispute,
+            DisputeFlowData,
+            AcceptDisputeData,
+            DisputeResponseData,
+        > = RouterDataV2 {
+            flow: std::marker::PhantomData,
+            resource_common_data: dispute_flow_data,
+            connector_auth_type: connector_auth_details,
+            request: dispute_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            router_data,
+        )
+        .await
+        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+
+        let dispute_response = generate_accept_dispute_response(response)
+            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+
+        Ok(tonic::Response::new(dispute_response))
     }
 }
 

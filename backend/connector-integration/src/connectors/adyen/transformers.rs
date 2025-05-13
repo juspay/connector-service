@@ -1,7 +1,7 @@
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{AcceptDispute, Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
-        EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
         RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
@@ -23,7 +23,7 @@ use hyperswitch_interfaces::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors,
 };
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
@@ -2057,4 +2057,103 @@ fn is_mandate_payment_for_setup_mandate(
             .as_ref()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
             .is_some()
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeAcceptRequest {
+    pub dispute_psp_reference: String,
+    pub merchant_account_code: String,
+}
+
+impl TryFrom<&RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>
+    for AdyenDisputeAcceptRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: &RouterDataV2<AcceptDispute, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.connector_auth_type)?;
+
+        Ok(Self {
+            dispute_psp_reference: item.request.connector_dispute_id.clone(),
+            merchant_account_code: auth.merchant_account.peek().to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeAcceptResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DisputeServiceResult {
+    pub success: bool,
+    pub error_message: Option<String>,
+}
+
+impl<F, Req>
+    ForeignTryFrom<(
+        AdyenDisputeAcceptResponse,
+        RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
+        u16,
+    )> for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn foreign_try_from(
+        (response, data, http_code): (
+            AdyenDisputeAcceptResponse,
+            RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeAccepted;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    status,
+                    ..data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..data
+            })
+        }
+    }
 }
