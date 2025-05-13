@@ -10,7 +10,7 @@ use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    MandateReference, AcceptDisputeResponse, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
+    AcceptDisputeResponse, MandateReference, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
     PaymentsCaptureResponse, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
     RefundsResponse, RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse,
 };

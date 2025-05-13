@@ -1,4 +1,6 @@
-use crate::connector_flow::{self, Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
+use crate::connector_flow::{
+    self, Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void,
+};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
@@ -104,11 +106,6 @@ pub trait RefundSyncV2:
 
 pub trait PaymentCapture:
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-{
-}
-
-pub trait SetupMandateV2:
-    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
 {
 }
 

@@ -23,7 +23,4 @@ pub struct Capture;
 pub struct SetupMandate;
 
 #[derive(Debug, Clone)]
-pub struct SetupMandate;
-
-#[derive(Debug, Clone)]
 pub struct Accept;

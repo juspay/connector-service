@@ -5,7 +5,9 @@ use crate::{
 use connector_integration::types::ConnectorData;
 use domain_types::types::generate_payment_void_response;
 use domain_types::{
-    connector_flow::{Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void,
+    },
     connector_types::{
         AcceptDisputeData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
@@ -27,8 +29,8 @@ use grpc_api_types::payments::{
     IncomingWebhookRequest, IncomingWebhookResponse, PaymentsAuthorizeRequest,
     PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsCaptureResponse,
     PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
-    RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
-    SetupMandateRequest, SetupMandateResponse,
+    RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse, SetupMandateRequest,
+    SetupMandateResponse,
 };
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},

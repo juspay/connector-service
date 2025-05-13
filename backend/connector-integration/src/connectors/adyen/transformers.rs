@@ -1,9 +1,10 @@
 use domain_types::{
     connector_flow::{Accept, Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
-        AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId, SetupMandateRequestData,
+        AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
+        SetupMandateRequestData,
     },
 };
 use error_stack::ResultExt;
