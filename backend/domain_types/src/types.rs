@@ -1,10 +1,12 @@
-use crate::connector_flow::{Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void};
+use crate::connector_flow::{
+    Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void,
+};
 use crate::connector_types::{
     AcceptDisputeData, DisputeFlowData, DisputeResponseData, MultipleCaptureRequestData,
     PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
     PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
     RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-    SetupMandateRequestData, WebhookDetailsResponse,
+    SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -13,6 +15,7 @@ use grpc_api_types::payments::{
     AcceptDisputeResponse, MandateReference, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
     PaymentsCaptureResponse, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
     RefundsResponse, RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse,
+    SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
@@ -1333,6 +1336,62 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
     }
 }
 
+pub fn generate_submit_evidence_response(
+    router_data_v2: RouterDataV2<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    >,
+) -> Result<SubmitEvidenceResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let dispute_response = router_data_v2.response;
+
+    match dispute_response {
+        Ok(response) => {
+            let grpc_status =
+                grpc_api_types::payments::DisputeStatus::foreign_from(response.dispute_status);
+
+            Ok(SubmitEvidenceResponse {
+                dispute_status: grpc_status as i32,
+                connector_dispute_id: Some(response.connector_dispute_id),
+                connector_dispute_status: None,
+                error_message: None,
+                error_code: None,
+            })
+        }
+        Err(e) => {
+            let grpc_attempt_status = e
+                .attempt_status
+                .map(grpc_api_types::payments::AttemptStatus::foreign_from)
+                .unwrap_or_default();
+
+            Ok(SubmitEvidenceResponse {
+                dispute_status: grpc_attempt_status as i32,
+                connector_dispute_id: e.connector_transaction_id,
+                connector_dispute_status: None,
+                error_message: Some(e.message),
+                error_code: Some(e.code),
+            })
+        }
+    }
+}
+
+impl ForeignTryFrom<(grpc_api_types::payments::SubmitEvidenceRequest, Connectors)>
+    for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors): (grpc_api_types::payments::SubmitEvidenceRequest, Connectors),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: None,
+            connectors,
+            connector_dispute_id: value.connector_dispute_id,
+        })
+    }
+}
+
 pub fn generate_refund_sync_response(
     router_data_v2: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
 ) -> Result<RefundsSyncResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -1461,6 +1520,69 @@ impl ForeignTryFrom<grpc_api_types::payments::AcceptDisputeRequest> for AcceptDi
         _value: grpc_api_types::payments::AcceptDisputeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(AcceptDisputeData {})
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::SubmitEvidenceRequest> for SubmitEvidenceData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::SubmitEvidenceRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(SubmitEvidenceData {
+            dispute_id: value.dispute_id,
+            connector_dispute_id: value.connector_dispute_id,
+            access_activity_log: value.access_activity_log,
+            billing_address: value.billing_address,
+            cancellation_policy: value.cancellation_policy,
+            cancellation_policy_file_type: value.cancellation_policy_file_type,
+            cancellation_policy_provider_file_id: value.cancellation_policy_provider_file_id,
+            cancellation_policy_disclosure: value.cancellation_policy_disclosure,
+            cancellation_rebuttal: value.cancellation_rebuttal,
+            customer_communication: value.customer_communication,
+            customer_communication_file_type: value.customer_communication_file_type,
+            customer_communication_provider_file_id: value.customer_communication_provider_file_id,
+            customer_email_address: value.customer_email_address,
+            customer_name: value.customer_name,
+            customer_purchase_ip: value.customer_purchase_ip,
+            customer_signature: value.customer_signature,
+            customer_signature_file_type: value.customer_signature_file_type,
+            customer_signature_provider_file_id: value.customer_signature_provider_file_id,
+            product_description: value.product_description,
+            receipt: value.receipt,
+            receipt_file_type: value.receipt_file_type,
+            receipt_provider_file_id: value.receipt_provider_file_id,
+            refund_policy: value.refund_policy,
+            refund_policy_file_type: value.refund_policy_file_type,
+            refund_policy_provider_file_id: value.refund_policy_provider_file_id,
+            refund_policy_disclosure: value.refund_policy_disclosure,
+            refund_refusal_explanation: value.refund_refusal_explanation,
+            service_date: value.service_date,
+            service_documentation: value.service_documentation,
+            service_documentation_file_type: value.service_documentation_file_type,
+            service_documentation_provider_file_id: value.service_documentation_provider_file_id,
+            shipping_address: value.shipping_address,
+            shipping_carrier: value.shipping_carrier,
+            shipping_date: value.shipping_date,
+            shipping_documentation: value.shipping_documentation,
+            shipping_documentation_file_type: value.shipping_documentation_file_type,
+            shipping_documentation_provider_file_id: value.shipping_documentation_provider_file_id,
+            shipping_tracking_number: value.shipping_tracking_number,
+            invoice_showing_distinct_transactions: value.invoice_showing_distinct_transactions,
+            invoice_showing_distinct_transactions_file_type: value
+                .invoice_showing_distinct_transactions_file_type,
+            invoice_showing_distinct_transactions_provider_file_id: value
+                .invoice_showing_distinct_transactions_provider_file_id,
+            recurring_transaction_agreement: value.recurring_transaction_agreement,
+            recurring_transaction_agreement_file_type: value
+                .recurring_transaction_agreement_file_type,
+            recurring_transaction_agreement_provider_file_id: value
+                .recurring_transaction_agreement_provider_file_id,
+            uncategorized_file: value.uncategorized_file,
+            uncategorized_file_type: value.uncategorized_file_type,
+            uncategorized_file_provider_file_id: value.uncategorized_file_provider_file_id,
+            uncategorized_text: value.uncategorized_text,
+        })
     }
 }
 

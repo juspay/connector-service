@@ -33,7 +33,8 @@ use hyperswitch_masking::{Mask, Maskable};
 use super::macros;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void,
+        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
@@ -42,8 +43,8 @@ use domain_types::{
         PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
         RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
-        ResponseId, SetupMandateRequestData, SetupMandateV2, ValidationTrait,
-        WebhookDetailsResponse,
+        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
+        ValidationTrait, WebhookDetailsResponse,
     },
 };
 use transformers::{
@@ -65,6 +66,7 @@ impl RefundV2 for Adyen {}
 impl PaymentCapture for Adyen {}
 impl SetupMandateV2 for Adyen {}
 impl AcceptDispute for Adyen {}
+impl SubmitEvidenceV2 for Adyen {}
 
 macros::create_all_prerequisites!(
     connector_name: Adyen,
@@ -823,6 +825,115 @@ impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeR
         let response: adyen::AdyenDisputeAcceptResponse = res
             .response
             .parse_struct("AdyenDisputeAcceptResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_5xx_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Adyen
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+    where
+        Self: ConnectorIntegrationV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    {
+        let mut headers = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+
+        let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
+        headers.append(&mut auth_header);
+        Ok(headers)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let dispute_base_url = req
+            .resource_common_data
+            .connectors
+            .adyen
+            .dispute_base_url
+            .clone()
+            .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+
+        Ok(format!(
+            "{}ca/services/DisputeService/v30/supplyDefenseDocument",
+            dispute_base_url
+        ))
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let adyen_req = adyen::AdyenDisputeSubmitEvidenceRequest::try_from(req)?;
+        Ok(Some(RequestContent::Json(Box::new(adyen_req))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: adyen::AdyenSubmitEvidenceResponse = res
+            .response
+            .parse_struct("AdyenDisputeSubmitEvidenceResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
