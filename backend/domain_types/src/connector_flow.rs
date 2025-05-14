@@ -24,3 +24,6 @@ pub struct SetupMandate;
 
 #[derive(Debug, Clone)]
 pub struct Accept;
+
+#[derive(Debug, Clone)]
+pub struct SubmitEvidence;

@@ -1,10 +1,11 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use domain_types::{
-    connector_flow::{Accept, Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Accept, Authorize, Capture, Refund, SetupMandate, SubmitEvidence, Void},
     connector_types::{
         AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference,
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
 };
 use error_stack::ResultExt;
@@ -2119,6 +2120,203 @@ impl<F, Req>
 
         if success {
             let status = hyperswitch_common_enums::DisputeStatus::DisputeAccepted;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    ..data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..data
+            })
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeSubmitEvidenceRequest {
+    defense_documents: Vec<DefenseDocuments>,
+    merchant_account_code: Secret<String>,
+    dispute_psp_reference: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefenseDocuments {
+    content: Secret<String>,
+    content_type: Option<String>,
+    defense_document_type_code: String,
+}
+
+fn get_defence_documents(item: SubmitEvidenceData) -> Option<Vec<DefenseDocuments>> {
+    let mut defense_documents: Vec<DefenseDocuments> = Vec::new();
+    if let Some(shipping_documentation) = item.shipping_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(shipping_documentation).into(),
+            content_type: item.shipping_documentation_provider_file_id,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(receipt) = item.receipt {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(receipt).into(),
+            content_type: item.receipt_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(invoice_showing_distinct_transactions) = item.invoice_showing_distinct_transactions
+    {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(invoice_showing_distinct_transactions).into(),
+            content_type: item.invoice_showing_distinct_transactions_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_communication) = item.customer_communication {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_communication).into(),
+            content_type: item.customer_communication_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(refund_policy) = item.refund_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(refund_policy).into(),
+            content_type: item.refund_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(recurring_transaction_agreement) = item.recurring_transaction_agreement {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(recurring_transaction_agreement).into(),
+            content_type: item.recurring_transaction_agreement_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(uncategorized_file) = item.uncategorized_file {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(uncategorized_file).into(),
+            content_type: item.uncategorized_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(cancellation_policy) = item.cancellation_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(cancellation_policy).into(),
+            content_type: item.cancellation_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_signature) = item.customer_signature {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_signature).into(),
+            content_type: item.customer_signature_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(service_documentation) = item.service_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(service_documentation).into(),
+            content_type: item.service_documentation_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+
+    if defense_documents.is_empty() {
+        None
+    } else {
+        Some(defense_documents)
+    }
+}
+
+fn get_content(item: Vec<u8>) -> String {
+    STANDARD.encode(item)
+}
+
+impl
+    TryFrom<&RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>>
+    for AdyenDisputeSubmitEvidenceRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.connector_auth_type)?;
+
+        Ok(Self {
+            defense_documents: get_defence_documents(item.request.clone()).ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "Missing Defence Documents",
+                },
+            )?,
+            merchant_account_code: auth.merchant_account.peek().to_string().into(),
+            dispute_psp_reference: item.request.connector_dispute_id.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenSubmitEvidenceResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+impl<F, Req>
+    ForeignTryFrom<(
+        AdyenSubmitEvidenceResponse,
+        RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
+        u16,
+    )> for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn foreign_try_from(
+        (response, data, http_code): (
+            AdyenSubmitEvidenceResponse,
+            RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeChallenged;
 
             let dispute_response_data = DisputeResponseData {
                 dispute_status: status,

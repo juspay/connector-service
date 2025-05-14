@@ -6,15 +6,17 @@ use connector_integration::types::ConnectorData;
 use domain_types::types::generate_payment_void_response;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void,
+        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
-    types::generate_accept_dispute_response,
+    types::{generate_accept_dispute_response, generate_submit_evidence_response},
 };
 use domain_types::{
     types::{
@@ -30,7 +32,7 @@ use grpc_api_types::payments::{
     PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsCaptureResponse,
     PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
     RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse, SetupMandateRequest,
-    SetupMandateResponse,
+    SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
 };
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -768,6 +770,7 @@ impl PaymentService for Payments {
 
         Ok(tonic::Response::new(setup_mandate_response))
     }
+
     async fn accept_dispute(
         &self,
         request: tonic::Request<AcceptDisputeRequest>,
@@ -820,6 +823,62 @@ impl PaymentService for Payments {
         .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
 
         let dispute_response = generate_accept_dispute_response(response)
+            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+
+        Ok(tonic::Response::new(dispute_response))
+    }
+
+    async fn submit_evidence(
+        &self,
+        request: tonic::Request<SubmitEvidenceRequest>,
+    ) -> Result<tonic::Response<SubmitEvidenceResponse>, tonic::Status> {
+        info!("DISPUTE_FLOW: initiated");
+        let metadata = request.metadata().clone();
+        let payload = request.into_inner();
+        let connector = connector_from_metadata(&metadata)?;
+        let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
+            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+
+        let dispute_flow_data =
+            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+                .map_err(|e| {
+                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
+                })?;
+
+        let connector_auth_details = auth_from_metadata(&metadata)?;
+
+        let router_data: RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        > = RouterDataV2 {
+            flow: std::marker::PhantomData,
+            resource_common_data: dispute_flow_data,
+            connector_auth_type: connector_auth_details,
+            request: dispute_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            router_data,
+        )
+        .await
+        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+
+        let dispute_response = generate_submit_evidence_response(response)
             .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
 
         Ok(tonic::Response::new(dispute_response))

@@ -1,5 +1,5 @@
 use crate::connector_flow::{
-    self, Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void,
+    self, Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
@@ -63,6 +63,7 @@ pub trait ConnectorServiceTrait:
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    + SubmitEvidenceV2
 {
 }
 
@@ -116,6 +117,11 @@ pub trait SetupMandateV2:
 
 pub trait AcceptDispute:
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+{
+}
+
+pub trait SubmitEvidenceV2:
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
 {
 }
 
@@ -532,4 +538,67 @@ pub struct DisputeResponseData {
     pub connector_dispute_id: String,
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SubmitEvidenceData {
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub access_activity_log: Option<String>,
+    pub billing_address: Option<String>,
+
+    pub cancellation_policy: Option<Vec<u8>>,
+    pub cancellation_policy_file_type: Option<String>,
+    pub cancellation_policy_provider_file_id: Option<String>,
+    pub cancellation_policy_disclosure: Option<String>,
+    pub cancellation_rebuttal: Option<String>,
+
+    pub customer_communication: Option<Vec<u8>>,
+    pub customer_communication_file_type: Option<String>,
+    pub customer_communication_provider_file_id: Option<String>,
+    pub customer_email_address: Option<String>,
+    pub customer_name: Option<String>,
+    pub customer_purchase_ip: Option<String>,
+
+    pub customer_signature: Option<Vec<u8>>,
+    pub customer_signature_file_type: Option<String>,
+    pub customer_signature_provider_file_id: Option<String>,
+
+    pub product_description: Option<String>,
+
+    pub receipt: Option<Vec<u8>>,
+    pub receipt_file_type: Option<String>,
+    pub receipt_provider_file_id: Option<String>,
+
+    pub refund_policy: Option<Vec<u8>>,
+    pub refund_policy_file_type: Option<String>,
+    pub refund_policy_provider_file_id: Option<String>,
+    pub refund_policy_disclosure: Option<String>,
+    pub refund_refusal_explanation: Option<String>,
+
+    pub service_date: Option<String>,
+    pub service_documentation: Option<Vec<u8>>,
+    pub service_documentation_file_type: Option<String>,
+    pub service_documentation_provider_file_id: Option<String>,
+
+    pub shipping_address: Option<String>,
+    pub shipping_carrier: Option<String>,
+    pub shipping_date: Option<String>,
+    pub shipping_documentation: Option<Vec<u8>>,
+    pub shipping_documentation_file_type: Option<String>,
+    pub shipping_documentation_provider_file_id: Option<String>,
+    pub shipping_tracking_number: Option<String>,
+
+    pub invoice_showing_distinct_transactions: Option<Vec<u8>>,
+    pub invoice_showing_distinct_transactions_file_type: Option<String>,
+    pub invoice_showing_distinct_transactions_provider_file_id: Option<String>,
+
+    pub recurring_transaction_agreement: Option<Vec<u8>>,
+    pub recurring_transaction_agreement_file_type: Option<String>,
+    pub recurring_transaction_agreement_provider_file_id: Option<String>,
+
+    pub uncategorized_file: Option<Vec<u8>>,
+    pub uncategorized_file_type: Option<String>,
+    pub uncategorized_file_provider_file_id: Option<String>,
+    pub uncategorized_text: Option<String>,
 }
