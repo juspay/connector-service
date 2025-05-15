@@ -1,4 +1,4 @@
-use domain_types::errors::{ApiClientError, ApplicationErrorResponse, ParsingError};
+use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse};
 use hyperswitch_interfaces::errors::ConnectorError;
 use tonic::Status;
 
@@ -107,7 +107,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | ConnectorError::FailedAtConnector { .. }
             | ConnectorError::AmountConversionFailed
             | ConnectorError::GenericError { .. } => {
-                ApplicationErrorResponse::InternalServerError(domain_types::errors::ApiError {
+                ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,
                     error_message: self.to_string(),
@@ -128,7 +128,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | ConnectorError::MissingPaymentMethodType
             | ConnectorError::CurrencyNotSupported { .. }
             | ConnectorError::InvalidConnectorConfig { .. } => {
-                ApplicationErrorResponse::BadRequest(domain_types::errors::ApiError {
+                ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
                     error_identifier: 400,
                     error_message: self.to_string(),
@@ -141,7 +141,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | ConnectorError::MissingConnectorRefundID
             | ConnectorError::MissingConnectorRelatedTransactionID { .. }
             | ConnectorError::InSufficientBalanceInPaymentMethod => {
-                ApplicationErrorResponse::Unprocessable(domain_types::errors::ApiError {
+                ApplicationErrorResponse::Unprocessable(ApiError {
                     sub_code: "UNPROCESSABLE_ENTITY".to_string(),
                     error_identifier: 422,
                     error_message: self.to_string(),
@@ -153,7 +153,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | ConnectorError::FlowNotSupported { .. }
             | ConnectorError::CaptureMethodNotSupported
             | ConnectorError::WebhooksNotImplemented => {
-                ApplicationErrorResponse::NotImplemented(domain_types::errors::ApiError {
+                ApplicationErrorResponse::NotImplemented(ApiError {
                     sub_code: "NOT_IMPLEMENTED".to_string(),
                     error_identifier: 501,
                     error_message: self.to_string(),
@@ -169,7 +169,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | ConnectorError::WebhookReferenceIdNotFound
             | ConnectorError::WebhookEventTypeNotFound
             | ConnectorError::WebhookResourceObjectNotFound => {
-                ApplicationErrorResponse::BadRequest(domain_types::errors::ApiError {
+                ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_WEBHOOK_DATA".to_string(),
                     error_identifier: 400,
                     error_message: self.to_string(),
@@ -177,9 +177,52 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                 })
             }
             ConnectorError::RequestTimeoutReceived => {
-                ApplicationErrorResponse::InternalServerError(domain_types::errors::ApiError {
+                ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
                     error_identifier: 504,
+                    error_message: self.to_string(),
+                    error_object: None,
+                })
+            }
+        }
+    }
+}
+
+impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
+    fn switch(&self) -> ApplicationErrorResponse {
+        match self {
+            ApiClientError::HeaderMapConstructionFailed
+            | ApiClientError::InvalidProxyConfiguration
+            | ApiClientError::ClientConstructionFailed
+            | ApiClientError::CertificateDecodeFailed
+            | ApiClientError::BodySerializationFailed
+            | ApiClientError::UnexpectedState
+            | ApiClientError::UrlEncodingFailed
+            | ApiClientError::RequestNotSent(_)
+            | ApiClientError::ResponseDecodingFailed
+            | ApiClientError::InternalServerErrorReceived
+            | ApiClientError::BadGatewayReceived
+            | ApiClientError::ServiceUnavailableReceived
+            | ApiClientError::UnexpectedServerResponse => {
+                ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
+                    error_identifier: 500,
+                    error_message: self.to_string(),
+                    error_object: None,
+                })
+            }
+            ApiClientError::RequestTimeoutReceived | ApiClientError::GatewayTimeoutReceived => {
+                ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "REQUEST_TIMEOUT".to_string(),
+                    error_identifier: 504,
+                    error_message: self.to_string(),
+                    error_object: None,
+                })
+            }
+            ApiClientError::ConnectionClosedIncompleteMessage => {
+                ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "INTERNAL_SERVER_ERROR".to_string(),
+                    error_identifier: 500,
                     error_message: self.to_string(),
                     error_object: None,
                 })
