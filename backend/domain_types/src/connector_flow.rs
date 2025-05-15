@@ -18,3 +18,12 @@ pub struct Refund;
 
 #[derive(Debug, Clone)]
 pub struct Capture;
+
+#[derive(Debug, Clone)]
+pub struct SetupMandate;
+
+#[derive(Debug, Clone)]
+pub struct Accept;
+
+#[derive(Debug, Clone)]
+pub struct SubmitEvidence;

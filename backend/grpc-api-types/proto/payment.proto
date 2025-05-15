@@ -10,6 +10,9 @@ service PaymentService {
   rpc IncomingWebhook(IncomingWebhookRequest) returns (IncomingWebhookResponse);
   rpc Refund(RefundsRequest) returns (RefundsResponse);
   rpc PaymentCapture(PaymentsCaptureRequest) returns (PaymentsCaptureResponse);
+  rpc SetupMandate(SetupMandateRequest) returns (SetupMandateResponse);
+  rpc AcceptDispute(AcceptDisputeRequest) returns (AcceptDisputeResponse);
+  rpc SubmitEvidence (SubmitEvidenceRequest) returns (SubmitEvidenceResponse);
 }
 
 message PaymentsAuthorizeRequest {
@@ -111,6 +114,53 @@ message IncomingWebhookResponse {
   EventType event_type = 1;
   WebhookResponseContent content = 2;
   bool source_verified = 3;
+}
+
+message SetupMandateRequest {
+  Currency currency = 15;
+  PaymentMethod payment_method = 2;
+  PaymentMethodData payment_method_data = 14;
+  optional string connector_customer = 1;
+  PaymentAddress address = 3;
+  AuthenticationType auth_type = 4;
+  optional bytes connector_meta_data = 5;
+  optional AccessToken access_token = 6;
+  optional string session_token = 7;
+  optional PaymentMethodToken payment_method_token = 8;
+  string connector_request_reference_id = 9;
+  optional int64 order_tax_amount = 11;
+  optional string email = 12;
+  optional string customer_name = 13;
+  optional CaptureMethod capture_method = 16;
+  optional string return_url = 17;
+  optional string webhook_url = 18;
+  optional string complete_authorize_url = 19;
+  optional FutureUsage setup_future_usage = 20;
+  optional bool off_session = 21;
+  optional CustomerAcceptance customer_acceptance = 22;
+  optional BrowserInformation browser_info = 23;
+  optional string order_category = 24;
+  bool enrolled_for_3ds = 25;
+  optional PaymentExperience payment_experience = 26;
+  optional PaymentMethodType payment_method_type = 27;
+  bool request_incremental_authorization = 28;
+  optional AuthenticationData authentication_data = 29;
+  optional bool request_extended_authorization = 30;
+  int64 minor_amount = 31;
+  optional string merchant_order_reference_id = 32;
+  optional int64 shipping_cost = 33;
+}
+
+message SetupMandateResponse {
+  ResponseId resource_id = 1;
+  MandateReference mandate_reference = 4;
+  AttemptStatus status = 8;
+  optional RedirectForm redirection_data = 2;
+  optional string network_txn_id = 5;
+  optional string connector_response_reference_id = 6;
+  optional bool incremental_authorization_allowed = 7;
+  optional string error_code = 9;
+  optional string error_message = 10;
 }
 
 enum EventType {
@@ -1009,4 +1059,86 @@ message PaymentsCaptureResponse {
   AttemptStatus status = 8;
   optional string error_code = 3;
   optional string error_message = 4;
+}
+
+message AcceptDisputeRequest {
+  optional string dispute_id = 1;
+  string connector_dispute_id = 3;
+}
+
+message AcceptDisputeResponse {
+  optional string connector_dispute_id = 1;
+  DisputeStatus dispute_status = 2;
+  optional string connector_dispute_status = 3;
+  optional string error_code = 4;
+  optional string error_message = 5;
+}
+
+enum DisputeStatus {
+  DisputeOpened=0;
+    DisputeExpired=1;
+    DisputeAccepted=2;
+    DisputeCancelled=3;
+    DisputeChallenged=4;
+    DisputeWon=5;
+    DisputeLost=6;
+}
+
+message SubmitEvidenceRequest {
+  optional string dispute_id = 1;
+  string connector_dispute_id = 2;
+  optional string access_activity_log = 3;
+  optional string billing_address = 4;
+  optional bytes cancellation_policy = 5;
+  optional string cancellation_policy_file_type = 6;
+  optional string cancellation_policy_provider_file_id = 7;
+  optional string cancellation_policy_disclosure = 8;
+  optional string cancellation_rebuttal = 9;
+  optional bytes customer_communication = 10;
+  optional string customer_communication_file_type = 11;
+  optional string customer_communication_provider_file_id = 12;
+  optional string customer_email_address = 13;
+  optional string customer_name = 14;
+  optional string customer_purchase_ip = 15;
+  optional bytes customer_signature = 16;
+  optional string customer_signature_file_type = 17;
+  optional string customer_signature_provider_file_id = 18;
+  optional string product_description = 19;
+  optional bytes receipt = 20;
+  optional string receipt_file_type = 21;
+  optional string receipt_provider_file_id = 22;
+  optional bytes refund_policy = 23;
+  optional string refund_policy_file_type = 24;
+  optional string refund_policy_provider_file_id = 25;
+  optional string refund_policy_disclosure = 26;
+  optional string refund_refusal_explanation = 27;
+  optional string service_date = 28;
+  optional bytes service_documentation = 29;
+  optional string service_documentation_file_type = 30;
+  optional string service_documentation_provider_file_id = 31;
+  optional string shipping_address = 32;
+  optional string shipping_carrier = 33;
+  optional string shipping_date = 50;
+  optional bytes shipping_documentation = 51;
+  optional string shipping_documentation_file_type = 52;
+  optional string shipping_documentation_provider_file_id = 37;
+  optional string shipping_tracking_number = 38;
+  optional bytes invoice_showing_distinct_transactions = 39;
+  optional string invoice_showing_distinct_transactions_file_type = 40;
+  optional string invoice_showing_distinct_transactions_provider_file_id = 41;
+  optional bytes recurring_transaction_agreement = 42;
+  optional string recurring_transaction_agreement_file_type = 43;
+  optional string recurring_transaction_agreement_provider_file_id = 44;
+  optional  bytes uncategorized_file = 45;
+  optional  string uncategorized_file_type = 46;
+  optional  string uncategorized_file_provider_file_id = 47;
+  optional  string uncategorized_text = 48;
+}
+
+message SubmitEvidenceResponse {
+  optional string connector_dispute_id = 1;
+  DisputeStatus dispute_status = 2;
+  optional string connector_dispute_status = 3;
+  optional string error_code = 4;
+  optional string error_message = 5;
 }

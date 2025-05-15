@@ -84,7 +84,6 @@ where
         tracing::info!(request=?masked_request, "request of connector");
         masked_request
     });
-
     let result = match connector_request {
         Some(request) => {
             let url = request.url.clone();
@@ -102,6 +101,7 @@ where
                     );
                 });
             tracing::info!(?response, "response from connector");
+
             match response {
                 Ok(body) => {
                     tracing::Span::current().record("url", tracing::field::display(url));
@@ -189,6 +189,7 @@ pub async fn call_connector_api(
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
+
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
 
     let client = create_client(
@@ -214,7 +215,6 @@ pub async fn call_connector_api(
         }
         .add_headers(headers)
     };
-
     let send_request = async {
         request.send().await.map_err(|error| {
             let api_error = match error {
@@ -230,6 +230,7 @@ pub async fn call_connector_api(
     };
 
     let response = send_request.await;
+
     handle_response(response).await
 }
 

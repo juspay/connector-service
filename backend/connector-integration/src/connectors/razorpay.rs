@@ -1,14 +1,19 @@
 pub mod test;
 pub mod transformers;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, Void},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
     connector_types::{
-        ConnectorServiceTrait, ConnectorWebhookSecrets, EventType, IncomingWebhook,
-        PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        RequestDetails, ResponseId, ValidationTrait, WebhookDetailsResponse,
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
+        DisputeFlowData, DisputeResponseData, EventType, IncomingWebhook, PaymentAuthorizeV2,
+        PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData, RequestDetails,
+        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
+        ValidationTrait, WebhookDetailsResponse,
     },
 };
 use hyperswitch_common_utils::{
@@ -65,6 +70,9 @@ impl PaymentVoidV2 for Razorpay {}
 impl RefundSyncV2 for Razorpay {}
 impl RefundV2 for Razorpay {}
 impl PaymentCapture for Razorpay {}
+impl SetupMandateV2 for Razorpay {}
+impl AcceptDispute for Razorpay {}
+impl SubmitEvidenceV2 for Razorpay {}
 
 impl Razorpay {
     pub const fn new() -> &'static Self {
@@ -731,4 +739,25 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Razorpay
+{
+}
+
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Razorpay
+{
+}
+
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Razorpay
+{
 }

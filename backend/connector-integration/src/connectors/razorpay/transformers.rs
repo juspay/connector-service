@@ -721,6 +721,7 @@ impl<F, Req>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    mandate_reference: Box::new(None),
                 };
                 let error = None;
 
@@ -743,6 +744,7 @@ impl<F, Req>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    mandate_reference: Box::new(None),
                 };
                 let error = None;
 
@@ -1147,6 +1149,7 @@ impl<F, Req>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
+                mandate_reference: Box::new(None),
             }),
             resource_common_data: PaymentFlowData {
                 status,
