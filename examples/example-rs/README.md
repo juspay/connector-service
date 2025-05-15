@@ -21,7 +21,7 @@ example-rs/
 
 This project relies on:
 - `tokio` - Asynchronous runtime for Rust
-- `grpc-api-types` - Custom library containing the Payment Service gRPC definitions
+- `rust-grpc-client` - Custom library containing the Payment Service gRPC definitions
 
 ## Building the Application
 

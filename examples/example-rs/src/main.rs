@@ -1,4 +1,4 @@
-use grpc_api_types::payments::{self, payment_service_client::PaymentServiceClient,Address, PhoneDetails};
+use rust_grpc_client::payments::{self, payment_service_client::PaymentServiceClient,Address, PhoneDetails};
 use std::error::Error;
 
 #[tokio::main]
