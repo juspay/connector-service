@@ -14,16 +14,20 @@ pub enum ApiClientError {
     BodySerializationFailed,
     #[error("Unexpected state reached/Invariants conflicted")]
     UnexpectedState,
+
     #[error("URL encoding of request payload failed")]
     UrlEncodingFailed,
     #[error("Failed to send request to connector {0}")]
     RequestNotSent(String),
     #[error("Failed to decode response")]
     ResponseDecodingFailed,
+
     #[error("Server responded with Request Timeout")]
     RequestTimeoutReceived,
+
     #[error("connection closed before a message could complete")]
     ConnectionClosedIncompleteMessage,
+
     #[error("Server responded with Internal Server Error")]
     InternalServerErrorReceived,
     #[error("Server responded with Bad Gateway")]
@@ -66,6 +70,4 @@ pub enum ParsingError {
     StructParseFailure(&'static str),
     #[error("Failed to serialize to {0} format")]
     EncodeError(&'static str),
-    #[error("Unknown enum variant for: {0}")]
-    UnknownVariant(&'static str),
 }
