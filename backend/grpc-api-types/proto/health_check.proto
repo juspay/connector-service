@@ -2,6 +2,10 @@ syntax = "proto3";
 
 package grpc.health.v1;
 
+import "google/api/annotations.proto";
+
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+
 message HealthCheckRequest {
   string service = 1;
 }
@@ -11,11 +15,13 @@ message HealthCheckResponse {
     UNKNOWN = 0;
     SERVING = 1;
     NOT_SERVING = 2;
-    SERVICE_UNKNOWN = 3;  // Used only by the Watch method.
+    SERVICE_UNKNOWN = 3; // Used only by the Watch method.
   }
   ServingStatus status = 1;
 }
 
 service Health {
-  rpc Check(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc Check(HealthCheckRequest) returns (HealthCheckResponse) {
+    option (google.api.http) = {get: "/v1/health"};
+  }
 }

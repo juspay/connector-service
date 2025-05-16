@@ -1,0 +1,19 @@
+version: v2
+deps:
+  - buf.build/googleapis/googleapis
+modules:
+  - path: .
+    excludes:
+      - examples/example-hs-grpc/proto
+lint:
+  use:
+    - STANDARD
+  ignore_only:
+    ENUM_VALUE_PREFIX:
+      - proto/payment.proto
+  disallow_comment_ignores: true
+  enum_zero_value_suffix: _UNSPECIFIED
+  service_suffix: Service
+  rpc_allow_same_request_response: false
+  rpc_allow_google_protobuf_empty_requests: false
+  rpc_allow_google_protobuf_empty_responses: false
