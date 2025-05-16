@@ -1,6 +1,11 @@
+use serde_json::Value;
 use std::str::FromStr;
 
-use crate::consts;
+use crate::{
+    configs::{Config, ServiceType},
+    consts,
+    logger::config,
+};
 use domain_types::connector_types;
 use http::request::Request;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
@@ -78,6 +83,126 @@ pub fn auth_from_metadata(
             format!("Invalid auth type: {auth}"),
         )),
     }
+}
+
+pub fn config_from_metadata(
+    metadata: &metadata::MetadataMap,
+    mut config: Config,
+) -> Result<Config, tonic::Status> {
+    // Get the override JSON from metadata
+    let override_json = match metadata.get("x-config-override") {
+        Some(value) => {
+            let json_str = value.to_str().map_err(|e| {
+                tonic::Status::invalid_argument(format!("Invalid JSON in x-config-override: {}", e))
+            })?;
+
+            serde_json::from_str::<Value>(json_str).map_err(|e| {
+                tonic::Status::invalid_argument(format!(
+                    "Invalid JSON format in x-config-override: {}",
+                    e
+                ))
+            })?
+        }
+        None => return Ok(config), // If no override provided, return the original config
+    };
+
+    // Apply overrides based on the JSON structure
+    if let Some(connectors) = override_json.get("connectors").and_then(Value::as_object) {
+        for (connector_name, connector_config) in connectors {
+            match connector_name.as_str() {
+                "adyen" => {
+                    if let Some(settings) = connector_config.as_object() {
+                        if let Some(base_url) = settings.get("base_url").and_then(Value::as_str) {
+                            config.connectors.adyen.base_url = base_url.to_string();
+                        }
+                    }
+                }
+                "razorpay" => {
+                    if let Some(settings) = connector_config.as_object() {
+                        if let Some(base_url) = settings.get("base_url").and_then(Value::as_str) {
+                            config.connectors.razorpay.base_url = base_url.to_string();
+                        }
+                    }
+                }
+                // Add other connectors as needed
+                _ => {
+                    tracing::warn!("Unknown connector in config override: {}", connector_name);
+                }
+            }
+        }
+    }
+
+    // proxy
+    if let Some(proxy) = override_json.get("proxy").and_then(Value::as_object) {
+        if let Some(timeout) = proxy.get("idle_pool_connection_timeout") {
+            if let Some(timeout_val) = timeout.as_u64() {
+                config.proxy.idle_pool_connection_timeout = Some(timeout_val);
+            }
+        }
+        if let Some(bypass) = proxy.get("bypass_proxy_urls").and_then(Value::as_array) {
+            let urls = bypass
+                .iter()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect();
+            config.proxy.bypass_proxy_urls = urls;
+        }
+    }
+
+    // metrics
+    if let Some(metrics) = override_json.get("metrics") {
+        if let Some(host) = metrics.get("host").and_then(Value::as_str) {
+            config.metrics.host = host.to_string();
+        }
+        if let Some(port) = metrics.get("port").and_then(Value::as_u64) {
+            config.metrics.port = u16::try_from(port)
+                .map_err(|_| tonic::Status::internal("Port number out of range for u16"))?;
+        }
+    }
+
+    // server
+    if let Some(server) = override_json.get("server") {
+        if let Some(host) = server.get("host").and_then(Value::as_str) {
+            config.server.host = host.to_string();
+        }
+        if let Some(port) = server.get("port").and_then(Value::as_u64) {
+            config.server.port = u16::try_from(port)
+                .map_err(|_| tonic::Status::internal("Port number out of range for u16"))?;
+        }
+        if let Some(server_type) = server.get("type").and_then(Value::as_str) {
+            config.server.type_ = match server_type {
+                "http" => ServiceType::Http,
+                "https" => ServiceType::Grpc,
+                _ => {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "Invalid server type: {}",
+                        server_type
+                    )))
+                }
+            };
+        }
+    }
+
+    // log.console
+    if let Some(log) = override_json.get("log").and_then(|v| v.get("console")) {
+        if let Some(enabled) = log.get("enabled").and_then(Value::as_bool) {
+            config.log.console.enabled = enabled;
+        }
+        if let Some(format) = log.get("log_format").and_then(Value::as_str) {
+            config.log.console.log_format = match format {
+                "json" => config::LogFormat::Json,
+                "default" => config::LogFormat::Default,
+                _ => {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "Invalid log format: {}",
+                        format
+                    )))
+                }
+            };
+        }
+    }
+
+    Ok(config)
 }
 
 fn parse_metadata<'a>(

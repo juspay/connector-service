@@ -1,6 +1,6 @@
 use crate::{
     configs::Config,
-    utils::{auth_from_metadata, connector_from_metadata},
+    utils::{auth_from_metadata, config_from_metadata, connector_from_metadata},
 };
 use connector_integration::types::ConnectorData;
 use domain_types::types::generate_payment_void_response;
@@ -185,7 +185,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-
+        let config = config_from_metadata(request.metadata(), self.config.clone())?;
         let connector = connector_from_metadata(request.metadata())?;
         let connector_auth_details = auth_from_metadata(request.metadata())?;
         let payload = request.into_inner();
@@ -203,18 +203,16 @@ impl PaymentService for Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         // Create common request data
-        let mut payment_flow_data = match PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-        )) {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "Invalid request data: {}",
-                    e
-                )))
-            }
-        };
+        let mut payment_flow_data =
+            match PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone())) {
+                Ok(data) => data,
+                Err(e) => {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "Invalid request data: {}",
+                        e
+                    )))
+                }
+            };
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
@@ -256,7 +254,7 @@ impl PaymentService for Payments {
 
         // Execute connector processing
         let response = match external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
         )
@@ -291,7 +289,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsSyncRequest>,
     ) -> Result<tonic::Response<PaymentsSyncResponse>, tonic::Status> {
         info!("PAYMENT_SYNC_FLOW: initiated");
-
+        let config = config_from_metadata(request.metadata(), self.config.clone())?;
         let connector = connector_from_metadata(request.metadata())?;
         let connector_auth_details = auth_from_metadata(request.metadata())?;
         let payload = request.into_inner();
@@ -320,18 +318,16 @@ impl PaymentService for Payments {
         };
 
         // Create common request data
-        let payment_flow_data = match PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-        )) {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "Invalid flow data: {}",
-                    e
-                )))
-            }
-        };
+        let payment_flow_data =
+            match PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone())) {
+                Ok(data) => data,
+                Err(e) => {
+                    return Err(tonic::Status::invalid_argument(format!(
+                        "Invalid flow data: {}",
+                        e
+                    )))
+                }
+            };
 
         // Create router data
         let router_data = RouterDataV2 {
@@ -344,7 +340,7 @@ impl PaymentService for Payments {
 
         // Execute connector processing
         let response = match external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
         )
@@ -378,7 +374,7 @@ impl PaymentService for Payments {
         request: tonic::Request<RefundsSyncRequest>,
     ) -> Result<tonic::Response<RefundsSyncResponse>, tonic::Status> {
         info!("REFUND_SYNC_FLOW: initiated");
-
+        let config = config_from_metadata(request.metadata(), self.config.clone())?;
         let connector = connector_from_metadata(request.metadata())?;
         let connector_auth_details = auth_from_metadata(request.metadata())?;
         let payload = request.into_inner();
@@ -400,7 +396,7 @@ impl PaymentService for Payments {
 
         // Create common request data
         let payment_flow_data =
-            RefundFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            RefundFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| {
                     tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
                 })?;
@@ -416,7 +412,7 @@ impl PaymentService for Payments {
             };
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
         )
@@ -435,6 +431,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsVoidRequest>,
     ) -> Result<tonic::Response<PaymentsVoidResponse>, tonic::Status> {
         info!("PAYMENT_CANCEL_FLOW: initiated");
+        let config = config_from_metadata(request.metadata(), self.config.clone())?;
         let connector = connector_from_metadata(request.metadata())?;
         let connector_auth_details = auth_from_metadata(request.metadata())?;
         let payload = request.into_inner();
@@ -452,7 +449,7 @@ impl PaymentService for Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         let payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| {
                     tonic::Status::invalid_argument(format!("Invalid request data: {}", e))
                 })?;
@@ -471,7 +468,7 @@ impl PaymentService for Payments {
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
         )
@@ -591,7 +588,7 @@ impl PaymentService for Payments {
         request: tonic::Request<RefundsRequest>,
     ) -> Result<tonic::Response<RefundsResponse>, tonic::Status> {
         info!("REFUND_FLOW: initiated");
-
+        let config = config_from_metadata(request.metadata(), self.config.clone())?;
         let connector = connector_from_metadata(request.metadata())?;
         let connector_auth_details = auth_from_metadata(request.metadata())?;
         let payload = request.into_inner();
@@ -613,7 +610,7 @@ impl PaymentService for Payments {
 
         // Create common request data
         let refund_flow_data =
-            RefundFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            RefundFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| {
                     tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
                 })?;
@@ -629,7 +626,7 @@ impl PaymentService for Payments {
             };
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
         )
@@ -648,7 +645,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsCaptureRequest>,
     ) -> Result<tonic::Response<PaymentsCaptureResponse>, tonic::Status> {
         info!("PAYMENT_CAPTURE_FLOW: initiated");
-
+        let config = config_from_metadata(request.metadata(), self.config.clone())?;
         let connector = connector_from_metadata(request.metadata())?;
         let connector_auth_details = auth_from_metadata(request.metadata())?;
         let payload = request.into_inner();
@@ -671,7 +668,7 @@ impl PaymentService for Payments {
 
         // Create common request data
         let payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| {
                     tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
                 })?;
@@ -686,7 +683,7 @@ impl PaymentService for Payments {
         };
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
         )
