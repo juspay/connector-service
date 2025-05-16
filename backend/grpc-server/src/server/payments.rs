@@ -27,6 +27,7 @@ use domain_types::{
     },
     utils::ForeignTryFrom,
 };
+use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
@@ -43,7 +44,6 @@ use hyperswitch_domain_models::{
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
-use error_stack::ResultExt;
 
 pub struct Payments {
     pub config: Config,
@@ -469,26 +469,22 @@ impl PaymentService for Payments {
 
         // Get content for the webhook based on the event type
         let content = match event_type {
-            domain_types::connector_types::EventType::Payment => {
-                get_payments_webhook_content(
-                    connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
-                )
-                .await
-                .map_err(|e| e.into_grpc_status())?
-            }
-            domain_types::connector_types::EventType::Refund => {
-                get_refunds_webhook_content(
-                    connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
-                )
-                .await
-                .map_err(|e| e.into_grpc_status())?
-            }
+            domain_types::connector_types::EventType::Payment => get_payments_webhook_content(
+                connector_data,
+                request_details,
+                webhook_secrets,
+                Some(connector_auth_details),
+            )
+            .await
+            .map_err(|e| e.into_grpc_status())?,
+            domain_types::connector_types::EventType::Refund => get_refunds_webhook_content(
+                connector_data,
+                request_details,
+                webhook_secrets,
+                Some(connector_auth_details),
+            )
+            .await
+            .map_err(|e| e.into_grpc_status())?,
         };
 
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
@@ -812,21 +808,20 @@ async fn get_payments_webhook_content(
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
-    let webhook_details = connector_data.connector.process_payment_webhook(
-        request_details,
-        webhook_secrets,
-        connector_auth_details,
-    )
-    .switch()?;
+    let webhook_details = connector_data
+        .connector
+        .process_payment_webhook(request_details, webhook_secrets, connector_auth_details)
+        .switch()?;
 
     // Generate response
-    let response = PaymentsSyncResponse::foreign_try_from(webhook_details)
-        .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
+    let response = PaymentsSyncResponse::foreign_try_from(webhook_details).change_context(
+        ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
             error_identifier: 500,
             error_message: "Error while constructing response".to_string(),
             error_object: None,
-        }))?;
+        }),
+    )?;
 
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(
@@ -847,13 +842,14 @@ async fn get_refunds_webhook_content(
         .switch()?;
 
     // Generate response
-    let response = RefundsSyncResponse::foreign_try_from(webhook_details)
-        .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
+    let response = RefundsSyncResponse::foreign_try_from(webhook_details).change_context(
+        ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
             error_identifier: 500,
             error_message: "Error while constructing response".to_string(),
             error_object: None,
-        }))?;
+        }),
+    )?;
 
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(

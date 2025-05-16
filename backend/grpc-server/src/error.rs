@@ -58,6 +58,7 @@ pub trait IntoGrpcStatus {
 }
 
 pub trait ResultExtGrpc<T> {
+    #[allow(clippy::result_large_err)]
     fn into_grpc_status(self) -> Result<T, Status>;
 }
 
@@ -152,14 +153,12 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::NotSupported { .. }
             | Self::FlowNotSupported { .. }
             | Self::CaptureMethodNotSupported
-            | Self::WebhooksNotImplemented => {
-                ApplicationErrorResponse::NotImplemented(ApiError {
-                    sub_code: "NOT_IMPLEMENTED".to_string(),
-                    error_identifier: 501,
-                    error_message: self.to_string(),
-                    error_object: None,
-                })
-            }
+            | Self::WebhooksNotImplemented => ApplicationErrorResponse::NotImplemented(ApiError {
+                sub_code: "NOT_IMPLEMENTED".to_string(),
+                error_identifier: 501,
+                error_message: self.to_string(),
+                error_object: None,
+            }),
             Self::MissingApplePayTokenData
             | Self::WebhookBodyDecodingFailed
             | Self::WebhookSignatureNotFound
@@ -211,7 +210,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
                     error_object: None,
                 })
             }
-            Self::RequestTimeoutReceived | ApiClientError::GatewayTimeoutReceived => {
+            Self::RequestTimeoutReceived | Self::GatewayTimeoutReceived => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
                     error_identifier: 504,
