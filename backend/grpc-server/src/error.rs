@@ -90,23 +90,23 @@ pub enum ConfigurationError {
 impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
     fn switch(&self) -> ApplicationErrorResponse {
         match self {
-            ConnectorError::FailedToObtainIntegrationUrl
-            | ConnectorError::FailedToObtainPreferredConnector
-            | ConnectorError::FailedToObtainAuthType
-            | ConnectorError::FailedToObtainCertificate
-            | ConnectorError::FailedToObtainCertificateKey
-            | ConnectorError::RequestEncodingFailed
-            | ConnectorError::RequestEncodingFailedWithReason(_)
-            | ConnectorError::ParsingFailed
-            | ConnectorError::ResponseDeserializationFailed
-            | ConnectorError::ResponseHandlingFailed
-            | ConnectorError::WebhookResponseEncodingFailed
-            | ConnectorError::ProcessingStepFailed(_)
-            | ConnectorError::UnexpectedResponseError(_)
-            | ConnectorError::RoutingRulesParsingError
-            | ConnectorError::FailedAtConnector { .. }
-            | ConnectorError::AmountConversionFailed
-            | ConnectorError::GenericError { .. } => {
+            Self::FailedToObtainIntegrationUrl
+            | Self::FailedToObtainPreferredConnector
+            | Self::FailedToObtainAuthType
+            | Self::FailedToObtainCertificate
+            | Self::FailedToObtainCertificateKey
+            | Self::RequestEncodingFailed
+            | Self::RequestEncodingFailedWithReason(_)
+            | Self::ParsingFailed
+            | Self::ResponseDeserializationFailed
+            | Self::ResponseHandlingFailed
+            | Self::WebhookResponseEncodingFailed
+            | Self::ProcessingStepFailed(_)
+            | Self::UnexpectedResponseError(_)
+            | Self::RoutingRulesParsingError
+            | Self::FailedAtConnector { .. }
+            | Self::AmountConversionFailed
+            | Self::GenericError { .. } => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,
@@ -114,20 +114,20 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_object: None,
                 })
             }
-            ConnectorError::InvalidConnectorName
-            | ConnectorError::InvalidWallet
-            | ConnectorError::MissingRequiredField { .. }
-            | ConnectorError::MissingRequiredFields { .. }
-            | ConnectorError::InvalidDateFormat
-            | ConnectorError::DateFormattingFailed
-            | ConnectorError::InvalidDataFormat { .. }
-            | ConnectorError::MismatchedPaymentData
-            | ConnectorError::InvalidWalletToken { .. }
-            | ConnectorError::FileValidationFailed { .. }
-            | ConnectorError::MissingConnectorRedirectionPayload { .. }
-            | ConnectorError::MissingPaymentMethodType
-            | ConnectorError::CurrencyNotSupported { .. }
-            | ConnectorError::InvalidConnectorConfig { .. } => {
+            Self::InvalidConnectorName
+            | Self::InvalidWallet
+            | Self::MissingRequiredField { .. }
+            | Self::MissingRequiredFields { .. }
+            | Self::InvalidDateFormat
+            | Self::DateFormattingFailed
+            | Self::InvalidDataFormat { .. }
+            | Self::MismatchedPaymentData
+            | Self::InvalidWalletToken { .. }
+            | Self::FileValidationFailed { .. }
+            | Self::MissingConnectorRedirectionPayload { .. }
+            | Self::MissingPaymentMethodType
+            | Self::CurrencyNotSupported { .. }
+            | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
                     error_identifier: 400,
@@ -135,12 +135,12 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_object: None,
                 })
             }
-            ConnectorError::NoConnectorMetaData
-            | ConnectorError::MissingConnectorMandateID
-            | ConnectorError::MissingConnectorTransactionID
-            | ConnectorError::MissingConnectorRefundID
-            | ConnectorError::MissingConnectorRelatedTransactionID { .. }
-            | ConnectorError::InSufficientBalanceInPaymentMethod => {
+            Self::NoConnectorMetaData
+            | Self::MissingConnectorMandateID
+            | Self::MissingConnectorTransactionID
+            | Self::MissingConnectorRefundID
+            | Self::MissingConnectorRelatedTransactionID { .. }
+            | Self::InSufficientBalanceInPaymentMethod => {
                 ApplicationErrorResponse::Unprocessable(ApiError {
                     sub_code: "UNPROCESSABLE_ENTITY".to_string(),
                     error_identifier: 422,
@@ -148,11 +148,11 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_object: None,
                 })
             }
-            ConnectorError::NotImplemented(_)
-            | ConnectorError::NotSupported { .. }
-            | ConnectorError::FlowNotSupported { .. }
-            | ConnectorError::CaptureMethodNotSupported
-            | ConnectorError::WebhooksNotImplemented => {
+            Self::NotImplemented(_)
+            | Self::NotSupported { .. }
+            | Self::FlowNotSupported { .. }
+            | Self::CaptureMethodNotSupported
+            | Self::WebhooksNotImplemented => {
                 ApplicationErrorResponse::NotImplemented(ApiError {
                     sub_code: "NOT_IMPLEMENTED".to_string(),
                     error_identifier: 501,
@@ -160,15 +160,15 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_object: None,
                 })
             }
-            ConnectorError::MissingApplePayTokenData
-            | ConnectorError::WebhookBodyDecodingFailed
-            | ConnectorError::WebhookSignatureNotFound
-            | ConnectorError::WebhookSourceVerificationFailed
-            | ConnectorError::WebhookVerificationSecretNotFound
-            | ConnectorError::WebhookVerificationSecretInvalid
-            | ConnectorError::WebhookReferenceIdNotFound
-            | ConnectorError::WebhookEventTypeNotFound
-            | ConnectorError::WebhookResourceObjectNotFound => {
+            Self::MissingApplePayTokenData
+            | Self::WebhookBodyDecodingFailed
+            | Self::WebhookSignatureNotFound
+            | Self::WebhookSourceVerificationFailed
+            | Self::WebhookVerificationSecretNotFound
+            | Self::WebhookVerificationSecretInvalid
+            | Self::WebhookReferenceIdNotFound
+            | Self::WebhookEventTypeNotFound
+            | Self::WebhookResourceObjectNotFound => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_WEBHOOK_DATA".to_string(),
                     error_identifier: 400,
@@ -176,7 +176,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_object: None,
                 })
             }
-            ConnectorError::RequestTimeoutReceived => {
+            Self::RequestTimeoutReceived => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
                     error_identifier: 504,
@@ -191,19 +191,19 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
 impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
     fn switch(&self) -> ApplicationErrorResponse {
         match self {
-            ApiClientError::HeaderMapConstructionFailed
-            | ApiClientError::InvalidProxyConfiguration
-            | ApiClientError::ClientConstructionFailed
-            | ApiClientError::CertificateDecodeFailed
-            | ApiClientError::BodySerializationFailed
-            | ApiClientError::UnexpectedState
-            | ApiClientError::UrlEncodingFailed
-            | ApiClientError::RequestNotSent(_)
-            | ApiClientError::ResponseDecodingFailed
-            | ApiClientError::InternalServerErrorReceived
-            | ApiClientError::BadGatewayReceived
-            | ApiClientError::ServiceUnavailableReceived
-            | ApiClientError::UnexpectedServerResponse => {
+            Self::HeaderMapConstructionFailed
+            | Self::InvalidProxyConfiguration
+            | Self::ClientConstructionFailed
+            | Self::CertificateDecodeFailed
+            | Self::BodySerializationFailed
+            | Self::UnexpectedState
+            | Self::UrlEncodingFailed
+            | Self::RequestNotSent(_)
+            | Self::ResponseDecodingFailed
+            | Self::InternalServerErrorReceived
+            | Self::BadGatewayReceived
+            | Self::ServiceUnavailableReceived
+            | Self::UnexpectedServerResponse => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,
@@ -211,7 +211,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
                     error_object: None,
                 })
             }
-            ApiClientError::RequestTimeoutReceived | ApiClientError::GatewayTimeoutReceived => {
+            Self::RequestTimeoutReceived | ApiClientError::GatewayTimeoutReceived => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
                     error_identifier: 504,
@@ -219,7 +219,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
                     error_object: None,
                 })
             }
-            ApiClientError::ConnectionClosedIncompleteMessage => {
+            Self::ConnectionClosedIncompleteMessage => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),
                     error_identifier: 500,
