@@ -13,6 +13,29 @@ service PaymentService {
   rpc SetupMandate(SetupMandateRequest) returns (SetupMandateResponse);
   rpc AcceptDispute(AcceptDisputeRequest) returns (AcceptDisputeResponse);
   rpc SubmitEvidence (SubmitEvidenceRequest) returns (SubmitEvidenceResponse);
+  rpc DefendDispute(DisputeDefendRequest) returns (DisputeDefendResponse);
+}
+
+message DisputeDefendRequest {
+  string defense_reason_code = 1;
+  string connector_dispute_id =3;
+}
+
+message DisputeDefendResponse {
+  DisputeStatus dispute_status = 1;
+  string connector_dispute_id = 2;
+  optional string error_code = 3;
+  optional string error_message = 4;
+}
+
+enum DisputeStatus {
+  DISPUTE_OPENED = 0;
+  DISPUTE_EXPIRED = 1;
+  DISPUTE_ACCEPTED = 2;
+  DISPUTE_CANCELLED = 3;
+  DISPUTE_CHALLENGED = 4;
+  DISPUTE_WON = 5;
+  DISPUTE_LOST = 6;
 }
 
 message PaymentsAuthorizeRequest {
@@ -1072,16 +1095,6 @@ message AcceptDisputeResponse {
   optional string connector_dispute_status = 3;
   optional string error_code = 4;
   optional string error_message = 5;
-}
-
-enum DisputeStatus {
-  DisputeOpened=0;
-    DisputeExpired=1;
-    DisputeAccepted=2;
-    DisputeCancelled=3;
-    DisputeChallenged=4;
-    DisputeWon=5;
-    DisputeLost=6;
 }
 
 message SubmitEvidenceRequest {

@@ -6,14 +6,14 @@ use connector_integration::types::ConnectorData;
 use domain_types::types::generate_payment_void_response;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
     types::{generate_accept_dispute_response, generate_submit_evidence_response},
@@ -28,11 +28,11 @@ use domain_types::{
 use external_services;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
-    IncomingWebhookRequest, IncomingWebhookResponse, PaymentsAuthorizeRequest,
-    PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsCaptureResponse,
-    PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
-    RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse, SetupMandateRequest,
-    SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
+    DisputeDefendRequest, DisputeDefendResponse, IncomingWebhookRequest, IncomingWebhookResponse,
+    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
+    PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
+    PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
+    SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
 };
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -641,6 +641,79 @@ impl PaymentService for Payments {
             .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
 
         Ok(tonic::Response::new(refund_response))
+    }
+
+    async fn defend_dispute(
+        &self,
+        request: tonic::Request<DisputeDefendRequest>,
+    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
+        info!("DISPUTE_DEFEND_FLOW: initiated");
+
+        let connector = connector_from_metadata(request.metadata())?;
+
+        // Extract auth credentials
+        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let payload = request.into_inner();
+
+        //get connector data
+        let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+        // Get connector integration
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        // Create common request data
+        let defend_dispute_flow_data =
+            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+                .map_err(|e| {
+                    tonic::Status::invalid_argument(format!("Invalid request data: {}", e))
+                });
+
+        // Create connector request data
+        let defend_dispute_data = DisputeDefendData::foreign_try_from(payload.clone())
+            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+
+        // Construct router data
+        let router_data = RouterDataV2::<
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: defend_dispute_flow_data?,
+            connector_auth_type: connector_auth_details,
+            request: defend_dispute_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        // Execute connector processing
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            router_data,
+        )
+        .await
+        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+
+        // Generate response
+        let defend_dispute_response =
+            match domain_types::types::generate_defend_dispute_response(response) {
+                Ok(resp) => resp,
+                Err(e) => {
+                    return Err(tonic::Status::internal(format!(
+                        "Response generation error: {}",
+                        e
+                    )))
+                }
+            };
+
+        Ok(tonic::Response::new(defend_dispute_response))
     }
 
     async fn payment_capture(
