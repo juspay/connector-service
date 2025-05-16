@@ -1,12 +1,18 @@
-use crate::connector_flow::{self, Authorize, Capture, DefendDispute, PSync, RSync, Refund, Void};
+use crate::connector_flow::{
+    self, Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate,
+    SubmitEvidence, Void,
+};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::Connectors;
 use crate::utils::ForeignTryFrom;
 use error_stack::ResultExt;
 use hyperswitch_api_models::enums::Currency;
+
+use hyperswitch_common_enums::DisputeStatus;
 use hyperswitch_common_utils::{errors, types::MinorUnit};
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use hyperswitch_domain_models::router_request_types::SyncRequestType;
+
 use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
@@ -50,8 +56,11 @@ pub trait ConnectorServiceTrait:
     + IncomingWebhook
     + RefundV2
     + PaymentCapture
+    + SetupMandateV2
+    + AcceptDispute
     + RefundSyncV2
     + DisputeDefend
+    + SubmitEvidenceV2
 {
 }
 
@@ -93,8 +102,28 @@ pub trait RefundV2:
 {
 }
 
+pub trait RefundSyncV2:
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+}
+
 pub trait PaymentCapture:
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+}
+
+pub trait SetupMandateV2:
+    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+}
+
+pub trait AcceptDispute:
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+{
+}
+
+pub trait SubmitEvidenceV2:
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
 {
 }
 
@@ -225,6 +254,7 @@ pub enum PaymentsResponseData {
         redirection_data:
             Box<Option<hyperswitch_domain_models::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
+        mandate_reference: Box<Option<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
@@ -232,6 +262,12 @@ pub enum PaymentsResponseData {
     SessionResponse {
         session_token: String,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct MandateReference {
+    pub connector_mandate_id: Option<String>,
+    pub payment_method_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -243,11 +279,6 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
-}
-
-pub trait RefundSyncV2:
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-{
 }
 
 #[derive(Debug, Default, Clone)]
@@ -464,8 +495,119 @@ pub struct PaymentsCaptureData {
     pub connector_metadata: Option<serde_json::Value>,
 }
 
+#[derive(Debug, Clone)]
+pub struct SetupMandateRequestData {
+    pub currency: hyperswitch_common_enums::Currency,
+    pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
+    pub amount: Option<i64>,
+    pub confirm: bool,
+    pub statement_descriptor_suffix: Option<String>,
+    pub statement_descriptor: Option<String>,
+    pub customer_acceptance: Option<hyperswitch_domain_models::mandates::CustomerAcceptance>,
+    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
+    pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
+    pub off_session: Option<bool>,
+    pub setup_mandate_details: Option<hyperswitch_domain_models::mandates::MandateData>,
+    pub router_return_url: Option<String>,
+    pub webhook_url: Option<String>,
+    pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
+    pub email: Option<hyperswitch_common_utils::pii::Email>,
+    pub customer_name: Option<String>,
+    pub return_url: Option<String>,
+    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
+    pub request_incremental_authorization: bool,
+    pub metadata: Option<serde_json::Value>,
+    pub complete_authorize_url: Option<String>,
+    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub merchant_order_reference_id: Option<String>,
+    pub minor_amount: Option<MinorUnit>,
+    pub shipping_cost: Option<MinorUnit>,
+    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AcceptDisputeData {}
+
+#[derive(Debug, Clone)]
+pub struct DisputeFlowData {
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub connectors: Connectors,
+    pub defense_reason_code: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DisputeResponseData {
+    pub connector_dispute_id: String,
+    pub dispute_status: DisputeStatus,
+    pub connector_dispute_status: Option<String>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SubmitEvidenceData {
+    pub dispute_id: Option<String>,
+    pub connector_dispute_id: String,
+    pub access_activity_log: Option<String>,
+    pub billing_address: Option<String>,
+
+    pub cancellation_policy: Option<Vec<u8>>,
+    pub cancellation_policy_file_type: Option<String>,
+    pub cancellation_policy_provider_file_id: Option<String>,
+    pub cancellation_policy_disclosure: Option<String>,
+    pub cancellation_rebuttal: Option<String>,
+
+    pub customer_communication: Option<Vec<u8>>,
+    pub customer_communication_file_type: Option<String>,
+    pub customer_communication_provider_file_id: Option<String>,
+    pub customer_email_address: Option<String>,
+    pub customer_name: Option<String>,
+    pub customer_purchase_ip: Option<String>,
+
+    pub customer_signature: Option<Vec<u8>>,
+    pub customer_signature_file_type: Option<String>,
+    pub customer_signature_provider_file_id: Option<String>,
+
+    pub product_description: Option<String>,
+
+    pub receipt: Option<Vec<u8>>,
+    pub receipt_file_type: Option<String>,
+    pub receipt_provider_file_id: Option<String>,
+
+    pub refund_policy: Option<Vec<u8>>,
+    pub refund_policy_file_type: Option<String>,
+    pub refund_policy_provider_file_id: Option<String>,
+    pub refund_policy_disclosure: Option<String>,
+    pub refund_refusal_explanation: Option<String>,
+
+    pub service_date: Option<String>,
+    pub service_documentation: Option<Vec<u8>>,
+    pub service_documentation_file_type: Option<String>,
+    pub service_documentation_provider_file_id: Option<String>,
+
+    pub shipping_address: Option<String>,
+    pub shipping_carrier: Option<String>,
+    pub shipping_date: Option<String>,
+    pub shipping_documentation: Option<Vec<u8>>,
+    pub shipping_documentation_file_type: Option<String>,
+    pub shipping_documentation_provider_file_id: Option<String>,
+    pub shipping_tracking_number: Option<String>,
+
+    pub invoice_showing_distinct_transactions: Option<Vec<u8>>,
+    pub invoice_showing_distinct_transactions_file_type: Option<String>,
+    pub invoice_showing_distinct_transactions_provider_file_id: Option<String>,
+
+    pub recurring_transaction_agreement: Option<Vec<u8>>,
+    pub recurring_transaction_agreement_file_type: Option<String>,
+    pub recurring_transaction_agreement_provider_file_id: Option<String>,
+
+    pub uncategorized_file: Option<Vec<u8>>,
+    pub uncategorized_file_type: Option<String>,
+    pub uncategorized_file_provider_file_id: Option<String>,
+    pub uncategorized_text: Option<String>,
+}
+
 pub trait DisputeDefend:
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeDefendResponseData>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
 {
 }
 
@@ -473,20 +615,5 @@ pub trait DisputeDefend:
 pub struct DisputeDefendData {
     pub dispute_id: String,
     pub connector_dispute_id: String,
-    pub defense_reason_code: String,
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct DisputeDefendResponseData {
-    pub dispute_status: hyperswitch_api_models::enums::DisputeStatus,
-    pub connector_status: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-pub struct DisputeFlowData {
-    pub connector_request_reference_id: String,
-    pub dispute_id: String,
-    pub status: hyperswitch_common_enums::DisputeStatus,
-    pub connectors: Connectors,
     pub defense_reason_code: String,
 }

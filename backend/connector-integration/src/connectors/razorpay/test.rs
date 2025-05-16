@@ -1663,7 +1663,7 @@ mod tests {
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
-                        dispute_base_url: None
+                        dispute_base_url: None,
                     },
                 },
             },
