@@ -169,7 +169,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_message: self.to_string(),
                     error_object: None,
                 })
-            },
+            }
             Self::RequestTimeoutReceived => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
@@ -177,7 +177,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                     error_message: self.to_string(),
                     error_object: None,
                 })
-            },
+            }
             Self::WebhookEventTypeNotFound
             | Self::WebhookSignatureNotFound
             | Self::WebhookReferenceIdNotFound
