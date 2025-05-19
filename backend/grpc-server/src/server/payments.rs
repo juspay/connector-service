@@ -1,9 +1,9 @@
 use crate::{
     configs::Config,
+    error::{IntoGrpcStatus, ReportSwitchExt},
     utils::{auth_from_metadata, connector_from_metadata},
 };
 use connector_integration::types::ConnectorData;
-use domain_types::types::generate_payment_void_response;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -16,15 +16,18 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
+    errors::{ApiError, ApplicationErrorResponse},
     types::{generate_accept_dispute_response, generate_submit_evidence_response},
 };
 use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
-        generate_refund_response, generate_refund_sync_response, generate_setup_mandate_response,
+        generate_payment_void_response, generate_refund_response, generate_refund_sync_response,
+        generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
+use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
@@ -34,6 +37,7 @@ use grpc_api_types::payments::{
     PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
     SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
 };
+use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -62,16 +66,8 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency =
-            match hyperswitch_common_enums::Currency::foreign_try_from(payload.currency()) {
-                Ok(currency) => currency,
-                Err(e) => {
-                    return Err(tonic::Status::invalid_argument(format!(
-                        "Invalid currency: {}",
-                        e
-                    )))
-                }
-            };
+        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+            .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
             amount: hyperswitch_common_utils::types::MinorUnit::new(payload.minor_amount),
@@ -92,21 +88,14 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = match external_services::service::execute_connector_processing_step(
+        let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
         )
         .await
-        {
-            Ok(resp) => resp,
-            Err(e) => {
-                return Err(tonic::Status::internal(format!(
-                    "Connector processing error: {}",
-                    e
-                )))
-            }
-        };
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
             Ok(PaymentCreateOrderResponse { order_id, .. }) => {
@@ -136,7 +125,7 @@ impl Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid currency: {}", e)))?;
+            .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
             amount: hyperswitch_common_utils::types::MinorUnit::new(0),
@@ -163,7 +152,8 @@ impl Payments {
             order_router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
             Ok(PaymentCreateOrderResponse { order_id, .. }) => {
@@ -186,8 +176,10 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         //get connector data
@@ -203,18 +195,9 @@ impl PaymentService for Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         // Create common request data
-        let mut payment_flow_data = match PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-        )) {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "Invalid request data: {}",
-                    e
-                )))
-            }
-        };
+        let mut payment_flow_data =
+            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+                .map_err(|e| e.into_grpc_status())?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
@@ -229,17 +212,8 @@ impl PaymentService for Payments {
         }
 
         // Create connector request data
-        let payment_authorize_data = match PaymentsAuthorizeData::foreign_try_from(payload.clone())
-        {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "Invalid request data: {}",
-                    e
-                )))
-            }
-        };
-
+        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
+            .map_err(|e| e.into_grpc_status())?;
         // Construct router data
         let router_data = RouterDataV2::<
             Authorize,
@@ -255,33 +229,18 @@ impl PaymentService for Payments {
         };
 
         // Execute connector processing
-        let response = match external_services::service::execute_connector_processing_step(
+        let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
         )
         .await
-        {
-            Ok(resp) => resp,
-            Err(e) => {
-                return Err(tonic::Status::internal(format!(
-                    "Connector processing error: {}",
-                    e
-                )))
-            }
-        };
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         // Generate response
-        let authorize_response =
-            match domain_types::types::generate_payment_authorize_response(response) {
-                Ok(resp) => resp,
-                Err(e) => {
-                    return Err(tonic::Status::internal(format!(
-                        "Response generation error: {}",
-                        e
-                    )))
-                }
-            };
+        let authorize_response = domain_types::types::generate_payment_authorize_response(response)
+            .map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(authorize_response))
     }
@@ -292,8 +251,10 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<PaymentsSyncResponse>, tonic::Status> {
         info!("PAYMENT_SYNC_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         // Get connector data
@@ -309,29 +270,13 @@ impl PaymentService for Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         // Create connector request data
-        let payment_sync_data = match PaymentsSyncData::foreign_try_from(payload.clone()) {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "Invalid request data: {}",
-                    e
-                )))
-            }
-        };
+        let payment_sync_data = PaymentsSyncData::foreign_try_from(payload.clone())
+            .map_err(|e| e.into_grpc_status())?;
 
         // Create common request data
-        let payment_flow_data = match PaymentFlowData::foreign_try_from((
-            payload.clone(),
-            self.config.connectors.clone(),
-        )) {
-            Ok(data) => data,
-            Err(e) => {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "Invalid flow data: {}",
-                    e
-                )))
-            }
-        };
+        let payment_flow_data =
+            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+                .map_err(|e| e.into_grpc_status())?;
 
         // Create router data
         let router_data = RouterDataV2 {
@@ -343,32 +288,18 @@ impl PaymentService for Payments {
         };
 
         // Execute connector processing
-        let response = match external_services::service::execute_connector_processing_step(
+        let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
         )
         .await
-        {
-            Ok(resp) => resp,
-            Err(e) => {
-                return Err(tonic::Status::internal(format!(
-                    "Connector processing error: {}",
-                    e
-                )))
-            }
-        };
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         // Generate response
-        let sync_response = match generate_payment_sync_response(response) {
-            Ok(resp) => resp,
-            Err(e) => {
-                return Err(tonic::Status::internal(format!(
-                    "Response generation error: {}",
-                    e
-                )))
-            }
-        };
+        let sync_response =
+            generate_payment_sync_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(sync_response))
     }
@@ -379,8 +310,10 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<RefundsSyncResponse>, tonic::Status> {
         info!("REFUND_SYNC_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         // Get connector data
@@ -395,15 +328,13 @@ impl PaymentService for Payments {
             RefundsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let refund_sync_data = RefundSyncData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+        let refund_sync_data =
+            RefundSyncData::foreign_try_from(payload.clone()).map_err(|e| e.into_grpc_status())?;
 
         // Create common request data
         let payment_flow_data =
             RefundFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
         // Create router data
         let router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> =
@@ -421,11 +352,12 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         // Generate response
-        let sync_response = generate_refund_sync_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let sync_response =
+            generate_refund_sync_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(sync_response))
     }
@@ -435,8 +367,10 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsVoidRequest>,
     ) -> Result<tonic::Response<PaymentsVoidResponse>, tonic::Status> {
         info!("PAYMENT_CANCEL_FLOW: initiated");
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         // Get connector data
@@ -453,12 +387,10 @@ impl PaymentService for Payments {
 
         let payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid request data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
-        let payment_void_data = PaymentVoidData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+        let payment_void_data =
+            PaymentVoidData::foreign_try_from(payload.clone()).map_err(|e| e.into_grpc_status())?;
 
         let router_data =
             RouterDataV2::<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
@@ -476,10 +408,11 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
-        let void_response = generate_payment_void_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let void_response =
+            generate_payment_void_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(void_response))
     }
@@ -488,8 +421,10 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<IncomingWebhookRequest>,
     ) -> Result<tonic::Response<IncomingWebhookResponse>, tonic::Status> {
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         let request_details = payload
@@ -498,23 +433,13 @@ impl PaymentService for Payments {
             .ok_or_else(|| {
                 tonic::Status::invalid_argument("missing request_details in the payload")
             })?
-            .map_err(|e| {
-                tonic::Status::invalid_argument(format!(
-                    "Invalid request_details in the payload: {}",
-                    e
-                ))
-            })?;
+            .map_err(|e| e.into_grpc_status())?;
 
         let webhook_secrets = payload
             .webhook_secrets
             .map(|details| {
                 domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(details)
-                    .map_err(|e| {
-                        tonic::Status::invalid_argument(format!(
-                            "Invalid webhook_secrets in the payload: {}",
-                            e
-                        ))
-                    })
+                    .map_err(|e| e.into_grpc_status())
             })
             .transpose()?;
 
@@ -529,12 +454,8 @@ impl PaymentService for Payments {
                 // TODO: do we need to force authentication? we can make it optional
                 Some(connector_auth_details.clone()),
             )
-            .map_err(|e| {
-                tonic::Status::internal(format!(
-                    "Connector processing error in verify_webhook_source: {}",
-                    e
-                ))
-            })?;
+            .switch()
+            .map_err(|e| e.into_grpc_status())?;
 
         let event_type = connector_data
             .connector
@@ -543,39 +464,31 @@ impl PaymentService for Payments {
                 webhook_secrets.clone(),
                 Some(connector_auth_details.clone()),
             )
-            .map_err(|e| {
-                tonic::Status::internal(format!(
-                    "Connector processing error in get_event_type: {}",
-                    e
-                ))
-            })?;
+            .switch()
+            .map_err(|e| e.into_grpc_status())?;
 
         // Get content for the webhook based on the event type
         let content = match event_type {
-            domain_types::connector_types::EventType::Payment => {
-                get_payments_webhook_content(
-                    connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
-                )
-                .await?
-            }
-            domain_types::connector_types::EventType::Refund => {
-                get_refunds_webhook_content(
-                    connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
-                )
-                .await?
-            }
+            domain_types::connector_types::EventType::Payment => get_payments_webhook_content(
+                connector_data,
+                request_details,
+                webhook_secrets,
+                Some(connector_auth_details),
+            )
+            .await
+            .map_err(|e| e.into_grpc_status())?,
+            domain_types::connector_types::EventType::Refund => get_refunds_webhook_content(
+                connector_data,
+                request_details,
+                webhook_secrets,
+                Some(connector_auth_details),
+            )
+            .await
+            .map_err(|e| e.into_grpc_status())?,
         };
 
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
-            .map_err(|e| {
-                tonic::Status::internal(format!("Invalid event_type in the payload: {}", e))
-            })?;
+            .map_err(|e| e.into_grpc_status())?;
 
         let response = IncomingWebhookResponse {
             event_type: api_event_type.into(),
@@ -592,8 +505,10 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<RefundsResponse>, tonic::Status> {
         info!("REFUND_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         // Get connector data
@@ -608,15 +523,13 @@ impl PaymentService for Payments {
             RefundsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let refund_data = RefundsData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+        let refund_data =
+            RefundsData::foreign_try_from(payload.clone()).map_err(|e| e.into_grpc_status())?;
 
         // Create common request data
         let refund_flow_data =
             RefundFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
         // Create router data
         let router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> =
@@ -634,11 +547,12 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         // Generate response
-        let refund_response = generate_refund_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let refund_response =
+            generate_refund_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(refund_response))
     }
@@ -649,10 +563,12 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
         info!("DISPUTE_DEFEND_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
 
         // Extract auth credentials
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         //get connector data
@@ -722,8 +638,10 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<PaymentsCaptureResponse>, tonic::Status> {
         info!("PAYMENT_CAPTURE_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         //get connector data
@@ -740,14 +658,12 @@ impl PaymentService for Payments {
 
         // Create connector request data
         let payment_capture_data = PaymentsCaptureData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+            .map_err(|e| e.into_grpc_status())?;
 
         // Create common request data
         let payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
         // Create router data
         let router_data = RouterDataV2 {
@@ -764,10 +680,12 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
-        let capture_response = generate_payment_capture_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let capture_response =
+            generate_payment_capture_response(response).map_err(|e| e.into_grpc_status())?;
+
         Ok(tonic::Response::new(capture_response))
     }
 
@@ -777,8 +695,10 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<SetupMandateResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
 
-        let connector = connector_from_metadata(request.metadata())?;
-        let connector_auth_details = auth_from_metadata(request.metadata())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
         //get connector data
@@ -796,9 +716,7 @@ impl PaymentService for Payments {
         // Create common request data
         let mut payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid request data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
@@ -813,7 +731,7 @@ impl PaymentService for Payments {
         }
 
         let setup_mandate_request_data = SetupMandateRequestData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+            .map_err(|e| e.into_grpc_status())?;
 
         // Create router data
         let router_data: RouterDataV2<
@@ -835,11 +753,12 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
         // Generate response
-        let setup_mandate_response = generate_setup_mandate_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let setup_mandate_response =
+            generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(setup_mandate_response))
     }
@@ -851,7 +770,7 @@ impl PaymentService for Payments {
         info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
-        let connector = connector_from_metadata(&metadata)?;
+        let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
 
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -864,15 +783,14 @@ impl PaymentService for Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+            .map_err(|e| e.into_grpc_status())?;
 
         let dispute_flow_data =
             DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
-        let connector_auth_details = auth_from_metadata(&metadata)?;
+        let connector_auth_details =
+            auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
 
         let router_data: RouterDataV2<
             Accept,
@@ -893,10 +811,11 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
-        let dispute_response = generate_accept_dispute_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let dispute_response =
+            generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(dispute_response))
     }
@@ -908,7 +827,7 @@ impl PaymentService for Payments {
         info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
-        let connector = connector_from_metadata(&metadata)?;
+        let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -920,15 +839,14 @@ impl PaymentService for Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
+            .map_err(|e| e.into_grpc_status())?;
 
         let dispute_flow_data =
             DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid flow data: {}", e))
-                })?;
+                .map_err(|e| e.into_grpc_status())?;
 
-        let connector_auth_details = auth_from_metadata(&metadata)?;
+        let connector_auth_details =
+            auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
 
         let router_data: RouterDataV2<
             SubmitEvidence,
@@ -949,10 +867,11 @@ impl PaymentService for Payments {
             router_data,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
 
-        let dispute_response = generate_submit_evidence_response(response)
-            .map_err(|e| tonic::Status::internal(format!("Response generation error: {}", e)))?;
+        let dispute_response =
+            generate_submit_evidence_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(dispute_response))
     }
@@ -963,30 +882,22 @@ async fn get_payments_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
-) -> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
-    let webhook_details = match connector_data.connector.process_payment_webhook(
-        request_details,
-        webhook_secrets,
-        connector_auth_details,
-    ) {
-        Ok(resp) => resp,
-        Err(e) => {
-            return Err(tonic::Status::internal(format!(
-                "Connector processing error in process_payment_webhook: {}",
-                e
-            )))
-        }
-    };
+) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
+    let webhook_details = connector_data
+        .connector
+        .process_payment_webhook(request_details, webhook_secrets, connector_auth_details)
+        .switch()?;
+
     // Generate response
-    let response = match PaymentsSyncResponse::foreign_try_from(webhook_details) {
-        Ok(resp) => resp,
-        Err(e) => {
-            return Err(tonic::Status::internal(format!(
-                "Error while constructing response: {}",
-                e
-            )))
-        }
-    };
+    let response = PaymentsSyncResponse::foreign_try_from(webhook_details).change_context(
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: "Error while constructing response".to_string(),
+            error_object: None,
+        }),
+    )?;
+
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(
             grpc_api_types::payments::webhook_response_content::Content::PaymentsResponse(response),
@@ -999,21 +910,21 @@ async fn get_refunds_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
-) -> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
+) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
-        .map_err(|e| {
-            tonic::Status::internal(format!(
-                "Connector processing error in process_refund_webhook: {}",
-                e
-            ))
-        })?;
+        .switch()?;
 
     // Generate response
-    let response = RefundsSyncResponse::foreign_try_from(webhook_details).map_err(|e| {
-        tonic::Status::internal(format!("Error while constructing response: {}", e))
-    })?;
+    let response = RefundsSyncResponse::foreign_try_from(webhook_details).change_context(
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: "Error while constructing response".to_string(),
+            error_object: None,
+        }),
+    )?;
 
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(

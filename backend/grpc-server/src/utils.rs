@@ -2,7 +2,10 @@ use std::str::FromStr;
 
 use crate::consts;
 use domain_types::connector_types;
+use domain_types::errors::{ApiError, ApplicationErrorResponse};
+use error_stack::Report;
 use http::request::Request;
+use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use tonic::metadata;
 
@@ -34,16 +37,22 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 
 pub fn connector_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> Result<connector_types::ConnectorEnum, tonic::Status> {
+) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
     parse_metadata(metadata, consts::X_CONNECTOR).and_then(|inner| {
-        connector_types::ConnectorEnum::from_str(inner)
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid connector: {e}")))
+        connector_types::ConnectorEnum::from_str(inner).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CONNECTOR".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid connector: {}", e),
+                error_object: None,
+            }))
+        })
     })
 }
 
 pub fn auth_from_metadata(
     metadata: &metadata::MetadataMap,
-) -> Result<ConnectorAuthType, tonic::Status> {
+) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
     const X_AUTH: &str = "x-auth";
     const X_API_KEY: &str = "x-api-key";
     const X_KEY1: &str = "x-key1";
@@ -74,8 +83,13 @@ pub fn auth_from_metadata(
         }),
         "no-key" => Ok(ConnectorAuthType::NoKey),
         "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
-        "currency-auth-key" | "certificate-auth" | _ => Err(tonic::Status::invalid_argument(
-            format!("Invalid auth type: {auth}"),
+        "currency-auth-key" | "certificate-auth" | _ => Err(Report::new(
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_AUTH_TYPE".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid auth type: {}", auth),
+                error_object: None,
+            }),
         )),
     }
 }
@@ -83,16 +97,25 @@ pub fn auth_from_metadata(
 fn parse_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
-) -> Result<&'a str, tonic::Status> {
+) -> CustomResult<&'a str, ApplicationErrorResponse> {
     metadata
         .get(key)
-        .ok_or(tonic::Status::invalid_argument(format!(
-            "Missing {} in request metadata",
-            key
-        )))
+        .ok_or_else(|| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_METADATA".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing {} in request metadata", key),
+                error_object: None,
+            }))
+        })
         .and_then(|value| {
             value.to_str().map_err(|e| {
-                tonic::Status::invalid_argument(format!("Invalid {} in request metadata: {e}", key))
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_string(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid {} in request metadata: {}", key, e),
+                    error_object: None,
+                }))
             })
         })
 }
