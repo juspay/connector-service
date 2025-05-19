@@ -120,6 +120,8 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingRequiredField { .. }
             | Self::MissingRequiredFields { .. }
             | Self::InvalidDateFormat
+            | Self::NotSupported { .. }
+            | Self::FlowNotSupported { .. }
             | Self::DateFormattingFailed
             | Self::InvalidDataFormat { .. }
             | Self::MismatchedPaymentData
@@ -150,8 +152,6 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
                 })
             }
             Self::NotImplemented(_)
-            | Self::NotSupported { .. }
-            | Self::FlowNotSupported { .. }
             | Self::CaptureMethodNotSupported
             | Self::WebhooksNotImplemented => ApplicationErrorResponse::NotImplemented(ApiError {
                 sub_code: "NOT_IMPLEMENTED".to_string(),
@@ -161,24 +161,31 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             }),
             Self::MissingApplePayTokenData
             | Self::WebhookBodyDecodingFailed
-            | Self::WebhookSignatureNotFound
             | Self::WebhookSourceVerificationFailed
-            | Self::WebhookVerificationSecretNotFound
-            | Self::WebhookVerificationSecretInvalid
-            | Self::WebhookReferenceIdNotFound
-            | Self::WebhookEventTypeNotFound
-            | Self::WebhookResourceObjectNotFound => {
+            | Self::WebhookVerificationSecretInvalid => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_WEBHOOK_DATA".to_string(),
                     error_identifier: 400,
                     error_message: self.to_string(),
                     error_object: None,
                 })
-            }
+            },
             Self::RequestTimeoutReceived => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "REQUEST_TIMEOUT".to_string(),
                     error_identifier: 504,
+                    error_message: self.to_string(),
+                    error_object: None,
+                })
+            },
+            Self::WebhookEventTypeNotFound
+            | Self::WebhookSignatureNotFound
+            | Self::WebhookReferenceIdNotFound
+            | Self::WebhookResourceObjectNotFound
+            | Self::WebhookVerificationSecretNotFound => {
+                ApplicationErrorResponse::NotFound(ApiError {
+                    sub_code: "WEBHOOK_DETAILS_NOT_FOUND".to_string(),
+                    error_identifier: 404,
                     error_message: self.to_string(),
                     error_object: None,
                 })
