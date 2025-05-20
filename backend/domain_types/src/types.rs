@@ -31,6 +31,8 @@ use std::{collections::HashMap, str::FromStr};
 pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
+    pub elavon: ConnectorParams,
+    pub authorizedotnet: ConnectorParams, // Add your connector params
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
