@@ -71,6 +71,10 @@ mod tests {
                             base_url: "https://sandbox.juspay.in/".to_string(),
                             dispute_base_url: None,
                         },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
                 },
@@ -231,6 +235,10 @@ mod tests {
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },

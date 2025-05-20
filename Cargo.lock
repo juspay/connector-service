@@ -958,9 +958,12 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "signal-hook",
+ "signal-hook-tokio",
  "strum 0.26.3",
  "thiserror 1.0.69",
  "time",
+ "tokio",
  "url",
  "utoipa",
  "uuid",
@@ -997,10 +1000,12 @@ dependencies = [
  "common_utils",
  "domain_types",
  "error-stack 0.4.1",
+ "hyperswitch_connectors",
  "hyperswitch_domain_models",
  "hyperswitch_interfaces",
  "masking",
  "paste",
+ "quick-xml 0.31.0",
  "reqwest",
  "serde",
  "serde_json",
@@ -2071,6 +2076,31 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "hyperswitch_connectors"
+version = "0.1.0"
+source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
+dependencies = [
+ "api_models",
+ "async-trait",
+ "base64 0.22.1",
+ "cards",
+ "common_enums",
+ "common_utils",
+ "error-stack 0.4.1",
+ "hyperswitch_domain_models",
+ "hyperswitch_interfaces",
+ "masking",
+ "ring",
+ "router_env",
+ "serde",
+ "serde_json",
+ "strum 0.26.3",
+ "time",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -3915,12 +3945,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "signal-hook"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d881a16cf4426aa584979d30bd82cb33429027e42122b169753d6ef1085ed6e2"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "signal-hook-tokio"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213241f76fb1e37e27de3b6aa1b068a2c333233b59cca6634f634b80a27ecf1e"
+dependencies = [
+ "futures-core",
+ "libc",
+ "signal-hook",
+ "tokio",
 ]
 
 [[package]]
