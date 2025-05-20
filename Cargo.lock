@@ -958,9 +958,12 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "signal-hook",
+ "signal-hook-tokio",
  "strum 0.26.3",
  "thiserror 1.0.69",
  "time",
+ "tokio",
  "url",
  "utoipa",
  "uuid",
@@ -996,17 +999,23 @@ dependencies = [
  "common_enums",
  "common_utils",
  "domain_types",
+ "encoding_rs",
  "error-stack 0.4.1",
+ "hmac",
+ "hyperswitch_connectors",
  "hyperswitch_domain_models",
  "hyperswitch_interfaces",
  "masking",
  "paste",
+ "quick-xml 0.31.0",
  "reqwest",
+ "ring",
  "serde",
  "serde_json",
  "serde_qs",
  "serde_urlencoded",
  "serde_with",
+ "sha2",
  "strum 0.26.3",
  "time",
  "url",
@@ -1270,6 +1279,7 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer",
  "crypto-common",
+ "subtle",
 ]
 
 [[package]]
@@ -1297,6 +1307,7 @@ name = "domain_types"
 version = "0.1.0"
 dependencies = [
  "api_models",
+ "base64 0.21.7",
  "cards",
  "common_enums",
  "common_utils",
@@ -1304,6 +1315,7 @@ dependencies = [
  "grpc-api-types",
  "hyperswitch_domain_models",
  "hyperswitch_interfaces",
+ "masking",
  "serde",
  "serde_json",
  "strum 0.26.3",
@@ -1889,6 +1901,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hmac"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
+dependencies = [
+ "digest",
+]
+
+[[package]]
 name = "http"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2071,6 +2092,31 @@ dependencies = [
  "tokio",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "hyperswitch_connectors"
+version = "0.1.0"
+source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
+dependencies = [
+ "api_models",
+ "async-trait",
+ "base64 0.22.1",
+ "cards",
+ "common_enums",
+ "common_utils",
+ "error-stack 0.4.1",
+ "hyperswitch_domain_models",
+ "hyperswitch_interfaces",
+ "masking",
+ "ring",
+ "router_env",
+ "serde",
+ "serde_json",
+ "strum 0.26.3",
+ "time",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -3915,12 +3961,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "signal-hook"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d881a16cf4426aa584979d30bd82cb33429027e42122b169753d6ef1085ed6e2"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "signal-hook-tokio"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213241f76fb1e37e27de3b6aa1b068a2c333233b59cca6634f634b80a27ecf1e"
+dependencies = [
+ "futures-core",
+ "libc",
+ "signal-hook",
+ "tokio",
 ]
 
 [[package]]

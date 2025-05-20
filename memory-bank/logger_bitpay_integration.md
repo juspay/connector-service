@@ -1,0 +1,3 @@
+1. **Start**: Begin the connector integration process for Bitpay (Cards Authorize Flow). Ref: build_workflow.md, Hyperswitch bitpay.rs. 
+2. **Add connector support**: Added `Bitpay` to `ConnectorEnum` (with placeholder ID 777), `Connectors` struct, `convert_connector` function in `connector-integration/src/types.rs`, and `connectors.rs`. Created `bitpay.rs` and `bitpay/transformers.rs`. Added placeholder `base_url` to `config/development.toml`. 
+3. **Take a reference from Hyperswitch**: Referenced Hyperswitch `bitpay.rs` for initial `get_headers` and `get_url` in `backend/connector-integration/src/connectors/bitpay.rs`. Hyperswitch `bitpay/transformers.rs` access was limited. 

@@ -22,13 +22,12 @@ mod tests {
         use hyperswitch_masking::Secret;
         use serde_json::json;
         use std::borrow::Cow;
-        use std::env;
         use std::marker::PhantomData;
         use std::str::FromStr;
         #[test]
         fn test_build_request_valid() {
-            let api_key = env::var("API_KEY").expect("API_KEY not set");
-            let key1 = env::var("KEY1").expect("KEY1 not set");
+            let api_key = "test_adyen_api_key".to_string(); // Hardcoded dummy value
+            let key1 = "test_adyen_key1".to_string(); // Hardcoded dummy value
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -69,6 +68,18 @@ mod tests {
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        authorizedotnet: ConnectorParams {
+                            base_url: "MOCK_AUTHORIZEDOTNET_URL".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -166,31 +177,28 @@ mod tests {
             > = connector_data.connector.get_connector_integration_v2();
 
             let request = connector_integration.build_request_v2(&req).unwrap();
-            // let amount= request.unwrap()
-            // assert!(amount==1000);
-            // let request = request.expect("Failed to build request");
-            let req = request.as_ref().map(|request| {
-                let masked_request = match request.body.as_ref() {
-                    Some(request) => match request {
+            let req_body = request.as_ref().map(|request_val| { 
+                let masked_request = match request_val.body.as_ref() { 
+                    Some(request_content) => match request_content { 
                         RequestContent::Json(i)
                         | RequestContent::FormUrlEncoded(i)
                         | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
                             json!({ "error": "failed to mask serialize connector request"}),
                         ),
-                        RequestContent::FormData(_) => json!({"requ est_type": "FORM_DATA"}),
+                        RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
                     None => serde_json::Value::Null,
                 };
                 masked_request
             });
-            println!("request: {:?}", req);
-            assert_eq!(req.as_ref().unwrap()["reference"], "conn_ref_123456789");
+            println!("request: {:?}", req_body); 
+            assert_eq!(req_body.as_ref().unwrap()["reference"], "conn_ref_123456789"); 
         }
         #[test]
         fn test_build_request_missing() {
-            let api_key = env::var("API_KEY").expect("API_KEY not set");
-            let key1 = env::var("KEY1").expect("KEY1 not set");
+            let api_key = "test_adyen_api_key_missing".to_string(); // Hardcoded dummy value
+            let key1 = "test_adyen_key1_missing".to_string(); // Hardcoded dummy value
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -231,6 +239,18 @@ mod tests {
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        authorizedotnet: ConnectorParams {
+                            base_url: "MOCK_AUTHORIZEDOTNET_URL".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -293,125 +313,5 @@ mod tests {
             let result = connector_integration.build_request_v2(&req);
             assert!(result.is_err(), "Expected error for missing fields");
         }
-        // #[test]
-        // fn test_build_request_invalid() {
-        //     let api_key = env::var("API_KEY").expect("API_KEY not set");
-        //     let key1 = env::var("KEY1").expect("KEY1 not set");
-        //     let req: RouterDataV2<
-        //         Authorize,
-        //         PaymentFlowData,
-        //         PaymentsAuthorizeData,
-        //         PaymentsResponseData
-        //     > = RouterDataV2 {
-        //         flow: PhantomData::<Authorize>,
-        //         resource_common_data: PaymentFlowData {
-        //             merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
-        //             customer_id: None,
-        //             connector_customer: None,
-        //             payment_id: "pay_invalid".to_string(),
-        //             attempt_id: "attempt_invalid".to_string(),
-        //             status: hyperswitch_common_enums::AttemptStatus::Pending,
-        //             payment_method: hyperswitch_common_enums::PaymentMethod::Card,
-        //             description: Some("Invalid test".to_string()),
-        //             return_url: None,
-        //             address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
-        //                 None,
-        //                 None,
-        //                 None,
-        //                 None
-        //             ),
-        //             auth_type: hyperswitch_common_enums::AuthenticationType::ThreeDs,
-        //             connector_meta_data: None,
-        //             amount_captured: None,
-        //             minor_amount_captured: None,
-        //             access_token: None,
-        //             session_token: None,
-        //             reference_id: None,
-        //             payment_method_token: None,
-        //             preprocessing_id: None,
-        //             connector_api_version: None,
-        //             connector_request_reference_id: "invalid_ref".to_string(),
-        //             test_mode: None,
-        //             connector_http_status_code: None,
-        //             connectors: Connectors {
-        //                 adyen: ConnectorParams {
-        //                     base_url: "https://checkout-test.adyen.com/".to_string(),
-        //                 },
-        //                 razorpay: ConnectorParams {
-        //                     base_url: "https://sandbox.juspay.in/".to_string(),
-        //                 },
-        //             },
-        //             external_latency: None,
-        //         },
-        //         connector_auth_type: ConnectorAuthType::BodyKey {
-        //             api_key: Secret::new(api_key.into()),
-        //             key1: Secret::new(key1.into()),
-        //         },
-        //         request: PaymentsAuthorizeData {
-        //             payment_method_data: PaymentMethodData::Card(
-        //                 (hyperswitch_domain_models::payment_method_data::Card {
-        //                     card_number: hyperswitch_cards::CardNumber
-        //                         ::from_str("1234567890123456")
-        //                         .unwrap(),
-        //                     card_cvc: Secret::new("12".into()),
-        //                     card_exp_month: Secret::new("00".into()), // invalid month
-        //                     card_exp_year: Secret::new("1999".into()), // past year
-        //                     ..Default::default()
-        //                 }).into()
-        //             ),
-        //             amount: 100,
-        //             order_tax_amount: None,
-        //             email: Some("invalid-email".to_string())
-        //                 .map(|email_str| Email::try_from(email_str))
-        //                 .transpose()
-        //                 .unwrap_or(None),
-        //             customer_name: None,
-        //             currency: hyperswitch_common_enums::Currency::USD,
-        //             confirm: true,
-        //             statement_descriptor_suffix: None,
-        //             statement_descriptor: None,
-        //             capture_method: None,
-        //             router_return_url: None,
-        //             webhook_url: None,
-        //             complete_authorize_url: None,
-        //             mandate_id: None,
-        //             setup_future_usage: None,
-        //             off_session: None,
-        //             browser_info: None,
-        //             order_category: None,
-        //             session_token: None,
-        //             enrolled_for_3ds: false,
-        //             related_transaction_id: None,
-        //             payment_experience: None,
-        //             payment_method_type: None,
-        //             customer_id: None,
-        //             request_incremental_authorization: false,
-        //             metadata: None,
-        //             minor_amount: MinorUnit::new(100),
-        //             merchant_order_reference_id: None,
-        //             shipping_cost: None,
-        //             merchant_account_id: None,
-        //             merchant_config_currency: None,
-        //         },
-        //         response: Err(ErrorResponse::default()),
-        //     };
-
-        //     let connector: BoxedConnector = Box::new(Adyen::new());
-        //     let connector_data = ConnectorData {
-        //         connector,
-        //         connector_name: ConnectorEnum::Adyen,
-        //     };
-
-        //     let connector_integration: BoxedConnectorIntegrationV2<
-        //         '_,
-        //         Authorize,
-        //         PaymentFlowData,
-        //         PaymentsAuthorizeData,
-        //         PaymentsResponseData
-        //     > = connector_data.connector.get_connector_integration_v2();
-
-        //     let result = connector_integration.build_request_v2(&req);
-        //     assert!(result.is_err(), "Expected error for invalid fields");
-        // }
     }
 }
