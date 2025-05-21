@@ -139,15 +139,7 @@ message TimeStamp {
   int32 nanos = 2;   // additional nanoseconds
 }
 
-enum DisputeStatus {
-  DISPUTE_OPENED = 0;
-  DISPUTE_EXPIRED = 1;
-  DISPUTE_ACCEPTED = 2;
-  DISPUTE_CANCELLED = 3;
-  DISPUTE_CHALLENGED = 4;
-  DISPUTE_WON = 5;     // dispute has been successfully challenged by the merchant
-  DISPUTE_LOST = 6;    // dispute has been unsuccessfully challenged
-}
+
 
 
 message DisputesSyncResponse {

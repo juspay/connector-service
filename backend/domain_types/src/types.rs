@@ -7,12 +7,7 @@ use crate::connector_types::{
     MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
     PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
     RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-    SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse, DisputeWebhookDetailsResponse
-    DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData,
-    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-    RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-   
-    WebhookDetailsResponse,
+    SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse, DisputeWebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
@@ -1166,22 +1161,6 @@ pub fn generate_payment_void_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
             })
-        }
-    }
-}
-
-impl ForeignFrom<hyperswitch_common_enums::DisputeStatus>
-    for grpc_api_types::payments::DisputeStatus
-{
-    fn foreign_from(status: hyperswitch_common_enums::DisputeStatus) -> Self {
-        match status {
-            hyperswitch_common_enums::DisputeStatus::DisputeOpened => Self::DisputeOpened,
-            hyperswitch_common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
-            hyperswitch_common_enums::DisputeStatus::DisputeAccepted => Self::DisputeAccepted,
-            hyperswitch_common_enums::DisputeStatus::DisputeCancelled => Self::DisputeCancelled,
-            hyperswitch_common_enums::DisputeStatus::DisputeChallenged => Self::DisputeChallenged,
-            hyperswitch_common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
-            hyperswitch_common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
         }
     }
 }

@@ -44,6 +44,9 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+
+use hyperswitch_common_utils::errors::CustomResult;
+
 use tracing::info;
 
 // Helper trait for payment operations
