@@ -121,7 +121,7 @@ fn parse_metadata<'a>(
 }
 
 #[macro_export]
-macro_rules! implement_payment_operation {
+macro_rules! implement_connector_operation {
     (
         fn_name: $fn_name:ident,
         log_prefix: $log_prefix:literal,

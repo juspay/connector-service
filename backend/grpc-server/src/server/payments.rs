@@ -1,4 +1,4 @@
-use crate::implement_payment_operation;
+use crate::implement_connector_operation;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
@@ -198,7 +198,7 @@ impl Payments {
 }
 
 impl PaymentOperationsInternal for Payments {
-    implement_payment_operation!(
+    implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
         request_type: PaymentsSyncRequest,
@@ -212,7 +212,7 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_sync_response
     );
 
-    implement_payment_operation!(
+    implement_connector_operation!(
         fn_name: internal_refund_sync,
         log_prefix: "REFUND_SYNC",
         request_type: RefundsSyncRequest,
@@ -226,7 +226,7 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_refund_sync_response
     );
 
-    implement_payment_operation!(
+    implement_connector_operation!(
         fn_name: internal_void_payment,
         log_prefix: "PAYMENT_VOID",
         request_type: PaymentsVoidRequest,
@@ -240,7 +240,7 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_void_response
     );
 
-    implement_payment_operation!(
+    implement_connector_operation!(
         fn_name: internal_refund,
         log_prefix: "REFUND",
         request_type: RefundsRequest,
@@ -254,7 +254,7 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_refund_response
     );
 
-    implement_payment_operation!(
+    implement_connector_operation!(
         fn_name: internal_payment_capture,
         log_prefix: "PAYMENT_CAPTURE",
         request_type: PaymentsCaptureRequest,
