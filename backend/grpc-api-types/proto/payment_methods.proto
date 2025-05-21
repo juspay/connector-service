@@ -1,0 +1,812 @@
+syntax = "proto3";
+
+package ucs.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+
+// Card network types for card payments
+enum CardNetwork {
+  CARD_NETWORK_UNSPECIFIED = 0;
+  VISA = 1;
+  MASTERCARD = 2;
+  AMEX = 3;
+  DISCOVER = 4;
+  JCB = 5;
+  DINERS = 6;
+  UNIONPAY = 7;
+  MAESTRO = 8;
+  CARTES_BANCAIRES = 9;
+  RUPAY = 10;
+}
+
+// PaymentMethod represents a payment instrument used to process a payment
+// It contains a oneof field with all possible payment method categories
+message PaymentMethod {
+  oneof payment_method {
+    CardPaymentMethodType card = 1;                               // Card-based payment methods (credit, debit, etc.)
+    WalletPaymentMethodType wallet = 2;                           // Digital wallet payment methods (Apple Pay, Google Pay, etc.)
+    RTPPaymentMethodType rtp = 3;                                 // Real-time payment methods (UPI, PIX, etc.)
+    TokenPaymentMethodType token = 4;                             // Tokenized payment methods
+    BankTransferPaymentMethodType bank_transfer = 5;              // Bank transfer payment methods (ACH, SEPA, etc.)
+    OnlineBankingPaymentMethodType online_banking = 6;            // Online banking payment methods (iDEAL, Sofort, etc.)
+    BNPLPaymentMethodType bnpl = 7;                               // Buy now, pay later payment methods (Affirm, Afterpay, etc.)
+    MobilePaymentMethodType mobile_payment = 8;                   // Mobile payment methods (BLIK, GCash, etc.)
+    CryptoCurrencyPaymentMethodType crypto = 9;                   // Cryptocurrency payment methods
+    CashVoucherPaymentMethodType cash_voucher = 10;               // Cash and voucher payment methods (OXXO, Boleto, etc.)
+    DirectDebitPaymentMethodType direct_debit = 11;               // Direct debit payment methods (BECS, KNET, etc.)
+    OtherPaymentMethodType other = 12;                            // Other payment methods that don't fit in the above categories
+  }
+}
+
+// Card payment methods category
+// Includes credit cards, debit cards, and card redirect flows
+message CardPaymentMethodType {
+  oneof card_type {
+    CardDetails credit = 1;                // Credit card payment details
+    CardDetails debit = 2;                 // Debit card payment details
+    CardRedirect card_redirect = 3;        // Card payment via redirect flow
+  }
+}
+
+// Digital wallet payment methods category
+// Includes mobile wallets and digital payment platforms
+message WalletPaymentMethodType {
+  oneof wallet_type {
+    AppleWallet apple_pay = 1;             // Apple Pay - https://www.apple.com/apple-pay/
+    GoogleWallet google_pay = 2;           // Google Pay - https://pay.google.com/
+    SamsungWallet samsung_pay = 3;         // Samsung Pay - https://www.samsung.com/samsung-pay/
+    AliPayWallet ali_pay = 4;              // Alipay - https://global.alipay.com/
+    AliPayHKWallet ali_pay_hk = 5;         // Alipay Hong Kong - https://www.alipay.hk/
+    WeChatPayWallet we_chat_pay = 6;       // WeChat Pay - https://pay.weixin.qq.com/
+    VenmoWallet venmo = 7;                 // Venmo - https://venmo.com/
+    CashAppWallet cash_app = 8;            // Cash App - https://cash.app/
+    AmazonPayWallet amazon_pay = 9;        // Amazon Pay - https://pay.amazon.com/
+    PazeWallet paze = 10;                  // Paze - Digital wallet service
+  }
+}
+
+// Real-time payment methods category
+// Includes instant payment systems and QR code-based payments
+message RTPPaymentMethodType {
+  oneof rtp_type {
+    UPI upi_collect = 1;                   // UPI Collect - Indian real-time payment system (collect flow) - https://www.npci.org.in/what-we-do/upi/product-overview
+    UPI upi_intent = 2;                    // UPI Intent - Indian real-time payment system (intent flow) - https://www.npci.org.in/what-we-do/upi/product-overview
+    PIX pix = 3;                           // PIX - Brazilian instant payment system - https://www.bcb.gov.br/en/financialstability/pix_en
+    PromptPay prompt_pay = 4;              // PromptPay - Thai QR code payment system - https://www.bot.or.th/English/PaymentSystems/PSServices/PromptPay/
+    VietQR viet_qr = 5;                    // VietQR - Vietnamese QR code payment system - https://vietqr.net/
+  }
+}
+
+// Bank transfer payment methods category
+// Includes various bank transfer systems across different regions
+message BankTransferPaymentMethodType {
+  oneof bank_transfer_type {
+    ACH ach = 1;                           // Automated Clearing House - US bank transfer system - https://www.nacha.org/ach-network
+    BACS bacs = 2;                         // Bankers' Automated Clearing Services - UK bank transfer - https://www.bacs.co.uk/
+    SEPA sepa = 3;                         // Single Euro Payments Area direct debit - https://www.ecb.europa.eu/paym/integration/retail/sepa/
+    SEPABankTransfer sepa_bank_transfer = 4; // SEPA credit transfer - https://www.ecb.europa.eu/paym/integration/retail/sepa/
+    EFT eft = 5;                           // Electronic Funds Transfer - Generic bank transfer
+    FPS fps = 6;                           // Faster Payments Service - UK real-time payments - https://www.fasterpayments.org.uk/
+    LocalBankTransfer local_bank_transfer = 7; // Generic local bank transfer
+    InstantBankTransfer instant_bank_transfer = 8; // Generic instant bank transfer
+    BCABankTransfer bca_bank_transfer = 9; // Bank Central Asia transfer in Indonesia - https://www.bca.co.id/
+    PermataBankTransfer permata_bank_transfer = 10; // Permata Bank transfer in Indonesia - https://www.permatabank.com/
+  }
+}
+
+// Online banking payment methods category
+// Includes online banking systems and open banking initiatives
+message OnlineBankingPaymentMethodType {
+  oneof online_banking_type {
+    OnlineBankingThailand online_banking_thailand = 1;       // Thai online banking
+    OnlineBankingCzechRepublic online_banking_czech_republic = 2; // Czech Republic online banking
+    OnlineBankingFinland online_banking_finland = 3;         // Finnish online banking
+    OnlineBankingFPX online_banking_fpx = 4;                 // Financial Process Exchange - Malaysian online banking - https://www.paynet.my/business-fpx.html
+    OnlineBankingPoland online_banking_poland = 5;           // Polish online banking
+    OnlineBankingSlovakia online_banking_slovakia = 6;       // Slovak online banking
+    OpenBankingUK open_banking_uk = 7;                       // UK Open Banking - https://www.openbanking.org.uk/
+    OpenBankingPIS open_banking_pis = 8;                     // Open Banking Payment Initiation Service - https://www.openbanking.org.uk/
+    LocalBankRedirect local_bank_redirect = 9;               // Generic local bank redirect payment
+    Ideal ideal = 10;                                        // iDEAL - Dutch online banking payment method - https://www.ideal.nl/
+    Sofort sofort = 11;                                      // Sofort - German online banking payment method - https://www.sofort.com/
+    Trustly trustly = 12;                                    // Trustly - European online banking payment method - https://www.trustly.net/
+    Giropay giropay = 13;                                    // Giropay - German bank transfer payment method - https://www.giropay.de/
+    EPS eps = 14;                                            // EPS - Austrian bank transfer system - https://www.eps-ueberweisung.at/
+    Przelewy24 przelewy24 = 15;                              // Przelewy24 - Polish payment system - https://www.przelewy24.pl/
+    PSE pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking - https://www.pse.com.co/
+  }
+}
+
+// Buy now, pay later payment methods category
+// Includes installment payment services
+message BNPLPaymentMethodType {
+  oneof bnpl_type {
+    Affirm affirm = 1;                                       // Affirm - US BNPL service - https://www.affirm.com/
+    AfterpayClearpay afterpay_clearpay = 2;                  // Afterpay/Clearpay - BNPL service (Afterpay in US/AU, Clearpay in UK/EU) - https://www.afterpay.com/
+    Alma alma = 3;                                           // Alma - French BNPL service - https://getalma.eu/
+    Atome atome = 4;                                         // Atome - Asian BNPL service - https://www.atome.sg/
+    PayBright pay_bright = 5;                                // PayBright - Canadian BNPL service - https://paybright.com/
+    Walley walley = 6;                                       // Walley - Nordic BNPL service - https://www.walley.eu/
+  }
+}
+
+// Mobile payment methods category
+// Includes mobile-specific payment solutions
+message MobilePaymentMethodType {
+  oneof mobile_payment_type {
+    Blik blik = 1;                                           // BLIK - Polish mobile payment system - https://blik.com/
+    Bizum bizum = 2;                                         // Bizum - Spanish mobile payment solution - https://bizum.es/
+    Dana dana = 3;                                           // DANA - Indonesian digital wallet - https://www.dana.id/
+    DuitNow duit_now = 4;                                    // DuitNow - Malaysian real-time payment platform - https://www.duitnow.my/
+    GoPay go_pay = 5;                                        // GoPay - Indonesian digital wallet by Gojek - https://www.gojek.com/gopay/
+    GCash gcash = 6;                                         // GCash - Filipino mobile wallet - https://www.gcash.com/
+    KakaoPay kakao_pay = 7;                                  // KakaoPay - South Korean mobile payment service - https://www.kakaopay.com/
+    MBWay mb_way = 8;                                        // MB WAY - Portuguese mobile payment solution - https://www.mbway.pt/
+    MobilePay mobile_pay = 9;                                // MobilePay - Nordic mobile payment platform - https://www.mobilepay.dk/
+    Momo momo = 10;                                          // MoMo - Vietnamese digital wallet - https://momo.vn/
+    MomoATM momo_atm = 11;                                   // MoMo ATM - MoMo ATM transfer in Vietnam - https://momo.vn/
+    Swish swish = 12;                                        // Swish - Swedish mobile payment system - https://www.swish.nu/
+    TouchNGo touch_n_go = 13;                                // Touch 'n Go - Malaysian e-wallet - https://www.touchngo.com.my/
+    Twint twint = 14;                                        // TWINT - Swiss mobile payment app - https://www.twint.ch/
+    Vipps vipps = 15;                                        // Vipps - Norwegian mobile payment application - https://vipps.no/
+  }
+}
+
+// Cryptocurrency payment methods category
+message CryptoCurrencyPaymentMethodType {
+  oneof crypto_type {
+    CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
+  }
+}
+
+// Cash and voucher payment methods category
+// Includes convenience store payments and voucher systems
+message CashVoucherPaymentMethodType {
+  oneof cash_voucher_type {
+    Alfamart alfamart = 1;                                   // Alfamart - Indonesian convenience store payment - https://www.alfamart.co.id/
+    Boleto boleto = 2;                                       // Boleto - Brazilian payment method - https://www.bcb.gov.br/
+    Efecty efecty = 3;                                       // Efecty - Colombian cash payment network - https://www.efecty.com.co/
+    EVoucher evoucher = 4;                                   // E-Voucher - Generic electronic voucher payment
+    Givex givex = 5;                                         // Givex - Gift card and loyalty program provider - https://www.givex.com/
+    Indomaret indomaret = 6;                                 // Indomaret - Indonesian convenience store payment - https://www.indomaret.co.id/
+    OXXO oxxo = 7;                                           // OXXO - Mexican convenience store payment - https://www.oxxo.com/
+    PagoEfectivo pago_efectivo = 8;                          // PagoEfectivo - Peruvian cash payment method - https://pagoefectivo.pe/
+    PaySafeCard pay_safe_card = 9;                           // Paysafecard - Prepaid payment method - https://www.paysafecard.com/
+    SevenEleven seven_eleven = 10;                           // 7-Eleven - Convenience store payment - https://www.7-eleven.com/
+    Lawson lawson = 11;                                      // Lawson - Japanese convenience store payment - https://www.lawson.jp/
+    MiniStop mini_stop = 12;                                 // Ministop - Japanese convenience store payment - https://www.ministop.co.jp/
+    FamilyMart family_mart = 13;                             // FamilyMart - Japanese convenience store payment - https://www.family.co.jp/
+    Seicomart seicomart = 14;                                // Seicomart - Japanese convenience store payment - https://www.seicomart.co.jp/
+    PayEasy pay_easy = 15;                                   // Pay-easy - Japanese bill payment service - https://www.pay-easy.jp/
+  }
+}
+
+// Direct debit payment methods category
+// Includes direct debit systems across different regions
+message DirectDebitPaymentMethodType {
+  oneof direct_debit_type {
+    BancontactCard bancontact_card = 1;                      // Bancontact - Belgian debit card scheme - https://www.bancontact.com/
+    BECS becs = 2;                                           // BECS - Bulk Electronic Clearing System - Australian direct debit - https://www.auspaynet.com.au/
+    Benefit benefit = 3;                                     // Benefit - Bahrain's national electronic wallet - https://www.benefit.bh/
+    BNIVA bni_va = 4;                                        // BNI VA - Bank Negara Indonesia Virtual Account - https://www.bni.co.id/
+    BRIVA bri_va = 5;                                        // BRI VA - Bank Rakyat Indonesia Virtual Account - https://bri.co.id/
+    CIMBVA cimb_va = 6;                                      // CIMB VA - CIMB Bank Virtual Account - https://www.cimbniaga.co.id/
+    DanamonVA danamon_va = 7;                                // Danamon VA - Bank Danamon Virtual Account - https://www.danamon.co.id/
+    MandiriVA mandiri_va = 8;                                // Mandiri VA - Bank Mandiri Virtual Account - https://www.bankmandiri.co.id/
+    KNET knet = 9;                                           // KNET - Kuwait's national electronic banking service - https://www.knet.com.kw/
+  }
+}
+
+// Other payment methods category
+// Includes payment methods that don't fit in other categories
+message OtherPaymentMethodType {
+  oneof other_type {
+    ClassicReward classic_reward = 1;                        // Classic Reward - Loyalty/reward points payment
+    DirectCarrierBilling direct_carrier_billing = 2;         // Direct Carrier Billing - Mobile carrier billing
+    Interac interac = 3;                                     // Interac - Canadian debit card system - https://www.interac.ca/
+    Multibanco multibanco = 4;                               // Multibanco - Portuguese payment method - https://www.multibanco.pt/
+    RedCompra red_compra = 5;                                // RedCompra - Chilean debit card network - https://www.redcompra.cl/
+    RedPagos red_pagos = 6;                                  // RedPagos - Uruguayan payment network - https://www.redpagos.com.uy/
+  }
+}
+
+// Payment method token details.
+message TokenPaymentMethodType {
+  // The token string representing a payment method.
+  string token = 1;
+}
+
+
+// Details of a payment card.
+message CardDetails {
+  // Card number.
+  string card_number = 1 [(validate.rules).string = {min_len: 13, max_len: 19, pattern: "^[0-9]{13,19}$"}];
+  // Card expiry month (e.g., "01", "12").
+  string card_exp_month = 2 [(validate.rules).string = {min_len: 2, max_len: 2, pattern: "^[0-9]{2}$"}];
+  // Card expiry year (e.g., "2023", "23").
+  string card_exp_year = 3 [(validate.rules).string = {min_len: 4, max_len: 4, pattern: "^[0-9]{4}$"}];
+  // Name of the cardholder.
+  optional string card_holder_name = 4;
+  // Card Verification Code (CVC/CVV).
+  string card_cvc = 5;
+  // Issuer of the card (e.g., "Chase", "HSBC").
+  optional string card_issuer = 6;
+  // Network of the card (e.g., Visa, Mastercard).
+  optional CardNetwork card_network = 7;
+  // Type of card (e.g., "credit", "debit").
+  optional string card_type = 8;
+  // Issuing country of the card (Alpha-2 code).
+  optional string card_issuing_country_alpha2 = 9; // Renamed from card_issuing_country
+  // Bank identification code, if applicable.
+  optional string bank_code = 10;
+  // Nickname for the saved card, if applicable.
+  optional string nick_name = 11;
+}
+
+// Card redirect payment method
+// Used for card payments that require a redirect to a 3DS page or issuer site
+message CardRedirect {
+  // Fields will be added as needed for card redirect flows
+  // Common fields might include return URLs, session tokens, etc.
+}
+
+// Wallet payment methods
+// Apple Pay - Apple's mobile payment and digital wallet service
+// https://www.apple.com/apple-pay/
+message AppleWallet {
+  // Fields will be added as needed for Apple Pay integration
+  // Common fields might include payment token, device data, etc.
+}
+
+// Google Pay - Google's mobile payment platform
+// https://pay.google.com/
+message GoogleWallet {
+  // Fields will be added as needed for Google Pay integration
+  // Common fields might include payment token, billing address, etc.
+}
+
+// Samsung Pay - Samsung's mobile payment service
+// https://www.samsung.com/samsung-pay/
+message SamsungWallet {
+  // Fields will be added as needed for Samsung Pay integration
+}
+
+// Alipay - Chinese digital wallet platform by Ant Group
+// https://global.alipay.com/
+message AliPayWallet {
+  // Fields will be added as needed for Alipay integration
+}
+
+// Alipay Hong Kong - Hong Kong version of Alipay
+// https://www.alipay.hk/
+message AliPayHKWallet {
+  // Fields will be added as needed for Alipay HK integration
+}
+
+// WeChat Pay - Chinese digital wallet service by Tencent
+// https://pay.weixin.qq.com/
+message WeChatPayWallet {
+  // Fields will be added as needed for WeChat Pay integration
+}
+
+// Venmo - US mobile payment service owned by PayPal
+// https://venmo.com/
+message VenmoWallet {
+  // Fields will be added as needed for Venmo integration
+}
+
+// Cash App - Mobile payment service by Block, Inc.
+// https://cash.app/
+message CashAppWallet {
+  // Fields will be added as needed for Cash App integration
+}
+
+// Amazon Pay - Online payment service by Amazon
+// https://pay.amazon.com/
+message AmazonPayWallet {
+  // Fields will be added as needed for Amazon Pay integration
+}
+
+// Paze - Digital wallet payment service
+message PazeWallet {
+  // Fields will be added as needed for Paze integration
+}
+
+// Real-time payment methods
+// UPI (Unified Payments Interface) - Indian instant real-time payment system
+// https://www.npci.org.in/what-we-do/upi/product-overview
+message UPI {
+  // Fields will be added as needed for UPI integration
+  // Common fields might include VPA (Virtual Payment Address), UPI ID, etc.
+}
+
+// PIX - Brazilian instant payment ecosystem
+// https://www.bcb.gov.br/en/financialstability/pix_en
+message PIX {
+  // Fields will be added as needed for PIX integration
+  // Common fields might include PIX key, QR code data, etc.
+}
+
+// PromptPay - Thai QR code payment system
+// https://www.bot.or.th/English/PaymentSystems/PSServices/PromptPay/
+message PromptPay {
+  // Fields will be added as needed for PromptPay integration
+}
+
+// VietQR - Vietnamese QR code payment system
+// https://vietqr.net/
+message VietQR {
+  // Fields will be added as needed for VietQR integration
+}
+
+// Bank transfer payment methods
+// ACH (Automated Clearing House) - US electronic funds transfer system
+// https://www.nacha.org/ach-network
+message ACH {
+  // Fields will be added as needed for ACH integration
+  // Common fields might include account number, routing number, etc.
+}
+
+// BACS (Bankers' Automated Clearing Services) - UK bank transfer system
+// https://www.bacs.co.uk/
+message BACS {
+  // Fields will be added as needed for BACS integration
+}
+
+// SEPA (Single Euro Payments Area) - EU payment integration initiative
+// https://www.ecb.europa.eu/paym/integration/retail/sepa/
+message SEPA {
+  // Fields will be added as needed for SEPA direct debit integration
+  // Common fields might include IBAN, BIC, mandate information, etc.
+}
+
+// SEPA Bank Transfer - Credit transfer within the SEPA network
+// https://www.ecb.europa.eu/paym/integration/retail/sepa/
+message SEPABankTransfer {
+  // Fields will be added as needed for SEPA credit transfer integration
+  // Common fields might include IBAN, BIC, remittance information, etc.
+}
+
+// EFT (Electronic Funds Transfer) - Generic electronic transfer of funds
+message EFT {
+  // Fields will be added as needed for EFT integration
+}
+
+// FPS (Faster Payments Service) - UK real-time payments
+// https://www.fasterpayments.org.uk/
+message FPS {
+  // Fields will be added as needed for FPS integration
+}
+
+// Local Bank Transfer - Generic local bank transfer method
+message LocalBankTransfer {
+  // Fields will be added as needed for local bank transfers
+}
+
+// Instant Bank Transfer - Generic instant bank transfer method
+message InstantBankTransfer {
+  // Fields will be added as needed for instant bank transfers
+}
+
+// BCA Bank Transfer - Bank Central Asia transfer in Indonesia
+// https://www.bca.co.id/
+message BCABankTransfer {
+  // Fields will be added as needed for BCA Bank Transfer integration
+}
+
+// Permata Bank Transfer - Permata Bank transfer in Indonesia
+// https://www.permatabank.com/
+message PermataBankTransfer {
+  // Fields will be added as needed for Permata Bank Transfer integration
+}
+
+// Online banking payment methods
+// Thai online banking systems
+message OnlineBankingThailand {
+  // Fields will be added as needed for Thai online banking integration
+}
+
+// Czech Republic online banking systems
+message OnlineBankingCzechRepublic {
+  // Fields will be added as needed for Czech online banking integration
+}
+
+// Finnish online banking systems
+message OnlineBankingFinland {
+  // Fields will be added as needed for Finnish online banking integration
+}
+
+// FPX (Financial Process Exchange) - Malaysian online banking
+// https://www.paynet.my/business-fpx.html
+message OnlineBankingFPX {
+  // Fields will be added as needed for FPX integration
+}
+
+// Polish online banking systems
+message OnlineBankingPoland {
+  // Fields will be added as needed for Polish online banking integration
+}
+
+// Slovak online banking systems
+message OnlineBankingSlovakia {
+  // Fields will be added as needed for Slovak online banking integration
+}
+
+// UK Open Banking - Open Banking implementation in the UK
+// https://www.openbanking.org.uk/
+message OpenBankingUK {
+  // Fields will be added as needed for UK Open Banking integration
+}
+
+// Open Banking Payment Initiation Service
+// https://www.openbanking.org.uk/
+message OpenBankingPIS {
+  // Fields will be added as needed for Open Banking PIS integration
+}
+
+// Generic local bank redirect payment
+message LocalBankRedirect {
+  // Fields will be added as needed for local bank redirect payments
+}
+
+// iDEAL - Dutch online banking payment method
+// https://www.ideal.nl/
+message Ideal {
+  // Fields will be added as needed for iDEAL integration
+  // Common fields might include issuer ID, return URL, etc.
+}
+
+// Sofort - German online banking payment method
+// https://www.sofort.com/
+message Sofort {
+  // Fields will be added as needed for Sofort integration
+}
+
+// Trustly - European online banking payment method
+// https://www.trustly.net/
+message Trustly {
+  // Fields will be added as needed for Trustly integration
+}
+
+// Giropay - German bank transfer payment method
+// https://www.giropay.de/
+message Giropay {
+  // Fields will be added as needed for Giropay integration
+}
+
+// EPS (Electronic Payment Standard) - Austrian bank transfer system
+// https://www.eps-ueberweisung.at/
+message EPS {
+  // Fields will be added as needed for EPS integration
+}
+
+// Przelewy24 - Polish payment system
+// https://www.przelewy24.pl/
+message Przelewy24 {
+  // Fields will be added as needed for Przelewy24 integration
+}
+
+// PSE (Pagos Seguros en Línea) - Colombian online banking
+// https://www.pse.com.co/
+message PSE {
+  // Fields will be added as needed for PSE integration
+}
+
+// Buy now, pay later payment methods
+// Affirm - US BNPL service
+// https://www.affirm.com/
+message Affirm {
+  // Fields will be added as needed for Affirm integration
+}
+
+// Afterpay/Clearpay - BNPL service (Afterpay in US/AU, Clearpay in UK/EU)
+// https://www.afterpay.com/
+message AfterpayClearpay {
+  // Fields will be added as needed for Afterpay/Clearpay integration
+}
+
+// Alma - French BNPL service
+// https://getalma.eu/
+message Alma {
+  // Fields will be added as needed for Alma integration
+}
+
+// Atome - Asian BNPL service
+// https://www.atome.sg/
+message Atome {
+  // Fields will be added as needed for Atome integration
+}
+
+// PayBright - Canadian BNPL service
+// https://paybright.com/
+message PayBright {
+  // Fields will be added as needed for PayBright integration
+}
+
+// Walley - Nordic BNPL service
+// https://www.walley.eu/
+message Walley {
+  // Fields will be added as needed for Walley integration
+}
+
+// Mobile payment methods
+// BLIK - Polish mobile payment system
+// https://blik.com/
+message Blik {
+  // Fields will be added as needed for BLIK integration
+}
+
+// Bizum - Spanish mobile payment solution
+// https://bizum.es/
+message Bizum {
+  // Fields will be added as needed for Bizum integration
+}
+
+// DANA - Indonesian digital wallet
+// https://www.dana.id/
+message Dana {
+  // Fields will be added as needed for DANA integration
+}
+
+// DuitNow - Malaysian real-time payment platform
+// https://www.duitnow.my/
+message DuitNow {
+  // Fields will be added as needed for DuitNow integration
+}
+
+// GoPay - Indonesian digital wallet by Gojek
+// https://www.gojek.com/gopay/
+message GoPay {
+  // Fields will be added as needed for GoPay integration
+}
+
+// GCash - Filipino mobile wallet and payment platform
+// https://www.gcash.com/
+message GCash {
+  // Fields will be added as needed for GCash integration
+}
+
+// KakaoPay - South Korean mobile payment service
+// https://www.kakaopay.com/
+message KakaoPay {
+  // Fields will be added as needed for KakaoPay integration
+}
+
+// MB WAY - Portuguese mobile payment solution
+// https://www.mbway.pt/
+message MBWay {
+  // Fields will be added as needed for MB WAY integration
+}
+
+// MobilePay - Nordic mobile payment platform
+// https://www.mobilepay.dk/
+message MobilePay {
+  // Fields will be added as needed for MobilePay integration
+}
+
+// MoMo - Vietnamese digital wallet
+// https://momo.vn/
+message Momo {
+  // Fields will be added as needed for MoMo integration
+}
+
+// MoMo ATM - MoMo ATM transfer in Vietnam
+// https://momo.vn/
+message MomoATM {
+  // Fields will be added as needed for MoMo ATM integration
+}
+
+// Swish - Swedish mobile payment system
+// https://www.swish.nu/
+message Swish {
+  // Fields will be added as needed for Swish integration
+}
+
+// Touch 'n Go - Malaysian e-wallet
+// https://www.touchngo.com.my/
+message TouchNGo {
+  // Fields will be added as needed for Touch 'n Go integration
+}
+
+// TWINT - Swiss mobile payment app
+// https://www.twint.ch/
+message Twint {
+  // Fields will be added as needed for TWINT integration
+}
+
+// Vipps - Norwegian mobile payment application
+// https://vipps.no/
+message Vipps {
+  // Fields will be added as needed for Vipps integration
+}
+
+// Cryptocurrency payment methods
+// Generic cryptocurrency payment
+message CryptoCurrency {
+  // Fields will be added as needed for cryptocurrency payments
+  // Common fields might include wallet address, currency type, etc.
+}
+
+// Cash/voucher payment methods
+// Alfamart - Indonesian convenience store payment
+// https://www.alfamart.co.id/
+message Alfamart {
+  // Fields will be added as needed for Alfamart integration
+}
+
+// Boleto - Brazilian payment method
+// https://www.bcb.gov.br/
+message Boleto {
+  // Fields will be added as needed for Boleto integration
+}
+
+// Efecty - Colombian cash payment network
+// https://www.efecty.com.co/
+message Efecty {
+  // Fields will be added as needed for Efecty integration
+}
+
+// E-Voucher - Generic electronic voucher payment
+message EVoucher {
+  // Fields will be added as needed for E-Voucher integration
+}
+
+// Givex - Gift card and loyalty program provider
+// https://www.givex.com/
+message Givex {
+  // Fields will be added as needed for Givex integration
+}
+
+// Indomaret - Indonesian convenience store payment
+// https://www.indomaret.co.id/
+message Indomaret {
+  // Fields will be added as needed for Indomaret integration
+}
+
+// OXXO - Mexican convenience store payment
+// https://www.oxxo.com/
+message OXXO {
+  // Fields will be added as needed for OXXO integration
+}
+
+// PagoEfectivo - Peruvian cash payment method
+// https://pagoefectivo.pe/
+message PagoEfectivo {
+  // Fields will be added as needed for PagoEfectivo integration
+}
+
+// Paysafecard - Prepaid payment method
+// https://www.paysafecard.com/
+message PaySafeCard {
+  // Fields will be added as needed for Paysafecard integration
+}
+
+// 7-Eleven - Convenience store payment
+// https://www.7-eleven.com/
+message SevenEleven {
+  // Fields will be added as needed for 7-Eleven integration
+}
+
+// Lawson - Japanese convenience store payment
+// https://www.lawson.jp/
+message Lawson {
+  // Fields will be added as needed for Lawson integration
+}
+
+// Ministop - Japanese convenience store payment
+// https://www.ministop.co.jp/
+message MiniStop {
+  // Fields will be added as needed for Ministop integration
+}
+
+// FamilyMart - Japanese convenience store payment
+// https://www.family.co.jp/
+message FamilyMart {
+  // Fields will be added as needed for FamilyMart integration
+}
+
+// Seicomart - Japanese convenience store payment
+// https://www.seicomart.co.jp/
+message Seicomart {
+  // Fields will be added as needed for Seicomart integration
+}
+
+// Pay-easy - Japanese bill payment service
+// https://www.pay-easy.jp/
+message PayEasy {
+  // Fields will be added as needed for Pay-easy integration
+}
+
+// Direct debit payment methods
+// Bancontact - Belgian debit card scheme
+// https://www.bancontact.com/
+message BancontactCard {
+  // Fields will be added as needed for Bancontact integration
+}
+
+// BECS - Bulk Electronic Clearing System - Australian direct debit
+// https://www.auspaynet.com.au/
+message BECS {
+  // Fields will be added as needed for BECS integration
+}
+
+// Benefit - Bahrain's national electronic wallet
+// https://www.benefit.bh/
+message Benefit {
+  // Fields will be added as needed for Benefit integration
+}
+
+// BNI VA - Bank Negara Indonesia Virtual Account
+// https://www.bni.co.id/
+message BNIVA {
+  // Fields will be added as needed for BNI VA integration
+}
+
+// BRI VA - Bank Rakyat Indonesia Virtual Account
+// https://bri.co.id/
+message BRIVA {
+  // Fields will be added as needed for BRI VA integration
+}
+
+// CIMB VA - CIMB Bank Virtual Account
+// https://www.cimbniaga.co.id/
+message CIMBVA {
+  // Fields will be added as needed for CIMB VA integration
+}
+
+// Danamon VA - Bank Danamon Virtual Account
+// https://www.danamon.co.id/
+message DanamonVA {
+  // Fields will be added as needed for Danamon VA integration
+}
+
+// Mandiri VA - Bank Mandiri Virtual Account
+// https://www.bankmandiri.co.id/
+message MandiriVA {
+  // Fields will be added as needed for Mandiri VA integration
+}
+
+// KNET - Kuwait's national electronic banking service
+// https://www.knet.com.kw/
+message KNET {
+  // Fields will be added as needed for KNET integration
+}
+
+// Other payment methods
+// Classic Reward - Loyalty/reward points payment
+message ClassicReward {
+  // Fields will be added as needed for Classic Reward integration
+}
+
+// Direct Carrier Billing - Mobile carrier billing
+message DirectCarrierBilling {
+  // Fields will be added as needed for Direct Carrier Billing integration
+}
+
+// Interac - Canadian debit card system
+// https://www.interac.ca/
+message Interac {
+  // Fields will be added as needed for Interac integration
+}
+
+// Multibanco - Portuguese payment method
+// https://www.multibanco.pt/
+message Multibanco {
+  // Fields will be added as needed for Multibanco integration
+}
+
+// RedCompra - Chilean debit card network
+// https://www.redcompra.cl/
+message RedCompra {
+  // Fields will be added as needed for RedCompra integration
+}
+
+// RedPagos - Uruguayan payment network
+// https://www.redpagos.com.uy/
+message RedPagos {
+  // Fields will be added as needed for RedPagos integration
+}
