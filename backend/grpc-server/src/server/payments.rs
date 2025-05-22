@@ -22,9 +22,9 @@ use domain_types::{
 };
 use domain_types::{
     types::{
-        generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_refund_sync_response,
-        generate_setup_mandate_response,
+        generate_defend_dispute_response, generate_payment_capture_response,
+        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
+        generate_refund_sync_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
@@ -48,6 +48,11 @@ use tracing::info;
 
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
+    async fn internal_defend_dispute(
+        &self,
+        request: tonic::Request<DisputeDefendRequest>,
+    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
+
     async fn internal_payment_sync(
         &self,
         request: tonic::Request<PaymentsSyncRequest>,
@@ -198,6 +203,20 @@ impl Payments {
 }
 
 impl PaymentOperationsInternal for Payments {
+    implement_connector_operation!(
+        fn_name: internal_defend_dispute,
+        log_prefix: "DEFEND_DISPUTE",
+        request_type: DisputeDefendRequest,
+        response_type: DisputeDefendResponse,
+        flow_marker: DefendDispute,
+        resource_common_data_type: DisputeFlowData,
+        request_data_type: DisputeDefendData,
+        response_data_type: DisputeResponseData,
+        request_data_constructor: DisputeDefendData::foreign_try_from,
+        common_flow_data_constructor: DisputeFlowData::foreign_try_from,
+        generate_response_fn: generate_defend_dispute_response
+    );
+
     implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
@@ -460,75 +479,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<DisputeDefendRequest>,
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
-        info!("DISPUTE_DEFEND_FLOW: initiated");
-
-        let connector =
-            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-
-        // Extract auth credentials
-        let connector_auth_details =
-            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let payload = request.into_inner();
-
-        //get connector data
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
-
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        // Create common request data
-        let defend_dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| {
-                    tonic::Status::invalid_argument(format!("Invalid request data: {}", e))
-                });
-
-        // Create connector request data
-        let defend_dispute_data = DisputeDefendData::foreign_try_from(payload.clone())
-            .map_err(|e| tonic::Status::invalid_argument(format!("Invalid request data: {}", e)))?;
-
-        // Construct router data
-        let router_data = RouterDataV2::<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: defend_dispute_flow_data?,
-            connector_auth_type: connector_auth_details,
-            request: defend_dispute_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-        )
-        .await
-        .map_err(|e| tonic::Status::internal(format!("Connector processing error: {}", e)))?;
-
-        // Generate response
-        let defend_dispute_response =
-            match domain_types::types::generate_defend_dispute_response(response) {
-                Ok(resp) => resp,
-                Err(e) => {
-                    return Err(tonic::Status::internal(format!(
-                        "Response generation error: {}",
-                        e
-                    )))
-                }
-            };
-
-        Ok(tonic::Response::new(defend_dispute_response))
+        self.internal_defend_dispute(request).await
     }
 
     async fn payment_capture(
