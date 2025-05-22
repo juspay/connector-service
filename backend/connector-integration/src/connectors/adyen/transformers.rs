@@ -11,7 +11,7 @@ use domain_types::{
         RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
 };
-use error_stack::ResultExt;
+use error_stack::{Report, ResultExt};
 use hyperswitch_api_models::enums::{self, AttemptStatus, RefundStatus};
 use hyperswitch_common_utils::{
     errors::CustomResult,
@@ -2438,18 +2438,26 @@ pub struct AdyenDefendDisputeRequest {
     defense_reason_code: String,
 }
 
-impl TryFrom<&RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>>
-    for AdyenDefendDisputeRequest
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        >,
+    > for AdyenDefendDisputeRequest
 {
     type Error = Error;
+
     fn try_from(
-        item: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        item: AdyenRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.connector_auth_type)?;
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
         Ok(Self {
-            dispute_psp_reference: item.request.connector_dispute_id.clone(),
+            dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),
             merchant_account_code: auth_type.merchant_account.clone(),
-            defense_reason_code: item.request.defense_reason_code.clone(),
+            defense_reason_code: item.router_data.request.defense_reason_code.clone(),
         })
     }
 }
@@ -2486,28 +2494,32 @@ pub struct DisputeServiceResult {
 }
 
 impl<F, Req>
-    ForeignTryFrom<(
-        AdyenDefendDisputeResponse,
-        RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
-        u16,
-    )> for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
-{
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
-    fn foreign_try_from(
-        (response, data, http_code): (
+    TryFrom<
+        ResponseRouterData<
             AdyenDefendDisputeResponse,
             RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
-            u16,
-        ),
+        >,
+    > for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Report<hyperswitch_interfaces::errors::ConnectorError>;
+
+    fn try_from(
+        value: ResponseRouterData<
+            AdyenDefendDisputeResponse,
+            RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
+        // You already have this logic inside your ForeignTryFrom impl — just copy that over:
+        let (response, data, status_code) = (value.response, value.router_data, value.http_code);
+
         match response {
             AdyenDefendDisputeResponse::DefendDisputeSuccessResponse(result) => {
-                let dispute_status: hyperswitch_api_models::enums::DisputeStatus =
-                    if result.dispute_service_result.success {
-                        hyperswitch_api_models::enums::DisputeStatus::DisputeWon
-                    } else {
-                        hyperswitch_api_models::enums::DisputeStatus::DisputeLost
-                    };
+                let dispute_status = if result.dispute_service_result.success {
+                    hyperswitch_api_models::enums::DisputeStatus::DisputeWon
+                } else {
+                    hyperswitch_api_models::enums::DisputeStatus::DisputeLost
+                };
+
                 Ok(Self {
                     response: Ok(DisputeResponseData {
                         dispute_status,
@@ -2517,12 +2529,13 @@ impl<F, Req>
                     ..data
                 })
             }
+
             AdyenDefendDisputeResponse::DefendDisputeFailedResponse(result) => Ok(Self {
                 response: Err(ErrorResponse {
                     code: result.error_code,
                     message: result.message.clone(),
                     reason: Some(result.message),
-                    status_code: http_code,
+                    status_code,
                     attempt_status: None,
                     connector_transaction_id: Some(result.psp_reference),
                 }),

@@ -6,14 +6,14 @@ use hyperswitch_common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
 };
 
-use crate::{with_error_response_body, with_response_body};
+use crate::with_error_response_body;
 
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
-use error_stack::{report, ResultExt};
+use error_stack::report;
 use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
     api::{self, ConnectorCommon},
@@ -44,11 +44,12 @@ use domain_types::{
     },
 };
 use transformers::{
-    self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenDisputeAcceptRequest,
-    AdyenDisputeAcceptResponse, AdyenDisputeSubmitEvidenceRequest, AdyenNotificationRequestItemWH,
-    AdyenPSyncResponse, AdyenPaymentRequest, AdyenPaymentResponse, AdyenRedirectRequest,
-    AdyenRefundRequest, AdyenRefundResponse, AdyenSubmitEvidenceResponse, AdyenVoidRequest,
-    AdyenVoidResponse, ForeignTryFrom, SetupMandateRequest, SetupMandateResponse,
+    self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenDefendDisputeRequest,
+    AdyenDefendDisputeResponse, AdyenDisputeAcceptRequest, AdyenDisputeAcceptResponse,
+    AdyenDisputeSubmitEvidenceRequest, AdyenNotificationRequestItemWH, AdyenPSyncResponse,
+    AdyenPaymentRequest, AdyenPaymentResponse, AdyenRedirectRequest, AdyenRefundRequest,
+    AdyenRefundResponse, AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse,
+    SetupMandateRequest, SetupMandateResponse,
 };
 
 pub(crate) mod headers {
@@ -119,6 +120,12 @@ macros::create_all_prerequisites!(
             request_body: AdyenDisputeSubmitEvidenceRequest,
             response_body: AdyenSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+        ),
+        (
+            flow: DefendDispute,
+            request_body: AdyenDefendDisputeRequest,
+            response_body: AdyenDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
         )
     ],
     amount_converters: [],
@@ -329,6 +336,34 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenDefendDisputeRequest),
+    curl_response: AdyenDefendDisputeResponse,
+    flow_name: DefendDispute,
+    resource_common_data: DisputeFlowData,
+    flow_request: DisputeDefendData,
+    flow_response: DisputeResponseData,
+    http_method: Post,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let dispute_url = self.connector_base_url_disputes(req)
+                .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            Ok(format!("{}ca/services/DisputeService/v30/defendDispute", dispute_url))
+        }
+    }
+);
+
 impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Adyen {}
 
 impl IncomingWebhook for Adyen {
@@ -502,92 +537,3 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Adyen
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-    where
-        Self: ConnectorIntegrationV2<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        >,
-    {
-        let mut header = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
-        Ok(header)
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let adyen_dispute_base_url = req
-            .resource_common_data
-            .connectors
-            .adyen
-            .dispute_base_url
-            .clone()
-            .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-        Ok(format!(
-            "{}ca/services/DisputeService/v30/defendDispute",
-            adyen_dispute_base_url
-        ))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = adyen::AdyenDefendDisputeRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-        errors::ConnectorError,
-    > {
-        let response: adyen::AdyenDefendDisputeResponse = res
-            .response
-            .parse_struct("AdyenDefendDisputeResponse")
-            .map_err(|err| {
-                report!(errors::ConnectorError::ResponseDeserializationFailed)
-                    .attach_printable(format!("Failed to parse AdyenDisputeResponse: {err:?}"))
-            })?;
-
-        with_response_body!(event_builder, response);
-
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-
-    fn get_5xx_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
