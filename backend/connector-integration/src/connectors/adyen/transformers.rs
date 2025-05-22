@@ -1,18 +1,18 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, PSync, Refund, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, DefendDispute, PSync, Refund, SetupMandate, SubmitEvidence,
+        Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
 };
-use error_stack::ResultExt;
+use error_stack::{Report, ResultExt};
 use hyperswitch_api_models::enums::{self, AttemptStatus, RefundStatus};
-
 use hyperswitch_common_utils::{
     errors::CustomResult,
     ext_traits::{ByteSliceExt, OptionExt},
@@ -2176,13 +2176,6 @@ pub struct AdyenDisputeAcceptResponse {
     pub dispute_service_result: Option<DisputeServiceResult>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DisputeServiceResult {
-    pub success: bool,
-    pub error_message: Option<String>,
-}
-
 impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
     for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
@@ -2433,6 +2426,115 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 response: Err(error_response),
                 ..router_data
             })
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDefendDisputeRequest {
+    dispute_psp_reference: String,
+    merchant_account_code: Secret<String>,
+    defense_reason_code: String,
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        >,
+    > for AdyenDefendDisputeRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),
+            merchant_account_code: auth_type.merchant_account.clone(),
+            defense_reason_code: item.router_data.request.defense_reason_code.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum AdyenDefendDisputeResponse {
+    DefendDisputeSuccessResponse(DefendDisputeSuccessResponse),
+    DefendDisputeFailedResponse(DefendDisputeErrorResponse),
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefendDisputeErrorResponse {
+    error_code: String,
+    error_type: String,
+    message: String,
+    psp_reference: String,
+    status: String,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefendDisputeSuccessResponse {
+    dispute_service_result: DisputeServiceResult,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DisputeServiceResult {
+    error_message: Option<String>,
+    success: bool,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Report<hyperswitch_interfaces::errors::ConnectorError>;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenDefendDisputeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        match response {
+            AdyenDefendDisputeResponse::DefendDisputeSuccessResponse(result) => {
+                let dispute_status = if result.dispute_service_result.success {
+                    hyperswitch_api_models::enums::DisputeStatus::DisputeWon
+                } else {
+                    hyperswitch_api_models::enums::DisputeStatus::DisputeLost
+                };
+
+                Ok(Self {
+                    response: Ok(DisputeResponseData {
+                        dispute_status,
+                        connector_dispute_status: None,
+                        connector_dispute_id: router_data.connector_dispute_id.clone(),
+                    }),
+                    ..router_data
+                })
+            }
+
+            AdyenDefendDisputeResponse::DefendDisputeFailedResponse(result) => Ok(Self {
+                response: Err(ErrorResponse {
+                    code: result.error_code,
+                    message: result.message.clone(),
+                    reason: Some(result.message),
+                    status_code: http_code,
+                    attempt_status: None,
+                    connector_transaction_id: Some(result.psp_reference),
+                }),
+                ..router_data
+            }),
         }
     }
 }

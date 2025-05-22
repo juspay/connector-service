@@ -7,14 +7,14 @@ use crate::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
     errors::{ApiError, ApplicationErrorResponse},
@@ -22,9 +22,9 @@ use domain_types::{
 };
 use domain_types::{
     types::{
-        generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_refund_sync_response,
-        generate_setup_mandate_response,
+        generate_defend_dispute_response, generate_payment_capture_response,
+        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
+        generate_refund_sync_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
@@ -32,11 +32,11 @@ use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
-    IncomingWebhookRequest, IncomingWebhookResponse, PaymentsAuthorizeRequest,
-    PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsCaptureResponse,
-    PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
-    RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse, SetupMandateRequest,
-    SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
+    DisputeDefendRequest, DisputeDefendResponse, IncomingWebhookRequest, IncomingWebhookResponse,
+    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
+    PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
+    PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
+    SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
@@ -48,6 +48,11 @@ use tracing::info;
 
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
+    async fn internal_defend_dispute(
+        &self,
+        request: tonic::Request<DisputeDefendRequest>,
+    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
+
     async fn internal_payment_sync(
         &self,
         request: tonic::Request<PaymentsSyncRequest>,
@@ -198,6 +203,20 @@ impl Payments {
 }
 
 impl PaymentOperationsInternal for Payments {
+    implement_connector_operation!(
+        fn_name: internal_defend_dispute,
+        log_prefix: "DEFEND_DISPUTE",
+        request_type: DisputeDefendRequest,
+        response_type: DisputeDefendResponse,
+        flow_marker: DefendDispute,
+        resource_common_data_type: DisputeFlowData,
+        request_data_type: DisputeDefendData,
+        response_data_type: DisputeResponseData,
+        request_data_constructor: DisputeDefendData::foreign_try_from,
+        common_flow_data_constructor: DisputeFlowData::foreign_try_from,
+        generate_response_fn: generate_defend_dispute_response
+    );
+
     implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
@@ -454,6 +473,13 @@ impl PaymentService for Payments {
         request: tonic::Request<RefundsRequest>,
     ) -> Result<tonic::Response<RefundsResponse>, tonic::Status> {
         self.internal_refund(request).await
+    }
+
+    async fn defend_dispute(
+        &self,
+        request: tonic::Request<DisputeDefendRequest>,
+    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
+        self.internal_defend_dispute(request).await
     }
 
     async fn payment_capture(

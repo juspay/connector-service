@@ -27,3 +27,6 @@ pub struct Accept;
 
 #[derive(Debug, Clone)]
 pub struct SubmitEvidence;
+
+#[derive(Debug, Clone)]
+pub struct DefendDispute;

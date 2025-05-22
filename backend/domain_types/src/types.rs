@@ -1,10 +1,11 @@
 use crate::connector_flow::{
-    Accept, Authorize, Capture, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void,
+    Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate, SubmitEvidence,
+    Void,
 };
 use crate::connector_types::{
-    AcceptDisputeData, DisputeFlowData, DisputeResponseData, MultipleCaptureRequestData,
-    PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-    PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+    AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+    MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+    PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
     RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
     SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
 };
@@ -12,10 +13,10 @@ use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    AcceptDisputeResponse, MandateReference, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
-    PaymentsCaptureResponse, PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse,
-    RefundsResponse, RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse,
-    SubmitEvidenceResponse,
+    AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, MandateReference,
+    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
+    PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
+    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
@@ -24,6 +25,7 @@ use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
 };
+use hyperswitch_interfaces::consts::NO_ERROR_CODE;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 
@@ -1332,6 +1334,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
             dispute_id: None,
             connectors,
             connector_dispute_id: value.connector_dispute_id,
+            defense_reason_code: None,
         })
     }
 }
@@ -1388,6 +1391,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::SubmitEvidenceRequest, Connectors
             dispute_id: None,
             connectors,
             connector_dispute_id: value.connector_dispute_id,
+            defense_reason_code: None,
         })
     }
 }
@@ -2048,4 +2052,61 @@ pub fn generate_setup_mandate_response(
         }
     };
     Ok(response)
+}
+
+impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors): (DisputeDefendRequest, Connectors),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: Some(value.connector_dispute_id.clone()),
+            connectors,
+            connector_dispute_id: value.connector_dispute_id,
+            defense_reason_code: Some(value.defense_reason_code),
+        })
+    }
+}
+
+impl ForeignTryFrom<DisputeDefendRequest> for DisputeDefendData {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: DisputeDefendRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let connector_dispute_id = value.connector_dispute_id;
+        Ok(Self {
+            dispute_id: connector_dispute_id.clone(),
+            connector_dispute_id,
+            defense_reason_code: value.defense_reason_code,
+        })
+    }
+}
+
+pub fn generate_defend_dispute_response(
+    router_data_v2: RouterDataV2<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    >,
+) -> Result<DisputeDefendResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let defend_dispute_response = router_data_v2.response;
+
+    match defend_dispute_response {
+        Ok(response) => Ok(DisputeDefendResponse {
+            dispute_status: response.dispute_status as i32,
+            connector_dispute_id: response.connector_dispute_id,
+            error_message: None,
+            error_code: None,
+        }),
+        Err(e) => Ok(DisputeDefendResponse {
+            dispute_status: hyperswitch_common_enums::DisputeStatus::DisputeLost as i32,
+            connector_dispute_id: e
+                .connector_transaction_id
+                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+            error_message: Some(e.message),
+            error_code: Some(e.code),
+        }),
+    }
 }
