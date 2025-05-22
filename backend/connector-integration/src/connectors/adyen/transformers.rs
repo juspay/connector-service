@@ -2493,25 +2493,19 @@ pub struct DisputeServiceResult {
     success: bool,
 }
 
-impl<F, Req>
-    TryFrom<
-        ResponseRouterData<
-            AdyenDefendDisputeResponse,
-            RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
-        >,
-    > for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
     type Error = Report<hyperswitch_interfaces::errors::ConnectorError>;
 
     fn try_from(
-        value: ResponseRouterData<
-            AdyenDefendDisputeResponse,
-            RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
-        >,
+        value: ResponseRouterData<AdyenDefendDisputeResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // You already have this logic inside your ForeignTryFrom impl — just copy that over:
-        let (response, data, status_code) = (value.response, value.router_data, value.http_code);
-
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
         match response {
             AdyenDefendDisputeResponse::DefendDisputeSuccessResponse(result) => {
                 let dispute_status = if result.dispute_service_result.success {
@@ -2524,9 +2518,9 @@ impl<F, Req>
                     response: Ok(DisputeResponseData {
                         dispute_status,
                         connector_dispute_status: None,
-                        connector_dispute_id: data.connector_dispute_id.clone(),
+                        connector_dispute_id: router_data.connector_dispute_id.clone(),
                     }),
-                    ..data
+                    ..router_data
                 })
             }
 
@@ -2535,11 +2529,11 @@ impl<F, Req>
                     code: result.error_code,
                     message: result.message.clone(),
                     reason: Some(result.message),
-                    status_code,
+                    status_code: http_code,
                     attempt_status: None,
                     connector_transaction_id: Some(result.psp_reference),
                 }),
-                ..data
+                ..router_data
             }),
         }
     }
