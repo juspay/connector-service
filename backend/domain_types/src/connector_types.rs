@@ -28,6 +28,15 @@ pub enum ConnectorEnum {
     Razorpay,
 }
 
+impl std::fmt::Display for ConnectorEnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ConnectorEnum::Adyen => write!(f, "adyen"),
+            ConnectorEnum::Razorpay => write!(f, "razorpay"),
+        }
+    }
+}
+
 impl ForeignTryFrom<i32> for ConnectorEnum {
     type Error = ApplicationErrorResponse;
 

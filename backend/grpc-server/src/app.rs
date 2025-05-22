@@ -1,10 +1,11 @@
 use crate::consts;
-use crate::{configs, error::ConfigurationError, logger, metrics, utils};
+use crate::{configs, error::ConfigurationError, logger, utils};
 use axum::http;
 use grpc_api_types::{
     health_check::health_server,
     payments::{payment_service_handler, payment_service_server},
 };
+use shared_metrics::metrics;
 use std::{future::Future, net};
 use tokio::{
     signal::unix::{signal, SignalKind},

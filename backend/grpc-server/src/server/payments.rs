@@ -44,6 +44,8 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use shared_metrics::metrics;
+use std::time::Instant;
 use tracing::info;
 
 // Helper trait for payment operations
@@ -90,6 +92,7 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentsAuthorizeRequest,
+        connector_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -126,6 +129,7 @@ impl Payments {
             &self.config.proxy,
             connector_integration,
             order_router_data,
+            connector_name,
         )
         .await
         .switch()
@@ -148,6 +152,7 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &SetupMandateRequest,
+        connector_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -184,6 +189,7 @@ impl Payments {
             &self.config.proxy,
             connector_integration,
             order_router_data,
+            connector_name,
         )
         .await
         .switch()
@@ -294,6 +300,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentsAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> {
+        let start_time = Instant::now();
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
 
         let connector =
@@ -327,6 +334,7 @@ impl PaymentService for Payments {
                 &mut payment_flow_data,
                 connector_auth_details.clone(),
                 &payload,
+                &connector.to_string(),
             )
             .await?;
         }
@@ -348,11 +356,15 @@ impl PaymentService for Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        metrics::grpc_server_requests_total
+            .with_label_values(&["payment_authorize", &connector.to_string()])
+            .inc();
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
+            &connector.to_string(),
         )
         .await
         .switch()
@@ -361,6 +373,15 @@ impl PaymentService for Payments {
         // Generate response
         let authorize_response = domain_types::types::generate_payment_authorize_response(response)
             .map_err(|e| e.into_grpc_status())?;
+
+        metrics::grpc_server_requests_successful
+            .with_label_values(&["payment_authorize", &connector.to_string()])
+            .inc();
+
+        let duration = start_time.elapsed().as_secs_f64();
+        metrics::grpc_server_request_latency
+            .with_label_values(&["payment_authorize", &connector.to_string()])
+            .observe(duration);
 
         Ok(tonic::Response::new(authorize_response))
     }
@@ -390,6 +411,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<IncomingWebhookRequest>,
     ) -> Result<tonic::Response<IncomingWebhookResponse>, tonic::Status> {
+        let start_time = Instant::now();
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let connector_auth_details =
@@ -459,11 +481,24 @@ impl PaymentService for Payments {
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
             .map_err(|e| e.into_grpc_status())?;
 
+        metrics::grpc_server_requests_total
+            .with_label_values(&["incoming_webhook", &connector.to_string()])
+            .inc();
+
         let response = IncomingWebhookResponse {
             event_type: api_event_type.into(),
             content: Some(content),
             source_verified,
         };
+
+        metrics::grpc_server_requests_successful
+            .with_label_values(&["incoming_webhook", &connector.to_string()])
+            .inc();
+
+        let duration = start_time.elapsed().as_secs_f64();
+        metrics::grpc_server_request_latency
+            .with_label_values(&["incoming_webhook", &connector.to_string()])
+            .observe(duration);
 
         Ok(tonic::Response::new(response))
     }
@@ -493,6 +528,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<SetupMandateRequest>,
     ) -> Result<tonic::Response<SetupMandateResponse>, tonic::Status> {
+        let start_time = Instant::now();
         info!("SETUP_MANDATE_FLOW: initiated");
 
         let connector =
@@ -526,6 +562,7 @@ impl PaymentService for Payments {
                 &mut payment_flow_data,
                 connector_auth_details.clone(),
                 &payload,
+                &connector.to_string(),
             )
             .await?;
         }
@@ -547,10 +584,15 @@ impl PaymentService for Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        metrics::grpc_server_requests_total
+            .with_label_values(&["setup_mandate", &connector.to_string()])
+            .inc();
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
+            &connector.to_string(),
         )
         .await
         .switch()
@@ -560,6 +602,15 @@ impl PaymentService for Payments {
         let setup_mandate_response =
             generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
 
+        metrics::grpc_server_requests_successful
+            .with_label_values(&["setup_mandate", &connector.to_string()])
+            .inc();
+
+        let duration = start_time.elapsed().as_secs_f64();
+        metrics::grpc_server_request_latency
+            .with_label_values(&["setup_mandate", &connector.to_string()])
+            .observe(duration);
+
         Ok(tonic::Response::new(setup_mandate_response))
     }
 
@@ -567,6 +618,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
+        let start_time = Instant::now();
         info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
@@ -605,10 +657,15 @@ impl PaymentService for Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        metrics::grpc_server_requests_total
+            .with_label_values(&["accept_dispute", &connector.to_string()])
+            .inc();
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
+            &connector.to_string(),
         )
         .await
         .switch()
@@ -617,6 +674,15 @@ impl PaymentService for Payments {
         let dispute_response =
             generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
 
+        metrics::grpc_server_requests_successful
+            .with_label_values(&["accept_dispute", &connector.to_string()])
+            .inc();
+
+        let duration = start_time.elapsed().as_secs_f64();
+        metrics::grpc_server_request_latency
+            .with_label_values(&["accept_dispute", &connector.to_string()])
+            .observe(duration);
+
         Ok(tonic::Response::new(dispute_response))
     }
 
@@ -624,6 +690,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<SubmitEvidenceRequest>,
     ) -> Result<tonic::Response<SubmitEvidenceResponse>, tonic::Status> {
+        let start_time = Instant::now();
         info!("DISPUTE_FLOW: initiated");
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
@@ -661,10 +728,15 @@ impl PaymentService for Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        metrics::grpc_server_requests_total
+            .with_label_values(&["submit_evidence", &connector.to_string()])
+            .inc();
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
+            &connector.to_string(),
         )
         .await
         .switch()
@@ -672,6 +744,15 @@ impl PaymentService for Payments {
 
         let dispute_response =
             generate_submit_evidence_response(response).map_err(|e| e.into_grpc_status())?;
+
+        metrics::grpc_server_requests_successful
+            .with_label_values(&["submit_evidence", &connector.to_string()])
+            .inc();
+
+        let duration = start_time.elapsed().as_secs_f64();
+        metrics::grpc_server_request_latency
+            .with_label_values(&["submit_evidence", &connector.to_string()])
+            .observe(duration);
 
         Ok(tonic::Response::new(dispute_response))
     }
