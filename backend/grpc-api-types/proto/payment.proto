@@ -134,21 +134,12 @@ enum DisputeStage {
   PRE_ARBITRATION = 2;
 }
 
-message TimeStamp {
-  int64 seconds = 1; // seconds since epoch
-  int32 nanos = 2;   // additional nanoseconds
-}
-
-
-
-
 message DisputesSyncResponse {
-  string dispute_id = 2;
+  string dispute_id = 1;
   DisputeStatus status = 17;
   DisputeStage stage = 19;
-  optional string connector_response_reference_id = 3;
-  optional string error_code = 4;
-  optional string error_message = 5;
+  optional string connector_response_reference_id = 2;
+  optional string dispute_message = 3;
 }
 
 message IncomingWebhookRequest {

@@ -327,8 +327,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub status: hyperswitch_common_enums::DisputeStatus,
     pub stage: hyperswitch_common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
-    pub error_code: Option<String>,
-    pub error_message: Option<String>,
+    pub dispute_message: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

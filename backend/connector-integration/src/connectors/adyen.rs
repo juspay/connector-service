@@ -452,8 +452,7 @@ impl IncomingWebhook for Adyen {
                 stage,
                 status,
                 connector_response_reference_id: Some(notif.psp_reference.clone()),
-                error_code: notif.reason.clone(),
-                error_message: notif.reason,
+                dispute_message: notif.reason,
             },
         )
     }

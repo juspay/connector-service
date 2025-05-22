@@ -457,15 +457,14 @@ impl PaymentService for Payments {
             )
             .await
             .map_err(|e| e.into_grpc_status())?,
-            domain_types::connector_types::EventType::Dispute => {
-                get_disputes_webhook_content(
+            domain_types::connector_types::EventType::Dispute => get_disputes_webhook_content(
                     connector_data,
                     request_details,
                     webhook_secrets,
                     Some(connector_auth_details),
                 )
-                .await?
-            }
+                .await
+                .map_err(|e| e.into_grpc_status())?
         };
 
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
@@ -750,21 +749,21 @@ async fn get_disputes_webhook_content(
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
-) -> Result<grpc_api_types::payments::WebhookResponseContent, tonic::Status> {
+) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
-        .map_err(|e| {
-            tonic::Status::internal(format!(
-                "Connector processing error in process_disputes_webhook: {}",
-                e
-            ))
-        })?;
+        .switch()?;
 
     // Generate response
-    let response = DisputesSyncResponse::foreign_try_from(webhook_details).map_err(|e| {
-        tonic::Status::internal(format!("Error while constructing response: {}", e))
-    })?;
+    let response = DisputesSyncResponse::foreign_try_from(webhook_details).change_context(
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: "Error while constructing response".to_string(),
+            error_object: None,
+        }),
+    )?;
 
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(

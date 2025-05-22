@@ -1509,8 +1509,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputesSyncResponse {
             stage: grpc_api_types::payments::DisputeStage::foreign_from(value.stage).into(),
             status: grpc_status.into(),
             connector_response_reference_id: value.connector_response_reference_id,
-            error_code: value.error_code,
-            error_message: value.error_message,
+            dispute_message: value.dispute_message,
         })
     }
 }
