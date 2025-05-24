@@ -219,7 +219,7 @@ async fn test_chargeback_accepted() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeOpened as i32);
+        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeAccepted as i32);
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
