@@ -2584,9 +2584,10 @@ pub(crate) fn get_dispute_stage_and_status(
         }
         WebhookEventCode::Chargeback => {
             let status = match dispute_status {
-                Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
+                Some(DisputeStatus::Undefended) | Some(DisputeStatus:: Pending) => HSDisputeStatus::DisputeOpened,
                 Some(DisputeStatus::Lost) | None => HSDisputeStatus::DisputeLost,
-                Some(_) => HSDisputeStatus::DisputeOpened,
+                Some(DisputeStatus::Accepted) => HSDisputeStatus::DisputeAccepted,
+                Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
             };
             (DisputeStage::Dispute, status)
         }
