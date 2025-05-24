@@ -36,7 +36,7 @@ use grpc_api_types::payments::{
     PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
     PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
     PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
-    SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
+    DisputesSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
@@ -44,6 +44,7 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+
 use tracing::info;
 
 // Helper trait for payment operations
@@ -454,6 +455,14 @@ impl PaymentService for Payments {
             )
             .await
             .map_err(|e| e.into_grpc_status())?,
+            domain_types::connector_types::EventType::Dispute => get_disputes_webhook_content(
+                    connector_data,
+                    request_details,
+                    webhook_secrets,
+                    Some(connector_auth_details),
+                )
+                .await
+                .map_err(|e| e.into_grpc_status())?
         };
 
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
@@ -729,6 +738,34 @@ async fn get_refunds_webhook_content(
     Ok(grpc_api_types::payments::WebhookResponseContent {
         content: Some(
             grpc_api_types::payments::webhook_response_content::Content::RefundsResponse(response),
+        ),
+    })
+}
+
+async fn get_disputes_webhook_content(
+    connector_data: ConnectorData,
+    request_details: domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<ConnectorAuthType>,
+) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
+    let webhook_details = connector_data
+        .connector
+        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .switch()?;
+
+    // Generate response
+    let response = DisputesSyncResponse::foreign_try_from(webhook_details).change_context(
+        ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: "Error while constructing response".to_string(),
+            error_object: None,
+        }),
+    )?;
+
+    Ok(grpc_api_types::payments::WebhookResponseContent {
+        content: Some(
+            grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response),
         ),
     })
 }
