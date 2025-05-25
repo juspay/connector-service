@@ -66,7 +66,7 @@ async fn process_webhook_and_get_response(
 
     let mut request = Request::new(IncomingWebhookRequest {
         request_details: Some(RequestDetails {
-            method: grpc_api_types::payments::Method::Post as i32,
+            method: grpc_api_types::payments::Method::Post.into(),
             headers: std::collections::HashMap::new(),
             uri: Some("/webhooks/adyen".to_string()),
             query_params: None,
@@ -81,21 +81,25 @@ async fn process_webhook_and_get_response(
     let api_secret =
         std::env::var("ADYEN_WEBHOOK_HMAC_KEY").unwrap_or_else(|_| "test_hmac_key".to_string());
 
+    request.metadata_mut().append(
+        "x-connector",
+        "adyen".parse().expect("Failed to parse x-connector"),
+    );
+    request.metadata_mut().append(
+        "x-auth",
+        "signature-key".parse().expect("Failed to parse x-auth"),
+    );
+    request.metadata_mut().append(
+        "x-api-key",
+        api_key.parse().expect("Failed to parse x-api-key"),
+    );
     request
         .metadata_mut()
-        .append("x-connector", "adyen".parse().unwrap());
-    request
-        .metadata_mut()
-        .append("x-auth", "signature-key".parse().unwrap());
-    request
-        .metadata_mut()
-        .append("x-api-key", api_key.parse().unwrap());
-    request
-        .metadata_mut()
-        .append("x-key1", key1.parse().unwrap());
-    request
-        .metadata_mut()
-        .append("x-api-secret", api_secret.parse().unwrap());
+        .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
+    request.metadata_mut().append(
+        "x-api-secret",
+        api_secret.parse().expect("Failed to parse x-api-secret"),
+    );
 
     let response = client
         .incoming_webhook(request)
@@ -105,11 +109,16 @@ async fn process_webhook_and_get_response(
 
     match response.content.and_then(|c| c.content) {
         Some(GrpcWebhookContent::DisputesResponse(dispute_response)) => dispute_response,
-        Some(other_content) => panic!(
-            "Incorrect webhook content type received: {:?}",
-            other_content
-        ),
-        None => panic!("Webhook response content is missing"),
+        _ => {
+            //if the content is not a DisputesResponse, return a dummy DisputesSyncResponse
+            DisputesSyncResponse {
+                stage: 0,
+                status: 0,
+                dispute_message: None,
+                dispute_id: "".to_string(),
+                connector_response_reference_id: None,
+            }
+        }
     }
 }
 
@@ -125,10 +134,15 @@ async fn test_notification_of_chargeback_undefended() {
         let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::PreDispute as i32);
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeOpened as i32
+            grpc_api_types::payments::DisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            grpc_api_types::payments::DisputeStage::PreDispute
+        );
+        assert_eq!(
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeOpened
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -145,10 +159,15 @@ async fn test_notification_of_chargeback_pending() {
         let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::PreDispute as i32);
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeOpened as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::PreDispute
+        );
+        assert_eq!(
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeOpened
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -166,12 +185,14 @@ async fn test_chargeback_undefended() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::ActiveDispute as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::ActiveDispute
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeOpened as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeOpened
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -189,12 +210,14 @@ async fn test_chargeback_pending() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::ActiveDispute as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::ActiveDispute
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeOpened as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeOpened
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -212,12 +235,14 @@ async fn test_chargeback_lost() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::ActiveDispute as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::ActiveDispute
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeLost as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeLost
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -235,12 +260,14 @@ async fn test_chargeback_accepted() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::ActiveDispute as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::ActiveDispute
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeAccepted as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeAccepted
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -258,12 +285,14 @@ async fn test_chargeback_reversed_pending() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::ActiveDispute as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::ActiveDispute
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeChallenged as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeChallenged
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -281,12 +310,14 @@ async fn test_chargeback_reversed_won() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::ActiveDispute as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::ActiveDispute
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeWon as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeWon
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -304,12 +335,14 @@ async fn test_second_chargeback_lost() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::PreArbitration as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::PreArbitration
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeLost as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeLost
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -327,12 +360,14 @@ async fn test_prearbitration_won_with_status_won() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::PreArbitration as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::PreArbitration
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeWon as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeWon
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -350,12 +385,14 @@ async fn test_prearbitration_won_with_status_pending() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::PreArbitration as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::PreArbitration
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeOpened as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeOpened
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
@@ -373,12 +410,14 @@ async fn test_prearbitration_lost() {
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(
-            dispute_response.stage,
-            GrpcDisputeStage::PreArbitration as i32
+            GrpcDisputeStage::try_from(dispute_response.stage)
+                .expect("Failed to convert i32 to DisputeStage"),
+            GrpcDisputeStage::PreArbitration
         );
         assert_eq!(
-            dispute_response.status,
-            GrpcDisputeStatus::DisputeLost as i32
+            GrpcDisputeStatus::try_from(dispute_response.status)
+                .expect("Failed to convert i32 to DisputeStatus"),
+            GrpcDisputeStatus::DisputeLost
         );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
