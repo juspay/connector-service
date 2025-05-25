@@ -32,11 +32,12 @@ use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, IncomingWebhookRequest, IncomingWebhookResponse,
-    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureRequest,
-    PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse, PaymentsVoidRequest,
-    PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest, RefundsSyncResponse,
-    DisputesSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest, SubmitEvidenceResponse,
+    DisputeDefendRequest, DisputeDefendResponse, DisputesSyncResponse, IncomingWebhookRequest,
+    IncomingWebhookResponse, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
+    PaymentsCaptureRequest, PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse,
+    PaymentsVoidRequest, PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest,
+    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest,
+    SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
@@ -456,13 +457,13 @@ impl PaymentService for Payments {
             .await
             .map_err(|e| e.into_grpc_status())?,
             domain_types::connector_types::EventType::Dispute => get_disputes_webhook_content(
-                    connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
-                )
-                .await
-                .map_err(|e| e.into_grpc_status())?
+                connector_data,
+                request_details,
+                webhook_secrets,
+                Some(connector_auth_details),
+            )
+            .await
+            .map_err(|e| e.into_grpc_status())?,
         };
 
         let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)

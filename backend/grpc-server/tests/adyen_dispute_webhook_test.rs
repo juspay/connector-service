@@ -3,11 +3,12 @@
 use grpc_server::{app, configs};
 mod common;
 use grpc_api_types::payments::{
-    payment_service_client::PaymentServiceClient, IncomingWebhookRequest, RequestDetails,
-    DisputeStage as GrpcDisputeStage, DisputeStatus as GrpcDisputeStatus, DisputesSyncResponse,
-    webhook_response_content::Content as GrpcWebhookContent,
+    payment_service_client::PaymentServiceClient,
+    webhook_response_content::Content as GrpcWebhookContent, DisputeStage as GrpcDisputeStage,
+    DisputeStatus as GrpcDisputeStatus, DisputesSyncResponse, IncomingWebhookRequest,
+    RequestDetails,
 };
-use serde_json::{json};
+use serde_json::json;
 use tonic::{transport::Channel, Request};
 
 // Helper function to construct Adyen webhook JSON body
@@ -26,7 +27,7 @@ fn build_adyen_webhook_json_body(
     let merchant_reference = "YOUR_REFERENCE"; // Default
     let payment_method = "mc"; // Default
     let amount_currency = "EUR"; // Default
-    let amount_value = 1000;    // Default
+    let amount_value = 1000; // Default
     let event_date = "2023-12-01T12:00:00Z"; // Default
     let success_status = "true";
 
@@ -60,8 +61,8 @@ async fn process_webhook_and_get_response(
     client: &mut PaymentServiceClient<Channel>,
     json_body: serde_json::Value,
 ) -> DisputesSyncResponse {
-    let request_body_bytes = serde_json::to_vec(&json_body)
-        .expect("Failed to serialize json_body to Vec<u8>");
+    let request_body_bytes =
+        serde_json::to_vec(&json_body).expect("Failed to serialize json_body to Vec<u8>");
 
     let mut request = Request::new(IncomingWebhookRequest {
         request_details: Some(RequestDetails {
@@ -75,14 +76,26 @@ async fn process_webhook_and_get_response(
     });
 
     let api_key = std::env::var("API_KEY").unwrap_or_else(|_| "test_adyen_api_key".to_string());
-    let key1 = std::env::var("ADYEN_MERCHANT_ACCOUNT").unwrap_or_else(|_| "test_merchant_acc".to_string());
-    let api_secret = std::env::var("ADYEN_WEBHOOK_HMAC_KEY").unwrap_or_else(|_| "test_hmac_key".to_string());
+    let key1 =
+        std::env::var("ADYEN_MERCHANT_ACCOUNT").unwrap_or_else(|_| "test_merchant_acc".to_string());
+    let api_secret =
+        std::env::var("ADYEN_WEBHOOK_HMAC_KEY").unwrap_or_else(|_| "test_hmac_key".to_string());
 
-    request.metadata_mut().append("x-connector", "adyen".parse().unwrap());
-    request.metadata_mut().append("x-auth", "signature-key".parse().unwrap());
-    request.metadata_mut().append("x-api-key", api_key.parse().unwrap());
-    request.metadata_mut().append("x-key1", key1.parse().unwrap());
-    request.metadata_mut().append("x-api-secret", api_secret.parse().unwrap());
+    request
+        .metadata_mut()
+        .append("x-connector", "adyen".parse().unwrap());
+    request
+        .metadata_mut()
+        .append("x-auth", "signature-key".parse().unwrap());
+    request
+        .metadata_mut()
+        .append("x-api-key", api_key.parse().unwrap());
+    request
+        .metadata_mut()
+        .append("x-key1", key1.parse().unwrap());
+    request
+        .metadata_mut()
+        .append("x-api-secret", api_secret.parse().unwrap());
 
     let response = client
         .incoming_webhook(request)
@@ -92,7 +105,10 @@ async fn process_webhook_and_get_response(
 
     match response.content.and_then(|c| c.content) {
         Some(GrpcWebhookContent::DisputesResponse(dispute_response)) => dispute_response,
-        Some(other_content) => panic!("Incorrect webhook content type received: {:?}", other_content),
+        Some(other_content) => panic!(
+            "Incorrect webhook content type received: {:?}",
+            other_content
+        ),
         None => panic!("Webhook response content is missing"),
     }
 }
@@ -106,15 +122,14 @@ async fn test_notification_of_chargeback_undefended() {
         let reason = "Fraudulent transaction";
         let adyen_dispute_status = Some("Undefended");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(dispute_response.stage, GrpcDisputeStage::PreDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeOpened as i32);
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeOpened as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -127,15 +142,14 @@ async fn test_notification_of_chargeback_pending() {
         let reason = "Product not received";
         let adyen_dispute_status = Some("Pending");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
         assert_eq!(dispute_response.stage, GrpcDisputeStage::PreDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeOpened as i32);
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeOpened as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -148,15 +162,17 @@ async fn test_chargeback_undefended() {
         let reason = "Service not rendered";
         let adyen_dispute_status = Some("Undefended");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeOpened as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::ActiveDispute as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeOpened as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -169,15 +185,17 @@ async fn test_chargeback_pending() {
         let reason = "Credit not processed";
         let adyen_dispute_status = Some("Pending");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeOpened as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::ActiveDispute as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeOpened as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -190,15 +208,17 @@ async fn test_chargeback_lost() {
         let reason = "Duplicate transaction";
         let adyen_dispute_status = Some("Lost");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeLost as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::ActiveDispute as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeLost as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -211,15 +231,17 @@ async fn test_chargeback_accepted() {
         let reason = "Fraudulent transaction - merchant accepted";
         let adyen_dispute_status = Some("Accepted");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeAccepted as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::ActiveDispute as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeAccepted as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -232,15 +254,17 @@ async fn test_chargeback_reversed_pending() {
         let reason = "Defense successful, awaiting bank review";
         let adyen_dispute_status = Some("Pending");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeChallenged as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::ActiveDispute as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeChallenged as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -253,15 +277,17 @@ async fn test_chargeback_reversed_won() {
         let reason = "Defense accepted by bank";
         let adyen_dispute_status = Some("Won");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::ActiveDispute as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeWon as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::ActiveDispute as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeWon as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -274,15 +300,17 @@ async fn test_second_chargeback_lost() {
         let reason = "Defense declined after initial reversal";
         let adyen_dispute_status = Some("Lost");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::PreArbitration as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeLost as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::PreArbitration as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeLost as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -295,15 +323,17 @@ async fn test_prearbitration_won_with_status_won() {
         let reason = "Pre-arbitration won by merchant";
         let adyen_dispute_status = Some("Won");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::PreArbitration as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeWon as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::PreArbitration as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeWon as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -316,15 +346,17 @@ async fn test_prearbitration_won_with_status_pending() {
         let reason = "Pre-arbitration outcome pending";
         let adyen_dispute_status = Some("Pending");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::PreArbitration as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeOpened as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::PreArbitration as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeOpened as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }
@@ -337,15 +369,17 @@ async fn test_prearbitration_lost() {
         let reason = "Pre-arbitration lost by merchant";
         let adyen_dispute_status = Some("Lost");
 
-        let json_body = build_adyen_webhook_json_body(
-            event_code,
-            reason,
-            adyen_dispute_status,
-        );
+        let json_body = build_adyen_webhook_json_body(event_code, reason, adyen_dispute_status);
         let dispute_response = process_webhook_and_get_response(&mut client, json_body).await;
 
-        assert_eq!(dispute_response.stage, GrpcDisputeStage::PreArbitration as i32);
-        assert_eq!(dispute_response.status, GrpcDisputeStatus::DisputeLost as i32);
+        assert_eq!(
+            dispute_response.stage,
+            GrpcDisputeStage::PreArbitration as i32
+        );
+        assert_eq!(
+            dispute_response.status,
+            GrpcDisputeStatus::DisputeLost as i32
+        );
         assert_eq!(dispute_response.dispute_message, Some(reason.to_string()));
     });
 }

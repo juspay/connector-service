@@ -4,19 +4,19 @@ use crate::connector_flow::{
 };
 use crate::connector_types::{
     AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-    MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-    PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-    RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-    SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse, DisputeWebhookDetailsResponse,
+    DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData,
+    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+    RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+    ResponseId, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, MandateReference,
-    PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
+    AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputesSyncResponse,
+    MandateReference, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse, PaymentsCaptureResponse,
     PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
-    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse, DisputesSyncResponse,
+    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse,
 };
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;

@@ -2568,7 +2568,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
     }
 }
 
-
 pub(crate) fn get_dispute_stage_and_status(
     code: WebhookEventCode,
     dispute_status: Option<DisputeStatus>,
@@ -2584,7 +2583,9 @@ pub(crate) fn get_dispute_stage_and_status(
         }
         WebhookEventCode::Chargeback => {
             let status = match dispute_status {
-                Some(DisputeStatus::Undefended) | Some(DisputeStatus:: Pending) => HSDisputeStatus::DisputeOpened,
+                Some(DisputeStatus::Undefended) | Some(DisputeStatus::Pending) => {
+                    HSDisputeStatus::DisputeOpened
+                }
                 Some(DisputeStatus::Lost) | None => HSDisputeStatus::DisputeLost,
                 Some(DisputeStatus::Accepted) => HSDisputeStatus::DisputeAccepted,
                 Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
