@@ -144,7 +144,7 @@ where
 
                             match handle_response_result {
                                 Ok(mut data) => {
-                                    if all_keys_required == Some(true) {
+                                    if all_keys_required.unwrap_or(false) {
                                         let raw_response_string =
                                             String::from_utf8(body.response.to_vec()).ok();
                                         data.resource_common_data
