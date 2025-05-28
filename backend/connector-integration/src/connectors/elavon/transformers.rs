@@ -54,14 +54,30 @@ impl TryFrom<&ConnectorAuthType> for ElavonAuthType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum TransactionType {
-    CcSale, 
+    CcSale,
     CcAuthOnly,
     CcComplete,
     CcReturn,
     TxnQuery,
+}
+
+impl Serialize for TransactionType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let value = match self {
+            TransactionType::CcSale => "ccsale",
+            TransactionType::CcAuthOnly => "ccauthonly",
+            TransactionType::CcComplete => "cccomplete",
+            TransactionType::CcReturn => "ccreturn",
+            TransactionType::TxnQuery => "txnquery",
+        };
+        serializer.serialize_str(value)
+    }
 }
 
 #[derive(Debug)]
@@ -190,7 +206,7 @@ impl
 
         let (avs_address, avs_zip) = get_avs_details_from_payment_address(Some(&router_data.resource_common_data.address));
 
-        let cvv_indicator = if card.card_cvc.peek().is_empty() { Some(0) } else { Some(1) };
+        let _cvv_indicator = if card.card_cvc.peek().is_empty() { Some(0) } else { Some(1) };
 
         let customer_id_str = request_data.customer_id.as_ref().map(|c| c.get_string_repr().to_string());
 
@@ -213,17 +229,17 @@ impl
             ssl_amount: item.amount.clone(),
             ssl_card_number: card.card_number.clone(),
             ssl_exp_date: Secret::new(exp_date),
-            ssl_cvv2cvc2: if cvv_indicator == Some(1) { Some(card.card_cvc.clone()) } else { None },
-            ssl_cvv2cvc2_indicator: cvv_indicator,
+            ssl_cvv2cvc2: Some(card.card_cvc.clone()),
+            ssl_cvv2cvc2_indicator: Some(1),
             ssl_email: request_data.email.clone(),
+            ssl_add_token: add_token,
+            ssl_token_source: token_source,
+            ssl_get_token: None,
             ssl_transaction_currency: request_data.currency,
             ssl_avs_address: avs_address,
             ssl_avs_zip: avs_zip,
             ssl_customer_code: customer_id_str,
             ssl_invoice_number: Some(router_data.resource_common_data.payment_id.clone()),
-            ssl_add_token: add_token,
-            ssl_token_source: token_source,
-            ssl_get_token: None, 
         };
         Ok(ElavonPaymentsRequest::Card(card_req))
     }
@@ -328,7 +344,7 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
                     ssl_result_message: flat_res.ssl_result_message.ok_or_else(|| de::Error::missing_field("ssl_result_message"))?,
                     ssl_token: flat_res.ssl_token.map(Secret::new),
                     ssl_approval_code: flat_res.ssl_approval_code,
-                    ssl_transaction_type: flat_res.ssl_transaction_type,
+                    ssl_transaction_type: flat_res.ssl_transaction_type.clone(),
                     ssl_cvv2_response: flat_res.ssl_cvv2_response,
                     ssl_avs_response: flat_res.ssl_avs_response,
                     ssl_token_response: flat_res.ssl_token_response,
@@ -357,7 +373,7 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
     }
 }
 
-fn get_elavon_attempt_status(
+pub fn get_elavon_attempt_status(
     elavon_result: &ElavonResult,
     http_code: u16, 
 ) -> (HyperswitchAttemptStatus, Option<ErrorResponse>) {
@@ -365,8 +381,8 @@ fn get_elavon_attempt_status(
         ElavonResult::Success(payment_response) => {
            
             let status = match payment_response.ssl_transaction_type.as_deref() {
-                Some("ccauthonly") => HyperswitchAttemptStatus::Authorized, 
-                Some("ccsale") | Some("cccomplete") => HyperswitchAttemptStatus::Charged,
+                Some("ccauthonly") | Some("AUTHONLY") => HyperswitchAttemptStatus::Authorized, 
+                Some("ccsale") | Some("cccomplete") | Some("SALE") | Some("COMPLETE") => HyperswitchAttemptStatus::Charged,
                 _ => { 
                     match payment_response.ssl_result {
                         SslResult::Approved => HyperswitchAttemptStatus::Charged, 
@@ -639,7 +655,7 @@ impl ForeignTryFrom<(
             ElavonResult::Success(success_payload) => {
                
                 let refund_status = match success_payload.ssl_transaction_type.as_deref() {
-                    Some("ccreturn") => { 
+                    Some("RETURN") => { 
                         match success_payload.ssl_result {
                             SslResult::Approved => hyperswitch_common_enums::RefundStatus::Success,
                              SslResult::Declined => hyperswitch_common_enums::RefundStatus::Failure, 
@@ -786,7 +802,7 @@ impl
                 match psync_response.ssl_transaction_type {
                     SyncTransactionType::Sale => HyperswitchAttemptStatus::Charged,
                     SyncTransactionType::AuthOnly => HyperswitchAttemptStatus::Charged,
-                    SyncTransactionType::Return => HyperswitchAttemptStatus::AutoRefunded,
+                    SyncTransactionType::Return => HyperswitchAttemptStatus::Pending,
                 }
             }
             TransactionSyncStatus::OPN => { 
@@ -829,7 +845,8 @@ impl
 } 
 
 #[derive(Debug, Serialize)]
-pub struct ElavonRSyncRequest {
+#[serde(rename = "txn")]
+pub struct SyncRequest {
     pub ssl_transaction_type: TransactionType,
     pub ssl_account_id: Secret<String>,
     pub ssl_user_id: Secret<String>,
@@ -837,7 +854,7 @@ pub struct ElavonRSyncRequest {
     pub ssl_txn_id: String, 
 }
 
-impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData>> for ElavonRSyncRequest {
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, domain_types::connector_types::RefundFlowData, domain_types::connector_types::RefundSyncData, domain_types::connector_types::RefundsResponseData>> for SyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -853,6 +870,31 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::RSync, domain_types::co
             ssl_user_id: auth_type.ssl_user_id,
             ssl_pin: auth_type.ssl_pin,
             ssl_txn_id: connector_refund_id,
+        })
+    }
+}
+
+impl TryFrom<&RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>> for SyncRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        router_data: &RouterDataV2<domain_types::connector_flow::PSync, PaymentFlowData, domain_types::connector_types::PaymentsSyncData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let request_data = &router_data.request;
+        let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
+
+        let connector_txn_id = match &request_data.connector_transaction_id {
+            DomainResponseId::ConnectorTransactionId(id) => id.clone(),
+            
+            _ => return Err(report!(errors::ConnectorError::MissingConnectorTransactionID))
+                       .attach_printable("Missing connector_transaction_id for Elavon PSync"),
+        };
+
+        Ok(Self {
+            ssl_transaction_type: TransactionType::TxnQuery,
+            ssl_account_id: auth_type.ssl_merchant_id,
+            ssl_user_id: auth_type.ssl_user_id,
+            ssl_pin: auth_type.ssl_pin,
+            ssl_txn_id: connector_txn_id,
         })
     }
 }
@@ -917,4 +959,4 @@ impl
         router_data_out.resource_common_data.status = refund_status;
         Ok(router_data_out)
     }
-} 
+}

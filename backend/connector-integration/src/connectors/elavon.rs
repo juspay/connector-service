@@ -1,5 +1,4 @@
 pub mod transformers;
-pub mod test;
 
 use domain_types::{
     connector_flow::{
@@ -49,15 +48,11 @@ pub fn deserialize_xml_to_struct<T: serde::de::DeserializeOwned>(
     xml_data: &[u8],
 ) -> Result<T, hs_errors::ConnectorError> {
     let response_str = std::str::from_utf8(xml_data)
-        .map_err(|_e| {
-             hs_errors::ConnectorError::ResponseDeserializationFailed
-        })?
+        .map_err(|_| hs_errors::ConnectorError::ResponseDeserializationFailed)?
         .trim();
-    let result: T = quick_xml::de::from_str(response_str).map_err(|_e| {
-        hs_errors::ConnectorError::ResponseDeserializationFailed
-    })?;
-
-    Ok(result)
+    
+    quick_xml::de::from_str(response_str)
+        .map_err(|_| hs_errors::ConnectorError::ResponseDeserializationFailed)
 }
 
 impl Elavon {
@@ -84,8 +79,8 @@ impl api::ConnectorCommon for Elavon {
         Ok(Vec::new())
     }
 
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.elavon.base_url.as_ref()
+    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
+        "https://api.demo.convergepay.com/VirtualMerchantDemo/"
     }
 
     fn build_error_response(
@@ -166,7 +161,7 @@ impl IncomingWebhook for Elavon {}
 pub fn struct_to_xml<T: Serialize>(
     item: &T,
 ) -> Result<HashMap<String, Secret<String, WithoutType>>, hs_errors::ConnectorError> {
-    let xml_content = quick_xml::se::to_string_with_root("txn", &item).map_err(|_e| {
+    let xml_content = quick_xml::se::to_string_with_root("txn", &item).map_err(|_| {
         hs_errors::ConnectorError::ResponseDeserializationFailed
     })?;
 
@@ -285,12 +280,12 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
-        let elavon_req = elavon::ElavonPsyncRequest::try_from(req)
+        let connector_req = elavon::SyncRequest::try_from(req)
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
-            .attach_printable("Failed to create ElavonPsyncRequest")?;
-
+            .attach_printable("Failed to create SyncRequest for PSync")?;
+        
         Ok(Some(RequestContent::FormUrlEncoded(Box::new(struct_to_xml(
-            &elavon_req,
+            &connector_req,
         )?))))
     }
 
@@ -300,11 +295,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, hs_errors::ConnectorError> {
-        let response: elavon::ElavonPSyncResponse = res
-            .response
-            .parse_struct("RazorpayPaymentResponse")
-            .change_context(hs_errors::ConnectorError::ResponseDeserializationFailed)?;
-
+        let response: elavon::ElavonPSyncResponse = deserialize_xml_to_struct(&res.response)?;
         with_response_body!(event_builder, response);
 
         let is_multiple_capture_sync = match data.request.sync_type {
@@ -361,16 +352,19 @@ impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, Ref
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
-        Ok(format!("{}/processxml.asp", req.resource_common_data.connectors.elavon.base_url))
+        Ok(format!("{}processxml.do", req.resource_common_data.connectors.elavon.base_url))
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
-        let elavon_request = elavon::ElavonRSyncRequest::try_from(req)?;
-        let form_payload = struct_to_xml(&elavon_request)?;
-
+        let connector_req = elavon::SyncRequest::try_from(req)
+            .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to create SyncRequest for RSync")?;
+            
+        let form_payload = struct_to_xml(&connector_req)?;
+        
         Ok(Some(RequestContent::FormUrlEncoded(Box::new(form_payload))))
     }
 
@@ -380,15 +374,15 @@ impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, Ref
         event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
     ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, hs_errors::ConnectorError> {
-        let response_data = deserialize_xml_to_struct::<elavon::ElavonRSyncResponse>(&res.response)
-            .change_context(hs_errors::ConnectorError::ResponseDeserializationFailed)?;
-        with_response_body!(event_builder, response_data);
-
+        let response: elavon::ElavonRSyncResponse = deserialize_xml_to_struct(&res.response)?;
+        with_response_body!(event_builder, response);
+        
         RouterDataV2::foreign_try_from((
-            response_data,
+            response,
             data.clone(),
-            res.status_code,
+            res.status_code
         ))
+        .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
