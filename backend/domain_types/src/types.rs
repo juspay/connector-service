@@ -18,6 +18,7 @@ use grpc_api_types::payments::{
     PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
     RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse,
 };
+use hyperswitch_common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
 use hyperswitch_domain_models::mandates::MandateData;
@@ -26,9 +27,10 @@ use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::consts::NO_ERROR_CODE;
+use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
-
+use utoipa::ToSchema;
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Connectors {
     pub adyen: ConnectorParams,
@@ -2138,4 +2140,200 @@ pub fn generate_defend_dispute_response(
             error_code: Some(e.code),
         }),
     }
+}
+
+#[derive(Debug, Clone, ToSchema, Serialize)]
+pub struct CardSpecificFeatures {
+    /// Indicates whether three_ds card payments are supported
+    // #[schema(value_type = FeatureStatus)]
+    pub three_ds: FeatureStatus,
+    /// Indicates whether non three_ds card payments are supported
+    // #[schema(value_type = FeatureStatus)]
+    pub no_three_ds: FeatureStatus,
+    /// List of supported card networks
+    // #[schema(value_type = Vec<CardNetwork>)]
+    pub supported_card_networks: Vec<CardNetwork>,
+}
+
+#[derive(Debug, Clone, ToSchema, Serialize)]
+#[serde(untagged)]
+pub enum PaymentMethodSpecificFeatures {
+    /// Card specific features
+    Card(CardSpecificFeatures),
+}
+/// Represents details of a payment method.
+#[derive(Debug, Clone)]
+pub struct PaymentMethodDetails {
+    /// Indicates whether mandates are supported by this payment method.
+    pub mandates: FeatureStatus,
+    /// Indicates whether refund is supported by this payment method.
+    pub refunds: FeatureStatus,
+    /// List of supported capture methods
+    pub supported_capture_methods: Vec<CaptureMethod>,
+    /// Payment method specific features
+    pub specific_features: Option<PaymentMethodSpecificFeatures>,
+}
+/// The status of the feature
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    ToSchema,
+)]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum FeatureStatus {
+    NotSupported,
+    Supported,
+}
+pub type PaymentMethodTypeMetadata = HashMap<PaymentMethodType, PaymentMethodDetails>;
+pub type SupportedPaymentMethods = HashMap<PaymentMethod, PaymentMethodTypeMetadata>;
+
+#[derive(Debug, Clone)]
+pub struct ConnectorInfo {
+    /// Display name of the Connector
+    pub display_name: &'static str,
+    /// Description of the connector.
+    pub description: &'static str,
+    /// Connector Type
+    pub connector_type: PaymentConnectorCategory,
+}
+
+/// Connector Access Method
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    PartialEq,
+    serde::Deserialize,
+    serde::Serialize,
+    strum::Display,
+    ToSchema,
+)]
+#[strum(serialize_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum PaymentConnectorCategory {
+    PaymentGateway,
+    AlternativePaymentMethod,
+    BankAcquirer,
+}
+
+#[derive(Debug, strum::Display, Eq, PartialEq, Hash)]
+pub enum PaymentMethodDataType {
+    Card,
+    Knet,
+    Benefit,
+    MomoAtm,
+    CardRedirect,
+    AliPayQr,
+    AliPayRedirect,
+    AliPayHkRedirect,
+    AmazonPayRedirect,
+    MomoRedirect,
+    KakaoPayRedirect,
+    GoPayRedirect,
+    GcashRedirect,
+    ApplePay,
+    ApplePayRedirect,
+    ApplePayThirdPartySdk,
+    DanaRedirect,
+    DuitNow,
+    GooglePay,
+    GooglePayRedirect,
+    GooglePayThirdPartySdk,
+    MbWayRedirect,
+    MobilePayRedirect,
+    PaypalRedirect,
+    PaypalSdk,
+    Paze,
+    SamsungPay,
+    TwintRedirect,
+    VippsRedirect,
+    TouchNGoRedirect,
+    WeChatPayRedirect,
+    WeChatPayQr,
+    CashappQr,
+    SwishQr,
+    KlarnaRedirect,
+    KlarnaSdk,
+    AffirmRedirect,
+    AfterpayClearpayRedirect,
+    PayBrightRedirect,
+    WalleyRedirect,
+    AlmaRedirect,
+    AtomeRedirect,
+    BancontactCard,
+    Bizum,
+    Blik,
+    Eft,
+    Eps,
+    Giropay,
+    Ideal,
+    Interac,
+    LocalBankRedirect,
+    OnlineBankingCzechRepublic,
+    OnlineBankingFinland,
+    OnlineBankingPoland,
+    OnlineBankingSlovakia,
+    OpenBankingUk,
+    Przelewy24,
+    Sofort,
+    Trustly,
+    OnlineBankingFpx,
+    OnlineBankingThailand,
+    AchBankDebit,
+    SepaBankDebit,
+    BecsBankDebit,
+    BacsBankDebit,
+    AchBankTransfer,
+    SepaBankTransfer,
+    BacsBankTransfer,
+    MultibancoBankTransfer,
+    PermataBankTransfer,
+    BcaBankTransfer,
+    BniVaBankTransfer,
+    BriVaBankTransfer,
+    CimbVaBankTransfer,
+    DanamonVaBankTransfer,
+    MandiriVaBankTransfer,
+    Pix,
+    Pse,
+    Crypto,
+    MandatePayment,
+    Reward,
+    Upi,
+    Boleto,
+    Efecty,
+    PagoEfectivo,
+    RedCompra,
+    RedPagos,
+    Alfamart,
+    Indomaret,
+    Oxxo,
+    SevenEleven,
+    Lawson,
+    MiniStop,
+    FamilyMart,
+    Seicomart,
+    PayEasy,
+    Givex,
+    PaySafeCar,
+    CardToken,
+    LocalBankTransfer,
+    Mifinity,
+    Fps,
+    PromptPay,
+    VietQr,
+    OpenBanking,
+    NetworkToken,
+    NetworkTransactionIdAndCardDetails,
+    DirectCarrierBilling,
+    InstantBankTransfer,
 }
