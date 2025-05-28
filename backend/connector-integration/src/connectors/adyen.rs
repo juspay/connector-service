@@ -3,10 +3,8 @@ pub mod transformers;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
 use domain_types::{
-    capture_method_not_supported,
     connector_types::{is_mandate_supported, ConnectorSpecifications},
     connector_types::{ConnectorValidation, SupportedPaymentMethodsExt},
-    payment_method_not_supported,
     types::{
         self, CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentMethodDataType,
         PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
@@ -630,43 +628,6 @@ impl ConnectorSpecifications for Adyen {
 }
 
 impl ConnectorValidation for Adyen {
-    fn validate_connector_against_payment_request(
-        &self,
-        capture_method: Option<CaptureMethod>,
-        payment_method: PaymentMethod,
-        pmt: Option<PaymentMethodType>,
-    ) -> CustomResult<(), ConnectorError> {
-        let capture_method = capture_method.unwrap_or_default();
-        let connector = self.id();
-
-        match pmt {
-            Some(payment_method_type) => match payment_method_type {
-                PaymentMethodType::Credit | PaymentMethodType::Debit => match capture_method {
-                    CaptureMethod::Automatic
-                    | CaptureMethod::Manual
-                    | CaptureMethod::ManualMultiple => Ok(()),
-                    CaptureMethod::Scheduled => {
-                        capture_method_not_supported!(
-                            connector,
-                            capture_method,
-                            payment_method_type
-                        )
-                    }
-                },
-                _ => {
-                    payment_method_not_supported!(connector, payment_method, payment_method_type)
-                }
-            },
-            None => match capture_method {
-                    CaptureMethod::Automatic    //confirm the capture methods once
-                    | CaptureMethod::Manual
-                    | CaptureMethod::ManualMultiple => Ok(()),
-                    CaptureMethod::Scheduled => {
-                        capture_method_not_supported!(connector, capture_method)
-                    }
-                },
-        }
-    }
 
     fn validate_mandate_payment(
         &self,
@@ -693,6 +654,6 @@ impl ConnectorValidation for Adyen {
         .into())
     }
     fn is_webhook_source_verification_mandatory(&self) -> bool {
-        false //Since webhooks is unimplemented so far out
+        false
     }
 }

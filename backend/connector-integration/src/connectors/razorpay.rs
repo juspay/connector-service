@@ -2,7 +2,6 @@ pub mod test;
 pub mod transformers;
 use crate::{with_error_response_body, with_response_body};
 use domain_types::{
-    capture_method_not_supported,
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
@@ -22,7 +21,6 @@ use domain_types::{
         ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
         ValidationTrait, WebhookDetailsResponse,
     },
-    payment_method_not_supported,
     types::{
         CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
         PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
@@ -782,45 +780,6 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 }
 
 impl ConnectorValidation for Razorpay {
-    fn validate_connector_against_payment_request(
-        &self,
-        capture_method: Option<CaptureMethod>,
-        payment_method: PaymentMethod,
-        pmt: Option<PaymentMethodType>,
-    ) -> CustomResult<(), ConnectorError> {
-        let capture_method = capture_method.unwrap_or_default();
-        let connector = self.id();
-
-        match pmt {
-            Some(payment_method_type) => match payment_method_type {
-                PaymentMethodType::Credit | PaymentMethodType::Debit => match capture_method {
-                    CaptureMethod::Automatic
-                    | CaptureMethod::Manual
-                    | CaptureMethod::ManualMultiple => Ok(()),
-                    CaptureMethod::Scheduled => {
-                        capture_method_not_supported!(
-                            connector,
-                            capture_method,
-                            payment_method_type
-                        )
-                    }
-                },
-                _ => {
-                    payment_method_not_supported!(connector, payment_method_type, payment_method)
-                }
-            },
-            None => match capture_method {
-                //not sure of the cap methods, confirm later
-                CaptureMethod::Automatic
-                | CaptureMethod::Manual
-                | CaptureMethod::ManualMultiple => Ok(()),
-                CaptureMethod::Scheduled => {
-                    capture_method_not_supported!(connector, capture_method)
-                }
-            },
-        }
-    }
-
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,
@@ -846,7 +805,7 @@ impl ConnectorValidation for Razorpay {
         .into())
     }
     fn is_webhook_source_verification_mandatory(&self) -> bool {
-        false //Since webhooks is unimplemented so far out
+        false
     }
 }
 
@@ -915,7 +874,10 @@ static RAZORPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     connector_type: PaymentConnectorCategory::PaymentGateway
 };
 
-static RAZORPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[];
+static RAZORPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[
+    EventClass::Payments,
+    EventClass::Refunds,
+];
 
 impl ConnectorSpecifications for Razorpay {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
