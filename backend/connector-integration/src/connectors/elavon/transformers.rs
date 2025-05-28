@@ -574,7 +574,6 @@ impl
                 return Err(report!(
                     errors::ConnectorError::MissingConnectorTransactionID
                 ))
-                .attach_printable("Missing connector_transaction_id for Elavon Capture")
             }
         };
 
@@ -862,7 +861,6 @@ impl
                 return Err(report!(
                     errors::ConnectorError::MissingConnectorTransactionID
                 ))
-                .attach_printable("Missing connector_transaction_id for Elavon PSync")
             }
         };
 

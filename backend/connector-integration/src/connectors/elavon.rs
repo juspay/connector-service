@@ -2,12 +2,12 @@ pub mod transformers;
 
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeFlowData,
-        DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData, 
+        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
         PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
@@ -152,6 +152,7 @@ impl api::ConnectorCommon for Elavon {
 impl api::ConnectorValidation for Elavon {}
 impl ValidationTrait for Elavon {}
 impl ConnectorServiceTrait for Elavon {}
+impl DisputeDefend for Elavon {}
 
 impl PaymentAuthorizeV2 for Elavon {}
 impl PaymentSyncV2 for Elavon {}
@@ -894,6 +895,81 @@ impl
     > {
         Err(hs_errors::ConnectorError::NotImplemented(
             "SubmitEvidence handle_response_v2".to_string(),
+        )
+        .into())
+    }
+    fn get_error_response_v2(
+        &self,
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Elavon
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("DefendDispute get_headers".to_string())
+                .into(),
+        )
+    }
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<String, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("DefendDispute get_url".to_string()).into())
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented(
+            "DefendDispute get_request_body".to_string(),
+        )
+        .into())
+    }
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        >,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: hs_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        Err(hs_errors::ConnectorError::NotImplemented(
+            "DefendDispute handle_response_v2".to_string(),
         )
         .into())
     }
