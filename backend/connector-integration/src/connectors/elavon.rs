@@ -6,7 +6,7 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData, 
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
         PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -917,12 +917,7 @@ impl
 {
     fn get_headers(
         &self,
-        _req: &RouterDataV2<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
         Err(
             hs_errors::ConnectorError::NotImplemented("DefendDispute get_headers".to_string())
@@ -931,28 +926,18 @@ impl
     }
     fn get_url(
         &self,
-        _req: &RouterDataV2<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
         Err(hs_errors::ConnectorError::NotImplemented("DefendDispute get_url".to_string()).into())
     }
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<
-            DefendDispute,
-            DisputeFlowData,
-            DisputeDefendData,
-            DisputeResponseData,
-        >,
+        _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
-        Err(hs_errors::ConnectorError::NotImplemented(
-            "DefendDispute get_request_body".to_string(),
+        Err(
+            hs_errors::ConnectorError::NotImplemented("DefendDispute get_request_body".to_string())
+                .into(),
         )
-        .into())
     }
     fn handle_response_v2(
         &self,
