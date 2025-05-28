@@ -628,7 +628,6 @@ impl ConnectorSpecifications for Adyen {
 }
 
 impl ConnectorValidation for Adyen {
-
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,

@@ -874,10 +874,8 @@ static RAZORPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     connector_type: PaymentConnectorCategory::PaymentGateway
 };
 
-static RAZORPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[
-    EventClass::Payments,
-    EventClass::Refunds,
-];
+static RAZORPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] =
+    &[EventClass::Payments, EventClass::Refunds];
 
 impl ConnectorSpecifications for Razorpay {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
