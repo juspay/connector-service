@@ -429,7 +429,10 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             customer_name: None,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-            capture_method: value.capture_method.map(|cm| hyperswitch_common_enums::CaptureMethod::foreign_try_from(cm).unwrap_or(hyperswitch_common_enums::CaptureMethod::Automatic)),
+            capture_method: value.capture_method.map(|cm| {
+                hyperswitch_common_enums::CaptureMethod::foreign_try_from(cm)
+                    .unwrap_or(hyperswitch_common_enums::CaptureMethod::Automatic)
+            }),
             router_return_url: value.return_url,
             complete_authorize_url: None,
             setup_future_usage: None,

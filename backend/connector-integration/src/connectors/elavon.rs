@@ -2,10 +2,17 @@ pub mod transformers;
 
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void
+        Accept, Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeFlowData,
+        DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
+        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
+        RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2,
+        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
     },
 };
 use error_stack::ResultExt;
@@ -14,28 +21,27 @@ use hyperswitch_common_utils::{
     ext_traits::ByteSliceExt,
     request::RequestContent,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
-    
 };
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2, router_request_types::SyncRequestType,
+    router_data_v2::RouterDataV2,
+    router_request_types::SyncRequestType,
 };
 use hyperswitch_interfaces::{
     api::{self as api, ConnectorCommon},
     configs::Connectors,
-    consts as hs_consts,
     connector_integration_v2::{self, ConnectorIntegrationV2},
-    errors as hs_errors,
+    consts as hs_consts, errors as hs_errors,
     events::connector_api_logs::ConnectorEvent,
     types as hs_types,
 };
-use hyperswitch_masking::{ Maskable, Secret, WithoutType};
+use hyperswitch_masking::{Maskable, Secret, WithoutType};
 use serde::Serialize;
 use std::collections::HashMap;
 
-use transformers::{self as elavon, ForeignTryFrom};
 use crate::with_response_body;
 use hyperswitch_common_enums;
+use transformers::{self as elavon, ForeignTryFrom};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -50,7 +56,7 @@ pub fn deserialize_xml_to_struct<T: serde::de::DeserializeOwned>(
     let response_str = std::str::from_utf8(xml_data)
         .map_err(|_| hs_errors::ConnectorError::ResponseDeserializationFailed)?
         .trim();
-    
+
     quick_xml::de::from_str(response_str)
         .map_err(|_| hs_errors::ConnectorError::ResponseDeserializationFailed)
 }
@@ -86,7 +92,7 @@ impl api::ConnectorCommon for Elavon {
     fn build_error_response(
         &self,
         res: hs_types::Response,
-         event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
         match res
             .response
@@ -96,26 +102,27 @@ impl api::ConnectorCommon for Elavon {
             Ok(elavon_response) => {
                 with_response_body!(event_builder, elavon_response);
                 match elavon_response.result {
-                    elavon::ElavonResult::Error(error_payload) => {
-                        Ok(ErrorResponse {
-                            status_code: res.status_code,
-                            code: error_payload.error_code.unwrap_or_else(|| hs_consts::NO_ERROR_CODE.to_string()),
-                            message: error_payload.error_message,
-                            reason: error_payload.error_name,
-                            attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
-                            connector_transaction_id: error_payload.ssl_txn_id,
-                        })
-                    }
-                    elavon::ElavonResult::Success(success_payload) => {
-                        Ok(ErrorResponse {
-                            status_code: res.status_code,
-                            code: hs_consts::NO_ERROR_CODE.to_string(),
-                            message: "Received success response in error flow".to_string(),
-                            reason: Some(format!("Unexpected success: {:?}", success_payload.ssl_result_message)),
-                            attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
-                            connector_transaction_id: Some(success_payload.ssl_txn_id),
-                        })
-                    }
+                    elavon::ElavonResult::Error(error_payload) => Ok(ErrorResponse {
+                        status_code: res.status_code,
+                        code: error_payload
+                            .error_code
+                            .unwrap_or_else(|| hs_consts::NO_ERROR_CODE.to_string()),
+                        message: error_payload.error_message,
+                        reason: error_payload.error_name,
+                        attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                        connector_transaction_id: error_payload.ssl_txn_id,
+                    }),
+                    elavon::ElavonResult::Success(success_payload) => Ok(ErrorResponse {
+                        status_code: res.status_code,
+                        code: hs_consts::NO_ERROR_CODE.to_string(),
+                        message: "Received success response in error flow".to_string(),
+                        reason: Some(format!(
+                            "Unexpected success: {:?}",
+                            success_payload.ssl_result_message
+                        )),
+                        attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                        connector_transaction_id: Some(success_payload.ssl_txn_id),
+                    }),
                 }
             }
             Err(_parsing_error) => {
@@ -161,9 +168,8 @@ impl IncomingWebhook for Elavon {}
 pub fn struct_to_xml<T: Serialize>(
     item: &T,
 ) -> Result<HashMap<String, Secret<String, WithoutType>>, hs_errors::ConnectorError> {
-    let xml_content = quick_xml::se::to_string_with_root("txn", &item).map_err(|_| {
-        hs_errors::ConnectorError::ResponseDeserializationFailed
-    })?;
+    let xml_content = quick_xml::se::to_string_with_root("txn", &item)
+        .map_err(|_| hs_errors::ConnectorError::ResponseDeserializationFailed)?;
 
     let mut result = HashMap::new();
     result.insert(
@@ -173,8 +179,13 @@ pub fn struct_to_xml<T: Serialize>(
     Ok(result)
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-    for Elavon
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData,
+        PaymentsResponseData,
+    > for Elavon
 {
     fn get_headers(
         &self,
@@ -193,18 +204,21 @@ impl connector_integration_v2::ConnectorIntegrationV2<Authorize, PaymentFlowData
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
-        Ok(format!("{}processxml.do", req.resource_common_data.connectors.elavon.base_url))
+        Ok(format!(
+            "{}processxml.do",
+            req.resource_common_data.connectors.elavon.base_url
+        ))
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
-        let amount = self.amount_converter.convert(
-            req.request.minor_amount,
-            req.request.currency,
-        ).change_context(hs_errors::ConnectorError::RequestEncodingFailed)
-         .attach_printable("Failed to convert amount for Elavon Authorize request")?;
+        let amount = self
+            .amount_converter
+            .convert(req.request.minor_amount, req.request.currency)
+            .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to convert amount for Elavon Authorize request")?;
 
         let elavon_router_data = elavon::ElavonRouterData::try_from((amount, req))
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
@@ -214,30 +228,37 @@ impl connector_integration_v2::ConnectorIntegrationV2<Authorize, PaymentFlowData
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to create ElavonPaymentsRequest from ElavonRouterData")?;
 
-        Ok(Some(RequestContent::FormUrlEncoded(Box::new(struct_to_xml(
-            &elavon_req,
-        )?))))
+        Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+            struct_to_xml(&elavon_req)?,
+        ))))
     }
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-         event_builder: Option<&mut ConnectorEvent>,
+        data: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
-    ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>, hs_errors::ConnectorError> {
-        let response: elavon::ElavonPaymentsResponse =
-            deserialize_xml_to_struct(&res.response)?;
-            with_response_body!(event_builder, response);
+    ) -> CustomResult<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        let response: elavon::ElavonPaymentsResponse = deserialize_xml_to_struct(&res.response)?;
+        with_response_body!(event_builder, response);
 
-            RouterDataV2::foreign_try_from((
-                response.result,
-                data.clone(),
-                res.status_code,
-                data.request.capture_method,
-                false,
-                data.request.payment_method_type,
-            ))
-            .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((
+            response.result,
+            data.clone(),
+            res.status_code,
+            data.request.capture_method,
+            false,
+            data.request.payment_method_type,
+        ))
+        .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -273,7 +294,10 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
-        Ok(format!("{}processxml.do", req.resource_common_data.connectors.elavon.base_url))
+        Ok(format!(
+            "{}processxml.do",
+            req.resource_common_data.connectors.elavon.base_url
+        ))
     }
 
     fn get_request_body(
@@ -283,10 +307,10 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         let connector_req = elavon::SyncRequest::try_from(req)
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to create SyncRequest for PSync")?;
-        
-        Ok(Some(RequestContent::FormUrlEncoded(Box::new(struct_to_xml(
-            &connector_req,
-        )?))))
+
+        Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+            struct_to_xml(&connector_req)?,
+        ))))
     }
 
     fn handle_response_v2(
@@ -294,7 +318,10 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
-    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, hs_errors::ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        hs_errors::ConnectorError,
+    > {
         let response: elavon::ElavonPSyncResponse = deserialize_xml_to_struct(&res.response)?;
         with_response_body!(event_builder, response);
 
@@ -322,15 +349,91 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
     }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Elavon {
-    fn get_headers(&self, _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("CreateOrder get_headers".to_string()).into()) }
-    fn get_url(&self, _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>) -> CustomResult<String, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("CreateOrder get_url".to_string()).into()) }
-    fn get_request_body(&self, _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("CreateOrder get_request_body".to_string()).into()) }
-    fn handle_response_v2(&self, _data: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, _event_builder: Option<&mut ConnectorEvent>, _res: hs_types::Response) -> CustomResult<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("CreateOrder handle_response_v2".to_string()).into()) }
-    fn get_error_response_v2(&self, res: hs_types::Response, event_builder: Option<&mut ConnectorEvent>) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> { self.build_error_response(res, event_builder) }
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Elavon
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("CreateOrder get_headers".to_string()).into())
+    }
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    ) -> CustomResult<String, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("CreateOrder get_url".to_string()).into())
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("CreateOrder get_request_body".to_string())
+                .into(),
+        )
+    }
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: hs_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+        hs_errors::ConnectorError,
+    > {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("CreateOrder handle_response_v2".to_string())
+                .into(),
+        )
+    }
+    fn get_error_response_v2(
+        &self,
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Elavon {
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Elavon
+{
     fn get_http_method(&self) -> hyperswitch_common_utils::request::Method {
         hyperswitch_common_utils::request::Method::Post
     }
@@ -352,7 +455,10 @@ impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, Ref
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
-        Ok(format!("{}processxml.do", req.resource_common_data.connectors.elavon.base_url))
+        Ok(format!(
+            "{}processxml.do",
+            req.resource_common_data.connectors.elavon.base_url
+        ))
     }
 
     fn get_request_body(
@@ -362,9 +468,9 @@ impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, Ref
         let connector_req = elavon::SyncRequest::try_from(req)
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to create SyncRequest for RSync")?;
-            
+
         let form_payload = struct_to_xml(&connector_req)?;
-        
+
         Ok(Some(RequestContent::FormUrlEncoded(Box::new(form_payload))))
     }
 
@@ -373,16 +479,15 @@ impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, Ref
         data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
-    ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, hs_errors::ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        hs_errors::ConnectorError,
+    > {
         let response: elavon::ElavonRSyncResponse = deserialize_xml_to_struct(&res.response)?;
         with_response_body!(event_builder, response);
-        
-        RouterDataV2::foreign_try_from((
-            response,
-            data.clone(),
-            res.status_code
-        ))
-        .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
+
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
+            .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -394,15 +499,60 @@ impl connector_integration_v2::ConnectorIntegrationV2<RSync, RefundFlowData, Ref
     }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Elavon {
-    fn get_headers(&self, _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Void get_headers".to_string()).into()) }
-    fn get_url(&self, _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<String, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Void get_url".to_string()).into()) }
-    fn get_request_body(&self, _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Void get_request_body".to_string()).into()) }
-    fn handle_response_v2(&self, _data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, _event_builder: Option<&mut ConnectorEvent>, _res: hs_types::Response) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Void handle_response_v2".to_string()).into()) }
-    fn get_error_response_v2(&self, res: hs_types::Response, event_builder: Option<&mut ConnectorEvent>) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> { self.build_error_response(res, event_builder) }
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Elavon
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("Void get_headers".to_string()).into())
+    }
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<String, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("Void get_url".to_string()).into())
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("Void get_request_body".to_string()).into())
+    }
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: hs_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        Err(hs_errors::ConnectorError::NotImplemented("Void handle_response_v2".to_string()).into())
+    }
+    fn get_error_response_v2(
+        &self,
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Elavon {
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Elavon
+{
     fn get_headers(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
@@ -420,18 +570,21 @@ impl connector_integration_v2::ConnectorIntegrationV2<Refund, RefundFlowData, Re
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
-        Ok(format!("{}processxml.do", req.resource_common_data.connectors.elavon.base_url))
+        Ok(format!(
+            "{}processxml.do",
+            req.resource_common_data.connectors.elavon.base_url
+        ))
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
-        let amount = self.amount_converter.convert(
-            req.request.minor_refund_amount,
-            req.request.currency,
-        ).change_context(hs_errors::ConnectorError::RequestEncodingFailed)
-         .attach_printable("Failed to convert amount for Elavon Refund request")?;
+        let amount = self
+            .amount_converter
+            .convert(req.request.minor_refund_amount, req.request.currency)
+            .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to convert amount for Elavon Refund request")?;
 
         let elavon_router_data = elavon::ElavonRouterData::try_from((amount, req))
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
@@ -441,9 +594,9 @@ impl connector_integration_v2::ConnectorIntegrationV2<Refund, RefundFlowData, Re
             .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to create ElavonRefundRequest from ElavonRouterData")?;
 
-        Ok(Some(RequestContent::FormUrlEncoded(Box::new(struct_to_xml(
-            &elavon_refund_req,
-        )?))))
+        Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+            struct_to_xml(&elavon_refund_req)?,
+        ))))
     }
 
     fn handle_response_v2(
@@ -451,27 +604,25 @@ impl connector_integration_v2::ConnectorIntegrationV2<Refund, RefundFlowData, Re
         data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
-    ) -> CustomResult<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, hs_errors::ConnectorError> {
-        let response: elavon::ElavonPaymentsResponse =
-            deserialize_xml_to_struct(&res.response)?;
-            with_response_body!(event_builder, response);
+    ) -> CustomResult<
+        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        let response: elavon::ElavonPaymentsResponse = deserialize_xml_to_struct(&res.response)?;
+        with_response_body!(event_builder, response);
 
-            RouterDataV2::foreign_try_from((
-                response.result,
-                data.clone(),
-                res.status_code,
-            ))
+        RouterDataV2::foreign_try_from((response.result, data.clone(), res.status_code))
             .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
         &self,
-        res: hs_types::Response, 
-        event_builder: Option<&mut ConnectorEvent>
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
-    
+
     fn get_5xx_error_response(
         &self,
         res: hs_types::Response,
@@ -481,7 +632,14 @@ impl connector_integration_v2::ConnectorIntegrationV2<Refund, RefundFlowData, Re
     }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Elavon {
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Elavon
+{
     fn get_headers(
         &self,
         _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
@@ -496,26 +654,29 @@ impl connector_integration_v2::ConnectorIntegrationV2<Capture, PaymentFlowData, 
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, hs_errors::ConnectorError> {
-        Ok(format!("{}processxml.do", req.resource_common_data.connectors.elavon.base_url))
+        Ok(format!(
+            "{}processxml.do",
+            req.resource_common_data.connectors.elavon.base_url
+        ))
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
-        let amount = self.amount_converter.convert(
-            req.request.minor_amount_to_capture,
-            req.request.currency,
-        ).change_context(hs_errors::ConnectorError::RequestEncodingFailed)
-         .attach_printable("Failed to convert amount for Elavon Capture request")?;
+        let amount = self
+            .amount_converter
+            .convert(req.request.minor_amount_to_capture, req.request.currency)
+            .change_context(hs_errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to convert amount for Elavon Capture request")?;
 
         let elavon_router_data = elavon::ElavonRouterData::try_from((amount, req))?;
-        
+
         let elavon_req = elavon::ElavonCaptureRequest::try_from(&elavon_router_data)?;
 
-        Ok(Some(RequestContent::FormUrlEncoded(Box::new(struct_to_xml(
-            &elavon_req,
-        )?))))
+        Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+            struct_to_xml(&elavon_req)?,
+        ))))
     }
 
     fn handle_response_v2(
@@ -523,18 +684,18 @@ impl connector_integration_v2::ConnectorIntegrationV2<Capture, PaymentFlowData, 
         data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: hs_types::Response,
-    ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, hs_errors::ConnectorError> {
-        let elavon_response: elavon::ElavonPaymentsResponse = deserialize_xml_to_struct(&res.response)
-            .change_context(hs_errors::ConnectorError::ResponseDeserializationFailed)?;
-        
+    ) -> CustomResult<
+        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        let elavon_response: elavon::ElavonPaymentsResponse =
+            deserialize_xml_to_struct(&res.response)
+                .change_context(hs_errors::ConnectorError::ResponseDeserializationFailed)?;
+
         with_response_body!(event_builder, elavon_response);
-        
-        RouterDataV2::foreign_try_from((
-            elavon_response.result,
-            data.clone(),
-            res.status_code,
-        ))
-        .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
+
+        RouterDataV2::foreign_try_from((elavon_response.result, data.clone(), res.status_code))
+            .change_context(hs_errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -546,26 +707,201 @@ impl connector_integration_v2::ConnectorIntegrationV2<Capture, PaymentFlowData, 
     }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Elavon {
-    fn get_headers(&self, _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SetupMandate get_headers".to_string()).into()) }
-    fn get_url(&self, _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>) -> CustomResult<String, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SetupMandate get_url".to_string()).into()) }
-    fn get_request_body(&self, _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SetupMandate get_request_body".to_string()).into()) }
-    fn handle_response_v2(&self, _data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>, _event_builder: Option<&mut ConnectorEvent>, _res: hs_types::Response) -> CustomResult<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SetupMandate handle_response_v2".to_string()).into()) }
-    fn get_error_response_v2(&self, res: hs_types::Response, event_builder: Option<&mut ConnectorEvent>) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> { self.build_error_response(res, event_builder) }
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Elavon
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("SetupMandate get_headers".to_string())
+                .into(),
+        )
+    }
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<String, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("SetupMandate get_url".to_string()).into())
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("SetupMandate get_request_body".to_string())
+                .into(),
+        )
+    }
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: hs_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        Err(hs_errors::ConnectorError::NotImplemented(
+            "SetupMandate handle_response_v2".to_string(),
+        )
+        .into())
+    }
+    fn get_error_response_v2(
+        &self,
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Elavon {
-    fn get_headers(&self, _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Accept get_headers".to_string()).into()) }
-    fn get_url(&self, _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>) -> CustomResult<String, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Accept get_url".to_string()).into()) }
-    fn get_request_body(&self, _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Accept get_request_body".to_string()).into()) }
-    fn handle_response_v2(&self, _data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, _event_builder: Option<&mut ConnectorEvent>, _res: hs_types::Response) -> CustomResult<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("Accept handle_response_v2".to_string()).into()) }
-    fn get_error_response_v2(&self, res: hs_types::Response, event_builder: Option<&mut ConnectorEvent>) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> { self.build_error_response(res, event_builder) }
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Elavon
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("Accept get_headers".to_string()).into())
+    }
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> CustomResult<String, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("Accept get_url".to_string()).into())
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+    ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("Accept get_request_body".to_string()).into())
+    }
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: hs_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("Accept handle_response_v2".to_string())
+                .into(),
+        )
+    }
+    fn get_error_response_v2(
+        &self,
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
 
-impl connector_integration_v2::ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Elavon {
-    fn get_headers(&self, _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SubmitEvidence get_headers".to_string()).into()) }
-    fn get_url(&self, _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>) -> CustomResult<String, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SubmitEvidence get_url".to_string()).into()) }
-    fn get_request_body(&self, _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SubmitEvidence get_request_body".to_string()).into()) }
-    fn handle_response_v2(&self, _data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, _event_builder: Option<&mut ConnectorEvent>, _res: hs_types::Response) -> CustomResult<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, hs_errors::ConnectorError> { Err(hs_errors::ConnectorError::NotImplemented("SubmitEvidence handle_response_v2".to_string()).into()) }
-    fn get_error_response_v2(&self, res: hs_types::Response, event_builder: Option<&mut ConnectorEvent>) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> { self.build_error_response(res, event_builder) }
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Elavon
+{
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, hs_errors::ConnectorError> {
+        Err(
+            hs_errors::ConnectorError::NotImplemented("SubmitEvidence get_headers".to_string())
+                .into(),
+        )
+    }
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<String, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented("SubmitEvidence get_url".to_string()).into())
+    }
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+    ) -> CustomResult<Option<RequestContent>, hs_errors::ConnectorError> {
+        Err(hs_errors::ConnectorError::NotImplemented(
+            "SubmitEvidence get_request_body".to_string(),
+        )
+        .into())
+    }
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: hs_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        hs_errors::ConnectorError,
+    > {
+        Err(hs_errors::ConnectorError::NotImplemented(
+            "SubmitEvidence handle_response_v2".to_string(),
+        )
+        .into())
+    }
+    fn get_error_response_v2(
+        &self,
+        res: hs_types::Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, hs_errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }

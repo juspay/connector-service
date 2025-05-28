@@ -8,19 +8,15 @@ mod common;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_service_client::PaymentServiceClient,
-        PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
-        PaymentsSyncRequest,
-        PaymentsCaptureRequest,
-        RefundsRequest,
-        RefundsSyncRequest,
-        CaptureMethod, Currency, PaymentMethod, PaymentMethodType, AuthenticationType,
-        AttemptStatus, RefundStatus,
+        payment_service_client::PaymentServiceClient, AttemptStatus, AuthenticationType,
+        CaptureMethod, Currency, PaymentMethod, PaymentMethodType, PaymentsAuthorizeRequest,
+        PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsSyncRequest, RefundStatus,
+        RefundsRequest, RefundsSyncRequest,
     },
 };
-use tonic::{transport::Channel, Request};
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::env;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tonic::{transport::Channel, Request};
 
 // Constants for Elavon connector
 const CONNECTOR_NAME: &str = "elavon";
@@ -51,13 +47,13 @@ fn get_timestamp() -> u64 {
 // Helper function to add Elavon metadata headers to a request
 fn add_elavon_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - requires them to be set
-    let api_key = env::var(ELAVON_API_KEY_ENV)
-        .expect("ELAVON_API_KEY environment variable is required");
-    let api_user = env::var(ELAVON_API_USER_ENV)
-        .expect("ELAVON_API_USER environment variable is required");
+    let api_key =
+        env::var(ELAVON_API_KEY_ENV).expect("ELAVON_API_KEY environment variable is required");
+    let api_user =
+        env::var(ELAVON_API_USER_ENV).expect("ELAVON_API_USER environment variable is required");
     let api_secret = env::var(ELAVON_API_SECRET_ENV)
         .expect("ELAVON_API_SECRET environment variable is required");
-    
+
     request.metadata_mut().append(
         "x-connector",
         CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
@@ -70,10 +66,9 @@ fn add_elavon_metadata<T>(request: &mut Request<T>) {
         "x-api-key",
         api_key.parse().expect("Failed to parse x-api-key"),
     );
-    request.metadata_mut().append(
-        "x-key1",
-        api_user.parse().expect("Failed to parse x-key1"),
-    );
+    request
+        .metadata_mut()
+        .append("x-key1", api_user.parse().expect("Failed to parse x-key1"));
     request.metadata_mut().append(
         "x-api-secret",
         api_secret.parse().expect("Failed to parse x-api-secret"),
@@ -113,7 +108,7 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAu
                     card_issuing_country: None,
                     bank_code: None,
                     nick_name: None,
-                }
+                },
             )),
         }),
         email: Some(TEST_EMAIL.to_string()),
@@ -126,7 +121,6 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAu
         payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
         ..Default::default()
     }
-    
 }
 
 // Test payment authorization with auto capture
@@ -135,27 +129,33 @@ async fn test_payment_authorization_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request
         let request = create_payment_authorize_request(CaptureMethod::Automatic);
-        
+
         // Add metadata headers
         let mut grpc_request = Request::new(request);
         add_elavon_metadata(&mut grpc_request);
-        
+
         // Send the request
         let response = client
             .payment_authorize(grpc_request)
             .await
             .expect("gRPC payment_authorize call failed")
             .into_inner();
-        
+
         // Verify the response
-        assert!(response.resource_id.is_some(), "Resource ID should be present");
-        
+        assert!(
+            response.resource_id.is_some(),
+            "Resource ID should be present"
+        );
+
         // Extract the transaction ID (using underscore prefix since it's used for assertions only)
         let _transaction_id = extract_transaction_id(&response);
-        
+
         // Verify payment status
-        assert_eq!(response.status, i32::from(AttemptStatus::Charged), 
-            "Payment should be in CHARGED state");
+        assert_eq!(
+            response.status,
+            i32::from(AttemptStatus::Charged),
+            "Payment should be in CHARGED state"
+        );
     });
 }
 
@@ -191,35 +191,35 @@ async fn test_payment_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // First create a payment to sync
         let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
-        
+
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
         add_elavon_metadata(&mut auth_grpc_request);
-        
+
         // Send the auth request
         let auth_response = client
             .payment_authorize(auth_grpc_request)
             .await
             .expect("gRPC payment_authorize call failed")
             .into_inner();
-        
+
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        
+
         // Create sync request
         let sync_request = create_payment_sync_request(&transaction_id);
-        
+
         // Add metadata headers for sync request
         let mut sync_grpc_request = Request::new(sync_request);
         add_elavon_metadata(&mut sync_grpc_request);
-        
+
         // Send the sync request
         let sync_response = client
             .payment_sync(sync_grpc_request)
             .await
             .expect("gRPC payment_sync call failed")
             .into_inner();
-        
+
         // Verify the sync response
         assert!(
             sync_response.status == i32::from(AttemptStatus::Authorized),
@@ -239,28 +239,29 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
     }
 }
 
-
 // Test payment authorization with manual capture
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request with manual capture
         let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
-        
+
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
 
-
         add_elavon_metadata(&mut auth_grpc_request);
-        
+
         // Send the auth request
         let auth_response = client
             .payment_authorize(auth_grpc_request)
             .await
             .expect("gRPC payment_authorize call failed")
             .into_inner();
-        
-        assert!(auth_response.resource_id.is_some(), "Resource ID should be present");
+
+        assert!(
+            auth_response.resource_id.is_some(),
+            "Resource ID should be present"
+        );
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
@@ -272,25 +273,24 @@ async fn test_payment_authorization_manual_capture() {
             auth_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in AUTHORIZED state"
         );
-        
+
         // Create capture request
         let capture_request = create_payment_capture_request(&transaction_id);
-        
+
         // Add metadata headers for capture request
         let mut capture_grpc_request = Request::new(capture_request);
         add_elavon_metadata(&mut capture_grpc_request);
-        
+
         // Send the capture request
         let capture_response = client
             .payment_capture(capture_grpc_request)
             .await
             .expect("gRPC payment_capture call failed")
             .into_inner();
-        
-        
+
         // Note: If the payment was already auto-captured, the capture request might fail
         // with an error like "Invalid Transaction ID: The transaction ID is invalid for this transaction type"
-        // In this case, we'll accept either a CHARGED status 
+        // In this case, we'll accept either a CHARGED status
         assert!(
             capture_response.status == i32::from(AttemptStatus::Charged),
             "Payment should be in CHARGED state"
@@ -334,38 +334,41 @@ async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // First create a payment to refund
         let auth_request = create_payment_authorize_request(CaptureMethod::Automatic);
-        
+
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
         add_elavon_metadata(&mut auth_grpc_request);
-        
+
         // Send the auth request
         let auth_response = client
             .payment_authorize(auth_grpc_request)
             .await
             .expect("gRPC payment_authorize call failed")
             .into_inner();
-        
+
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        
+
         // Create refund request
         let refund_request = create_refund_request(&transaction_id);
-        
+
         // Add metadata headers for refund request
         let mut refund_grpc_request = Request::new(refund_request);
         add_elavon_metadata(&mut refund_grpc_request);
-        
+
         // Send the refund request
         let refund_response = client
             .refund(refund_grpc_request)
             .await
             .expect("gRPC refund call failed")
             .into_inner();
-        
+
         // Extract the refund ID
-        let refund_id = refund_response.connector_refund_id.clone().unwrap_or_default();
-        
+        let refund_id = refund_response
+            .connector_refund_id
+            .clone()
+            .unwrap_or_default();
+
         // Verify the refund response
         assert!(!refund_id.is_empty(), "Refund ID should not be empty");
         assert!(
@@ -381,63 +384,63 @@ async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // First create a payment to refund
         let auth_request = create_payment_authorize_request(CaptureMethod::Automatic);
-        
+
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
         add_elavon_metadata(&mut auth_grpc_request);
-        
+
         // Send the auth request
         let auth_response = client
             .payment_authorize(auth_grpc_request)
             .await
             .expect("gRPC payment_authorize call failed")
             .into_inner();
-        
+
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        
+
         // Create refund request
         let refund_request = create_refund_request(&transaction_id);
-        
+
         // Add metadata headers for refund request
         let mut refund_grpc_request = Request::new(refund_request);
         add_elavon_metadata(&mut refund_grpc_request);
-        
+
         // Send the refund request
         let refund_response = client
             .refund(refund_grpc_request)
             .await
             .expect("gRPC refund call failed")
             .into_inner();
-        
+
         // Extract the refund ID
-        let refund_id = refund_response.connector_refund_id.clone().unwrap_or_default();
-        
+        let refund_id = refund_response
+            .connector_refund_id
+            .clone()
+            .unwrap_or_default();
+
         // Verify the refund response
         assert!(!refund_id.is_empty(), "Refund ID should not be empty");
-        
+
         // Create refund sync request
         let refund_sync_request = create_refund_sync_request(&transaction_id, &refund_id);
-        
+
         // Add metadata headers for refund sync request
         let mut refund_sync_grpc_request = Request::new(refund_sync_request);
         add_elavon_metadata(&mut refund_sync_grpc_request);
-        
+
         // Send the refund sync request
         let refund_sync_response = client
             .refund_sync(refund_sync_grpc_request)
             .await
             .expect("gRPC refund_sync call failed")
             .into_inner();
-        
+
         // Verify the refund sync response
         assert!(
-            refund_sync_response.status == i32::from(RefundStatus::RefundPending) || 
-            refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
+            refund_sync_response.status == i32::from(RefundStatus::RefundPending)
+                || refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
             "Refund should be in PENDING or SUCCESS state"
         );
-        
-
-        
     });
 }
