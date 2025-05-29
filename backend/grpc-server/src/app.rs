@@ -1,5 +1,5 @@
 use crate::consts;
-use crate::{configs, error::ConfigurationError, logger, metrics, utils};
+use crate::{configs, error::ConfigurationError, interceptor, logger, metrics, utils};
 use axum::http;
 use grpc_api_types::{
     health_check::health_server,
@@ -182,6 +182,7 @@ impl Service {
         );
 
         Server::builder()
+            .layer(interceptor::GrpcLoggingLayer)
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
