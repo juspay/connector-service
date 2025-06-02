@@ -1,17 +1,23 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use domain_types::{
-    connector_flow::{Accept, Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{
+        Accept, Authorize, Capture, DefendDispute, PSync, Refund, SetupMandate, SubmitEvidence,
+        Void,
+    },
     connector_types::{
-        AcceptDisputeData, DisputeFlowData, DisputeResponseData, EventType, MandateReference,
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
 };
-use error_stack::ResultExt;
+use error_stack::{Report, ResultExt};
 use hyperswitch_api_models::enums::{self, AttemptStatus, RefundStatus};
-
 use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::Method, types::MinorUnit,
+    errors::CustomResult,
+    ext_traits::{ByteSliceExt, OptionExt},
+    request::Method,
+    types::MinorUnit,
 };
 
 use hyperswitch_domain_models::{
@@ -468,6 +474,9 @@ pub struct AdyenPaymentRequest {
     device_fingerprint: Option<Secret<String>>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct SetupMandateRequest(AdyenPaymentRequest);
+
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -693,17 +702,72 @@ impl
     }
 }
 
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for AdyenVoidRequest
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for AdyenRedirectRequest
 {
     type Error = Error;
     fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        item: AdyenRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth_type = AdyenAuthType::try_from(&item.connector_auth_type)?;
+        let encoded_data = item
+            .router_data
+            .request
+            .encoded_data
+            .clone()
+            .get_required_value("encoded_data")
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let adyen_redirection_type =
+            serde_urlencoded::from_str::<AdyenRedirectRequestTypes>(encoded_data.as_str())
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        let adyen_redirect_request = match adyen_redirection_type {
+            AdyenRedirectRequestTypes::AdyenRedirection(req) => AdyenRedirectRequest {
+                details: AdyenRedirectRequestTypes::AdyenRedirection(AdyenRedirection {
+                    redirect_result: req.redirect_result,
+                    type_of_redirection_result: None,
+                    result_code: None,
+                }),
+            },
+            AdyenRedirectRequestTypes::AdyenThreeDS(req) => AdyenRedirectRequest {
+                details: AdyenRedirectRequestTypes::AdyenThreeDS(AdyenThreeDS {
+                    three_ds_result: req.three_ds_result,
+                    type_of_redirection_result: None,
+                    result_code: None,
+                }),
+            },
+            AdyenRedirectRequestTypes::AdyenRefusal(req) => AdyenRedirectRequest {
+                details: AdyenRedirectRequestTypes::AdyenRefusal(AdyenRefusal {
+                    payload: req.payload,
+                    type_of_redirection_result: None,
+                    result_code: None,
+                }),
+            },
+        };
+        Ok(adyen_redirect_request)
+    }
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
+    > for AdyenVoidRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
         Ok(Self {
             merchant_account: auth_type.merchant_account,
-            reference: item.request.connector_transaction_id.clone(),
+            reference: item.router_data.request.connector_transaction_id.clone(),
         })
     }
 }
@@ -714,6 +778,12 @@ pub enum AdyenPaymentResponse {
     Response(Box<AdyenResponse>),
     RedirectionResponse(Box<RedirectionResponse>),
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AdyenPSyncResponse(AdyenPaymentResponse);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SetupMandateResponse(AdyenPaymentResponse);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -872,33 +942,23 @@ impl<F> TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
     }
 }
 
-impl<F, Req>
-    ForeignTryFrom<(
-        AdyenPaymentResponse,
-        RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-        u16,
-        Option<hyperswitch_api_models::enums::CaptureMethod>,
-        bool,
-        Option<hyperswitch_api_models::enums::PaymentMethodType>,
-    )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<AdyenPSyncResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Error;
-    fn foreign_try_from(
-        (response, data, http_code, _capture_method, _is_multiple_capture_psync_flow, pmt): (
-            AdyenPaymentResponse,
-            RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-            u16,
-            Option<hyperswitch_api_models::enums::CaptureMethod>,
-            bool,
-            Option<hyperswitch_api_models::enums::PaymentMethodType>,
-        ),
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: ResponseRouterData<AdyenPSyncResponse, Self>) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let pmt = router_data.request.payment_method_type;
         let is_manual_capture = false;
         let (status, error, payment_response_data) = match response {
-            AdyenPaymentResponse::Response(response) => {
+            AdyenPSyncResponse(AdyenPaymentResponse::Response(response)) => {
                 get_adyen_response(*response, is_manual_capture, http_code, pmt)?
             }
-            AdyenPaymentResponse::RedirectionResponse(response) => {
+            AdyenPSyncResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
                 get_redirection_response(*response, is_manual_capture, http_code, pmt)?
             }
         };
@@ -907,9 +967,9 @@ impl<F, Req>
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
                 status,
-                ..data.resource_common_data
+                ..router_data.resource_common_data
             },
-            ..data
+            ..router_data
         })
     }
 }
@@ -932,19 +992,16 @@ impl ForeignTryFrom<AdyenVoidStatus> for hyperswitch_common_enums::AttemptStatus
     }
 }
 
-impl
-    ForeignTryFrom<(
-        AdyenVoidResponse,
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    )> for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = Error;
-    fn foreign_try_from(
-        (response, data): (
-            AdyenVoidResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: ResponseRouterData<AdyenVoidResponse, Self>) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code: _,
+        } = value;
         let status = AttemptStatus::Pending;
 
         let payment_void_response_data = PaymentsResponseData::TransactionResponse {
@@ -961,9 +1018,9 @@ impl
             response: Ok(payment_void_response_data),
             resource_common_data: PaymentFlowData {
                 status,
-                ..data.resource_common_data
+                ..router_data.resource_common_data
             },
-            ..data
+            ..router_data
         })
     }
 }
@@ -1206,6 +1263,28 @@ pub enum WebhookEventCode {
     RefundFailed,
     RefundReversed,
     CancelOrRefund,
+    NotificationOfChargeback,
+    Chargeback,
+    ChargebackReversed,
+    SecondChargeback,
+    PrearbitrationWon,
+    PrearbitrationLost,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum DisputeStatus {
+    Undefended,
+    Pending,
+    Lost,
+    Accepted,
+    Won,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenAdditionalDataWH {
+    pub dispute_status: Option<DisputeStatus>,
+    pub chargeback_reason_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1218,6 +1297,7 @@ pub struct AdyenNotificationRequestItemWH {
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
+    pub additional_data: AdyenAdditionalDataWH,
 }
 
 fn is_success_scenario(is_success: &str) -> bool {
@@ -1284,6 +1364,12 @@ pub(crate) fn get_adyen_webhook_event_type(code: WebhookEventCode) -> EventType 
         | WebhookEventCode::RefundFailed
         | WebhookEventCode::RefundReversed
         | WebhookEventCode::CancelOrRefund => EventType::Refund,
+        WebhookEventCode::NotificationOfChargeback
+        | WebhookEventCode::Chargeback
+        | WebhookEventCode::ChargebackReversed
+        | WebhookEventCode::SecondChargeback
+        | WebhookEventCode::PrearbitrationWon
+        | WebhookEventCode::PrearbitrationLost => EventType::Dispute,
     }
 }
 
@@ -1603,14 +1689,13 @@ pub struct AdyenRefundResponse {
 }
 
 impl
-    TryFrom<
-        &AdyenRouterData1<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
-    > for AdyenRefundRequest
+    TryFrom<AdyenRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for AdyenRefundRequest
 {
     type Error = Error;
     fn try_from(
-        item: &AdyenRouterData1<
-            &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        item: AdyenRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1629,21 +1714,17 @@ impl
     }
 }
 
-impl<F, Req>
-    ForeignTryFrom<(
-        AdyenRefundResponse,
-        RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>,
-        u16,
-    )> for RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>
+impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>
 {
     type Error = Error;
-    fn foreign_try_from(
-        (response, data, _http_code): (
-            AdyenRefundResponse,
-            RouterDataV2<F, RefundFlowData, Req, RefundsResponseData>,
-            u16,
-        ),
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: ResponseRouterData<AdyenRefundResponse, Self>) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code: _,
+        } = value;
+
         let status = hyperswitch_common_enums::enums::RefundStatus::Pending;
 
         let refunds_response_data = RefundsResponseData {
@@ -1654,10 +1735,10 @@ impl<F, Req>
         Ok(Self {
             resource_common_data: RefundFlowData {
                 status,
-                ..data.resource_common_data
+                ..router_data.resource_common_data
             },
             response: Ok(refunds_response_data),
-            ..data
+            ..router_data
         })
     }
 }
@@ -1672,15 +1753,15 @@ pub struct AdyenCaptureRequest {
 
 impl
     TryFrom<
-        &AdyenRouterData1<
-            &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        AdyenRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     > for AdyenCaptureRequest
 {
     type Error = Error;
     fn try_from(
-        item: &AdyenRouterData1<
-            &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        item: AdyenRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1715,21 +1796,19 @@ pub struct AdyenCaptureResponse {
     splits: Option<Vec<AdyenSplitData>>,
 }
 
-impl<F, Req>
-    ForeignTryFrom<(
-        AdyenCaptureResponse,
-        RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-        bool,
-    )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = Error;
-    fn foreign_try_from(
-        (response, data, is_multiple_capture_psync_flow): (
-            AdyenCaptureResponse,
-            RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-            bool,
-        ),
+    fn try_from(
+        value: ResponseRouterData<AdyenCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code: _,
+        } = value;
+        let is_multiple_capture_psync_flow = router_data.request.multiple_capture_data.is_some();
         let connector_transaction_id = if is_multiple_capture_psync_flow {
             response.psp_reference.clone()
         } else {
@@ -1747,21 +1826,18 @@ impl<F, Req>
                 mandate_reference: Box::new(None),
             }),
             resource_common_data: PaymentFlowData {
-                // From the docs, the only value returned is "received", outcome of refund is available
-                // through refund notification webhook
-                // For more info: https://docs.adyen.com/online-payments/capture
                 status: AttemptStatus::Pending,
-                ..data.resource_common_data
+                ..router_data.resource_common_data
             },
-            ..data
+            ..router_data
         })
     }
 }
 
 impl
     TryFrom<(
-        &AdyenRouterData1<
-            &RouterDataV2<
+        AdyenRouterData<
+            RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData,
@@ -1769,13 +1845,13 @@ impl
             >,
         >,
         &Card,
-    )> for AdyenPaymentRequest
+    )> for SetupMandateRequest
 {
     type Error = Error;
     fn try_from(
         value: (
-            &AdyenRouterData1<
-                &RouterDataV2<
+            AdyenRouterData<
+                RouterDataV2<
                     SetupMandate,
                     PaymentFlowData,
                     SetupMandateRequestData,
@@ -1786,15 +1862,15 @@ impl
         ),
     ) -> Result<Self, Self::Error> {
         let (item, card_data) = value;
-        let amount = get_amount_data_for_setup_mandate(item);
+        let amount = get_amount_data_for_setup_mandate(&item);
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let shopper_interaction = AdyenShopperInteraction::from(item.router_data);
+        let shopper_interaction = AdyenShopperInteraction::from(&item.router_data);
         let shopper_reference = build_shopper_reference(
             &item.router_data.request.customer_id.clone(),
             item.router_data.resource_common_data.merchant_id.clone(),
         );
         let (recurring_processing_model, store_payment_method, _) =
-            get_recurring_processing_model_for_setup_mandate(item.router_data)?;
+            get_recurring_processing_model_for_setup_mandate(&item.router_data)?;
 
         let return_url = item
             .router_data
@@ -1817,13 +1893,13 @@ impl
 
         let card_holder_name = item.router_data.request.customer_name.clone();
 
-        let additional_data = get_additional_data_for_setup_mandate(item.router_data);
+        let additional_data = get_additional_data_for_setup_mandate(&item.router_data);
 
         let payment_method = PaymentMethod::AdyenPaymentMethod(Box::new(
             AdyenPaymentMethod::try_from((card_data, card_holder_name))?,
         ));
 
-        Ok(AdyenPaymentRequest {
+        Ok(SetupMandateRequest(AdyenPaymentRequest {
             amount,
             merchant_account: auth_type.merchant_account,
             payment_method,
@@ -1852,26 +1928,26 @@ impl
             store: None,
             splits: None,
             device_fingerprint: None,
-        })
+        }))
     }
 }
 
 impl
     TryFrom<
-        &AdyenRouterData1<
-            &RouterDataV2<
+        AdyenRouterData<
+            RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData,
                 PaymentsResponseData,
             >,
         >,
-    > for AdyenPaymentRequest
+    > for SetupMandateRequest
 {
     type Error = Error;
     fn try_from(
-        item: &AdyenRouterData1<
-            &RouterDataV2<
+        item: AdyenRouterData<
+            RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData,
@@ -1891,8 +1967,8 @@ impl
                     "payment_method".into(),
                 ),
             )?,
-            None => match item.router_data.request.payment_method_data {
-                PaymentMethodData::Card(ref card) => AdyenPaymentRequest::try_from((item, card)),
+            None => match item.router_data.request.payment_method_data.clone() {
+                PaymentMethodData::Card(ref card) => SetupMandateRequest::try_from((item, card)),
                 PaymentMethodData::Wallet(_)
                 | PaymentMethodData::PayLater(_)
                 | PaymentMethodData::BankRedirect(_)
@@ -1917,9 +1993,43 @@ impl
     }
 }
 
+impl<F> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+    type Error = Error;
+    fn try_from(
+        value: ResponseRouterData<SetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        let pmt = router_data.request.payment_method_type;
+        let is_manual_capture = false;
+        let (status, error, payment_response_data) = match response {
+            SetupMandateResponse(AdyenPaymentResponse::Response(response)) => {
+                get_adyen_response(*response, is_manual_capture, http_code, pmt)?
+            }
+            SetupMandateResponse(AdyenPaymentResponse::RedirectionResponse(response)) => {
+                get_redirection_response(*response, is_manual_capture, http_code, pmt)?
+            }
+        };
+
+        Ok(Self {
+            response: error.map_or_else(|| Ok(payment_response_data), Err),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
+    }
+}
+
 fn get_amount_data_for_setup_mandate(
-    item: &AdyenRouterData1<
-        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+    item: &AdyenRouterData<
+        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
     >,
 ) -> Amount {
     Amount {
@@ -2066,18 +2176,24 @@ pub struct AdyenDisputeAcceptRequest {
     pub merchant_account_code: String,
 }
 
-impl TryFrom<&RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>>
-    for AdyenDisputeAcceptRequest
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        >,
+    > for AdyenDisputeAcceptRequest
 {
     type Error = Error;
 
     fn try_from(
-        item: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        item: AdyenRouterData<
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth = AdyenAuthType::try_from(&item.connector_auth_type)?;
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         Ok(Self {
-            dispute_psp_reference: item.connector_dispute_id.clone(),
+            dispute_psp_reference: item.router_data.connector_dispute_id.clone(),
             merchant_account_code: auth.merchant_account.peek().to_string(),
         })
     }
@@ -2089,29 +2205,19 @@ pub struct AdyenDisputeAcceptResponse {
     pub dispute_service_result: Option<DisputeServiceResult>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DisputeServiceResult {
-    pub success: bool,
-    pub error_message: Option<String>,
-}
-
-impl<F, Req>
-    ForeignTryFrom<(
-        AdyenDisputeAcceptResponse,
-        RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
-        u16,
-    )> for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
     type Error = Error;
 
-    fn foreign_try_from(
-        (response, data, http_code): (
-            AdyenDisputeAcceptResponse,
-            RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>,
-            u16,
-        ),
+    fn try_from(
+        value: ResponseRouterData<AdyenDisputeAcceptResponse, Self>,
     ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
         let success = response
             .dispute_service_result
             .as_ref()
@@ -2122,16 +2228,16 @@ impl<F, Req>
 
             let dispute_response_data = DisputeResponseData {
                 dispute_status: status,
-                connector_dispute_id: data.connector_dispute_id.clone(),
+                connector_dispute_id: router_data.connector_dispute_id.clone(),
                 connector_dispute_status: None,
             };
 
             Ok(Self {
                 resource_common_data: DisputeFlowData {
-                    ..data.resource_common_data
+                    ..router_data.resource_common_data
                 },
                 response: Ok(dispute_response_data),
-                ..data
+                ..router_data
             })
         } else {
             let error_message = response
@@ -2150,10 +2256,362 @@ impl<F, Req>
             };
 
             Ok(Self {
-                resource_common_data: data.resource_common_data.clone(),
+                resource_common_data: router_data.resource_common_data.clone(),
                 response: Err(error_response),
-                ..data
+                ..router_data
             })
         }
+    }
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDisputeSubmitEvidenceRequest {
+    defense_documents: Vec<DefenseDocuments>,
+    merchant_account_code: Secret<String>,
+    dispute_psp_reference: String,
+}
+
+#[derive(Default, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefenseDocuments {
+    content: Secret<String>,
+    content_type: Option<String>,
+    defense_document_type_code: String,
+}
+
+fn get_defence_documents(item: SubmitEvidenceData) -> Option<Vec<DefenseDocuments>> {
+    let mut defense_documents: Vec<DefenseDocuments> = Vec::new();
+    if let Some(shipping_documentation) = item.shipping_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(shipping_documentation).into(),
+            content_type: item.shipping_documentation_provider_file_id,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(receipt) = item.receipt {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(receipt).into(),
+            content_type: item.receipt_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(invoice_showing_distinct_transactions) = item.invoice_showing_distinct_transactions
+    {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(invoice_showing_distinct_transactions).into(),
+            content_type: item.invoice_showing_distinct_transactions_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_communication) = item.customer_communication {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_communication).into(),
+            content_type: item.customer_communication_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(refund_policy) = item.refund_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(refund_policy).into(),
+            content_type: item.refund_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(recurring_transaction_agreement) = item.recurring_transaction_agreement {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(recurring_transaction_agreement).into(),
+            content_type: item.recurring_transaction_agreement_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(uncategorized_file) = item.uncategorized_file {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(uncategorized_file).into(),
+            content_type: item.uncategorized_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(cancellation_policy) = item.cancellation_policy {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(cancellation_policy).into(),
+            content_type: item.cancellation_policy_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(customer_signature) = item.customer_signature {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(customer_signature).into(),
+            content_type: item.customer_signature_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+    if let Some(service_documentation) = item.service_documentation {
+        defense_documents.push(DefenseDocuments {
+            content: get_content(service_documentation).into(),
+            content_type: item.service_documentation_file_type,
+            defense_document_type_code: "DefenseMaterial".into(),
+        })
+    }
+
+    if defense_documents.is_empty() {
+        None
+    } else {
+        Some(defense_documents)
+    }
+}
+
+fn get_content(item: Vec<u8>) -> String {
+    STANDARD.encode(item)
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        >,
+    > for AdyenDisputeSubmitEvidenceRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            defense_documents: get_defence_documents(item.router_data.request.clone()).ok_or(
+                errors::ConnectorError::MissingRequiredField {
+                    field_name: "Missing Defence Documents",
+                },
+            )?,
+            merchant_account_code: auth.merchant_account.peek().to_string().into(),
+            dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenSubmitEvidenceResponse {
+    pub dispute_service_result: Option<DisputeServiceResult>,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenSubmitEvidenceResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        let success = response
+            .dispute_service_result
+            .as_ref()
+            .is_some_and(|r| r.success);
+
+        if success {
+            let status = hyperswitch_common_enums::DisputeStatus::DisputeChallenged;
+
+            let dispute_response_data = DisputeResponseData {
+                dispute_status: status,
+                connector_dispute_id: router_data.connector_dispute_id.clone(),
+                connector_dispute_status: None,
+            };
+
+            Ok(Self {
+                resource_common_data: DisputeFlowData {
+                    ..router_data.resource_common_data
+                },
+                response: Ok(dispute_response_data),
+                ..router_data
+            })
+        } else {
+            let error_message = response
+                .dispute_service_result
+                .as_ref()
+                .and_then(|r| r.error_message.clone())
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string());
+
+            let error_response = ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: error_message.clone(),
+                reason: Some(error_message.clone()),
+                status_code: http_code,
+                attempt_status: None,
+                connector_transaction_id: None,
+            };
+
+            Ok(Self {
+                resource_common_data: router_data.resource_common_data.clone(),
+                response: Err(error_response),
+                ..router_data
+            })
+        }
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdyenDefendDisputeRequest {
+    dispute_psp_reference: String,
+    merchant_account_code: Secret<String>,
+    defense_reason_code: String,
+}
+
+impl
+    TryFrom<
+        AdyenRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        >,
+    > for AdyenDefendDisputeRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AdyenRouterData<
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        Ok(Self {
+            dispute_psp_reference: item.router_data.request.connector_dispute_id.clone(),
+            merchant_account_code: auth_type.merchant_account.clone(),
+            defense_reason_code: item.router_data.request.defense_reason_code.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum AdyenDefendDisputeResponse {
+    DefendDisputeSuccessResponse(DefendDisputeSuccessResponse),
+    DefendDisputeFailedResponse(DefendDisputeErrorResponse),
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefendDisputeErrorResponse {
+    error_code: String,
+    error_type: String,
+    message: String,
+    psp_reference: String,
+    status: String,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DefendDisputeSuccessResponse {
+    dispute_service_result: DisputeServiceResult,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DisputeServiceResult {
+    error_message: Option<String>,
+    success: bool,
+}
+
+impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
+    for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
+{
+    type Error = Report<hyperswitch_interfaces::errors::ConnectorError>;
+
+    fn try_from(
+        value: ResponseRouterData<AdyenDefendDisputeResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+        match response {
+            AdyenDefendDisputeResponse::DefendDisputeSuccessResponse(result) => {
+                let dispute_status = if result.dispute_service_result.success {
+                    hyperswitch_api_models::enums::DisputeStatus::DisputeWon
+                } else {
+                    hyperswitch_api_models::enums::DisputeStatus::DisputeLost
+                };
+
+                Ok(Self {
+                    response: Ok(DisputeResponseData {
+                        dispute_status,
+                        connector_dispute_status: None,
+                        connector_dispute_id: router_data.connector_dispute_id.clone(),
+                    }),
+                    ..router_data
+                })
+            }
+
+            AdyenDefendDisputeResponse::DefendDisputeFailedResponse(result) => Ok(Self {
+                response: Err(ErrorResponse {
+                    code: result.error_code,
+                    message: result.message.clone(),
+                    reason: Some(result.message),
+                    status_code: http_code,
+                    attempt_status: None,
+                    connector_transaction_id: Some(result.psp_reference),
+                }),
+                ..router_data
+            }),
+        }
+    }
+}
+
+pub(crate) fn get_dispute_stage_and_status(
+    code: WebhookEventCode,
+    dispute_status: Option<DisputeStatus>,
+) -> (
+    hyperswitch_common_enums::DisputeStage,
+    hyperswitch_common_enums::DisputeStatus,
+) {
+    use hyperswitch_common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
+
+    match code {
+        WebhookEventCode::NotificationOfChargeback => {
+            (DisputeStage::PreDispute, HSDisputeStatus::DisputeOpened)
+        }
+        WebhookEventCode::Chargeback => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Undefended) | Some(DisputeStatus::Pending) => {
+                    HSDisputeStatus::DisputeOpened
+                }
+                Some(DisputeStatus::Lost) | None => HSDisputeStatus::DisputeLost,
+                Some(DisputeStatus::Accepted) => HSDisputeStatus::DisputeAccepted,
+                Some(DisputeStatus::Won) => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::ChargebackReversed => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeChallenged,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::Dispute, status)
+        }
+        WebhookEventCode::SecondChargeback => {
+            (DisputeStage::PreArbitration, HSDisputeStatus::DisputeLost)
+        }
+        WebhookEventCode::PrearbitrationWon => {
+            let status = match dispute_status {
+                Some(DisputeStatus::Pending) => HSDisputeStatus::DisputeOpened,
+                _ => HSDisputeStatus::DisputeWon,
+            };
+            (DisputeStage::PreArbitration, status)
+        }
+        WebhookEventCode::PrearbitrationLost => {
+            (DisputeStage::PreArbitration, HSDisputeStatus::DisputeLost)
+        }
+        _ => (DisputeStage::Dispute, HSDisputeStatus::DisputeOpened),
     }
 }

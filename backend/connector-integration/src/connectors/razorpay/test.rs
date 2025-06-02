@@ -94,7 +94,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -247,7 +247,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "".to_string(),
@@ -359,7 +359,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "".to_string(),
@@ -494,7 +494,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -786,7 +786,7 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -949,7 +949,7 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1111,7 +1111,7 @@ mod tests {
                     connectors: domain_types::types::Connectors {
                         adyen: domain_types::types::ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: domain_types::types::ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1203,7 +1203,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1301,7 +1301,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "".to_string(),
@@ -1438,7 +1438,7 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1554,7 +1554,7 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1659,7 +1659,7 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
