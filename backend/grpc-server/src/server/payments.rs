@@ -297,7 +297,8 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-        let config = config_from_metadata(request.metadata(), self.config.clone()).map_err(|e| e.into_grpc_status())?;
+        let config = config_from_metadata(request.metadata(), self.config.clone())
+            .map_err(|e| e.into_grpc_status())?;
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let connector_auth_details =
@@ -379,7 +380,6 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<RefundsSyncRequest>,
     ) -> Result<tonic::Response<RefundsSyncResponse>, tonic::Status> {
-
         self.internal_refund_sync(request).await
     }
 
@@ -387,7 +387,6 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentsVoidRequest>,
     ) -> Result<tonic::Response<PaymentsVoidResponse>, tonic::Status> {
-
         self.internal_void_payment(request).await
     }
 
@@ -485,7 +484,6 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<RefundsRequest>,
     ) -> Result<tonic::Response<RefundsResponse>, tonic::Status> {
-
         self.internal_refund(request).await
     }
 
@@ -500,7 +498,6 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentsCaptureRequest>,
     ) -> Result<tonic::Response<PaymentsCaptureResponse>, tonic::Status> {
-
         self.internal_payment_capture(request).await
     }
 

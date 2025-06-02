@@ -12,9 +12,9 @@ mod common;
 #[tokio::test]
 async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        let mut client = PaymentServiceClient::connect("http://localhost:8000")
-            .await
-            .unwrap();
+        // let mut client = PaymentServiceClient::connect("http://localhost:8000")
+        // .await
+        // .unwrap();
         // Create a request with configuration override
         let mut request = Request::new(PaymentsAuthorizeRequest {
             amount: 1000 as i64,
