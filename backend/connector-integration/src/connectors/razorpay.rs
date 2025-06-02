@@ -1,9 +1,14 @@
 pub mod test;
 pub mod transformers;
+use crate::{with_error_response_body, with_response_body};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
+    },
+    connector_types::{
+        is_mandate_supported, ConnectorSpecifications, ConnectorValidation,
+        SupportedPaymentMethodsExt,
     },
     connector_types::{
         AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
@@ -12,24 +17,33 @@ use domain_types::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSyncV2,
         PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
-        SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
+        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
+        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
         ValidationTrait, WebhookDetailsResponse,
     },
+    types::{
+        CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
+        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+        SupportedPaymentMethods,
+    },
+};
+use hyperswitch_common_enums::{
+    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
 use hyperswitch_common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
+    pii::SecretSerdeValue,
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
-
-use crate::{with_error_response_body, with_response_body};
+use std::sync::LazyLock;
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use error_stack::{report, ResultExt};
 use hyperswitch_domain_models::{
+    payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
@@ -39,6 +53,7 @@ use hyperswitch_interfaces::{
     configs::Connectors,
     connector_integration_v2::ConnectorIntegrationV2,
     errors,
+    errors::ConnectorError,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
@@ -544,10 +559,7 @@ impl IncomingWebhook for Razorpay {
         request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<
-        domain_types::connector_types::RefundWebhookDetailsResponse,
-        error_stack::Report<errors::ConnectorError>,
-    > {
+    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
             report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                 .attach_printable(format!("error while decoing webhook body {err}"))
@@ -557,18 +569,16 @@ impl IncomingWebhook for Razorpay {
             error_stack::Report::new(errors::ConnectorError::RequestEncodingFailed)
         })?;
 
-        Ok(
-            domain_types::connector_types::RefundWebhookDetailsResponse {
-                connector_refund_id: Some(notif.entity.id),
-                status: transformers::get_razorpay_refund_webhook_status(
-                    notif.entity.entity,
-                    notif.entity.status,
-                )?,
-                connector_response_reference_id: None,
-                error_code: None,
-                error_message: None,
-            },
-        )
+        Ok(RefundWebhookDetailsResponse {
+            connector_refund_id: Some(notif.entity.id),
+            status: transformers::get_razorpay_refund_webhook_status(
+                notif.entity.entity,
+                notif.entity.status,
+            )?,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+        })
     }
 }
 
@@ -767,4 +777,116 @@ impl
 impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Razorpay
 {
+}
+
+impl ConnectorValidation for Razorpay {
+    fn validate_mandate_payment(
+        &self,
+        pm_type: Option<PaymentMethodType>,
+        pm_data: PaymentMethodData,
+    ) -> CustomResult<(), ConnectorError> {
+        let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
+        is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
+    }
+
+    fn validate_psync_reference_id(
+        &self,
+        data: &hyperswitch_domain_models::router_request_types::PaymentsSyncData,
+        _is_three_ds: bool,
+        _status: AttemptStatus,
+        _connector_meta_data: Option<SecretSerdeValue>,
+    ) -> CustomResult<(), errors::ConnectorError> {
+        if data.encoded_data.is_some() {
+            return Ok(());
+        }
+        Err(errors::ConnectorError::MissingRequiredField {
+            field_name: "encoded_data",
+        }
+        .into())
+    }
+    fn is_webhook_source_verification_mandatory(&self) -> bool {
+        false
+    }
+}
+
+static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
+    LazyLock::new(|| {
+        let razorpay_supported_capture_methods = vec![
+            CaptureMethod::Automatic,
+            CaptureMethod::Manual,
+            CaptureMethod::ManualMultiple,
+            // CaptureMethod::Scheduled,
+        ];
+
+        let razorpay_supported_card_network = vec![
+            CardNetwork::Visa,
+            CardNetwork::Mastercard,
+            CardNetwork::AmericanExpress,
+            CardNetwork::Maestro,
+            CardNetwork::RuPay,
+            CardNetwork::DinersClub,
+            //have to add bajaj to this list too
+            // ref : https://razorpay.com/docs/payments/payment-methods/cards/
+        ];
+
+        let mut razorpay_supported_payment_methods = SupportedPaymentMethods::new();
+
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::Card,
+            PaymentMethodType::Debit,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: razorpay_supported_capture_methods.clone(),
+                specific_features: Some(PaymentMethodSpecificFeatures::Card(
+                    CardSpecificFeatures {
+                        three_ds: FeatureStatus::NotSupported,
+                        no_three_ds: FeatureStatus::Supported,
+                        supported_card_networks: razorpay_supported_card_network.clone(),
+                    },
+                )),
+            },
+        );
+
+        razorpay_supported_payment_methods.add(
+            PaymentMethod::Card,
+            PaymentMethodType::Credit,
+            PaymentMethodDetails {
+                mandates: FeatureStatus::NotSupported,
+                refunds: FeatureStatus::Supported,
+                supported_capture_methods: razorpay_supported_capture_methods.clone(),
+                specific_features: Some(PaymentMethodSpecificFeatures::Card(
+                    CardSpecificFeatures {
+                        three_ds: FeatureStatus::NotSupported,
+                        no_three_ds: FeatureStatus::Supported,
+                        supported_card_networks: razorpay_supported_card_network.clone(),
+                    },
+                )),
+            },
+        );
+
+        razorpay_supported_payment_methods
+    });
+
+static RAZORPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
+    display_name: "Razorpay",
+    description: "Razorpay is a payment gateway that allows businesses to accept, process, and disburse payments with its product suite.",
+    connector_type: PaymentConnectorCategory::PaymentGateway
+};
+
+static RAZORPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] =
+    &[EventClass::Payments, EventClass::Refunds];
+
+impl ConnectorSpecifications for Razorpay {
+    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
+        Some(&RAZORPAY_CONNECTOR_INFO)
+    }
+
+    fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
+        Some(RAZORPAY_SUPPORTED_WEBHOOK_FLOWS)
+    }
+
+    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
+        Some(&RAZORPAY_SUPPORTED_PAYMENT_METHODS)
+    }
 }

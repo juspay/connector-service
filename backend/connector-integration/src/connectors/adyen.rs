@@ -1,14 +1,25 @@
 mod test;
 pub mod transformers;
-
 use crate::types::ResponseRouterData;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
-};
-
 use crate::with_error_response_body;
+use domain_types::{
+    connector_types::{is_mandate_supported, ConnectorSpecifications},
+    connector_types::{ConnectorValidation, SupportedPaymentMethodsExt},
+    types::{
+        self, CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentMethodDataType,
+        PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
+    },
+};
+use hyperswitch_common_enums::{
+    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
+};
+use hyperswitch_common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
+};
+use std::sync::LazyLock;
 
 use hyperswitch_domain_models::{
+    payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -377,7 +388,7 @@ impl IncomingWebhook for Adyen {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                    .attach_printable(format!("error while decoing webhook body {err}"))
+                    .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         Ok(transformers::get_adyen_webhook_event_type(notif.event_code))
     }
@@ -391,7 +402,7 @@ impl IncomingWebhook for Adyen {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                    .attach_printable(format!("error while decoing webhook body {err}"))
+                    .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
         Ok(WebhookDetailsResponse {
             resource_id: Some(ResponseId::ConnectorTransactionId(
@@ -416,7 +427,7 @@ impl IncomingWebhook for Adyen {
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                    .attach_printable(format!("error while decoing webhook body {err}"))
+                    .attach_printable(format!("error while decoding webhook body {err}"))
             })?;
 
         Ok(RefundWebhookDetailsResponse {
@@ -426,6 +437,35 @@ impl IncomingWebhook for Adyen {
             error_code: notif.reason.clone(),
             error_message: notif.reason,
         })
+    }
+
+    fn process_dispute_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::DisputeWebhookDetailsResponse,
+        error_stack::Report<errors::ConnectorError>,
+    > {
+        let notif: AdyenNotificationRequestItemWH =
+            transformers::get_webhook_object_from_body(request.body).map_err(|err| {
+                report!(errors::ConnectorError::WebhookBodyDecodingFailed)
+                    .attach_printable(format!("error while decoding webhook body {err}"))
+            })?;
+        let (stage, status) = transformers::get_dispute_stage_and_status(
+            notif.event_code,
+            notif.additional_data.dispute_status,
+        );
+        Ok(
+            domain_types::connector_types::DisputeWebhookDetailsResponse {
+                dispute_id: notif.psp_reference.clone(),
+                stage,
+                status,
+                connector_response_reference_id: Some(notif.psp_reference.clone()),
+                dispute_message: notif.reason,
+            },
+        )
     }
 }
 
@@ -537,3 +577,111 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
+    let adyen_supported_capture_methods = vec![
+        CaptureMethod::Automatic,
+        CaptureMethod::Manual,
+        CaptureMethod::ManualMultiple,
+        // CaptureMethod::Scheduled,
+    ];
+
+    let adyen_supported_card_network = vec![
+        CardNetwork::AmericanExpress,
+        CardNetwork::CartesBancaires,
+        CardNetwork::UnionPay,
+        CardNetwork::DinersClub,
+        CardNetwork::Discover,
+        CardNetwork::Interac,
+        CardNetwork::JCB,
+        CardNetwork::Maestro,
+        CardNetwork::Mastercard,
+        CardNetwork::Visa,
+    ];
+
+    let mut adyen_supported_payment_methods = SupportedPaymentMethods::new();
+
+    adyen_supported_payment_methods.add(
+        PaymentMethod::Card,
+        PaymentMethodType::Credit,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: Some(PaymentMethodSpecificFeatures::Card(CardSpecificFeatures {
+                three_ds: FeatureStatus::Supported,
+                no_three_ds: FeatureStatus::Supported,
+                supported_card_networks: adyen_supported_card_network.clone(),
+            })),
+        },
+    );
+
+    adyen_supported_payment_methods.add(
+        PaymentMethod::Card,
+        PaymentMethodType::Debit,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::Supported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: adyen_supported_capture_methods.clone(),
+            specific_features: Some(PaymentMethodSpecificFeatures::Card(CardSpecificFeatures {
+                three_ds: FeatureStatus::Supported,
+                no_three_ds: FeatureStatus::Supported,
+                supported_card_networks: adyen_supported_card_network.clone(),
+            })),
+        },
+    );
+
+    adyen_supported_payment_methods
+});
+
+static ADYEN_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
+    display_name: "Adyen", 
+    description: "Adyen is a Dutch payment company with the status of an acquiring bank that allows businesses to accept e-commerce, mobile, and point-of-sale payments. It is listed on the stock exchange Euronext Amsterdam.",
+    connector_type: types::PaymentConnectorCategory::PaymentGateway,
+};
+
+static ADYEN_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
+
+impl ConnectorSpecifications for Adyen {
+    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
+        Some(&ADYEN_CONNECTOR_INFO)
+    }
+
+    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
+        Some(&ADYEN_SUPPORTED_PAYMENT_METHODS)
+    }
+
+    fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
+        Some(ADYEN_SUPPORTED_WEBHOOK_FLOWS)
+    }
+}
+
+impl ConnectorValidation for Adyen {
+    fn validate_mandate_payment(
+        &self,
+        pm_type: Option<PaymentMethodType>,
+        pm_data: PaymentMethodData,
+    ) -> CustomResult<(), ConnectorError> {
+        let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
+        is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
+    }
+
+    fn validate_psync_reference_id(
+        &self,
+        data: &hyperswitch_domain_models::router_request_types::PaymentsSyncData,
+        _is_three_ds: bool,
+        _status: AttemptStatus,
+        _connector_meta_data: Option<SecretSerdeValue>,
+    ) -> CustomResult<(), ConnectorError> {
+        if data.encoded_data.is_some() {
+            return Ok(());
+        }
+        Err(errors::ConnectorError::MissingRequiredField {
+            field_name: "encoded_data",
+        }
+        .into())
+    }
+    fn is_webhook_source_verification_mandatory(&self) -> bool {
+        false
+    }
+}

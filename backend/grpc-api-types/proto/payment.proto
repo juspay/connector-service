@@ -128,6 +128,20 @@ message PaymentsVoidResponse {
   optional string error_message = 5;
 }
 
+enum DisputeStage {
+  PRE_DISPUTE = 0;
+  ACTIVE_DISPUTE = 1;
+  PRE_ARBITRATION = 2;
+}
+
+message DisputesSyncResponse {
+  string dispute_id = 1;
+  DisputeStatus status = 17;
+  DisputeStage stage = 19;
+  optional string connector_response_reference_id = 2;
+  optional string dispute_message = 3;
+}
+
 message IncomingWebhookRequest {
   RequestDetails request_details = 2;
   optional ConnectorWebhookSecrets webhook_secrets = 3;
@@ -189,12 +203,14 @@ message SetupMandateResponse {
 enum EventType {
   PAYMENT = 0;
   REFUND = 1;
+  DISPUTE = 2;
 }
 
 message WebhookResponseContent {
   oneof content {
     PaymentsSyncResponse payments_response = 1;
     RefundsSyncResponse refunds_response = 2;
+    DisputesSyncResponse disputes_response = 3;
   }
 }
 
