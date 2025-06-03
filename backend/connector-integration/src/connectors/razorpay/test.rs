@@ -259,7 +259,8 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
+                            // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
@@ -377,7 +378,8 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
+                            // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
@@ -1357,7 +1359,8 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
+                            // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },

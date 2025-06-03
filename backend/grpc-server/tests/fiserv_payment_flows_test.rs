@@ -5,6 +5,7 @@
 use grpc_server::{app, configs};
 mod common;
 
+use base64::{engine::general_purpose, Engine};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -14,7 +15,6 @@ use grpc_api_types::{
         RefundsRequest, RefundsSyncRequest,
     },
 };
-use base64::{engine::general_purpose, Engine};
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
@@ -48,10 +48,13 @@ fn get_timestamp() -> u64 {
 // Helper function to add Fiserv metadata headers to a request
 fn add_fiserv_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - throw error if not set
-    let api_key = env::var(FISERV_API_KEY_ENV).expect("FISERV_API_KEY environment variable is required");
+    let api_key =
+        env::var(FISERV_API_KEY_ENV).expect("FISERV_API_KEY environment variable is required");
     let key1 = env::var(FISERV_KEY1_ENV).expect("FISERV_KEY1 environment variable is required");
-    let api_secret = env::var(FISERV_API_SECRET_ENV).expect("FISERV_API_SECRET environment variable is required");
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV).expect("FISERV_TERMINAL_ID environment variable is required");
+    let api_secret = env::var(FISERV_API_SECRET_ENV)
+        .expect("FISERV_API_SECRET environment variable is required");
+    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
+        .expect("FISERV_TERMINAL_ID environment variable is required");
 
     request.metadata_mut().append(
         "x-connector",
@@ -72,29 +75,33 @@ fn add_fiserv_metadata<T>(request: &mut Request<T>) {
         "x-api-secret",
         api_secret.parse().expect("Failed to parse x-api-secret"),
     );
-    
+
     // Add the terminal_id in the metadata JSON
     // This metadata must be in the proper format that the connector expects
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
-    
+
     // For capture operations, the connector looks for terminal_id in connector_metadata
     let base64_metadata = general_purpose::STANDARD.encode(metadata_json.as_bytes());
-    
+
     request.metadata_mut().append(
         "x-metadata",
         metadata_json.parse().expect("Failed to parse x-metadata"),
     );
-    
+
     // Also add connector-metadata-id explicitly to handle capture operation
     request.metadata_mut().append(
         "connector-metadata-id",
-        metadata_json.parse().expect("Failed to parse connector-metadata-id"),
+        metadata_json
+            .parse()
+            .expect("Failed to parse connector-metadata-id"),
     );
-    
+
     // Add base64-encoded metadata as x-connector-metadata
     request.metadata_mut().append(
         "x-connector-metadata",
-        base64_metadata.parse().expect("Failed to parse x-connector-metadata"),
+        base64_metadata
+            .parse()
+            .expect("Failed to parse x-connector-metadata"),
     );
 }
 
@@ -112,7 +119,8 @@ fn extract_transaction_id(response: &PaymentsAuthorizeResponse) -> String {
 // Helper function to create a payment authorization request
 fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAuthorizeRequest {
     // Get terminal_id for metadata
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV).expect("FISERV_TERMINAL_ID environment variable is required");
+    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
+        .expect("FISERV_TERMINAL_ID environment variable is required");
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     // Initialize with all required fields
@@ -161,7 +169,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentsSyncRequest {
 
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureRequest {
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV).expect("FISERV_TERMINAL_ID environment variable is required");
+    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
+        .expect("FISERV_TERMINAL_ID environment variable is required");
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     PaymentsCaptureRequest {
@@ -175,9 +184,10 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
 
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> RefundsRequest {
-    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV).expect("FISERV_TERMINAL_ID environment variable is required");
+    let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
+        .expect("FISERV_TERMINAL_ID environment variable is required");
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
-    
+
     RefundsRequest {
         refund_id: format!("refund_{}", get_timestamp()),
         connector_transaction_id: transaction_id.to_string(),
@@ -296,14 +306,21 @@ async fn test_payment_authorization_manual_capture() {
             auth_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in AUTHORIZED state with manual capture"
         );
-        
+
         // Create capture request with terminal_id in metadata
-        let terminal_id = env::var(FISERV_TERMINAL_ID_ENV).expect("FISERV_TERMINAL_ID environment variable is required");
+        let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
+            .expect("FISERV_TERMINAL_ID environment variable is required");
         let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
-        
+
         // For debug
-        println!("Connector Metadata: {:?}", auth_response.resource_id.as_ref().and_then(|r| r.id.as_ref()));
-        
+        println!(
+            "Connector Metadata: {:?}",
+            auth_response
+                .resource_id
+                .as_ref()
+                .and_then(|r| r.id.as_ref())
+        );
+
         let mut capture_request = create_payment_capture_request(&transaction_id);
         // Set the connector_meta_data field in the capture request
         capture_request.connector_meta_data = Some(metadata_json.as_bytes().to_vec());
@@ -311,13 +328,15 @@ async fn test_payment_authorization_manual_capture() {
         // Add metadata headers for capture request - make sure they include the terminal_id
         let mut capture_grpc_request = Request::new(capture_request);
         add_fiserv_metadata(&mut capture_grpc_request);
-        
+
         // Important: Also add connector-metadata explicitly to ensure it gets passed through
         capture_grpc_request.metadata_mut().append(
             "connector-metadata",
-            metadata_json.parse().expect("Failed to parse connector-metadata"),
+            metadata_json
+                .parse()
+                .expect("Failed to parse connector-metadata"),
         );
-        
+
         // Send the capture request
         let capture_response = client
             .payment_capture(capture_grpc_request)
@@ -381,7 +400,7 @@ async fn test_payment_sync() {
 #[tokio::test]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // First create a payment 
+        // First create a payment
         let auth_request = create_payment_authorize_request(CaptureMethod::Automatic);
 
         // Add metadata headers for auth request
@@ -401,8 +420,8 @@ async fn test_refund() {
 
         // Verify payment status
         assert!(
-            auth_response.status == i32::from(AttemptStatus::Charged) || 
-            auth_response.status == i32::from(AttemptStatus::Authorized),
+            auth_response.status == i32::from(AttemptStatus::Charged)
+                || auth_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in CHARGED or AUTHORIZED state before attempting refund"
         );
 
@@ -410,17 +429,17 @@ async fn test_refund() {
         let sync_request = create_payment_sync_request(&transaction_id);
         let mut sync_grpc_request = Request::new(sync_request);
         add_fiserv_metadata(&mut sync_grpc_request);
-        
+
         // Wait a bit longer to ensure the payment is fully processed
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-        
+
         // Send the sync request to verify payment status
         let _sync_response = client
             .payment_sync(sync_grpc_request)
             .await
             .expect("gRPC payment_sync call failed")
             .into_inner();
-            
+
         // Create refund request
         let refund_request = create_refund_request(&transaction_id);
 
@@ -430,35 +449,35 @@ async fn test_refund() {
 
         // Send the refund request and handle both success and error cases
         let refund_result = client.refund(refund_grpc_request).await;
-        
+
         match refund_result {
             Ok(response) => {
                 let refund_response = response.into_inner();
-                
+
                 // Extract the refund ID
                 let refund_id = refund_response
                     .connector_refund_id
                     .clone()
                     .unwrap_or_default();
                 println!("Refund ID: {}", refund_id);
-                
-                // Verify the refund status 
+
+                // Verify the refund status
                 assert!(
-                    refund_response.refund_status == i32::from(RefundStatus::RefundSuccess) || 
-                    refund_response.refund_status == i32::from(RefundStatus::RefundPending),
+                    refund_response.refund_status == i32::from(RefundStatus::RefundSuccess)
+                        || refund_response.refund_status == i32::from(RefundStatus::RefundPending),
                     "Refund should be in SUCCESS or PENDING state"
                 );
-            },
+            }
             Err(status) => {
                 // If the refund fails, it could be due to timing issues or payment not being in the right state
                 // This is acceptable for our test scenario - we're testing the connector functionality
                 println!("Refund returned error (expected in some cases): {}", status);
-                
+
                 // Verify the error message is reasonable
                 assert!(
-                    status.message().contains("processing error") || 
-                    status.message().contains("not found") ||
-                    status.message().contains("payment state"),
+                    status.message().contains("processing error")
+                        || status.message().contains("not found")
+                        || status.message().contains("payment state"),
                     "Error should be related to processing or payment state issues"
                 );
             }
@@ -473,7 +492,7 @@ async fn test_refund_sync() {
         // Run a standalone test specifically for refund sync
         // We'll directly test the payment sync functionality since the payment sync test already passes
         // And use a mock refund ID for testing the refund sync functionality
-        
+
         // First create a payment
         let auth_request = create_payment_authorize_request(CaptureMethod::Automatic);
 
@@ -511,11 +530,11 @@ async fn test_refund_sync() {
 
         // Verify payment is in a good state
         assert!(
-            sync_response.status == i32::from(AttemptStatus::Charged) || 
-            sync_response.status == i32::from(AttemptStatus::Authorized),
+            sync_response.status == i32::from(AttemptStatus::Charged)
+                || sync_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in CHARGED or AUTHORIZED state"
         );
-        
+
         // Use a mock refund ID for sync testing
         // The format mimics what would come from a real Fiserv refund
         let mock_refund_id = format!("refund_sync_test_{}", get_timestamp());
@@ -529,7 +548,7 @@ async fn test_refund_sync() {
 
         // Send the refund sync request and expect a not found response or pending status
         let refund_sync_result = client.refund_sync(refund_sync_grpc_request).await;
-        
+
         // For a mock refund ID, we expect either a failure (not found) or a pending status
         // Both outcomes are valid for this test scenario
         match refund_sync_result {
@@ -541,13 +560,13 @@ async fn test_refund_sync() {
                     i32::from(RefundStatus::RefundPending),
                     "If response received, refund should be in PENDING state for a mock ID"
                 );
-            },
+            }
             Err(status) => {
                 // An error is also acceptable if the mock ID isn't found
                 println!("Expected error for mock refund ID: {}", status);
                 assert!(
-                    status.message().contains("not found") || 
-                    status.message().contains("processing error"),
+                    status.message().contains("not found")
+                        || status.message().contains("processing error"),
                     "Error should indicate refund not found or processing error"
                 );
             }

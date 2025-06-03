@@ -35,7 +35,8 @@ use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
 #[derive(Clone, serde::Deserialize, Debug)]
-pub struct Connectors { // Added pub
+pub struct Connectors {
+    // Added pub
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
@@ -860,8 +861,10 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
     fn foreign_try_from(
         (value, connectors): (PaymentsAuthorizeRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let address = match &value.address { // Borrow value.address
-            Some(address_value) => { // address_value is &grpc_api_types::payments::PaymentAddress
+        let address = match &value.address {
+            // Borrow value.address
+            Some(address_value) => {
+                // address_value is &grpc_api_types::payments::PaymentAddress
                 hyperswitch_domain_models::payment_address::PaymentAddress::foreign_try_from(
                     (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
                 )?
@@ -880,14 +883,18 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::foreign_try_from(value.payment_method())?, // Use direct enum
+            payment_method: hyperswitch_common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method(),
+            )?, // Use direct enum
             address,
-            auth_type: hyperswitch_common_enums::AuthenticationType::foreign_try_from(value.auth_type())?, // Use direct enum
+            auth_type: hyperswitch_common_enums::AuthenticationType::foreign_try_from(
+                value.auth_type(),
+            )?, // Use direct enum
             connector_request_reference_id: value.connector_request_reference_id,
-            customer_id: None, 
-            connector_customer: value.connector_customer, 
-            description: None, 
-            return_url: value.return_url.clone(), 
+            customer_id: None,
+            connector_customer: value.connector_customer,
+            description: None,
+            return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.connector_meta_data.map(|json_bytes_vec| {
                     String::from_utf8(json_bytes_vec.to_vec())
@@ -1088,9 +1095,13 @@ pub fn generate_payment_authorize_response(
 }
 
 // ForeignTryFrom for PaymentMethod gRPC enum to internal enum
-impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for hyperswitch_common_enums::PaymentMethod {
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
+    for hyperswitch_common_enums::PaymentMethod
+{
     type Error = ApplicationErrorResponse;
-    fn foreign_try_from(item: grpc_api_types::payments::PaymentMethod) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        item: grpc_api_types::payments::PaymentMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match item {
             grpc_api_types::payments::PaymentMethod::Card => Ok(Self::Card),
             grpc_api_types::payments::PaymentMethod::Wallet => Ok(Self::Wallet),
@@ -1099,14 +1110,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for hyperswitch_com
 }
 
 // ForeignTryFrom for AuthenticationType gRPC enum to internal enum
-impl ForeignTryFrom<grpc_api_types::payments::AuthenticationType> for hyperswitch_common_enums::AuthenticationType {
+impl ForeignTryFrom<grpc_api_types::payments::AuthenticationType>
+    for hyperswitch_common_enums::AuthenticationType
+{
     type Error = ApplicationErrorResponse;
-    fn foreign_try_from(item: grpc_api_types::payments::AuthenticationType) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        item: grpc_api_types::payments::AuthenticationType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match item {
             grpc_api_types::payments::AuthenticationType::ThreeDs => Ok(Self::ThreeDs),
             grpc_api_types::payments::AuthenticationType::NoThreeDs => Ok(Self::NoThreeDs),
             // Add other mappings as needed
-           
         }
     }
 }
@@ -1713,7 +1727,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundsRequest> for RefundsData {
             reason: value.reason.clone(),
             webhook_url: None,
             refund_amount: value.refund_amount,
-            connector_metadata: { 
+            connector_metadata: {
                 value.connector_metadata.map(|json_bytes_vec| {
                     String::from_utf8(json_bytes_vec.to_vec())
                         .map(serde_json::Value::String) // Should be Option<serde_json::Value>, not Secret

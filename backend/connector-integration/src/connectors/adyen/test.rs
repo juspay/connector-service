@@ -171,9 +171,9 @@ mod tests {
             > = connector_data.connector.get_connector_integration_v2();
 
             let request = connector_integration.build_request_v2(&req).unwrap();
-            let req_body = request.as_ref().map(|request_val| { 
-                let masked_request = match request_val.body.as_ref() { 
-                    Some(request_content) => match request_content { 
+            let req_body = request.as_ref().map(|request_val| {
+                let masked_request = match request_val.body.as_ref() {
+                    Some(request_content) => match request_content {
                         RequestContent::Json(i)
                         | RequestContent::FormUrlEncoded(i)
                         | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
@@ -186,8 +186,11 @@ mod tests {
                 };
                 masked_request
             });
-            println!("request: {:?}", req_body); 
-            assert_eq!(req_body.as_ref().unwrap()["reference"], "conn_ref_123456789"); 
+            println!("request: {:?}", req_body);
+            assert_eq!(
+                req_body.as_ref().unwrap()["reference"],
+                "conn_ref_123456789"
+            );
         }
         #[test]
         fn test_build_request_missing() {
