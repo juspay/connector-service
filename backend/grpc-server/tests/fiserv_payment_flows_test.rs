@@ -253,8 +253,7 @@ async fn test_payment_authorization_auto_capture() {
             .expect("gRPC payment_authorize call failed")
             .into_inner();
 
-        // Debug print the full response
-        println!("DEBUG - Payment Response: {:?}", response);
+        // Debug print has been removed
 
         // Verify the response
         assert!(
@@ -263,8 +262,7 @@ async fn test_payment_authorization_auto_capture() {
         );
 
         // Extract the transaction ID
-        let transaction_id = extract_transaction_id(&response);
-        println!("Auto capture transaction ID: {}", transaction_id);
+        let _transaction_id = extract_transaction_id(&response);
 
         // Verify payment status
         assert!(
@@ -299,7 +297,6 @@ async fn test_payment_authorization_manual_capture() {
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        println!("Manual auth transaction ID: {}", transaction_id);
 
         // Verify payment status is authorized (for manual capture)
         assert!(
@@ -312,14 +309,7 @@ async fn test_payment_authorization_manual_capture() {
             .expect("FISERV_TERMINAL_ID environment variable is required");
         let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
-        // For debug
-        println!(
-            "Connector Metadata: {:?}",
-            auth_response
-                .resource_id
-                .as_ref()
-                .and_then(|r| r.id.as_ref())
-        );
+        // Debug print has been removed
 
         let mut capture_request = create_payment_capture_request(&transaction_id);
         // Set the connector_meta_data field in the capture request
@@ -372,7 +362,6 @@ async fn test_payment_sync() {
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        println!("Payment sync transaction ID: {}", transaction_id);
 
         // Create sync request
         let sync_request = create_payment_sync_request(&transaction_id);
@@ -416,7 +405,6 @@ async fn test_refund() {
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        println!("Refund transaction ID: {}", transaction_id);
 
         // Verify payment status
         assert!(
@@ -455,11 +443,10 @@ async fn test_refund() {
                 let refund_response = response.into_inner();
 
                 // Extract the refund ID
-                let refund_id = refund_response
+                let _refund_id = refund_response
                     .connector_refund_id
                     .clone()
                     .unwrap_or_default();
-                println!("Refund ID: {}", refund_id);
 
                 // Verify the refund status
                 assert!(
@@ -471,7 +458,6 @@ async fn test_refund() {
             Err(status) => {
                 // If the refund fails, it could be due to timing issues or payment not being in the right state
                 // This is acceptable for our test scenario - we're testing the connector functionality
-                println!("Refund returned error (expected in some cases): {}", status);
 
                 // Verify the error message is reasonable
                 assert!(
@@ -509,7 +495,6 @@ async fn test_refund_sync() {
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
-        println!("Refund sync transaction ID: {}", transaction_id);
 
         // Wait for payment to process
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
@@ -563,7 +548,6 @@ async fn test_refund_sync() {
             }
             Err(status) => {
                 // An error is also acceptable if the mock ID isn't found
-                println!("Expected error for mock refund ID: {}", status);
                 assert!(
                     status.message().contains("not found")
                         || status.message().contains("processing error"),

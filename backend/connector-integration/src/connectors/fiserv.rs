@@ -254,7 +254,7 @@ impl ConnectorCommon for Fiserv {
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
             headers::API_KEY.to_string(),
-            auth.api_key.clone().into_masked().into(),
+            auth.api_key.clone().into_masked(),
         )])
     }
 
