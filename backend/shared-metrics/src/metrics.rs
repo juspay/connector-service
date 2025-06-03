@@ -4,6 +4,9 @@ use prometheus::{
     self, Encoder, HistogramVec, IntCounterVec, TextEncoder, register_histogram_vec,
     register_int_counter_vec,
 };
+use std::future::Future;
+use std::time::Instant;
+use tonic::{Response, Status};
 
 // Define latency buckets for histograms
 const LATENCY_BUCKETS: &[f64] = &[
@@ -70,6 +73,57 @@ lazy_static! {
     )
     .unwrap();
 
+}
+
+pub async fn with_metrics_and_connector<R, F, Fut>(
+    method_name: &str,
+    connector: &str,
+    handler: F,
+) -> Result<Response<R>, Status>
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = Result<Response<R>, Status>>,
+{
+    let start_time = Instant::now();
+
+    // Increment total requests counter
+    grpc_server_requests_total
+        .with_label_values(&[method_name, connector])
+        .inc();
+
+    // Execute the handler
+    let result = handler().await;
+
+    // Record metrics based on result
+    match &result {
+        Ok(_) => {
+            grpc_server_requests_successful
+                .with_label_values(&[method_name, connector])
+                .inc();
+        }
+        Err(_) => {
+            // Could add error metrics here if needed
+        }
+    }
+
+    // Record latency
+    let duration = start_time.elapsed().as_secs_f64();
+    grpc_server_request_latency
+        .with_label_values(&[method_name, connector])
+        .observe(duration);
+
+    result
+}
+
+// Convenience macro for even easier usage
+#[macro_export]
+macro_rules! with_metrics {
+    ($method:expr, $request:expr, $body:block) => {
+        MetricsMiddleware::with_metrics($method, &$request, || async move $body).await
+    };
+    ($method:expr, $connector:expr, $body:block) => {
+        MetricsMiddleware::with_metrics_and_connector($method, $connector, || async move $body).await
+    };
 }
 
 pub async fn metrics_handler() -> error_stack::Result<String, MetricsError> {

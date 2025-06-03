@@ -139,75 +139,66 @@ macro_rules! implement_connector_operation {
             &self,
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
-            let start_time = Instant::now();
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
 
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
-            let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
-            let payload = request.into_inner();
+            metrics::with_metrics_and_connector($log_prefix, &connector.to_string(), || {
+                Box::pin(async {
+                    let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
+                    let payload = request.into_inner();
 
-            // Get connector data
-            let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+                    // Get connector data
+                    let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-            // Get connector integration
-            let connector_integration: hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-                '_,
-                $flow_marker,
-                $resource_common_data_type,
-                $request_data_type,
-                $response_data_type,
-            > = connector_data.connector.get_connector_integration_v2();
+                    // Get connector integration
+                    let connector_integration: hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+                        '_,
+                        $flow_marker,
+                        $resource_common_data_type,
+                        $request_data_type,
+                        $response_data_type,
+                    > = connector_data.connector.get_connector_integration_v2();
 
-            // Create connector request data
-            let specific_request_data = $request_data_constructor(payload.clone())
-                .into_grpc_status()?;
+                    // Create connector request data
+                    let specific_request_data = $request_data_constructor(payload.clone())
+                        .into_grpc_status()?;
 
-            // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
-                .into_grpc_status()?;
+                    // Create common request data
+                    let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+                        .into_grpc_status()?;
 
-            // Create router data
-            let router_data = hyperswitch_domain_models::router_data_v2::RouterDataV2::<
-                $flow_marker,
-                $resource_common_data_type,
-                $request_data_type,
-                $response_data_type,
-            > {
-                flow: std::marker::PhantomData,
-                resource_common_data: common_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: specific_request_data,
-                response: Err(hyperswitch_domain_models::router_data::ErrorResponse::default()),
-            };
+                    // Create router data
+                    let router_data = hyperswitch_domain_models::router_data_v2::RouterDataV2::<
+                        $flow_marker,
+                        $resource_common_data_type,
+                        $request_data_type,
+                        $response_data_type,
+                    > {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: common_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: specific_request_data,
+                        response: Err(hyperswitch_domain_models::router_data::ErrorResponse::default()),
+                    };
 
-            metrics::grpc_server_requests_total
-            .with_label_values(&[&$log_prefix, &connector.to_string()])
-            .inc();
-            // Execute connector processing
-            let response_result = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                &connector.to_string(),
-            )
-            .await
-            .switch()
-            .into_grpc_status()?;
+                    // Execute connector processing
+                    let response_result = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        &connector.to_string(),
+                    )
+                    .await
+                    .switch()
+                    .into_grpc_status()?;
 
-            // Generate response
-            let final_response = $generate_response_fn(response_result)
-                .into_grpc_status()?;
+                    // Generate response
+                    let final_response = $generate_response_fn(response_result)
+                        .into_grpc_status()?;
 
-            metrics::grpc_server_requests_successful
-            .with_label_values(&[&$log_prefix, &connector.to_string()])
-            .inc();
-
-            let duration = start_time.elapsed().as_secs_f64();
-            metrics::grpc_server_request_latency
-                .with_label_values(&[&$log_prefix, &connector.to_string()])
-                .observe(duration);
-
-            Ok(tonic::Response::new(final_response))
+                    Ok(tonic::Response::new(final_response))
+                })
+            }).await
         }
     };
 }
