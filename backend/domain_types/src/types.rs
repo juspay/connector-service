@@ -1903,7 +1903,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentsCaptureRequest> for Paymen
             connector_metadata: {
                 value.connector_meta_data.map(|json_bytes_vec| {
                     String::from_utf8(json_bytes_vec.to_vec())
-                        .map(|json_string| serde_json::Value::String(json_string))
+                        .map(serde_json::Value::String)
                         .map_err(|utf8_error| {
                             report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "INVALID_DATA_FORMAT".to_string(),
