@@ -6,7 +6,10 @@ use hyperswitch_api_models::enums::{self, AttemptStatus, CardNetwork};
 use hyperswitch_cards::CardNumber;
 use hyperswitch_common_enums::RefundStatus;
 use hyperswitch_common_utils::{
-    ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
+    ext_traits::ByteSliceExt,
+    pii::{Email, UpiVpaMaskingStrategy},
+    request::Method,
+    types::MinorUnit,
 };
 
 use domain_types::{
@@ -18,7 +21,7 @@ use domain_types::{
     },
 };
 use hyperswitch_domain_models::{
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{Card, PaymentMethodData, UpiData},
     router_data::{ConnectorAuthType, RouterData},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -109,6 +112,22 @@ pub struct CardDetails {
     pub cvv: Option<Secret<String>>,
 }
 
+#[serde_with::skip_serializing_none]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct UpiDetails {
+    flow: UpiAction,
+    vpa: Option<Secret<String, UpiVpaMaskingStrategy>>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum UpiAction {
+    #[default]
+    Collect,
+    Intent,
+}
+
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthenticationChannel {
@@ -136,6 +155,7 @@ pub struct BrowserInfo {
     pub language: Option<String>,
 }
 
+#[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub struct RazorpayPaymentRequest {
@@ -145,7 +165,8 @@ pub struct RazorpayPaymentRequest {
     pub email: Email,
     pub order_id: String,
     pub method: PaymentMethodType,
-    pub card: PaymentMethodSpecificData,
+    #[serde(flatten)]
+    pub payment_method_specific_data: PaymentMethodSpecificData,
     pub authentication: Option<AuthenticationDetails>,
     pub browser: Option<BrowserInfo>,
     pub ip: String,
@@ -154,9 +175,10 @@ pub struct RazorpayPaymentRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged, rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum PaymentMethodSpecificData {
     Card(CardDetails),
+    Upi(UpiDetails),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,6 +264,22 @@ fn extract_payment_method_and_data(
 
             Ok((PaymentMethodType::Card, card))
         }
+        PaymentMethodData::Upi(upi_data) => {
+            let upi = match upi_data {
+                UpiData::UpiCollect(upi_collect_data) => {
+                    PaymentMethodSpecificData::Upi(UpiDetails {
+                        flow: UpiAction::Collect,
+                        vpa: upi_collect_data.vpa_id.clone(),
+                    })
+                }
+                UpiData::UpiIntent(_) => PaymentMethodSpecificData::Upi(UpiDetails {
+                    flow: UpiAction::Intent,
+                    vpa: None,
+                }),
+            };
+
+            Ok((PaymentMethodType::Upi, upi))
+        }
         PaymentMethodData::CardRedirect(_)
         | PaymentMethodData::Wallet(_)
         | PaymentMethodData::PayLater(_)
@@ -252,7 +290,6 @@ fn extract_payment_method_and_data(
         | PaymentMethodData::MandatePayment
         | PaymentMethodData::Reward
         | PaymentMethodData::RealTimePayment(_)
-        | PaymentMethodData::Upi(_)
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
@@ -265,29 +302,19 @@ fn extract_payment_method_and_data(
 }
 
 impl
-    TryFrom<(
+    TryFrom<
         &RazorpayRouterData<
             &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
-        &Card,
-    )> for RazorpayPaymentRequest
+    > for RazorpayPaymentRequest
 {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
 
     fn try_from(
-        value: (
-            &RazorpayRouterData<
-                &RouterDataV2<
-                    Authorize,
-                    PaymentFlowData,
-                    PaymentsAuthorizeData,
-                    PaymentsResponseData,
-                >,
-            >,
-            &Card,
-        ),
+        item: &RazorpayRouterData<
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        let (item, _card_data) = value;
         let amount = item.amount;
         let currency = item.router_data.request.currency.to_string();
 
@@ -318,7 +345,7 @@ impl
             },
         )?;
 
-        let (method, card) = extract_payment_method_and_data(
+        let (method, payment_method_specific_data) = extract_payment_method_and_data(
             &item.router_data.request.payment_method_data,
             item.router_data.request.customer_name.clone(),
         )?;
@@ -330,9 +357,15 @@ impl
             None => AuthenticationChannel::App,
         };
 
-        let authentication = Some(AuthenticationDetails {
-            authentication_channel,
-        });
+        let authentication = match item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(_) => Some(AuthenticationDetails {
+                authentication_channel,
+            }),
+            _ => {
+                // If the payment method is not card, we assume no authentication is required
+                None
+            }
+        };
 
         let browser = browser_info_opt.map(|info| BrowserInfo {
             java_enabled: info.java_enabled,
@@ -364,38 +397,13 @@ impl
             email,
             order_id,
             method,
-            card,
+            payment_method_specific_data,
             authentication,
             browser,
             ip,
             referer,
             user_agent,
         })
-    }
-}
-
-impl
-    TryFrom<
-        &RazorpayRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        >,
-    > for RazorpayPaymentRequest
-{
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
-
-    fn try_from(
-        item: &RazorpayRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => RazorpayPaymentRequest::try_from((item, card)),
-            _ => Err(
-                hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
-                    "Only card payments are supported".into(),
-                ),
-            ),
-        }
     }
 }
 
@@ -433,9 +441,9 @@ pub struct RazorpayPsyncResponse {
     pub id: String,
     pub entity: String,
     pub amount: i64,
-    pub base_amount: i64,
+    pub base_amount: Option<i64>,
     pub currency: String,
-    pub base_currency: String,
+    pub base_currency: Option<String>,
     pub status: RazorpayStatus,
     pub method: PaymentMethodType,
     pub order_id: Option<String>,
@@ -528,10 +536,10 @@ pub struct SyncCardDetails {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct SyncUPIDetails {
-    pub payer_account_type: String,
+    pub payer_account_type: Option<String>,
     pub vpa: String,
-    pub flow: String,
-    pub bank: String,
+    pub flow: Option<String>,
+    pub bank: Option<String>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -542,6 +550,7 @@ pub struct AcquirerData {
     pub rrn: Option<String>,
     pub authentication_reference_number: Option<String>,
     pub bank_transaction_id: Option<String>,
+    pub upi_transaction_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
