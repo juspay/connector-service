@@ -1,68 +1,65 @@
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Refund, Void, CreateOrder, SetupMandate, Accept, SubmitEvidence, DefendDispute, RSync},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
     connector_types::{
-        ConnectorServiceTrait, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundsData,
-        RefundsResponseData, PaymentsSyncData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        SetupMandateRequestData, AcceptDisputeData, DisputeFlowData, DisputeResponseData, SubmitEvidenceData,
-        ValidationTrait, PaymentAuthorizeV2, PaymentSyncV2, PaymentOrderCreate, PaymentVoidV2, IncomingWebhook, RefundV2, PaymentCapture, SetupMandateV2, AcceptDispute, RefundSyncV2, SubmitEvidenceV2, DisputeDefendData, DisputeDefend,
-        ConnectorSpecifications, RefundSyncData
-    }
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorSpecifications,
+        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, IncomingWebhook,
+        PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
+        SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
+        ValidationTrait,
+    },
 };
 use error_stack::ResultExt;
 use hyperswitch_common_utils::{
-    errors::CustomResult,
-    request::RequestContent,
-    types::{FloatMajorUnit},
-    ext_traits::BytesExt,
+    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::FloatMajorUnit,
 };
-
 
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
 use hyperswitch_interfaces::{
-    api::{ConnectorCommon},
+    api::ConnectorCommon,
     configs::Connectors as InterfaceConnectors,
     connector_integration_v2::ConnectorIntegrationV2,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
-    types::Response
+    types::Response,
 };
-use hyperswitch_masking::{Maskable, Mask, PeekInterface, ExposeInterface};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use ring::hmac;
 use time::OffsetDateTime;
-use uuid::Uuid; 
-use ring::hmac; 
-use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
+use uuid::Uuid;
 
 pub mod transformers;
 
 use transformers::{
-    FiservPaymentsRequest, FiservPaymentsResponse, FiservSyncRequest,
-    FiservSyncResponse, FiservCaptureRequest, FiservCaptureResponse, FiservVoidRequest, FiservVoidResponse, FiservRefundRequest, FiservRefundResponse,
-    FiservRefundSyncRequest, FiservRefundSyncResponse
+    FiservCaptureRequest, FiservCaptureResponse, FiservPaymentsRequest, FiservPaymentsResponse,
+    FiservRefundRequest, FiservRefundResponse, FiservRefundSyncRequest, FiservRefundSyncResponse,
+    FiservSyncRequest, FiservSyncResponse, FiservVoidRequest, FiservVoidResponse,
 };
 
+use super::macros;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
-use super::macros;
-
-
 
 // Local headers module
 mod headers {
-    pub const API_KEY: &str = "Api-Key"; 
+    pub const API_KEY: &str = "Api-Key";
     pub const CONTENT_TYPE: &str = "Content-Type";
     pub const TIMESTAMP: &str = "Timestamp";
     pub const CLIENT_REQUEST_ID: &str = "Client-Request-Id";
-    pub const AUTH_TOKEN_TYPE: &str = "Auth-Token-Type"; 
-    pub const AUTHORIZATION: &str = "Authorization"; 
+    pub const AUTH_TOKEN_TYPE: &str = "Auth-Token-Type";
+    pub const AUTHORIZATION: &str = "Authorization";
 }
-
-
 
 impl ConnectorServiceTrait for Fiserv {}
 impl PaymentAuthorizeV2 for Fiserv {}
@@ -107,7 +104,7 @@ macros::macro_connector_implementation!(
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)
                     .attach_printable("Unsupported request body type for RSync signature generation")?,
             };
-            
+
             self.build_headers(req, &payload_string_for_sig)
         }
         fn get_url(
@@ -144,7 +141,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
         ),
         (
-            flow: Void, 
+            flow: Void,
             request_body: FiservVoidRequest,
             response_body: FiservVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
@@ -168,7 +165,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         pub fn generate_authorization_signature(
             &self,
-            auth: &self::transformers::FiservAuthType, 
+            auth: &self::transformers::FiservAuthType,
             client_request_id: &str,
             payload_str: &str,
             timestamp_ms: i128,
@@ -183,7 +180,7 @@ macros::create_all_prerequisites!(
 
             let key = hmac::Key::new(hmac::HMAC_SHA256, auth.api_secret.clone().expose().as_bytes());
             let tag = hmac::sign(&key, raw_signature.as_bytes());
-            
+
             Ok(BASE64_STANDARD_ENGINE.encode(tag.as_ref()))
         }
 
@@ -194,14 +191,14 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let timestamp_ms = OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000;
             let client_request_id = Uuid::new_v4().to_string();
-            
+
             let auth_type_for_sig = self::transformers::FiservAuthType::try_from(&req.connector_auth_type)
                 .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            
+
             let signature = self.generate_authorization_signature(
                 &auth_type_for_sig,
                 &client_request_id,
-                payload_string_for_sig, 
+                payload_string_for_sig,
                 timestamp_ms,
             )?;
 
@@ -209,13 +206,13 @@ macros::create_all_prerequisites!(
                 (headers::CONTENT_TYPE.to_string(), self.common_get_content_type().to_string().into()),
                 (headers::CLIENT_REQUEST_ID.to_string(), client_request_id.into()),
                 (headers::TIMESTAMP.to_string(), timestamp_ms.to_string().into()),
-                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".to_string().into()), 
+                (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".to_string().into()),
                 (headers::AUTHORIZATION.to_string(), signature.into_masked()),
             ];
-            
+
             let mut api_key_header = self.get_auth_header(&req.connector_auth_type)?;
             http_headers.append(&mut api_key_header);
-            
+
             Ok(http_headers)
         }
 
@@ -252,11 +249,12 @@ impl ConnectorCommon for Fiserv {
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth: self::transformers::FiservAuthType = self::transformers::FiservAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+        let auth: self::transformers::FiservAuthType =
+            self::transformers::FiservAuthType::try_from(auth_type)
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
-            headers::API_KEY.to_string(), 
-            auth.api_key.clone().into_masked().into(), 
+            headers::API_KEY.to_string(),
+            auth.api_key.clone().into_masked().into(),
         )])
     }
 
@@ -271,16 +269,22 @@ impl ConnectorCommon for Fiserv {
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
-        
-        let first_error_detail = response.error.as_ref().or(response.details.as_ref()).and_then(|e| e.first());
+
+        let first_error_detail = response
+            .error
+            .as_ref()
+            .or(response.details.as_ref())
+            .and_then(|e| e.first());
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: first_error_detail.and_then(|e| e.code.clone()).unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+            code: first_error_detail
+                .and_then(|e| e.code.clone())
+                .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
             message: first_error_detail.map_or(NO_ERROR_MESSAGE.to_string(), |e| e.message.clone()),
             reason: first_error_detail.and_then(|e| e.field.clone()),
             attempt_status: None,
-            connector_transaction_id: None, 
+            connector_transaction_id: None,
         })
     }
 }
@@ -313,7 +317,7 @@ macros::macro_connector_implementation!(
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)
                     .attach_printable("Unsupported request body type for signature generation")?,
             };
-            
+
             self.build_headers(req, &payload_string_for_sig)
         }
         fn get_url(
@@ -321,7 +325,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-                "{}ch/payments/v1/charges", 
+                "{}ch/payments/v1/charges",
                 self.connector_base_url_payments(req)
             ))
         }
@@ -356,7 +360,7 @@ macros::macro_connector_implementation!(
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)
                     .attach_printable("Unsupported request body type for PSync signature generation")?,
             };
-            
+
             self.build_headers(req, &payload_string_for_sig)
         }
         fn get_url(
@@ -398,7 +402,7 @@ macros::macro_connector_implementation!(
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)
                     .attach_printable("Unsupported request body type for Capture signature generation")?,
             };
-            
+
             self.build_headers(req, &payload_string_for_sig)
         }
         fn get_url(
@@ -406,7 +410,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-                "{}ch/payments/v1/charges", 
+                "{}ch/payments/v1/charges",
                 self.connector_base_url_payments(req)
             ))
         }
@@ -441,7 +445,7 @@ macros::macro_connector_implementation!(
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)
                     .attach_printable("Unsupported request body type for Void signature generation")?,
             };
-            
+
             self.build_headers(req, &payload_string_for_sig)
         }
         fn get_url(
@@ -449,7 +453,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-                "{}ch/payments/v1/cancels", 
+                "{}ch/payments/v1/cancels",
                 self.connector_base_url_payments(req)
             ))
         }
@@ -484,7 +488,7 @@ macros::macro_connector_implementation!(
                 _ => return Err(errors::ConnectorError::RequestEncodingFailed)
                     .attach_printable("Unsupported request body type for Refund signature generation")?,
             };
-            
+
             self.build_headers(req, &payload_string_for_sig)
         }
         fn get_url(
@@ -492,7 +496,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
-                "{}ch/payments/v1/refunds", 
+                "{}ch/payments/v1/refunds",
                 self.connector_base_url_refunds(req)
             ))
         }
@@ -500,11 +504,37 @@ macros::macro_connector_implementation!(
 );
 
 // Implementation for empty stubs - these will need to be properly implemented later
-impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Fiserv {}
-impl ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Fiserv {}
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Fiserv {}
-impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Fiserv {}
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Fiserv {}
+impl
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Fiserv
+{
+}
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Fiserv
+{
+}
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Fiserv
+{
+}
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Fiserv
+{
+}
 
 impl ConnectorSpecifications for Fiserv {}
 
