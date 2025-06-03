@@ -30,6 +30,7 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::consts::NO_ERROR_CODE;
+use hyperswitch_masking::Secret;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
@@ -225,6 +226,31 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
                         sub_code: "INVALID_WALLET_DATA".to_owned(),
                         error_identifier: 400,
                         error_message: "Wallet data is required".to_owned(),
+                        error_object: None,
+                    })
+                    .into()),
+                },
+                grpc_api_types::payments::payment_method_data::Data::Upi(upi) => match upi.data {
+                    Some(grpc_api_types::payments::upi_data::Data::UpiCollect(
+                        upi_collect_data,
+                    )) => Ok(PaymentMethodData::Upi(
+                        hyperswitch_domain_models::payment_method_data::UpiData::UpiCollect(
+                            hyperswitch_domain_models::payment_method_data::UpiCollectData {
+                                vpa_id: upi_collect_data.vpa_id.map(Secret::new),
+                            },
+                        ),
+                    )),
+                    Some(grpc_api_types::payments::upi_data::Data::UpiIntent(_)) => {
+                        Ok(PaymentMethodData::Upi(
+                            hyperswitch_domain_models::payment_method_data::UpiData::UpiIntent(
+                                hyperswitch_domain_models::payment_method_data::UpiIntentData {},
+                            ),
+                        ))
+                    }
+                    None => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_UPI_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Upi data is required".to_owned(),
                         error_object: None,
                     })
                     .into()),
