@@ -1,3 +1,8 @@
+#![allow(clippy::panic_in_result_fn)]
+#![allow(clippy::unwrap_used)]
+#![allow(clippy::as_conversions)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::print_stdout)]
 use grpc_api_types::payments::{
     self, payment_service_client::PaymentServiceClient, Address, PaymentsAuthorizeRequest,
     PhoneDetails,
