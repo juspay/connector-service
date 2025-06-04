@@ -24,7 +24,8 @@ use hyperswitch_common_utils::pii::Email;
 use hyperswitch_domain_models::mandates::MandateData;
 use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
-    payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
+    payment_method_data::{self, PaymentMethodData},
+    router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::consts::NO_ERROR_CODE;
 use serde::Serialize;
@@ -119,6 +120,87 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
                         nick_name: card.nick_name.map(|name| name.into()),
                     }),
                 ),
+                grpc_api_types::payments::payment_method_data::Data::Wallet(wallet) => match wallet
+                    .data
+                {
+                    Some(grpc_api_types::payments::wallet_data::Data::GooglePay(google_pay)) => {
+                        let google_pay_payment_method_info = google_pay
+                            .info
+                            .map(|info| payment_method_data::GooglePayPaymentMethodInfo {
+                                card_network: info.card_network,
+                                card_details: info.card_details,
+                                assurance_details: None,
+                            })
+                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_WALLET_DATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Google Pay Payment Method Info is required"
+                                    .to_owned(),
+                                error_object: None,
+                            }))?;
+
+                        let tokenization_data = google_pay
+                            .tokenization_data
+                            .map(
+                                |tokenization_data| payment_method_data::GpayTokenizationData {
+                                    token_type: tokenization_data.r#type,
+                                    token: tokenization_data.token,
+                                },
+                            )
+                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_WALLET_DATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Google Pay Tokenization Data is required"
+                                    .to_owned(),
+                                error_object: None,
+                            }))?;
+
+                        Ok(PaymentMethodData::Wallet(
+                            payment_method_data::WalletData::GooglePay(
+                                payment_method_data::GooglePayWalletData {
+                                    pm_type: google_pay.r#type,
+                                    description: google_pay.description,
+                                    info: google_pay_payment_method_info,
+                                    tokenization_data,
+                                },
+                            ),
+                        ))
+                    }
+                    Some(grpc_api_types::payments::wallet_data::Data::ApplePay(apple_pay)) => {
+                        let apple_pay_payment_method = apple_pay
+                            .payment_method
+                            .map(
+                                |payment_method| payment_method_data::ApplepayPaymentMethod {
+                                    display_name: payment_method.display_name,
+                                    network: payment_method.network,
+                                    pm_type: payment_method.pm_type,
+                                },
+                            )
+                            .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_WALLET_DATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Apple Pay Payment Method is required".to_owned(),
+                                error_object: None,
+                            }))?;
+
+                        Ok(PaymentMethodData::Wallet(
+                            payment_method_data::WalletData::ApplePay(
+                                payment_method_data::ApplePayWalletData {
+                                    payment_data: apple_pay.payment_data,
+                                    payment_method: apple_pay_payment_method,
+                                    transaction_identifier: apple_pay.transaction_identifier,
+                                },
+                            ),
+                        ))
+                    }
+                    None => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_WALLET_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Wallet data is required".to_owned(),
+                        error_object: None,
+                    })
+                    .into()),
+                },
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
