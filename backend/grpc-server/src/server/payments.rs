@@ -128,6 +128,7 @@ impl Payments {
             &self.config.proxy,
             connector_integration,
             order_router_data,
+            None,
         )
         .await
         .switch()
@@ -186,6 +187,7 @@ impl Payments {
             &self.config.proxy,
             connector_integration,
             order_router_data,
+            None,
         )
         .await
         .switch()
@@ -357,6 +359,7 @@ impl PaymentService for Payments {
             &config.proxy,
             connector_integration,
             router_data,
+            payload.all_keys_required,
         )
         .await
         .switch()
@@ -563,6 +566,7 @@ impl PaymentService for Payments {
             &self.config.proxy,
             connector_integration,
             router_data,
+            None,
         )
         .await
         .switch()
@@ -621,6 +625,7 @@ impl PaymentService for Payments {
             &self.config.proxy,
             connector_integration,
             router_data,
+            None,
         )
         .await
         .switch()
@@ -677,6 +682,7 @@ impl PaymentService for Payments {
             &self.config.proxy,
             connector_integration,
             router_data,
+            None,
         )
         .await
         .switch()

@@ -73,6 +73,7 @@ mod tests {
                         },
                     },
                     external_latency: None,
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -147,6 +148,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -235,6 +237,7 @@ mod tests {
                         },
                     },
                     external_latency: None,
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -272,6 +275,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

@@ -1146,6 +1146,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
             mandate_reference: Box::new(None),
+            raw_connector_response: None,
         };
 
         Ok(Self {
@@ -1215,6 +1216,7 @@ pub fn get_adyen_response(
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
         mandate_reference: Box::new(mandate_reference),
+        raw_connector_response: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1285,6 +1287,7 @@ pub fn get_redirection_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: Box::new(None),
+        raw_connector_response: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1864,6 +1867,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.psp_reference,
             refund_status: status,
+            raw_connector_response: None,
         };
 
         Ok(Self {
@@ -1958,6 +1962,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
                 mandate_reference: Box::new(None),
+                raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending,
@@ -2364,6 +2369,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                 dispute_status: status,
                 connector_dispute_id: router_data.connector_dispute_id.clone(),
                 connector_dispute_status: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2559,6 +2565,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 dispute_status: status,
                 connector_dispute_id: router_data.connector_dispute_id.clone(),
                 connector_dispute_status: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2682,6 +2689,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                         dispute_status,
                         connector_dispute_status: None,
                         connector_dispute_id: router_data.connector_dispute_id.clone(),
+                        raw_connector_response: None,
                     }),
                     ..router_data
                 })
