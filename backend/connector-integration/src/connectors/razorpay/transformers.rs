@@ -622,6 +622,7 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
+            raw_connector_response: None,
         };
 
         Ok(Self {
@@ -654,6 +655,7 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
+            raw_connector_response: None,
         };
 
         Ok(Self {
@@ -722,6 +724,7 @@ impl<F, Req>
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     mandate_reference: Box::new(None),
+                    raw_connector_response: None,
                 };
                 let error = None;
 
@@ -745,6 +748,7 @@ impl<F, Req>
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     mandate_reference: Box::new(None),
+                    raw_connector_response: None,
                 };
                 let error = None;
 
@@ -1150,6 +1154,7 @@ impl<F, Req>
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
                 mandate_reference: Box::new(None),
+                raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

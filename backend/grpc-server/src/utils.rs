@@ -184,6 +184,7 @@ macro_rules! implement_connector_operation {
                 &self.config.proxy,
                 connector_integration,
                 router_data,
+                payload.all_keys_required,
             )
             .await
             .switch()
