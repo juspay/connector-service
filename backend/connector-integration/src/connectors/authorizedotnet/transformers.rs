@@ -1131,6 +1131,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
+                    raw_connector_response: None,
                 });
 
                 Ok(new_router_data)
@@ -1352,6 +1353,7 @@ pub fn convert_to_payments_response_data_or_error(
                         .map(|s| s.peek().clone()),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    raw_connector_response: None,
                 })
             } else {
                 // Failure status or other non-successful/active statuses handled by specific error mapping
@@ -1410,6 +1412,7 @@ pub fn convert_to_payments_response_data_or_error(
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
+                    raw_connector_response: None,
                 })
             } else {
                 Err(ErrorResponse {
@@ -1494,6 +1497,7 @@ pub fn convert_to_refund_response_data_or_error(
                 let response_data = RefundsResponseData {
                     connector_refund_id: trans_res.transaction_id.clone(),
                     refund_status,
+                    raw_connector_response: None,
                 };
                 Ok((api_call_attempt_status, Ok(response_data)))
             } else {
