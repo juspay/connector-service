@@ -425,7 +425,6 @@ async fn test_payment_sync() {
 
 // Test void flow (unique to AuthorizeDotNet)
 #[tokio::test]
-#[ignore] // Void functionality needs further investigation
 async fn test_void() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // First create a payment to void
