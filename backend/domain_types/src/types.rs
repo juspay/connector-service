@@ -42,6 +42,7 @@ pub struct Connectors {
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
+    pub authorizedotnet: ConnectorParams, // Add your connector params
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

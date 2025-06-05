@@ -55,3 +55,4 @@ hyper-util = { version = "0.1.3", features = ["tokio"] }
 
 [lints]
 workspace = true
+rand = "0.8.5"

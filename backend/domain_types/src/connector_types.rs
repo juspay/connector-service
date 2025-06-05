@@ -45,6 +45,7 @@ pub enum ConnectorEnum {
     Elavon,
     Xendit,
     Checkout,
+    Authorizedotnet,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
