@@ -457,6 +457,7 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             shipping_cost: None,
             merchant_account_id: None,
             merchant_config_currency: None,
+            all_keys_required: value.all_keys_required,
         })
     }
 }
@@ -889,6 +890,7 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             connector_http_status_code: None,
             external_latency: None,
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -932,6 +934,7 @@ impl ForeignTryFrom<(PaymentsVoidRequest, Connectors)> for PaymentFlowData {
             connector_http_status_code: None,
             external_latency: None,
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -976,6 +979,7 @@ pub fn generate_payment_authorize_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference: _,
+                raw_connector_response: _,
             } => {
                 PaymentsAuthorizeResponse {
                     resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(resource_id)?),
@@ -1019,6 +1023,7 @@ pub fn generate_payment_authorize_response(
                     mandate_reference: None, //TODO
                     error_message: None,
                     error_code: None,
+                    raw_connector_response: router_data_v2.resource_common_data.raw_connector_response.clone(),
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1047,6 +1052,10 @@ pub fn generate_payment_authorize_response(
                 status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
+                raw_connector_response: router_data_v2
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
             }
         }
     };
@@ -1081,6 +1090,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentsSyncRequest> for PaymentsS
             currency,
             payment_experience: None,
             amount,
+            all_keys_required: value.all_keys_required,
         })
     }
 }
@@ -1121,6 +1131,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentsSyncRequest, Connectors)>
             connector_http_status_code: None,
             external_latency: None,
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -1205,6 +1216,7 @@ pub fn generate_payment_void_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
+                raw_connector_response: _,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -1218,6 +1230,10 @@ pub fn generate_payment_void_response(
                     connector_response_reference_id,
                     error_code: None,
                     error_message: None,
+                    raw_connector_response: router_data_v2
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1244,6 +1260,10 @@ pub fn generate_payment_void_response(
                 status: status as i32,
                 error_message: Some(e.message),
                 error_code: Some(e.code),
+                raw_connector_response: router_data_v2
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
             })
         }
     }
@@ -1276,6 +1296,7 @@ pub fn generate_payment_sync_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
+                raw_connector_response: _,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -1293,6 +1314,10 @@ pub fn generate_payment_sync_response(
                     connector_response_reference_id,
                     error_code: None,
                     error_message: None,
+                    raw_connector_response: router_data_v2
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1321,6 +1346,10 @@ pub fn generate_payment_sync_response(
                 status: status as i32,
                 error_message: Some(e.message),
                 error_code: Some(e.code),
+                raw_connector_response: router_data_v2
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
             })
         }
     }
@@ -1338,6 +1367,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundsSyncRequest> for RefundSync
             reason: value.refund_reason.clone(),
             refund_status: hyperswitch_common_enums::RefundStatus::Pending,
             refund_connector_metadata: None,
+            all_keys_required: value.all_keys_required,
         })
     }
 }
@@ -1352,6 +1382,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::RefundsSyncRequest, Connectors)> 
             status: hyperswitch_common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -1366,6 +1397,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::RefundsRequest, Connectors)> for 
             status: hyperswitch_common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -1431,6 +1463,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
             connectors,
             connector_dispute_id: value.connector_dispute_id,
             defense_reason_code: None,
+            raw_connector_response: None,
         })
     }
 }
@@ -1488,6 +1521,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::SubmitEvidenceRequest, Connectors
             connectors,
             connector_dispute_id: value.connector_dispute_id,
             defense_reason_code: None,
+            raw_connector_response: None,
         })
     }
 }
@@ -1508,6 +1542,10 @@ pub fn generate_refund_sync_response(
                 connector_response_reference_id: Some(response.connector_refund_id.clone()),
                 error_code: None,
                 error_message: None,
+                raw_connector_response: router_data_v2
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
             })
         }
         Err(e) => {
@@ -1522,6 +1560,10 @@ pub fn generate_refund_sync_response(
                 connector_response_reference_id: e.connector_transaction_id,
                 error_code: Some(e.message),
                 error_message: Some(e.code),
+                raw_connector_response: router_data_v2
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone(),
             })
         }
     }
@@ -1546,6 +1588,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentsSyncResponse {
             connector_response_reference_id: value.connector_response_reference_id,
             error_code: value.error_code,
             error_message: value.error_message,
+            raw_connector_response: None,
         })
     }
 }
@@ -1559,6 +1602,7 @@ impl ForeignTryFrom<PaymentsVoidRequest> for PaymentVoidData {
         Ok(Self {
             connector_transaction_id: value.connector_request_reference_id,
             cancellation_reason: value.cancellation_reason,
+            raw_connector_response: None,
         })
     }
 }
@@ -1577,6 +1621,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundsSyncResponse {
             connector_response_reference_id: value.connector_response_reference_id,
             error_code: value.error_code,
             error_message: value.error_message,
+            raw_connector_response: None,
         })
     }
 }
@@ -1718,6 +1763,7 @@ pub fn generate_refund_response(
                 refund_status: grpc_status as i32,
                 error_message: None,
                 error_code: None,
+                raw_connector_response: response.raw_connector_response,
             })
         }
         Err(e) => {
@@ -1731,6 +1777,7 @@ pub fn generate_refund_response(
                 refund_status: status as i32,
                 error_message: Some(e.message),
                 error_code: Some(e.code),
+                raw_connector_response: None,
             })
         }
     }
@@ -1801,6 +1848,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentsCaptureRequest, Connector
             connector_http_status_code: None,
             external_latency: None,
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -1825,6 +1873,7 @@ pub fn generate_payment_capture_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
+                raw_connector_response: _,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -1837,6 +1886,7 @@ pub fn generate_payment_capture_response(
                     error_code: None,
                     error_message: None,
                     status: grpc_status.into(),
+                    raw_connector_response: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1863,6 +1913,7 @@ pub fn generate_payment_capture_response(
                 status: status.into(),
                 error_message: Some(e.message),
                 error_code: Some(e.code),
+                raw_connector_response: None,
             })
         }
     }
@@ -1915,6 +1966,7 @@ impl ForeignTryFrom<(SetupMandateRequest, Connectors)> for PaymentFlowData {
             connector_http_status_code: None,
             external_latency: None,
             connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -2088,6 +2140,7 @@ pub fn generate_setup_mandate_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
+                raw_connector_response: _,
             } => {
                 SetupMandateResponse {
                     resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(resource_id)?),
@@ -2178,6 +2231,7 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
             connectors,
             connector_dispute_id: value.connector_dispute_id,
             defense_reason_code: Some(value.defense_reason_code),
+            raw_connector_response: None,
         })
     }
 }
@@ -2212,6 +2266,7 @@ pub fn generate_defend_dispute_response(
             connector_dispute_id: response.connector_dispute_id,
             error_message: None,
             error_code: None,
+            raw_connector_response: None,
         }),
         Err(e) => Ok(DisputeDefendResponse {
             dispute_status: hyperswitch_common_enums::DisputeStatus::DisputeLost as i32,
@@ -2220,6 +2275,7 @@ pub fn generate_defend_dispute_response(
                 .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
             error_message: Some(e.message),
             error_code: Some(e.code),
+            raw_connector_response: None,
         }),
     }
 }

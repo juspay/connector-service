@@ -19,6 +19,7 @@ service PaymentService {
 message DisputeDefendRequest {
   string defense_reason_code = 1;
   string connector_dispute_id =3;
+  optional bool all_keys_required = 34;
 }
 
 message DisputeDefendResponse {
@@ -26,6 +27,7 @@ message DisputeDefendResponse {
   string connector_dispute_id = 2;
   optional string error_code = 3;
   optional string error_message = 4;
+  optional string raw_connector_response = 11;
 }
 
 enum DisputeStatus {
@@ -72,6 +74,7 @@ AuthenticationType auth_type = 4;
   int64 minor_amount = 31;
   optional string merchant_order_reference_id = 32;
   optional int64 shipping_cost = 33;
+  optional bool all_keys_required = 34;
 }
 
 message PaymentsAuthorizeResponse {
@@ -84,11 +87,13 @@ message PaymentsAuthorizeResponse {
   AttemptStatus status = 8;
   optional string error_code = 9;
   optional string error_message = 10;
+  optional string raw_connector_response = 11;
 }
 
 message PaymentsSyncRequest {
   string resource_id = 1;
   optional string connector_request_reference_id = 2;
+  optional bool all_keys_required = 3;
 }
 
 message PaymentsSyncResponse {
@@ -99,12 +104,14 @@ message PaymentsSyncResponse {
   optional string connector_response_reference_id = 5;
   optional string error_code = 9;
   optional string error_message = 10;
+  optional string raw_connector_response = 11;
 }
 
 message RefundsSyncRequest {
   string connector_refund_id = 2;
   string connector_transaction_id = 1;
   optional string refund_reason = 3;
+  optional bool all_keys_required = 4;
 }
 
 message RefundsSyncResponse {
@@ -113,11 +120,13 @@ message RefundsSyncResponse {
   optional string connector_response_reference_id = 5;
   optional string error_code = 9;
   optional string error_message = 10;
+  optional string raw_connector_response = 11;
 }
 
 message PaymentsVoidRequest {
   string connector_request_reference_id = 2;
   optional string cancellation_reason = 1;
+  optional bool all_keys_required = 3;
 }
 
 message PaymentsVoidResponse {
@@ -126,6 +135,7 @@ message PaymentsVoidResponse {
   AttemptStatus status = 8;
   optional string error_code = 4;
   optional string error_message = 5;
+  optional string raw_connector_response = 11;
 }
 
 enum DisputeStage {
@@ -243,6 +253,7 @@ message RefundsRequest {
   int64 minor_refund_amount = 11;
   optional string merchant_account_id = 12;
   optional CaptureMethod capture_method = 16;
+  optional bool all_keys_required = 17;
 }
 
 message RefundsResponse {
@@ -250,6 +261,7 @@ message RefundsResponse {
   RefundStatus refund_status = 36;
   optional string error_code = 2;
   optional string error_message = 3;
+  optional string raw_connector_response = 4;
 }
 
 enum Connector {
@@ -1127,6 +1139,7 @@ message PaymentsCaptureRequest {
   Currency currency = 15;
   optional MultipleCaptureRequestData multiple_capture_data = 21;
   optional bytes connector_meta_data = 3;
+  optional bool all_keys_required = 4;
 }
 
 
@@ -1136,6 +1149,7 @@ message PaymentsCaptureResponse {
   AttemptStatus status = 8;
   optional string error_code = 3;
   optional string error_message = 4;
+  optional string raw_connector_response = 5;
 }
 
 message AcceptDisputeRequest {

@@ -181,16 +181,17 @@ macro_rules! implement_connector_operation {
                         response: Err(hyperswitch_domain_models::router_data::ErrorResponse::default()),
                     };
 
-                    // Execute connector processing
-                    let response_result = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        &connector.to_string(),
-                    )
-                    .await
-                    .switch()
-                    .into_grpc_status()?;
+            // Execute connector processing
+            let response_result = external_services::service::execute_connector_processing_step(
+                &self.config.proxy,
+                connector_integration,
+                router_data,
+                payload.all_keys_required,
+                &connector.to_string(),
+            )
+            .await
+            .switch()
+            .into_grpc_status()?;
 
                     // Generate response
                     let final_response = $generate_response_fn(response_result)

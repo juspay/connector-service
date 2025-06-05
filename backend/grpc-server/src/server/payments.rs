@@ -129,6 +129,7 @@ impl Payments {
             &self.config.proxy,
             connector_integration,
             order_router_data,
+            None,
             connector_name,
         )
         .await
@@ -189,6 +190,7 @@ impl Payments {
             &self.config.proxy,
             connector_integration,
             order_router_data,
+            None,
             connector_name,
         )
         .await
@@ -364,6 +366,7 @@ impl PaymentService for Payments {
                     &self.config.proxy,
                     connector_integration,
                     router_data,
+                    payload.all_keys_required,
                     &connector.to_string(),
                 )
                 .await
@@ -587,6 +590,7 @@ impl PaymentService for Payments {
                     &self.config.proxy,
                     connector_integration,
                     router_data,
+                    None,
                     &connector.to_string(),
                 )
                 .await
@@ -650,6 +654,7 @@ impl PaymentService for Payments {
                     &self.config.proxy,
                     connector_integration,
                     router_data,
+                    None,
                     &connector.to_string(),
                 )
                 .await
@@ -713,6 +718,7 @@ impl PaymentService for Payments {
                     &self.config.proxy,
                     connector_integration,
                     router_data,
+                    None,
                     &connector.to_string(),
                 )
                 .await

@@ -147,6 +147,10 @@ pub trait SubmitEvidenceV2:
 {
 }
 
+pub trait RawConnectorResponse {
+    fn set_raw_connector_response(&mut self, response: Option<String>);
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
     pub merchant_id: hyperswitch_common_utils::id_type::MerchantId,
@@ -177,11 +181,20 @@ pub struct PaymentFlowData {
     pub connector_http_status_code: Option<u16>,
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
+    pub raw_connector_response: Option<String>,
 }
+
+impl RawConnectorResponse for PaymentFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<String>) {
+        self.raw_connector_response = response;
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentVoidData {
     pub connector_transaction_id: String,
     pub cancellation_reason: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -230,6 +243,7 @@ pub struct PaymentsAuthorizeData {
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
     pub merchant_config_currency: Option<hyperswitch_common_enums::Currency>,
+    pub all_keys_required: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -244,6 +258,7 @@ pub struct PaymentsSyncData {
     pub currency: hyperswitch_common_enums::Currency,
     pub payment_experience: Option<hyperswitch_common_enums::PaymentExperience>,
     pub amount: MinorUnit,
+    pub all_keys_required: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -278,6 +293,7 @@ pub enum PaymentsResponseData {
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
+        raw_connector_response: Option<String>,
     },
     SessionResponse {
         session_token: String,
@@ -308,12 +324,14 @@ pub struct RefundSyncData {
     pub reason: Option<String>,
     pub refund_connector_metadata: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
     pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub all_keys_required: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -321,6 +339,13 @@ pub struct RefundFlowData {
     pub status: hyperswitch_common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
+    pub raw_connector_response: Option<String>,
+}
+
+impl RawConnectorResponse for RefundFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<String>) {
+        self.raw_connector_response = response;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -574,6 +599,13 @@ pub struct DisputeFlowData {
     pub connector_dispute_id: String,
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
+    pub raw_connector_response: Option<String>,
+}
+
+impl RawConnectorResponse for DisputeFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<String>) {
+        self.raw_connector_response = response;
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -581,6 +613,7 @@ pub struct DisputeResponseData {
     pub connector_dispute_id: String,
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
