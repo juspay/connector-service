@@ -1,1 +1,1 @@
-pub use grpc_api_types::{health_check, payments};
+pub use grpc_api_types::{self, health_check, payments};
