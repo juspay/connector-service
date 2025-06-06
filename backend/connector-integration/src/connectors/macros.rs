@@ -179,7 +179,7 @@ macro_rules! expand_fn_get_request_body {
 pub(crate) use expand_fn_get_request_body;
 
 macro_rules! expand_fn_handle_response {
-    // When preprocess is true
+    // When preprocess_response is true
     ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, true) => {
         fn handle_response_v2(
             &self,
@@ -209,7 +209,7 @@ macro_rules! expand_fn_handle_response {
         }
     };
 
-    // When preprocess is false or any other value
+    // When preprocess_response is false or any other value
     ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, false) => {
         fn handle_response_v2(
             &self,
@@ -283,7 +283,7 @@ macro_rules! expand_default_functions {
 pub(crate) use expand_default_functions;
 
 macro_rules! macro_connector_implementation {
-    // Version with preprocess parameter explicitly set
+    // Version with preprocess_response parameter explicitly set
     (
         connector_default_implementations: [$($function_name: ident), *],
         connector: $connector: ty,
@@ -294,7 +294,7 @@ macro_rules! macro_connector_implementation {
         flow_request:$request: ty,
         flow_response:$response: ty,
         http_method: $http_method_type:ident,
-        preprocess: $preprocess: expr,
+        preprocess_response: $preprocess_response: expr,
         other_functions: {
             $($function_def: tt)*
         }
@@ -341,7 +341,7 @@ macro_rules! macro_connector_implementation {
         }
     };
 
-    // Version without preprocess parameter (defaults to false)
+    // Version without preprocess_response parameter (defaults to false)
     (
         connector_default_implementations: [$($function_name: ident), *],
         connector: $connector: ty,
