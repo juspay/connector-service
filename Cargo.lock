@@ -1014,6 +1014,7 @@ dependencies = [
  "serde_with",
  "strum 0.26.3",
  "time",
+ "tracing",
  "url",
  "uuid",
 ]
