@@ -189,7 +189,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess: true, // Keeping true for Authorize.net which needs BOM handling
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
     other_functions: {
         fn get_headers(
             &self,
@@ -217,7 +217,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess: true, // Keeping true for Authorize.net which needs BOM handling
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
     other_functions: {
         fn get_headers(
             &self,
@@ -245,7 +245,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess: true, // Keeping true for Authorize.net which needs BOM handling
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
     other_functions: {
         fn get_headers(
             &self,
@@ -273,7 +273,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess: true, // Keeping true for Authorize.net which needs BOM handling
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
     other_functions: {
         fn get_headers(
             &self,
@@ -302,7 +302,7 @@ macros::macro_connector_implementation!(
 //     flow_request: RefundsData,
 //     flow_response: RefundsResponseData,
 //     http_method: Post,
-//     preprocess: true, // Keeping true for Authorize.net which needs BOM handling
+//     preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
 //     other_functions: {
 //         fn get_headers(
 //             &self,
