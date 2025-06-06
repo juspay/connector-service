@@ -1,6 +1,11 @@
+use serde_json::Value;
 use std::str::FromStr;
 
-use crate::consts;
+use crate::{
+    configs::{Config, ServiceType},
+    consts,
+    logger::config,
+};
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
 use error_stack::Report;
@@ -94,6 +99,153 @@ pub fn auth_from_metadata(
     }
 }
 
+pub fn config_from_metadata(
+    metadata: &metadata::MetadataMap,
+    mut config: Config,
+) -> CustomResult<Config, ApplicationErrorResponse> {
+    // Get the override JSON from metadata
+    let override_json = match metadata.get("x-config-override") {
+        Some(value) => {
+            let json_str = value.to_str().map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".to_string(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid JSON in x-config-override: {}", e),
+                    error_object: None,
+                }))
+            })?;
+
+            serde_json::from_str::<Value>(json_str).map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_JSON_FORMAT".to_string(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid JSON format in x-config-override: {}", e),
+                    error_object: None,
+                }))
+            })?
+        }
+        None => return Ok(config), // If no override provided, return the original config
+    };
+
+    // Apply overrides based on the JSON structure
+    if let Some(connectors) = override_json.get("connectors").and_then(Value::as_object) {
+        for (connector_name, connector_config) in connectors {
+            match connector_name.as_str() {
+                "adyen" => {
+                    if let Some(settings) = connector_config.as_object() {
+                        if let Some(base_url) = settings.get("base_url").and_then(Value::as_str) {
+                            config.connectors.adyen.base_url = base_url.to_string();
+                        }
+                    }
+                }
+                "razorpay" => {
+                    if let Some(settings) = connector_config.as_object() {
+                        if let Some(base_url) = settings.get("base_url").and_then(Value::as_str) {
+                            config.connectors.razorpay.base_url = base_url.to_string();
+                        }
+                    }
+                }
+                // Add other connectors as needed
+                _ => {
+                    tracing::warn!("Unknown connector in config override: {}", connector_name);
+                }
+            }
+        }
+    }
+
+    // proxy
+    if let Some(proxy) = override_json.get("proxy").and_then(Value::as_object) {
+        if let Some(timeout) = proxy.get("idle_pool_connection_timeout") {
+            if let Some(timeout_val) = timeout.as_u64() {
+                config.proxy.idle_pool_connection_timeout = Some(timeout_val);
+            }
+        }
+        if let Some(bypass) = proxy.get("bypass_proxy_urls").and_then(Value::as_array) {
+            let urls = bypass
+                .iter()
+                .filter_map(Value::as_str)
+                .map(String::from)
+                .collect();
+            config.proxy.bypass_proxy_urls = urls;
+        }
+    }
+
+    // metrics
+    if let Some(metrics) = override_json.get("metrics") {
+        if let Some(host) = metrics.get("host").and_then(Value::as_str) {
+            config.metrics.host = host.to_string();
+        }
+        if let Some(port) = metrics.get("port").and_then(Value::as_u64) {
+            config.metrics.port = u16::try_from(port).map_err(|_| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PORT_RANGE".to_string(),
+                    error_identifier: 400,
+                    error_message: "Port number out of range for u16".to_string(),
+                    error_object: None,
+                }))
+            })?;
+        }
+    }
+
+    // server
+    if let Some(server) = override_json.get("server") {
+        if let Some(host) = server.get("host").and_then(Value::as_str) {
+            config.server.host = host.to_string();
+        }
+        if let Some(port) = server.get("port").and_then(Value::as_u64) {
+            config.server.port = u16::try_from(port).map_err(|_| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PORT_RANGE".to_string(),
+                    error_identifier: 400,
+                    error_message: "Port number out of range for u16".to_string(),
+                    error_object: None,
+                }))
+            })?;
+        }
+        if let Some(server_type) = server.get("type").and_then(Value::as_str) {
+            config.server.type_ = match server_type {
+                "http" => ServiceType::Http,
+                "https" => ServiceType::Grpc,
+                _ => {
+                    return Err(Report::new(ApplicationErrorResponse::BadRequest(
+                        ApiError {
+                            sub_code: "INVALID_SERVER_TYPE".to_string(),
+                            error_identifier: 400,
+                            error_message: format!("Invalid server type: {}", server_type),
+                            error_object: None,
+                        },
+                    )))
+                }
+            };
+        }
+    }
+
+    // log.console
+    if let Some(log) = override_json.get("log").and_then(|v| v.get("console")) {
+        if let Some(enabled) = log.get("enabled").and_then(Value::as_bool) {
+            config.log.console.enabled = enabled;
+        }
+        if let Some(format) = log.get("log_format").and_then(Value::as_str) {
+            config.log.console.log_format = match format {
+                "json" => config::LogFormat::Json,
+                "default" => config::LogFormat::Default,
+                _ => {
+                    return Err(Report::new(ApplicationErrorResponse::BadRequest(
+                        ApiError {
+                            sub_code: "INVALID_LOG_FORMAT".to_string(),
+                            error_identifier: 400,
+                            error_message: format!("Invalid log format: {}", format),
+                            error_object: None,
+                        },
+                    )))
+                }
+            };
+        }
+    }
+
+    Ok(config)
+}
+
 fn parse_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
@@ -140,7 +292,8 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
-
+            let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
+                .into_grpc_status()?;
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
@@ -162,7 +315,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone()))
                 .into_grpc_status()?;
 
             // Create router data
@@ -181,7 +334,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let response_result = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
+                &config.proxy,
                 connector_integration,
                 router_data,
                 payload.all_keys_required,
