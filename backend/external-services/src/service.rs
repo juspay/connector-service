@@ -13,6 +13,7 @@ use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
+use shared_metrics::metrics;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
@@ -29,6 +30,7 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
+    connector_name: &str,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -90,6 +92,10 @@ where
         Some(request) => {
             let url = request.url.clone();
             let method = request.method;
+            metrics::external_service_total_api_calls
+                .with_label_values(&[connector_name, &method.to_string()])
+                .inc();
+            let external_service_start_latency = tokio::time::Instant::now();
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
                 .await
                 .change_context(ConnectorError::RequestEncodingFailed)
@@ -102,6 +108,10 @@ where
                         )),
                     );
                 });
+            let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
+            metrics::external_service_api_calls_latency
+                .with_label_values(&[connector_name, &method.to_string()])
+                .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
 
             match response {
@@ -156,6 +166,13 @@ where
                             }?
                         }
                         Err(body) => {
+                            metrics::external_service_api_calls_errors
+                                .with_label_values(&[
+                                    connector_name,
+                                    &method.to_string(),
+                                    body.status_code.to_string().as_str(),
+                                ])
+                                .inc();
                             let error = match body.status_code {
                                 500..=511 => connector.get_5xx_error_response(body, None)?,
                                 _ => connector.get_error_response_v2(body, None)?,
