@@ -4,6 +4,7 @@ use super::macros;
 use crate::types::ResponseRouterData;
 use crate::utils::preprocess_xml_response_bytes;
 use crate::with_error_response_body;
+use bytes::Bytes;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -19,40 +20,33 @@ use domain_types::{
         SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
     },
 };
-use crate::with_response_body;
+use error_stack::ResultExt;
 use hyperswitch_common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    request::RequestContent,
-    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
 };
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+use hyperswitch_interfaces::errors::ConnectorError;
 use hyperswitch_interfaces::{
-    api::{self, ConnectorCommon},
+    api::ConnectorCommon,
     configs::Connectors,
     connector_integration_v2::{self, ConnectorIntegrationV2},
     errors,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use serde::{Deserialize, Serialize, Deserializer, de};
-use std::collections::HashMap;
-use hyperswitch_interfaces::errors::ConnectorError;
-use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret, WithoutType, ExposeInterface};
-use hyperswitch_domain_models::router_data::PaymentMethodToken;
-use hyperswitch_interfaces::consts as hs_interface_consts;
-use domain_types::connector_types::ResponseId as DomainResponseId;
-use transformers :: {self as elavon, ElavonPaymentsResponse, ElavonPSyncResponse, ElavonCaptureResponse, ElavonRefundResponse, XMLElavonRequest, XMLPSyncRequest, XMLCaptureRequest, XMLRefundRequest, XMLRSyncRequest, ElavonRSyncResponse};
-use bytes::Bytes;
+use hyperswitch_masking::Maskable;
+use transformers::{
+    self as elavon, ElavonCaptureResponse, ElavonPSyncResponse, ElavonPaymentsResponse,
+    ElavonRSyncResponse, ElavonRefundResponse, XMLCaptureRequest, XMLElavonRequest,
+    XMLPSyncRequest, XMLRSyncRequest, XMLRefundRequest,
+};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
-
 
 impl ConnectorServiceTrait for Elavon {}
 impl PaymentAuthorizeV2 for Elavon {}
@@ -69,9 +63,6 @@ impl SubmitEvidenceV2 for Elavon {}
 impl DisputeDefend for Elavon {}
 impl IncomingWebhook for Elavon {}
 impl PaymentOrderCreate for Elavon {}
-
-
-
 
 impl ConnectorCommon for Elavon {
     fn id(&self) -> &'static str {
@@ -108,9 +99,7 @@ impl ConnectorCommon for Elavon {
                 match elavon_response.result {
                     elavon::ElavonResult::Error(error_payload) => Ok(ErrorResponse {
                         status_code: res.status_code,
-                        code: error_payload
-                            .error_code
-                            .unwrap_or_else(|| "".to_string()),
+                        code: error_payload.error_code.unwrap_or_else(|| "".to_string()),
                         message: error_payload.error_message,
                         reason: error_payload.error_name,
                         attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
@@ -152,7 +141,6 @@ impl ConnectorCommon for Elavon {
         }
     }
 }
-
 
 macros::create_all_prerequisites!(
     connector_name: Elavon,
@@ -201,7 +189,7 @@ macros::create_all_prerequisites!(
         }
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -210,7 +198,6 @@ macros::create_all_prerequisites!(
         }
     }
 );
-
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type],
@@ -243,9 +230,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
-
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type],
     connector: Elavon,
@@ -277,8 +261,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
-
 impl
     connector_integration_v2::ConnectorIntegrationV2<
         CreateOrder,
@@ -286,7 +268,8 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Elavon
-{}
+{
+}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type],
@@ -388,42 +371,45 @@ impl
         PaymentVoidData,
         PaymentsResponseData,
     > for Elavon
-{}
-
-
-
-impl
-connector_integration_v2::ConnectorIntegrationV2<
-SetupMandate,
-PaymentFlowData,
-SetupMandateRequestData,
-PaymentsResponseData,
-> for Elavon
-{}
+{
+}
 
 impl
-connector_integration_v2::ConnectorIntegrationV2<
-Accept,
-DisputeFlowData,
-AcceptDisputeData,
-DisputeResponseData,
-> for Elavon
-{}
+    connector_integration_v2::ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
 
 impl
-connector_integration_v2::ConnectorIntegrationV2<
-SubmitEvidence,
-DisputeFlowData,
-SubmitEvidenceData,
-DisputeResponseData,
-> for Elavon
-{}
+    connector_integration_v2::ConnectorIntegrationV2<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Elavon
+{
+}
 
 impl
-connector_integration_v2::ConnectorIntegrationV2<
-DefendDispute,
-DisputeFlowData,
-DisputeDefendData,
-DisputeResponseData,
-> for Elavon
-{}
+    connector_integration_v2::ConnectorIntegrationV2<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Elavon
+{
+}
+
+impl
+    connector_integration_v2::ConnectorIntegrationV2<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Elavon
+{
+}

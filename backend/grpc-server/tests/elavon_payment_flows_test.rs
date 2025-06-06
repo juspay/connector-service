@@ -119,6 +119,7 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAu
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
         payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
+        all_keys_required: Some(false),
         ..Default::default()
     }
 }
@@ -182,6 +183,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentsSyncRequest {
     PaymentsSyncRequest {
         resource_id: transaction_id.to_string(),
         connector_request_reference_id: Some(format!("elavon_sync_{}", get_timestamp())),
+        all_keys_required: Some(false),
     }
 }
 
@@ -236,6 +238,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
         connector_meta_data: None,
+        all_keys_required: Some(false),
     }
 }
 
@@ -316,6 +319,7 @@ fn create_refund_request(transaction_id: &str) -> RefundsRequest {
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
+        all_keys_required: Some(false),
     }
 }
 
@@ -325,6 +329,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundsS
         connector_transaction_id: transaction_id.to_string(),
         connector_refund_id: refund_id.to_string(),
         refund_reason: None,
+        all_keys_required: Some(false),
     }
 }
 
