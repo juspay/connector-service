@@ -1188,7 +1188,7 @@ pub fn get_adyen_response(
                 .unwrap_or_else(|| hyperswitch_interfaces::consts::NO_ERROR_MESSAGE.to_string()),
             reason: response.refusal_reason,
             status_code,
-            attempt_status: None,
+            attempt_status: Some(hyperswitch_common_enums::enums::AttemptStatus::Failure),
             connector_transaction_id: Some(response.psp_reference.clone()),
         })
     } else {
