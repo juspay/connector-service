@@ -179,7 +179,38 @@ macro_rules! expand_fn_get_request_body {
 pub(crate) use expand_fn_get_request_body;
 
 macro_rules! expand_fn_handle_response {
-    ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty) => {
+    // When preprocess_response is true
+    ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, true) => {
+        fn handle_response_v2(
+            &self,
+            data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            event_builder: Option<&mut ConnectorEvent>,
+            res: Response,
+        ) -> CustomResult<
+            RouterDataV2<$flow, $resource_common_data, $request, $response>,
+            ConnectorError,
+        > {
+            paste::paste! {let bridge = self.[< $flow:snake >];}
+
+            // Apply preprocessing if specified in the macro
+            let response_bytes = self
+                .preprocess_response_bytes(res.response)
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+            let response_body = bridge.response(response_bytes)?;
+            event_builder.map(|i| i.set_response_body(&response_body));
+            let response_router_data = ResponseRouterData {
+                response: response_body,
+                router_data: data.clone(),
+                http_code: res.status_code,
+            };
+            let result = bridge.router_data(response_router_data)?;
+            Ok(result)
+        }
+    };
+
+    // When preprocess_response is false or any other value
+    ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, false) => {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -252,6 +283,65 @@ macro_rules! expand_default_functions {
 pub(crate) use expand_default_functions;
 
 macro_rules! macro_connector_implementation {
+    // Version with preprocess_response parameter explicitly set
+    (
+        connector_default_implementations: [$($function_name: ident), *],
+        connector: $connector: ty,
+        $(curl_request: $content_type:ident($curl_req: ty),)?
+        curl_response:$curl_res: ty,
+        flow_name:$flow: ident,
+        resource_common_data:$resource_common_data: ty,
+        flow_request:$request: ty,
+        flow_response:$response: ty,
+        http_method: $http_method_type:ident,
+        preprocess_response: $preprocess_response: expr,
+        other_functions: {
+            $($function_def: tt)*
+        }
+    ) => {
+        impl
+            ConnectorIntegrationV2<
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+            > for $connector
+        {
+            fn get_http_method(&self) -> hyperswitch_common_utils::request::Method {
+                hyperswitch_common_utils::request::Method::$http_method_type
+            }
+            $($function_def)*
+            $(
+                macros::expand_default_functions!(
+                    function: $function_name,
+                    flow_name:$flow,
+                    resource_common_data:$resource_common_data,
+                    flow_request:$request,
+                    flow_response:$response,
+                );
+            )*
+            macros::expand_fn_get_request_body!(
+                $connector,
+                $($curl_req,)?
+                $($content_type,)?
+                $curl_res,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response
+            );
+            macros::expand_fn_handle_response!(
+                $connector,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+                true
+            );
+        }
+    };
+
+    // Version without preprocess_response parameter (defaults to false)
     (
         connector_default_implementations: [$($function_name: ident), *],
         connector: $connector: ty,
@@ -303,10 +393,11 @@ macro_rules! macro_connector_implementation {
                 $flow,
                 $resource_common_data,
                 $request,
-                $response
+                $response,
+                false
             );
         }
-    }
+    };
 }
 pub(crate) use macro_connector_implementation;
 
