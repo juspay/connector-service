@@ -1064,7 +1064,7 @@ impl
             s2s_client_ip:"103.159.11.202".to_string(),
             s2s_device_info:"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3".to_string(),
             upiAppName: "phonepe".to_string(),
-            bankcode: "PPINTENT".to_string(),
+            bankcode: "INTENT".to_string(),
             txn_s2s_flow: 2,
             // intent_url : "upi://pay?pa=receiver@upi&pn=Receiver+Name&mc=0000&tid=txn123456&tr=order987654&tn=Test+Payment&am=2.00&cu=INR&url=https://your.site".to_string(),
 
@@ -1234,15 +1234,54 @@ pub struct UpiInAppSdkParams {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct PayUPaymentResponse {
-    pub status: String,
-    pub message: String,
-    pub transaction_id: Option<String>,
-    pub order_id: Option<String>,
-    pub payment_url: Option<String>,
-    pub sdk_params: Option<SdkParams>,
-    pub next_action: Option<String>,
+    // NOTE: PayU success responses often return status as the number 1.
+    // Ensure this matches the actual success response from the API.
+    // If a success response can also have a string status, change this to String.
+    pub status: i32,
+    pub token: String,
+    #[serde(rename = "referenceId")]
+    pub reference_id: String,
+    #[serde(rename = "returnUrl")]
+    pub return_url: String,
+    #[serde(rename = "merchantName")]
+    pub merchant_name: String,
+    #[serde(rename = "merchantVpa")]
+    pub merchant_vpa: String,
+    pub amount: String,
+    #[serde(rename = "intentSdkCombineVerifyAndPayButton")]
+    pub intent_sdk_combine_verify_and_pay_button: Option<String>,
+    #[serde(rename = "txnId")]
+    pub txn_id: String,
+    #[serde(rename = "disableIntentSeamlessFailure")]
+    pub disable_intent_seamless_failure: String,
+    #[serde(rename = "vpaRegex")]
+    pub vpa_regex: String,
+    pub apps: Vec<UpiApp>,
+    #[serde(rename = "upiPushDisabled")]
+    pub upi_push_disabled: String,
+    #[serde(rename = "pushServiceUrl")]
+    pub push_service_url: String,
+    #[serde(rename = "pushServiceUrlV2")]
+    pub push_service_url_v2: String,
+    #[serde(rename = "upiServicePollInterval")]
+    pub upi_service_poll_interval: String,
+    #[serde(rename = "sdkUpiPushExpiry")]
+    pub sdk_upi_push_expiry: String,
+    #[serde(rename = "sdkUpiVerificationInterval")]
+    pub sdk_upi_verification_interval: String,
+    #[serde(rename = "encodedPayuId")]
+    pub encoded_payu_id: String,
+    #[serde(rename = "intentURIData")]
+    pub intent_uri_data: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpiApp {
+    pub name: String,
+    pub package: String,
+}
+
+// This enum will now work correctly
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PayUResponse {
@@ -1257,39 +1296,42 @@ impl<F, Req>
         u16,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _http_code): (
+        (response, data, http_code): (
             PayUResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
             u16,
         ),
     ) -> Result<Self, Self::Error> {
         match response {
+            // Success Case: Handle the payment response
             PayUResponse::PaymentResponse(payment_response) => {
-                let status = if payment_response.payment_url.is_some() {
-                    AttemptStatus::AuthenticationPending
-                } else {
-                    AttemptStatus::Pending
-                };
+                // The presence of a return_url indicates that the user needs to be redirected
+                // for authentication.
+                let status = AttemptStatus::AuthenticationPending;
 
-                let redirect_form = payment_response.payment_url.map(|url| RedirectForm::Form {
-                    endpoint: url,
+                // Create a redirection form using the `return_url` from the response.
+                // The original code used `.payment_url`, we've adapted it to `.return_url`.
+                let redirect_form = RedirectForm::Form {
+                    endpoint: payment_response.return_url,
                     method: Method::Get,
                     form_fields: HashMap::new(),
-                });
+                };
 
+                // Construct the transaction response data.
                 let payment_response_data = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        payment_response.transaction_id.unwrap_or_default(),
-                    ),
-                    redirection_data: Box::new(redirect_form),
+                    // Use `txn_id` for the connector transaction ID.
+                    resource_id: ResponseId::ConnectorTransactionId(payment_response.txn_id),
+                    redirection_data: Box::new(Some(redirect_form)),
+                    // Use `reference_id` as the connector's reference for the order.
+                    connector_response_reference_id: Some(payment_response.reference_id),
+                    mandate_reference: Box::new(None),
+                    // These fields can be populated if the data is available in the response
                     connector_metadata: None,
                     network_txn_id: None,
-                    connector_response_reference_id: payment_response.order_id,
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
                 };
 
                 Ok(Self {
@@ -1301,7 +1343,12 @@ impl<F, Req>
                     ..data
                 })
             }
+
+            // Error Case: Handle the error response
             PayUResponse::ErrorResponse(error_response) => {
+                tracing::info!("shivral inside ------ {:?}", error_response);
+
+                // Convert the connector's error into a standardized error response.
                 Err(hyperswitch_interfaces::errors::ConnectorError::ResponseHandlingFailed)
             }
         }

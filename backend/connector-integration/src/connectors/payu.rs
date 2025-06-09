@@ -181,7 +181,10 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let response: payu::PayUResponse = res
             .response
             .parse_struct("PayUPaymentResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .map_err(|e| {
+                tracing::info!("shivral ------ {:?}", e);
+                errors::ConnectorError::ResponseDeserializationFailed
+            })?;
 
         with_response_body!(event_builder, response);
 
