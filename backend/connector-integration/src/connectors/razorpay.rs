@@ -197,6 +197,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         with_response_body!(event_builder, response);
 
         RouterDataV2::foreign_try_from((
+            //transforms happen here
             response,
             data.clone(),
             res.status_code,

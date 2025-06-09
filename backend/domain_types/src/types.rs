@@ -26,6 +26,7 @@ use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::consts::NO_ERROR_CODE;
+use hyperswitch_masking::Secret;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 
@@ -33,6 +34,7 @@ use std::{collections::HashMap, str::FromStr};
 pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
+    pub payu: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -84,6 +86,31 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value.data {
             Some(data) => match data {
+                grpc_api_types::payments::payment_method_data::Data::Upi(upi) => match upi.data {
+                    Some(grpc_api_types::payments::upi_data::Data::UpiCollect(
+                        upi_collect_data,
+                    )) => Ok(PaymentMethodData::Upi(
+                        hyperswitch_domain_models::payment_method_data::UpiData::UpiCollect(
+                            hyperswitch_domain_models::payment_method_data::UpiCollectData {
+                                vpa_id: upi_collect_data.vpa_id.map(Secret::new),
+                            },
+                        ),
+                    )),
+                    Some(grpc_api_types::payments::upi_data::Data::UpiIntent(_)) => {
+                        Ok(PaymentMethodData::Upi(
+                            hyperswitch_domain_models::payment_method_data::UpiData::UpiIntent(
+                                hyperswitch_domain_models::payment_method_data::UpiIntentData {},
+                            ),
+                        ))
+                    }
+                    None => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_UPI_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Upi data is required".to_owned(),
+                        error_object: None,
+                    })
+                    .into()),
+                },
                 grpc_api_types::payments::payment_method_data::Data::Card(card) => Ok(
                     PaymentMethodData::Card(hyperswitch_domain_models::payment_method_data::Card {
                         card_number: hyperswitch_cards::CardNumber::from_str(&card.card_number)
@@ -301,7 +328,6 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
                 error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                     error_identifier: 400,
-
                     error_message: "Invalid email".to_owned(),
                     error_object: None,
                 }))
@@ -309,74 +335,144 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             None => None,
         };
 
+        let customer_id = value
+            .connector_customer
+            .clone()
+            .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+            .transpose()
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                error_identifier: 400,
+                error_message: "Failed to parse Customer Id".to_owned(),
+                error_object: None,
+            }))?;
+
+        let payment_method_data = value.clone().payment_method_data.ok_or_else(|| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Payment method data is required".to_owned(),
+                error_object: None,
+            })
+        })?;
+
+        let browser_info = value.clone().browser_info.map(|info| {
+            hyperswitch_domain_models::router_request_types::BrowserInformation {
+                color_depth: None,
+                java_enabled: info.java_enabled,
+                java_script_enabled: info.java_script_enabled,
+                language: info.language,
+                screen_height: info.screen_height,
+                screen_width: info.screen_width,
+                time_zone: info.time_zone,
+                ip_address: None,
+                accept_header: info.accept_header,
+                user_agent: info.user_agent,
+            }
+        });
+
+        // Convert enum fields with error handling
+        let currency =
+            hyperswitch_common_enums::Currency::foreign_try_from(value.clone().currency())?;
+
+        // Convert amounts to MinorUnit
+        let order_tax_amount = value
+            .order_tax_amount
+            .map(|amount| hyperswitch_common_utils::types::MinorUnit::new(amount));
+
+        let shipping_cost = value
+            .shipping_cost
+            .map(|cost| hyperswitch_common_utils::types::MinorUnit::new(cost));
+
         Ok(Self {
-            payment_method_data: PaymentMethodData::foreign_try_from(
-                value.clone().payment_method_data.ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
-                })?,
-            )?,
+            // Original fields
+            payment_method_data: PaymentMethodData::foreign_try_from(payment_method_data)?,
             amount: value.amount,
-            currency: hyperswitch_common_enums::Currency::foreign_try_from(value.currency())?,
-            confirm: true,
-            webhook_url: value.webhook_url,
-            browser_info: value.browser_info.map(|info| {
-                hyperswitch_domain_models::router_request_types::BrowserInformation {
-                    color_depth: None,
-                    java_enabled: info.java_enabled,
-                    java_script_enabled: info.java_script_enabled,
-                    language: info.language,
-                    screen_height: info.screen_height,
-                    screen_width: info.screen_width,
-                    time_zone: info.time_zone,
-                    ip_address: None,
-                    accept_header: info.accept_header,
-                    user_agent: info.user_agent,
-                }
-            }),
-            payment_method_type: Some(hyperswitch_common_enums::PaymentMethodType::Credit), //TODO
-            minor_amount: hyperswitch_common_utils::types::MinorUnit::new(value.minor_amount),
+            order_tax_amount,
             email,
-            customer_name: None,
+            customer_name: value.customer_name,
+            currency,
+            confirm: true,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
             capture_method: None,
-            router_return_url: value.return_url,
-            complete_authorize_url: None,
+            router_return_url: value.return_url.clone(),
+            webhook_url: value.webhook_url,
+            complete_authorize_url: value.complete_authorize_url,
+            mandate_id: None, // Could be derived from payment_method_token if needed
             setup_future_usage: None,
-            mandate_id: None,
-            off_session: None,
-            order_category: None,
-            session_token: None,
-            enrolled_for_3ds: false,
+            off_session: value.off_session,
+            browser_info,
+            order_category: value.order_category,
+            session_token: value.session_token,
+            enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
             payment_experience: None,
-            customer_id: value
-                .connector_customer
-                .clone()
-                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
-            request_incremental_authorization: false,
-            metadata: None,
-            merchant_order_reference_id: None,
-            order_tax_amount: None,
-            shipping_cost: None,
+            payment_method_type: None,
+            customer_id,
+            request_incremental_authorization: value.request_incremental_authorization,
+            metadata: None, // Could construct from UDF fields if needed
+            minor_amount: hyperswitch_common_utils::types::MinorUnit::new(value.minor_amount),
+            merchant_order_reference_id: value.merchant_order_reference_id,
+            shipping_cost,
             merchant_account_id: None,
             merchant_config_currency: None,
+
+            // New fields mapped directly from PaymentsAuthorizeRequest
+            connector_customer: value.connector_customer,
+            auth_type: None,
+            connector_meta_data: value.connector_meta_data,
+            connector_request_reference_id: value.connector_request_reference_id,
+            return_url: value.return_url,
+            request_extended_authorization: value.request_extended_authorization,
+
+            // Payu-specific fields
+            key: value.key,
+            txnid: value.txnid,
+            productinfo: value.productinfo,
+            firstname: value.firstname,
+            lastname: value.lastname,
+            phone: value.phone,
+            surl: value.surl,
+            furl: value.furl,
+            hash: value.hash,
+            pg: value.pg,
+            bankcode: value.bankcode,
+            address1: value.address1,
+            address2: value.address2,
+            city: value.city,
+            state: value.state,
+            country: value.country,
+            zipcode: value.zipcode,
+            udf1: value.udf1,
+            udf2: value.udf2,
+            udf3: value.udf3,
+            udf4: value.udf4,
+            udf5: value.udf5,
+            udf6: value.udf6,
+            udf7: value.udf7,
+            udf8: value.udf8,
+            udf9: value.udf9,
+            udf10: value.udf10,
+            offer_key: value.offer_key,
+            txn_s2s_flow: value.txn_s2s_flow,
+            s2s_client_ip: value.s2s_client_ip,
+            s2s_device_info: value.s2s_device_info,
+            vpa: value.vpa,
+            api_version: value.api_version,
+            si: value.si,
+            si_details: value.si_details,
+            pre_authorize: value.pre_authorize,
+            beneficiarydetail: value.beneficiarydetail,
+            user_token: value.user_token,
+            offer_auto_apply: value.offer_auto_apply,
+            additional_charges: value.additional_charges,
+            additional_gst_charges: value.additional_gst_charges,
+            upi_app_name: value.upi_app_name,
+            split_request: value.split_request,
         })
     }
 }
-
 impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
     for hyperswitch_domain_models::payment_address::PaymentAddress
 {

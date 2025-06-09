@@ -39,39 +39,103 @@ enum DisputeStatus {
 }
 
 message PaymentsAuthorizeRequest {
-  int64 amount = 10;
-  Currency currency = 15;
-  PaymentMethod payment_method = 2;
-  PaymentMethodData payment_method_data = 14;
-  optional string connector_customer = 1;
-  PaymentAddress address = 3;
-AuthenticationType auth_type = 4;
-  optional bytes connector_meta_data = 5;
-  optional AccessToken access_token = 6;
-  optional string session_token = 7;
-  optional PaymentMethodToken payment_method_token = 8;
-  string connector_request_reference_id = 9;
-  optional int64 order_tax_amount = 11;
-  optional string email = 12;
-  optional string customer_name = 13;
-  optional CaptureMethod capture_method = 16;
-  optional string return_url = 17;
-  optional string webhook_url = 18;
-  optional string complete_authorize_url = 19;
-  optional FutureUsage setup_future_usage = 20;
-  optional bool off_session = 21;
-  optional CustomerAcceptance customer_acceptance = 22;
-  optional BrowserInformation browser_info = 23;
-  optional string order_category = 24;
-  bool enrolled_for_3ds = 25;
-  optional PaymentExperience payment_experience = 26;
-  optional PaymentMethodType payment_method_type = 27;
-  bool request_incremental_authorization = 28;
-  optional AuthenticationData authentication_data = 29;
-  optional bool request_extended_authorization = 30;
-  int64 minor_amount = 31;
-  optional string merchant_order_reference_id = 32;
-  optional int64 shipping_cost = 33;
+      int64 amount = 10;
+    Currency currency = 15;
+    PaymentMethod payment_method = 2;
+    PaymentMethodData payment_method_data = 14;
+    optional string connector_customer = 1;
+    PaymentAddress address = 3;
+    AuthenticationType auth_type = 4;
+    optional bytes connector_meta_data = 5;
+    optional AccessToken access_token = 6;
+    optional string session_token = 7;
+    optional PaymentMethodToken payment_method_token = 8;
+    string connector_request_reference_id = 9;
+    optional int64 order_tax_amount = 11;
+    optional string email = 12;
+    optional string customer_name = 13;
+    optional CaptureMethod capture_method = 16;
+    optional string return_url = 17;
+    optional string webhook_url = 18;
+    optional string complete_authorize_url = 19;
+    optional FutureUsage setup_future_usage = 20;
+    optional bool off_session = 21;
+    optional CustomerAcceptance customer_acceptance = 22;
+    optional BrowserInformation browser_info = 23;
+    optional string order_category = 24;
+    bool enrolled_for_3ds = 25;
+    optional PaymentExperience payment_experience = 26;
+    optional PaymentMethodType payment_method_type = 27;
+    bool request_incremental_authorization = 28;
+    optional AuthenticationData authentication_data = 29;
+    optional bool request_extended_authorization = 30;
+    int64 minor_amount = 31;
+    optional string merchant_order_reference_id = 32;
+    optional int64 shipping_cost = 33;
+
+    // Converted PayuUpiTransactionRequest fields
+    string key = 34;
+    string txnid = 35;
+    string productinfo = 36;
+    string firstname = 37;
+    optional string lastname = 38;
+    string phone = 39;
+    string surl = 40;
+    optional string furl = 41;
+    string hash = 42;
+    optional string pg = 43;
+    optional string bankcode = 44;
+    optional string address1 = 45;
+    optional string address2 = 46;
+    optional string city = 47;
+    optional string state = 48;
+    optional string country = 49;
+    optional string zipcode = 50;
+    optional string udf1 = 51;
+    optional string udf2 = 52;
+    optional string udf3 = 53;
+    optional string udf4 = 54;
+    optional string udf5 = 55;
+    optional string udf6 = 56;
+    optional string udf7 = 57;
+    optional string udf8 = 58;
+    optional string udf9 = 59;
+    optional string udf10 = 60;
+    optional string offer_key = 61;
+    string txn_s2s_flow = 62;
+    string s2s_client_ip = 63;
+    string s2s_device_info = 64;
+    optional string vpa = 65;
+    optional string api_version = 66;
+    optional int32 si = 67;
+    optional string si_details = 68;
+    optional int32 pre_authorize = 69;
+    optional string beneficiarydetail = 70;
+    optional string user_token = 71;
+    optional int32 offer_auto_apply = 72;
+    optional string additional_charges = 73;
+    optional string additional_gst_charges = 74;
+    optional string upiAppName = 75;
+
+    // SplitInfo and SubMerchantSplit fields
+    message SplitInfo {
+        string type = 76;
+        repeated KeyValuePair splitInfo = 77; // Preserves key order
+    }
+
+    message KeyValuePair {
+        string key = 78;
+        SubMerchantSplit value = 79;
+    }
+
+    message SubMerchantSplit {
+        optional string aggregatorSubTxnId = 80;
+        string aggregatorSubAmt = 81;
+        optional string aggregatorCharges = 82;
+    }
+
+    optional SplitInfo splitRequest = 83;
+
 }
 
 message PaymentsAuthorizeResponse {
@@ -681,8 +745,24 @@ enum PaymentMethodType {
 message PaymentMethodData {
   oneof data {
     Card card = 1;
+    UpiData upi = 3;
+
   }
 }
+
+message UpiData {
+  oneof data {
+    UpiCollectData upi_collect = 1;
+    UpiIntentData upi_intent = 2;
+  }
+}
+
+message UpiCollectData {
+  optional string vpa_id = 1;
+}
+
+message UpiIntentData {}
+
 
 message Card {
   string card_number = 1;

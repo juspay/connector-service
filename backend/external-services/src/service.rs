@@ -14,7 +14,7 @@ use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
 use std::{str::FromStr, time::Duration};
-use tracing::field::Empty;
+use tracing::{field::Empty, info_span};
 
 use hyperswitch_interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
@@ -69,6 +69,11 @@ where
     let mut router_data = router_data.clone();
 
     let req = connector_request.as_ref().map(|connector_request| {
+        let body = connector_request.body.as_ref();
+        tracing::info!("shivral ------ ");
+        tracing::info!("shivral ------ {:?}", body);
+
+        tracing::Span::current().record("body", tracing::field::debug(body));
         let masked_request = match connector_request.body.as_ref() {
             Some(request) => match request {
                 RequestContent::Json(i)
@@ -87,7 +92,9 @@ where
     let result = match connector_request {
         Some(request) => {
             let url = request.url.clone();
-            let method = request.method;
+            let method = request.method.clone();
+            let body = request.body.as_ref().unwrap();
+
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
                 .await
                 .change_context(ConnectorError::RequestEncodingFailed)
@@ -104,10 +111,14 @@ where
 
             match response {
                 Ok(body) => {
-                    tracing::Span::current().record("url", tracing::field::display(url));
+                    tracing::Span::current().record("url", tracing::field::display(&url));
                     tracing::Span::current().record("method", tracing::field::display(method));
+
                     let response = match body {
                         Ok(body) => {
+                            tracing::Span::current()
+                                .record("shivral", tracing::field::debug(body.clone()));
+
                             let status_code = body.status_code;
                             if let Ok(response) =
                                 serde_json::from_slice::<serde_json::Value>(&body.response)
@@ -146,6 +157,9 @@ where
                             }?
                         }
                         Err(body) => {
+                            tracing::Span::current()
+                                .record("shivral", tracing::field::debug(body.clone()));
+
                             let error = match body.status_code {
                                 500..=511 => connector.get_5xx_error_response(body, None)?,
                                 _ => connector.get_error_response_v2(body, None)?,
@@ -157,7 +171,7 @@ where
                     Ok(response)
                 }
                 Err(err) => {
-                    tracing::Span::current().record("url", tracing::field::display(url));
+                    tracing::Span::current().record("url", tracing::field::display(&url));
                     Err(err.change_context(ConnectorError::ProcessingStepFailed(None)))
                 }
             }
@@ -208,6 +222,13 @@ pub async fn call_connector_api(
                 let client = client.post(url);
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => {
+                        tracing::info!(
+                            "shivral ------ {:?}",
+                            serde_urlencoded::to_string(&payload).unwrap_or_default()
+                        );
+                        client.form(&payload)
+                    }
                     _ => client,
                 }
             }
@@ -215,8 +236,11 @@ pub async fn call_connector_api(
         }
         .add_headers(headers)
     };
+
     let send_request = async {
         request.send().await.map_err(|error| {
+            tracing::info!("shivral ------ {:?}", error);
+
             let api_error = match error {
                 error if error.is_timeout() => ApiClientError::RequestTimeoutReceived,
                 _ => ApiClientError::RequestNotSent(error.to_string()),

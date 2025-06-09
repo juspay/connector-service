@@ -31,6 +31,7 @@ Processor Agnostic Payments
 ---
 
 <a name="introduction"></a>
+
 ## 🔌 Introduction
 
 > The "Linux moment" for payments.
@@ -42,20 +43,21 @@ Processor Agnostic Payments
 - Supports all payment payment life-cycle management operations like including authorization, capture, refunds, status and chargebacks across processors
 - Client-SDKs in multiple programming languages (Java, Python, Go, Rust, PHP) for rapid integration.
 
-The objective is to liberate merchants and fintechs from being locked-in to the contract of a single payment processor and make switching payment processors a breeze.  Given its open source nature, we expect it to eventually encompass the widest variety of processor support across the globe through community contributions and support.
+The objective is to liberate merchants and fintechs from being locked-in to the contract of a single payment processor and make switching payment processors a breeze. Given its open source nature, we expect it to eventually encompass the widest variety of processor support across the globe through community contributions and support.
 
 The Connector Service has been in production since Jan 2023 and is a part of Hyperswitch - Composable & Open Source Payment Orchestration platform, built by the team from Juspay.
 
-Built for scalability and portability, it allows businesses to seamlessly switch processors without disrupting their internal business logic.  One can think of this as the payments equivalent of the [open telemetry](https://opentelemetry.io/) and [open feature](https://openfeature.dev/).
+Built for scalability and portability, it allows businesses to seamlessly switch processors without disrupting their internal business logic. One can think of this as the payments equivalent of the [open telemetry](https://opentelemetry.io/) and [open feature](https://openfeature.dev/).
 
 ---
 
 <a name="architecture-overview"></a>
+
 ## 🏗️ Architecture Overview
 
 The connector service comprises of two major runtime components:
 
-- a **gRPC service** that offers a unified interface for all merchant payment operations supported by different payment processors around the world.  This service would run as part of your application deployment.  Some of these operations include:
+- a **gRPC service** that offers a unified interface for all merchant payment operations supported by different payment processors around the world. This service would run as part of your application deployment. Some of these operations include:
   - authorization
   - capture
   - refund
@@ -75,9 +77,10 @@ The connector service comprises of two major runtime components:
 ---
 
 <a name="component-overview"></a>
+
 ## 🏗️ Component / Implementation Overview
 
-The code for the project is organized in the following directory structure.  The details for the key directories is explained below:
+The code for the project is organized in the following directory structure. The details for the key directories is explained below:
 
 ```
 connector-service/
@@ -106,7 +109,7 @@ connector-service/
 
 ### Connector Integration Trait
 
-The `connector-integration` component uses Rust's [trait mechanism](https://doc.rust-lang.org/book/ch10-02-traits.html) to allow each payment processor to define its implementation for a particular payment operation.  Each payment operation is expected to implement the following set of functions that enables the framework to create and invoke the appropriate API of the payment processor.
+The `connector-integration` component uses Rust's [trait mechanism](https://doc.rust-lang.org/book/ch10-02-traits.html) to allow each payment processor to define its implementation for a particular payment operation. Each payment operation is expected to implement the following set of functions that enables the framework to create and invoke the appropriate API of the payment processor.
 
 ```rust
 trait ConnectorIntegration<Flow, ResourceCommonData, Req, Resp> {
@@ -133,8 +136,11 @@ trait IncomingWebhook {
    fn process_refund_webhook();
 }
 ```
+
 ---
+
 <a name="getting-started"></a>
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -151,6 +157,7 @@ Before setting up the project, ensure you have the following pre-requisites inst
 ##### MacOS
 
 1. **Setup Rust/Cargo**
+
    ```shell
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
@@ -178,6 +185,7 @@ Before setting up the project, ensure you have the following pre-requisites inst
    ```
 
 ---
+
 ##### Windows
 
 1. **Setup Rust/Cargo**
@@ -188,6 +196,7 @@ Run the downloaded executable (rustup-init.exe)
 Follow the on-screen instructions
 
 **Option 2:** Using powershell
+
 ```bash
 winget install -e --id Rustlang.Rust.GNU
 ```
@@ -198,14 +207,17 @@ winget install -e --id Rustlang.Rust.GNU
    ```
 
 ---
+
 ##### Linux
 
 1. **Setup Rust/Cargo**
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 2. **Setup grpcurl**
+
 ```bash
 # Download the latest grpcurl release (replace version if needed)
 curl -sLO https://github.com/fullstorydev/grpcurl/releases/latest/download/grpcurl_$(uname -s)_$(uname -m).tar.gz
@@ -219,24 +231,26 @@ sudo mv grpcurl /usr/local/bin/
 # Verify the installation
 grpcurl --version
 ```
+
 ---
 
 <a name="project-setup"></a>
+
 ### 💻 Project Setup
 
 Test the gRPC endpoints using client SDKs or Postman alternatives that support gRPC. Sample SDKs are available in the `sdk` directory for Python, Rust, etc.
 
 1. Clone the Project
 
-    ```bash
-    git clone https://github.com/juspay/connector-service.git
-    ```
+   ```bash
+   git clone https://github.com/juspay/connector-service.git
+   ```
 
 2. Navigate into your project directory
 
-    ```bash
-    cd connector-service
-    ```
+   ```bash
+   cd connector-service
+   ```
 
 3. Compile the project
 
@@ -258,6 +272,7 @@ Test the gRPC endpoints using client SDKs or Postman alternatives that support g
 ---
 
 <a name="testing-your-local-setup"></a>
+
 ### Testing your Local Setup
 
 You can test your gRPC service with a command like this:
@@ -279,7 +294,6 @@ grpcurl -plaintext -d '{
 The final part of the command — **localhost:8000 ucs.payments.PaymentService/VoidPayment** — corresponds to the **VoidPayment** RPC defined in your **payment.proto** file. Depending on which RPC method you want to invoke, you can replace **VoidPayment** with any of the following method names defined under PaymentService.
 
 _Note: 💡 Replace all placeholders (YOUR_CONNECTOR_REFERENCE_ID, CONNECTOR_API_KEY, etc.) with actual values for your payments processors._
-
 
 On running the above grpcURL command, you'll should see a response like the following:
 
@@ -311,6 +325,7 @@ git push origin feature/new-connector
 Ensure all code is linted and tested:
 
 #### 🛠️ Linting and Testing Your Code
+
 Ensure that all your code is linted and formatted properly by running the following commands:
 
 1. Lint the code with Clippy:
@@ -330,19 +345,22 @@ What clippy does:
 ```bash
 cargo +nightly fmt --all
 ```
+
 What cargo fmt does:
 
 - Uses the nightly Rust compiler, enabling experimental features.
 - Formats your code consistently according to Rust's style guide.
 
 ---
+
 <a name="supported-payment-processors-and-methods"></a>
+
 ## Supported payment processors and methods
 
 | Connector       | Authorize | Capture | Sale | Refunds | Disputes | Status | Webhooks |
-|-----------------|-----------|---------|------|---------|----------|--------|----------|
+| --------------- | --------- | ------- | ---- | ------- | -------- | ------ | -------- |
 | Stripe          |           |         |      |         |          |        |          |
-| Adyen           | ✔️         | ✔️       | ✔️    | ✔️       | ✔️        | ✔️      | ✔️        |
+| Adyen           | ✔️        | ✔️      | ✔️   | ✔️      | ✔️       | ✔️     | ✔️       |
 | Paypal          |           |         |      |         |          |        |          |
 | Braintree       |           |         |      |         |          |        |          |
 | Authorize.net   |           |         |      |         |          |        |          |
@@ -354,15 +372,15 @@ What cargo fmt does:
 | Global Payments |           |         |      |         |          |        |          |
 | Elavon          |           |         |      |         |          |        |          |
 | Paytm           |           |         |      |         |          |        |          |
-| Razorpay        | ✔️         | ✔️       | ✔️    | ✔️       |          | ✔️      | ✔️        |
+| Razorpay        | ✔️        | ✔️      | ✔️   | ✔️      |          | ✔️     | ✔️       |
 | Phonepe         |           |         |      |         |          |        |          |
-| PayU            |           |         |      |         |          |        |          |
+| Payu            |           |         |      |         |          |        |          |
 | Billdesk        |           |         |      |         |          |        |          |
-
 
 ---
 
 <a name="related-projects"></a>
+
 ## 🔗 Related Projects
 
 ### [Hyperswitch](https://github.com/juspay/hyperswitch)

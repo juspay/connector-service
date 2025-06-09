@@ -26,6 +26,7 @@ use std::collections::HashMap;
 pub enum ConnectorEnum {
     Adyen,
     Razorpay,
+    Payu,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -166,6 +167,7 @@ pub struct PaymentVoidData {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData {
+    // Original fields
     pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
@@ -210,8 +212,60 @@ pub struct PaymentsAuthorizeData {
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
     pub merchant_config_currency: Option<hyperswitch_common_enums::Currency>,
-}
 
+    // New fields from PaymentsAuthorizeRequest
+    pub connector_customer: Option<String>,
+    pub auth_type: Option<hyperswitch_common_enums::AuthenticationType>,
+    pub connector_meta_data: Option<Vec<u8>>,
+    pub connector_request_reference_id: String,
+    pub return_url: Option<String>,
+    pub request_extended_authorization: Option<bool>,
+
+    // Payu-specific fields (converted from PaymentsAuthorizeRequest)
+    pub key: String,
+    pub txnid: String,
+    pub productinfo: String,
+    pub firstname: String,
+    pub lastname: Option<String>,
+    pub phone: String,
+    pub surl: String,
+    pub furl: Option<String>,
+    pub hash: String,
+    pub pg: Option<String>,
+    pub bankcode: Option<String>,
+    pub address1: Option<String>,
+    pub address2: Option<String>,
+    pub city: Option<String>,
+    pub state: Option<String>,
+    pub country: Option<String>,
+    pub zipcode: Option<String>,
+    pub udf1: Option<String>,
+    pub udf2: Option<String>,
+    pub udf3: Option<String>,
+    pub udf4: Option<String>,
+    pub udf5: Option<String>,
+    pub udf6: Option<String>,
+    pub udf7: Option<String>,
+    pub udf8: Option<String>,
+    pub udf9: Option<String>,
+    pub udf10: Option<String>,
+    pub offer_key: Option<String>,
+    pub txn_s2s_flow: String,
+    pub s2s_client_ip: String,
+    pub s2s_device_info: String,
+    pub vpa: Option<String>,
+    pub api_version: Option<String>,
+    pub si: Option<i32>,
+    pub si_details: Option<String>,
+    pub pre_authorize: Option<i32>,
+    pub beneficiarydetail: Option<String>,
+    pub user_token: Option<String>,
+    pub offer_auto_apply: Option<i32>,
+    pub additional_charges: Option<String>,
+    pub additional_gst_charges: Option<String>,
+    pub upi_app_name: Option<String>,
+    pub split_request: Option<grpc_api_types::payments::payments_authorize_request::SplitInfo>,
+}
 #[derive(Debug, Default, Clone)]
 pub struct PaymentsSyncData {
     pub connector_transaction_id: ResponseId,
