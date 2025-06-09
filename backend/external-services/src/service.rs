@@ -16,6 +16,7 @@ use serde_json::json;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
+use domain_types::connector_types::RawConnectorResponse;
 use hyperswitch_interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
 };
@@ -27,12 +28,13 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    all_keys_required: Option<bool>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
     Req: Clone + 'static + std::fmt::Debug,
     Resp: Clone + 'static + std::fmt::Debug,
-    ResourceCommonData: Clone + 'static,
+    ResourceCommonData: Clone + 'static + RawConnectorResponse,
 {
     let span = tracing::info_span!(
         "ucs_outgoing_app_data",
@@ -84,7 +86,6 @@ where
         tracing::info!(request=?masked_request, "request of connector");
         masked_request
     });
-
     let result = match connector_request {
         Some(request) => {
             let url = request.url.clone();
@@ -102,6 +103,7 @@ where
                     );
                 });
             tracing::info!(?response, "response from connector");
+
             match response {
                 Ok(body) => {
                     tracing::Span::current().record("url", tracing::field::display(url));
@@ -141,7 +143,15 @@ where
                                 connector.handle_response_v2(&router_data, None, body.clone());
 
                             match handle_response_result {
-                                Ok(data) => Ok(data),
+                                Ok(mut data) => {
+                                    if all_keys_required.unwrap_or(false) {
+                                        let raw_response_string =
+                                            String::from_utf8(body.response.to_vec()).ok();
+                                        data.resource_common_data
+                                            .set_raw_connector_response(raw_response_string);
+                                    }
+                                    Ok(data)
+                                }
                                 Err(err) => Err(err),
                             }?
                         }
@@ -189,6 +199,7 @@ pub async fn call_connector_api(
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
+
     let should_bypass_proxy = proxy.bypass_proxy_urls.contains(&url.to_string());
 
     let client = create_client(
@@ -214,7 +225,6 @@ pub async fn call_connector_api(
         }
         .add_headers(headers)
     };
-
     let send_request = async {
         request.send().await.map_err(|error| {
             let api_error = match error {
@@ -230,6 +240,7 @@ pub async fn call_connector_api(
     };
 
     let response = send_request.await;
+
     handle_response(response).await
 }
 

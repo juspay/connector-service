@@ -43,7 +43,7 @@ Cargo.toml               # Project metadata and dependencies
 Example of using the payment service client:
 
 ```rust
-use rust_grpc_client::payment_service_client::PaymentServiceClient;
+use rust_grpc_client::payments::payment_service_client::PaymentServiceClient;
 
 // Example usage
 fn main() {
@@ -57,7 +57,7 @@ fn main() {
 Example of using the health check client:
 
 ```rust
-use rust_grpc_client::health_client::HealthClient;
+use rust_grpc_client::health_check::health_client::HealthClient;
 
 fn main() {
     let client = HealthClient::new(/* channel setup here */);

@@ -65,7 +65,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
@@ -73,6 +73,7 @@ mod tests {
                         },
                     },
                     external_latency: None,
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -147,6 +148,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -227,7 +229,7 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
@@ -235,6 +237,7 @@ mod tests {
                         },
                     },
                     external_latency: None,
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -272,6 +275,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

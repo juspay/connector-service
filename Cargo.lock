@@ -1308,6 +1308,7 @@ dependencies = [
  "serde_json",
  "strum 0.26.3",
  "thiserror 1.0.69",
+ "utoipa",
 ]
 
 [[package]]

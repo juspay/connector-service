@@ -558,7 +558,44 @@ enum PaymentMethodType {
 message PaymentMethodData {
   oneof data {
     Card card = 1;
+    Wallet wallet = 2;
   }
+}
+
+message Wallet {
+  oneof data {
+    GooglePayWalletData google_pay = 1;
+    ApplePayWalletData apple_pay = 2;
+  }
+}
+
+message GooglePayWalletData {
+  string type = 1;
+  string description = 2;
+  GooglePayPaymentMethodInfo info = 3;
+  GpayTokenizationData tokenization_data = 4;
+}
+
+message GooglePayPaymentMethodInfo {
+  string card_network = 1;
+  string card_details = 2;
+}
+
+message GpayTokenizationData {
+  string type = 1;
+  string token = 2;
+}
+
+message ApplePayWalletData {
+  string payment_data = 1;
+  ApplePayPaymentMethod payment_method = 2;
+  string transaction_identifier = 3;
+}
+
+message ApplePayPaymentMethod {
+  string display_name = 1;
+  string network = 2;
+  string pm_type = 3;
 }
 
 message Card {
@@ -613,6 +650,7 @@ message AuthenticationData {
 
 enum PaymentMethod {
   CARD = 0;
+  WALLET = 1;
 }
 
 message PaymentAddress {
