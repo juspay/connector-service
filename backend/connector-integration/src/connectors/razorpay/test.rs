@@ -94,13 +94,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -165,6 +166,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -247,13 +249,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -302,6 +305,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -359,13 +363,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -414,6 +419,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -494,13 +500,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -565,6 +572,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -786,13 +794,14 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
                 },
+                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -855,6 +864,7 @@ mod tests {
                 shipping_cost: None,
                 merchant_account_id: None,
                 merchant_config_currency: None,
+                all_keys_required: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -949,13 +959,14 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
                 },
+                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1018,6 +1029,7 @@ mod tests {
                 shipping_cost: None,
                 merchant_account_id: None,
                 merchant_config_currency: None,
+                all_keys_required: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1111,13 +1123,14 @@ mod tests {
                     connectors: domain_types::types::Connectors {
                         adyen: domain_types::types::ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: domain_types::types::ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1203,13 +1216,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1301,13 +1315,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1356,6 +1371,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),
@@ -1438,13 +1454,14 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
                 },
+                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1554,13 +1571,14 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
                 },
+                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1659,13 +1677,14 @@ mod tests {
                 connectors: Connectors {
                     adyen: ConnectorParams {
                         base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
                 },
+                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),

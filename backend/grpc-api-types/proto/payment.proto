@@ -12,6 +12,32 @@ service PaymentService {
   rpc PaymentCapture(PaymentsCaptureRequest) returns (PaymentsCaptureResponse);
   rpc SetupMandate(SetupMandateRequest) returns (SetupMandateResponse);
   rpc AcceptDispute(AcceptDisputeRequest) returns (AcceptDisputeResponse);
+  rpc SubmitEvidence (SubmitEvidenceRequest) returns (SubmitEvidenceResponse);
+  rpc DefendDispute(DisputeDefendRequest) returns (DisputeDefendResponse);
+}
+
+message DisputeDefendRequest {
+  string defense_reason_code = 1;
+  string connector_dispute_id =3;
+  optional bool all_keys_required = 34;
+}
+
+message DisputeDefendResponse {
+  DisputeStatus dispute_status = 1;
+  string connector_dispute_id = 2;
+  optional string error_code = 3;
+  optional string error_message = 4;
+  optional string raw_connector_response = 11;
+}
+
+enum DisputeStatus {
+  DISPUTE_OPENED = 0;
+  DISPUTE_EXPIRED = 1;
+  DISPUTE_ACCEPTED = 2;
+  DISPUTE_CANCELLED = 3;
+  DISPUTE_CHALLENGED = 4;
+  DISPUTE_WON = 5;
+  DISPUTE_LOST = 6;
 }
 
 message PaymentsAuthorizeRequest {
@@ -48,6 +74,7 @@ AuthenticationType auth_type = 4;
   int64 minor_amount = 31;
   optional string merchant_order_reference_id = 32;
   optional int64 shipping_cost = 33;
+  optional bool all_keys_required = 34;
 }
 
 message PaymentsAuthorizeResponse {
@@ -60,11 +87,13 @@ message PaymentsAuthorizeResponse {
   AttemptStatus status = 8;
   optional string error_code = 9;
   optional string error_message = 10;
+  optional string raw_connector_response = 11;
 }
 
 message PaymentsSyncRequest {
   string resource_id = 1;
   optional string connector_request_reference_id = 2;
+  optional bool all_keys_required = 3;
 }
 
 message PaymentsSyncResponse {
@@ -75,12 +104,14 @@ message PaymentsSyncResponse {
   optional string connector_response_reference_id = 5;
   optional string error_code = 9;
   optional string error_message = 10;
+  optional string raw_connector_response = 11;
 }
 
 message RefundsSyncRequest {
   string connector_refund_id = 2;
   string connector_transaction_id = 1;
   optional string refund_reason = 3;
+  optional bool all_keys_required = 4;
 }
 
 message RefundsSyncResponse {
@@ -89,11 +120,13 @@ message RefundsSyncResponse {
   optional string connector_response_reference_id = 5;
   optional string error_code = 9;
   optional string error_message = 10;
+  optional string raw_connector_response = 11;
 }
 
 message PaymentsVoidRequest {
   string connector_request_reference_id = 2;
   optional string cancellation_reason = 1;
+  optional bool all_keys_required = 3;
 }
 
 message PaymentsVoidResponse {
@@ -102,6 +135,21 @@ message PaymentsVoidResponse {
   AttemptStatus status = 8;
   optional string error_code = 4;
   optional string error_message = 5;
+  optional string raw_connector_response = 11;
+}
+
+enum DisputeStage {
+  PRE_DISPUTE = 0;
+  ACTIVE_DISPUTE = 1;
+  PRE_ARBITRATION = 2;
+}
+
+message DisputesSyncResponse {
+  string dispute_id = 1;
+  DisputeStatus status = 17;
+  DisputeStage stage = 19;
+  optional string connector_response_reference_id = 2;
+  optional string dispute_message = 3;
 }
 
 message IncomingWebhookRequest {
@@ -165,12 +213,14 @@ message SetupMandateResponse {
 enum EventType {
   PAYMENT = 0;
   REFUND = 1;
+  DISPUTE = 2;
 }
 
 message WebhookResponseContent {
   oneof content {
     PaymentsSyncResponse payments_response = 1;
     RefundsSyncResponse refunds_response = 2;
+    DisputesSyncResponse disputes_response = 3;
   }
 }
 
@@ -203,6 +253,7 @@ message RefundsRequest {
   int64 minor_refund_amount = 11;
   optional string merchant_account_id = 12;
   optional CaptureMethod capture_method = 16;
+  optional bool all_keys_required = 17;
 }
 
 message RefundsResponse {
@@ -210,6 +261,7 @@ message RefundsResponse {
   RefundStatus refund_status = 36;
   optional string error_code = 2;
   optional string error_message = 3;
+  optional string raw_connector_response = 4;
 }
 
 enum Connector {
@@ -657,7 +709,44 @@ enum PaymentMethodType {
 message PaymentMethodData {
   oneof data {
     Card card = 1;
+    WalletData wallet = 2;
   }
+}
+
+message WalletData {
+  oneof data {
+    GooglePayWalletData google_pay = 1;
+    ApplePayWalletData apple_pay = 2;
+  }
+}
+
+message GooglePayWalletData {
+  string type = 1;
+  string description = 2;
+  GooglePayPaymentMethodInfo info = 3;
+  GpayTokenizationData tokenization_data = 4;
+}
+
+message GooglePayPaymentMethodInfo {
+  string card_network = 1;
+  string card_details = 2;
+}
+
+message GpayTokenizationData {
+  string type = 1;
+  string token = 2;
+}
+
+message ApplePayWalletData {
+  string payment_data = 1;
+  ApplePayPaymentMethod payment_method = 2;
+  string transaction_identifier = 3;
+}
+
+message ApplePayPaymentMethod {
+  string display_name = 1;
+  string network = 2;
+  string pm_type = 3;
 }
 
 message Card {
@@ -712,6 +801,7 @@ message AuthenticationData {
 
 enum PaymentMethod {
   CARD = 0;
+  WALLET = 1;
 }
 
 message PaymentAddress {
@@ -1049,6 +1139,7 @@ message PaymentsCaptureRequest {
   Currency currency = 15;
   optional MultipleCaptureRequestData multiple_capture_data = 21;
   optional bytes connector_meta_data = 3;
+  optional bool all_keys_required = 4;
 }
 
 
@@ -1058,6 +1149,7 @@ message PaymentsCaptureResponse {
   AttemptStatus status = 8;
   optional string error_code = 3;
   optional string error_message = 4;
+  optional string raw_connector_response = 5;
 }
 
 message AcceptDisputeRequest {
@@ -1073,12 +1165,61 @@ message AcceptDisputeResponse {
   optional string error_message = 5;
 }
 
-enum DisputeStatus {
-  DisputeOpened=0;
-    DisputeExpired=1;
-    DisputeAccepted=2;
-    DisputeCancelled=3;
-    DisputeChallenged=4;
-    DisputeWon=5;
-    DisputeLost=6;
+message SubmitEvidenceRequest {
+  optional string dispute_id = 1;
+  string connector_dispute_id = 2;
+  optional string access_activity_log = 3;
+  optional string billing_address = 4;
+  optional bytes cancellation_policy = 5;
+  optional string cancellation_policy_file_type = 6;
+  optional string cancellation_policy_provider_file_id = 7;
+  optional string cancellation_policy_disclosure = 8;
+  optional string cancellation_rebuttal = 9;
+  optional bytes customer_communication = 10;
+  optional string customer_communication_file_type = 11;
+  optional string customer_communication_provider_file_id = 12;
+  optional string customer_email_address = 13;
+  optional string customer_name = 14;
+  optional string customer_purchase_ip = 15;
+  optional bytes customer_signature = 16;
+  optional string customer_signature_file_type = 17;
+  optional string customer_signature_provider_file_id = 18;
+  optional string product_description = 19;
+  optional bytes receipt = 20;
+  optional string receipt_file_type = 21;
+  optional string receipt_provider_file_id = 22;
+  optional bytes refund_policy = 23;
+  optional string refund_policy_file_type = 24;
+  optional string refund_policy_provider_file_id = 25;
+  optional string refund_policy_disclosure = 26;
+  optional string refund_refusal_explanation = 27;
+  optional string service_date = 28;
+  optional bytes service_documentation = 29;
+  optional string service_documentation_file_type = 30;
+  optional string service_documentation_provider_file_id = 31;
+  optional string shipping_address = 32;
+  optional string shipping_carrier = 33;
+  optional string shipping_date = 50;
+  optional bytes shipping_documentation = 51;
+  optional string shipping_documentation_file_type = 52;
+  optional string shipping_documentation_provider_file_id = 37;
+  optional string shipping_tracking_number = 38;
+  optional bytes invoice_showing_distinct_transactions = 39;
+  optional string invoice_showing_distinct_transactions_file_type = 40;
+  optional string invoice_showing_distinct_transactions_provider_file_id = 41;
+  optional bytes recurring_transaction_agreement = 42;
+  optional string recurring_transaction_agreement_file_type = 43;
+  optional string recurring_transaction_agreement_provider_file_id = 44;
+  optional  bytes uncategorized_file = 45;
+  optional  string uncategorized_file_type = 46;
+  optional  string uncategorized_file_provider_file_id = 47;
+  optional  string uncategorized_text = 48;
+}
+
+message SubmitEvidenceResponse {
+  optional string connector_dispute_id = 1;
+  DisputeStatus dispute_status = 2;
+  optional string connector_dispute_status = 3;
+  optional string error_code = 4;
+  optional string error_message = 5;
 }
