@@ -90,22 +90,9 @@ macros::macro_connector_implementation!(
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let request_body_for_sig = self.get_request_body(req)?;
-            let payload_string_for_sig = match request_body_for_sig {
-                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize JSON request body for RSync signature")?,
-                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize form request body for RSync signature")?,
-                None => "".to_string(),
-                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Unsupported request body type for RSync signature generation")?,
-            };
-
-            self.build_headers(req, &payload_string_for_sig)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -187,8 +174,23 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-            payload_string_for_sig: &str,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> 
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            let temp_request_body_for_sig = self.get_request_body(req)?;
+            let payload_string_for_sig = match temp_request_body_for_sig {
+                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .attach_printable("Failed to serialize JSON request body for signature")?,
+                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)
+                    .attach_printable("Failed to serialize form request body for signature")?,
+                None => "".to_string(),
+                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
+                    .attach_printable("Unsupported request body type for signature generation")?,
+            };
+
             let timestamp_ms = OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000;
             let client_request_id = Uuid::new_v4().to_string();
 
@@ -198,12 +200,13 @@ macros::create_all_prerequisites!(
             let signature = self.generate_authorization_signature(
                 &auth_type_for_sig,
                 &client_request_id,
-                payload_string_for_sig,
+                &payload_string_for_sig,
                 timestamp_ms,
             )?;
 
+            // Step 4: Build and return the headers
             let mut http_headers = vec![
-                (headers::CONTENT_TYPE.to_string(), self.common_get_content_type().to_string().into()),
+                (headers::CONTENT_TYPE.to_string(), self.common_get_content_type().into()),
                 (headers::CLIENT_REQUEST_ID.to_string(), client_request_id.into()),
                 (headers::TIMESTAMP.to_string(), timestamp_ms.to_string().into()),
                 (headers::AUTH_TOKEN_TYPE.to_string(), "HMAC".to_string().into()),
@@ -304,21 +307,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            // Get the request body string for signature
-            let temp_request_body_for_sig = self.get_request_body(req)?;
-            let payload_string_for_sig = match temp_request_body_for_sig {
-                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize JSON request body for signature")?,
-                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize form request body for signature")?,
-                None => "".to_string(),
-                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Unsupported request body type for signature generation")?,
-            };
-
-            self.build_headers(req, &payload_string_for_sig)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -347,21 +336,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            // For POST requests with a body, serialize the body for the signature.
-            let request_body_for_sig = self.get_request_body(req)?;
-            let payload_string_for_sig = match request_body_for_sig {
-                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize JSON request body for PSync signature")?,
-                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize form request body for PSync signature")?,
-                None => "".to_string(),
-                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Unsupported request body type for PSync signature generation")?,
-            };
-
-            self.build_headers(req, &payload_string_for_sig)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -390,20 +365,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let request_body_for_sig = self.get_request_body(req)?;
-            let payload_string_for_sig = match request_body_for_sig {
-                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize JSON request body for Capture signature")?,
-                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize form request body for Capture signature")?,
-                None => "".to_string(),
-                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Unsupported request body type for Capture signature generation")?,
-            };
-
-            self.build_headers(req, &payload_string_for_sig)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -433,20 +395,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let request_body_for_sig = self.get_request_body(req)?;
-            let payload_string_for_sig = match request_body_for_sig {
-                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize JSON request body for Void signature")?,
-                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize form request body for Void signature")?,
-                None => "".to_string(),
-                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Unsupported request body type for Void signature generation")?,
-            };
-
-            self.build_headers(req, &payload_string_for_sig)
+            self.build_headers(req)
         }
         fn get_url(
             &self,
@@ -476,20 +425,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let request_body_for_sig = self.get_request_body(req)?;
-            let payload_string_for_sig = match request_body_for_sig {
-                Some(RequestContent::Json(json_body)) => serde_json::to_string(&json_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize JSON request body for Refund signature")?,
-                Some(RequestContent::FormUrlEncoded(form_body)) => serde_urlencoded::to_string(&form_body)
-                    .change_context(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Failed to serialize form request body for Refund signature")?,
-                None => "".to_string(),
-                _ => return Err(errors::ConnectorError::RequestEncodingFailed)
-                    .attach_printable("Unsupported request body type for Refund signature generation")?,
-            };
-
-            self.build_headers(req, &payload_string_for_sig)
+            self.build_headers(req)
         }
         fn get_url(
             &self,

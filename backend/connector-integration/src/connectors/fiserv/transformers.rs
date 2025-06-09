@@ -21,8 +21,8 @@ use crate::types::ResponseRouterData;
 
 use domain_types::{
     connector_flow::{
-        Authorize as AuthorizeFlow, Capture as CaptureFlow, PSync as PSyncFlow, RSync as RSyncFlow,
-        Refund as RefundFlow, Void as VoidFlow,
+        Authorize, Capture, PSync, RSync,
+        Refund, Void,
     },
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -357,7 +357,7 @@ impl
     TryFrom<
         FiservRouterData<
             RouterDataV2<
-                AuthorizeFlow,
+                Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData,
                 PaymentsResponseData,
@@ -369,7 +369,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<
-                AuthorizeFlow,
+                Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData,
                 PaymentsResponseData,
@@ -465,14 +465,14 @@ impl
 impl
     TryFrom<
         FiservRouterData<
-            RouterDataV2<CaptureFlow, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     > for FiservCaptureRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<CaptureFlow, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -560,14 +560,14 @@ impl
 impl
     TryFrom<
         FiservRouterData<
-            RouterDataV2<PSyncFlow, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     > for FiservSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<PSyncFlow, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -592,14 +592,14 @@ impl
 impl
     TryFrom<
         FiservRouterData<
-            RouterDataV2<VoidFlow, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     > for FiservVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<VoidFlow, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -657,14 +657,14 @@ impl
 impl
     TryFrom<
         FiservRouterData<
-            RouterDataV2<RefundFlow, RefundFlowData, RefundsData, RefundsResponseData>,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     > for FiservRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<RefundFlow, RefundFlowData, RefundsData, RefundsResponseData>,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -726,14 +726,14 @@ impl
 impl
     TryFrom<
         FiservRouterData<
-            RouterDataV2<RSyncFlow, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     > for FiservRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<RSyncFlow, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
