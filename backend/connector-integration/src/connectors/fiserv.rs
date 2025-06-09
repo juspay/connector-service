@@ -174,7 +174,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> 
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {

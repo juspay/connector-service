@@ -20,10 +20,7 @@ use crate::connectors::fiserv::FiservRouterData;
 use crate::types::ResponseRouterData;
 
 use domain_types::{
-    connector_flow::{
-        Authorize, Capture, PSync, RSync,
-        Refund, Void,
-    },
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
@@ -356,24 +353,14 @@ pub struct FiservRefundSyncRequest {
 impl
     TryFrom<
         FiservRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     > for FiservPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -656,9 +643,7 @@ impl
 // Implementation for the Refund request
 impl
     TryFrom<
-        FiservRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        >,
+        FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
     > for FiservRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -725,9 +710,7 @@ impl
 // Implementation for the RefundSync request
 impl
     TryFrom<
-        FiservRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        >,
+        FiservRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
     > for FiservRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
