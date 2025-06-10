@@ -777,6 +777,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
+            raw_connector_response: None,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -841,6 +842,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
+            raw_connector_response: None,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -903,6 +905,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
+            raw_connector_response: None,
         };
 
         if status == enums::AttemptStatus::Failure {
@@ -972,6 +975,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 gateway_resp.transaction_processing_details.order_id.clone(),
             ),
             incremental_authorization_allowed: None,
+            raw_connector_response: None,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -1024,6 +1028,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                         .clone()
                 }),
             refund_status,
+            raw_connector_response: None,
         };
 
         if refund_status == enums::RefundStatus::Failure {
@@ -1085,6 +1090,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                         .clone()
                 }),
             refund_status,
+            raw_connector_response: None,
         };
 
         if refund_status == enums::RefundStatus::Failure {

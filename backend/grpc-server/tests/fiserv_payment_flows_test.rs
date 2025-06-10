@@ -50,7 +50,8 @@ fn add_fiserv_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - throw error if not set
     let api_key =
         env::var(FISERV_API_KEY_ENV).expect("TEST_FISERV_API_KEY environment variable is required");
-    let key1 = env::var(FISERV_KEY1_ENV).expect("TEST_FISERV_KEY1 environment variable is required");
+    let key1 =
+        env::var(FISERV_KEY1_ENV).expect("TEST_FISERV_KEY1 environment variable is required");
     let api_secret = env::var(FISERV_API_SECRET_ENV)
         .expect("TEST_FISERV_API_SECRET environment variable is required");
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
@@ -164,6 +165,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentsSyncRequest {
     PaymentsSyncRequest {
         resource_id: transaction_id.to_string(),
         connector_request_reference_id: Some(format!("fiserv_sync_{}", get_timestamp())),
+        all_keys_required: None,
     }
 }
 
@@ -179,6 +181,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
         connector_meta_data: Some(metadata_json.as_bytes().to_vec()),
+        all_keys_required: None,
     }
 }
 
@@ -204,6 +207,7 @@ fn create_refund_request(transaction_id: &str) -> RefundsRequest {
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
+        all_keys_required: None,
     }
 }
 
@@ -213,6 +217,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundsS
         connector_transaction_id: transaction_id.to_string(),
         connector_refund_id: refund_id.to_string(),
         refund_reason: None,
+        all_keys_required: None,
     }
 }
 
