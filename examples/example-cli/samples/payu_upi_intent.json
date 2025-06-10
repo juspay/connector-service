@@ -1,0 +1,18 @@
+{
+  "amount": 1000,
+  "currency": "INR",
+  "email": "customer@example.com",
+  "customer_name": "Test Customer",
+  "payment_method_data": {
+    "upi_intent": {
+      "upi_app": "GPAY"
+    }
+  },
+  "metadata": {
+    "product_info": "Test Payment"
+  },
+  "return_url": "https://example.com/return",
+  "metadata": {
+    "product_info": "Test Payment"
+  }
+}

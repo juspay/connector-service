@@ -1,0 +1,15 @@
+{
+  "amount": 1000,
+  "currency": "INR",
+  "email": "customer@example.com",
+  "customer_name": "Test Customer",
+  "payment_method_data": {
+    "upi_collect": {
+      "vpa_id": "customer@okaxis"
+    }
+  },
+  "return_url": "https://example.com/return",
+  "metadata": {
+    "product_info": "Test Payment"
+  }
+}

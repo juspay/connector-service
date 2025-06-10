@@ -1,36 +1,68 @@
+//! PayU UPI Payment Connector
+//!
+//! This module implements the connector integration for PayU, focusing on UPI payment methods
+//! in the Indian market.
+//!
+//! # UPI Payment Methods
+//!
+//! ## UPI Intent
+//! UPI Intent allows users to select a UPI app (Google Pay, PhonePe, etc.) for payment.
+//! The flow involves redirecting the user to their chosen UPI app to complete the payment.
+//!
+//! ## UPI Collect
+//! UPI Collect allows merchants to collect payments directly from a customer's UPI ID (VPA).
+//! The customer receives a payment request in their UPI app and approves it.
+//!
+//! # Implementation Details
+//!
+//! This connector implements:
+//! - Payment authorization for UPI Intent and UPI Collect
+//! - Hash-based security verification
+//! - Error handling for UPI-specific error codes
+//! - Mobile deep linking for UPI apps
+
 use domain_types::{
-    connector_flow::{Authorize, Accept, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void, CreateOrder}, 
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
     connector_types::{
-        ConnectorServiceTrait, PaymentAuthorizeV2, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        DisputeFlowData, AcceptDisputeData, DisputeResponseData, SubmitEvidenceData, DisputeDefendData,
-        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, PaymentVoidData, PaymentsSyncData,
-        PaymentsCaptureData, SetupMandateRequestData, PaymentCreateOrderData, PaymentCreateOrderResponse
+        AcceptDisputeData, ConnectorServiceTrait, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentAuthorizeV2, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
 };
 use hyperswitch_interfaces::connector_integration_v2::ConnectorIntegrationV2;
 
 use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt};
-use hyperswitch_domain_models::{router_data::{ ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2};
-use hyperswitch_interfaces::{
-    api::{ConnectorCommon, CurrencyUnit}, configs::Connectors, errors::{self, ConnectorError}, events::connector_api_logs::ConnectorEvent, types::Response
-};
 use error_stack::ResultExt;
+use hyperswitch_domain_models::{
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+};
+use hyperswitch_interfaces::{
+    api::{ConnectorCommon, CurrencyUnit},
+    configs::Connectors,
+    errors::{self, ConnectorError},
+    events::connector_api_logs::ConnectorEvent,
+    types::Response,
+};
 
 use hex;
-use masking::{Maskable, Secret, ExposeInterface};
-use sha2::{Sha512, Digest};
+use masking::{ExposeInterface, Maskable, Secret};
+use sha2::{Digest, Sha512};
 
 mod transformers;
 use super::macros;
 
-use self::transformers::{PayuPaymentRequest, PayuPaymentResponse, PayuErrorResponse, PayuErrorCode, PayuAuthType};
+use self::transformers::{
+    PayuAuthType, PayuErrorCode, PayuErrorResponse, PayuPaymentRequest, PayuPaymentResponse,
+};
 use crate::types::ResponseRouterData;
-
-
-
-
-
 
 // Set up the connector with macros
 macros::create_all_prerequisites!(
@@ -65,7 +97,7 @@ macros::create_all_prerequisites!(
                 _ => false,
             }
         }
-        
+
         // Hash generation function for PayU
         pub fn generate_payu_hash(
             &self,
@@ -76,12 +108,12 @@ macros::create_all_prerequisites!(
             first_name: &str,
             email: &str,
         ) -> CustomResult<Secret<String>, errors::ConnectorError> {
-            // PayU hash format: 
+            // PayU hash format:
             // sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||salt)
             // Note the 6 empty fields between udf5 and salt (represented by 6 consecutive pipes)
-            
+
             let hash_string = format!(
-                "{}|{}|{}|{}|{}|{}|||||||||||{}", 
+                "{}|{}|{}|{}|{}|{}|||||||||||{}",
                 auth.key.clone().expose(),
                 txn_id,
                 amount,
@@ -90,15 +122,15 @@ macros::create_all_prerequisites!(
                 email,
                 auth.salt.clone().expose()
             );
-            
+
             // Generate SHA512 hash
             let mut hasher = Sha512::new();
             hasher.update(hash_string.as_bytes());
             let hash_result = hasher.finalize();
-            
+
             // Convert to hex string
             let hash = hex::encode(hash_result);
-            
+
             Ok(Secret::new(hash))
         }
     }
@@ -110,7 +142,7 @@ macros::macro_connector_implementation!(
     connector: Payu,
     curl_request: FormData(PayuPaymentRequest),
     curl_response: PayuPaymentResponse,
-    flow_name: Authorize, 
+    flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData,
     flow_response: PaymentsResponseData,
@@ -120,27 +152,27 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            
+
             // Basic headers for PayU requests
             let mut headers = vec![
                 ("Content-Type".to_string(), ("application/x-www-form-urlencoded".to_string().into())),
                 ("Accept".to_string(), ("application/json".to_string().into())),
             ];
-            
+
             // Add mobile-specific headers if this is a UPI request from a mobile device
             if let Some(is_mobile) = req.request.metadata.as_ref()
-                .and_then(|meta| meta.get("is_mobile_device").map(|v| v == "true")) 
+                .and_then(|meta| meta.get("is_mobile_device").map(|v| v == "true"))
             {
                 if is_mobile {
                     headers.push(("User-Agent".to_string(), "Mozilla/5.0 (Linux; Android 10)".to_string().into()));
                     headers.push(("X-Mobile-Request".to_string(), ("true".to_string().into())));
                 }
             }
-            
-            
+
+
             Ok(headers)
         }
-        
+
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
@@ -149,24 +181,23 @@ macros::macro_connector_implementation!(
             let base_url = &req.resource_common_data.connectors.payu.base_url;
             let payment_path = "/_payment"; // PayU standard payment endpoint
             let url = format!("{}{}", base_url, payment_path);
-            
-            
+
+
             Ok(url)
         }
-        
+
     }
 );
-
 
 impl ConnectorCommon for Payu {
     fn id(&self) -> &'static str {
         "payu"
     }
-    
+
     fn get_currency_unit(&self) -> CurrencyUnit {
         CurrencyUnit::Minor
     }
-    
+
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorAuthType,
@@ -174,30 +205,31 @@ impl ConnectorCommon for Payu {
         // PayU primarily uses form-based authentication, not headers
         Ok(vec![])
     }
-    
+
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         &connectors.payu.base_url
     }
-    
+
     fn build_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: PayuErrorResponse = res.response
+        let response: PayuErrorResponse = res
+            .response
             .parse_struct("PayuErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-            
+
         // Log the error with event builder if available
         if let Some(_event_builder) = event_builder {
             // TODO: Add event logging when the correct methods are available
             // event_builder.add_data("payu_error_code", response.error_code.as_ref());
             // event_builder.add_data("payu_error_message", &response.error_message);
         }
-        
+
         // Map PayU error code to connector error
         let _connector_error = response.error_code.to_connector_error();
-        
+
         // Map PayU error codes to appropriate attempt status
         let attempt_status = match response.error_code {
             PayuErrorCode::InvalidVpa => AttemptStatus::Failure,
@@ -207,7 +239,7 @@ impl ConnectorCommon for Payu {
             PayuErrorCode::PaymentFailed => AttemptStatus::Failure,
             _ => AttemptStatus::Failure,
         };
-        
+
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.error_code.as_ref().to_string(),
@@ -233,21 +265,53 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
 
 impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Payu {}
 
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Payu {}
+impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Payu
+{
+}
 
-impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Payu {}
+impl
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Payu
+{
+}
 
 impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Payu {}
 
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Payu {}
+impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Payu
+{
+}
 
-impl ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Payu {}
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Payu
+{
+}
 
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Payu {}
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Payu
+{
+}
 
-impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Payu {}
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Payu
+{
+}
 
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Payu {}
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Payu
+{
+}
 
 // Now implement the trait aliases
 impl domain_types::connector_types::RefundV2 for Payu {}
