@@ -36,6 +36,7 @@ use utoipa::ToSchema;
 pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
+    pub authorizedotnet: ConnectorParams, // Add your connector params
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -428,7 +429,15 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             customer_name: None,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-            capture_method: None,
+            capture_method: value.capture_method.map(|cm| {
+                match cm {
+                    0 => hyperswitch_common_enums::CaptureMethod::Automatic,
+                    1 => hyperswitch_common_enums::CaptureMethod::Manual,
+                    2 => hyperswitch_common_enums::CaptureMethod::ManualMultiple,
+                    // Default to Automatic for any other value
+                    _ => hyperswitch_common_enums::CaptureMethod::Automatic,
+                }
+            }),
             router_return_url: value.return_url,
             complete_authorize_url: None,
             setup_future_usage: None,
