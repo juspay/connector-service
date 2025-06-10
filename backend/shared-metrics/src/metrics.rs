@@ -32,21 +32,21 @@ lazy_static! {
     pub static ref grpc_server_requests_total: IntCounterVec = register_int_counter_vec!(
         "grpc_server_requests_total",
         "Total number of gRPC requests received",
-        &["method","connector"]
+        &["flow","connector"]
     )
         .unwrap();
 
     pub static ref grpc_server_requests_successful: IntCounterVec = register_int_counter_vec!(
         "grpc_server_requests_successful",
         "Total number of gRPC requests successful",
-        &["method","connector"]
+        &["flow","connector"]
     )
         .unwrap();
 
     pub static ref grpc_server_request_latency: HistogramVec = register_histogram_vec!(
         "grpc_server_request_latency_seconds",
         "Request latency in seconds",
-        &["method", "connector"],
+        &["flow", "connector"],
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
@@ -115,17 +115,6 @@ where
     result
 }
 
-// Convenience macro for even easier usage
-#[macro_export]
-macro_rules! with_metrics {
-    ($method:expr, $request:expr, $body:block) => {
-        MetricsMiddleware::with_metrics($method, &$request, || async move $body).await
-    };
-    ($method:expr, $connector:expr, $body:block) => {
-        MetricsMiddleware::with_metrics_and_connector($method, $connector, || async move $body).await
-    };
-}
-
 pub async fn metrics_handler() -> error_stack::Result<String, MetricsError> {
     let mut buffer = Vec::new();
     let encoder = TextEncoder::new();
@@ -143,5 +132,3 @@ pub enum MetricsError {
     #[error("Error converting metrics to utf8")]
     Utf8Error,
 }
-
-// Ensure no manual implementation of std::fmt::Display exists for MetricsError to avoid conflicts with thiserror::Error derive macro
