@@ -22,9 +22,9 @@ use tonic::{transport::Channel, Request};
 const CONNECTOR_NAME: &str = "elavon";
 
 // Environment variable names for API credentials
-const ELAVON_API_KEY_ENV: &str = "ELAVON_API_KEY";
-const ELAVON_API_USER_ENV: &str = "ELAVON_API_USER";
-const ELAVON_API_SECRET_ENV: &str = "ELAVON_API_SECRET";
+const ELAVON_API_KEY_ENV: &str = "TEST_ELAVON_API_KEY";
+const ELAVON_API_USER_ENV: &str = "TEST_ELAVON_API_USER";
+const ELAVON_API_SECRET_ENV: &str = "TEST_ELAVON_API_SECRET";
 const TEST_AMOUNT: i64 = 1000;
 const TEST_CARD_NUMBER: &str = "4124939999999990";
 const TEST_CARD_EXP_MONTH: &str = "12";
@@ -48,11 +48,11 @@ fn get_timestamp() -> u64 {
 fn add_elavon_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - requires them to be set
     let api_key =
-        env::var(ELAVON_API_KEY_ENV).expect("ELAVON_API_KEY environment variable is required");
-    let api_user =
-        env::var(ELAVON_API_USER_ENV).expect("ELAVON_API_USER environment variable is required");
+        env::var(ELAVON_API_KEY_ENV).expect("TEST_ELAVON_API_KEY environment variable is required");
+    let api_user = env::var(ELAVON_API_USER_ENV)
+        .expect("TEST_ELAVON_API_USER environment variable is required");
     let api_secret = env::var(ELAVON_API_SECRET_ENV)
-        .expect("ELAVON_API_SECRET environment variable is required");
+        .expect("TEST_ELAVON_API_SECRET environment variable is required");
 
     request.metadata_mut().append(
         "x-connector",
