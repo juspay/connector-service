@@ -23,10 +23,10 @@ use tonic::{transport::Channel, Request};
 const CONNECTOR_NAME: &str = "fiserv";
 
 // Environment variable names for API credentials (can be set or overridden with provided values)
-const FISERV_API_KEY_ENV: &str = "FISERV_API_KEY";
-const FISERV_KEY1_ENV: &str = "FISERV_KEY1";
-const FISERV_API_SECRET_ENV: &str = "FISERV_API_SECRET";
-const FISERV_TERMINAL_ID_ENV: &str = "FISERV_TERMINAL_ID";
+const FISERV_API_KEY_ENV: &str = "TEST_FISERV_API_KEY";
+const FISERV_KEY1_ENV: &str = "TEST_FISERV_KEY1";
+const FISERV_API_SECRET_ENV: &str = "TEST_FISERV_API_SECRET";
+const FISERV_TERMINAL_ID_ENV: &str = "TEST_FISERV_TERMINAL_ID";
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
@@ -49,12 +49,12 @@ fn get_timestamp() -> u64 {
 fn add_fiserv_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - throw error if not set
     let api_key =
-        env::var(FISERV_API_KEY_ENV).expect("FISERV_API_KEY environment variable is required");
-    let key1 = env::var(FISERV_KEY1_ENV).expect("FISERV_KEY1 environment variable is required");
+        env::var(FISERV_API_KEY_ENV).expect("TEST_FISERV_API_KEY environment variable is required");
+    let key1 = env::var(FISERV_KEY1_ENV).expect("TEST_FISERV_KEY1 environment variable is required");
     let api_secret = env::var(FISERV_API_SECRET_ENV)
-        .expect("FISERV_API_SECRET environment variable is required");
+        .expect("TEST_FISERV_API_SECRET environment variable is required");
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("FISERV_TERMINAL_ID environment variable is required");
+        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
 
     request.metadata_mut().append(
         "x-connector",
@@ -120,7 +120,7 @@ fn extract_transaction_id(response: &PaymentsAuthorizeResponse) -> String {
 fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAuthorizeRequest {
     // Get terminal_id for metadata
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("FISERV_TERMINAL_ID environment variable is required");
+        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     // Initialize with all required fields
@@ -170,7 +170,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentsSyncRequest {
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureRequest {
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("FISERV_TERMINAL_ID environment variable is required");
+        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     PaymentsCaptureRequest {
@@ -185,7 +185,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> RefundsRequest {
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-        .expect("FISERV_TERMINAL_ID environment variable is required");
+        .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
     let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     RefundsRequest {
@@ -306,7 +306,7 @@ async fn test_payment_authorization_manual_capture() {
 
         // Create capture request with terminal_id in metadata
         let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-            .expect("FISERV_TERMINAL_ID environment variable is required");
+            .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
         let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
         // Debug print has been removed
