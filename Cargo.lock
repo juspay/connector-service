@@ -1001,6 +1001,7 @@ dependencies = [
  "hyperswitch_interfaces",
  "masking",
  "paste",
+ "quick-xml 0.31.0",
  "reqwest",
  "ring",
  "serde",
