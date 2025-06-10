@@ -451,7 +451,7 @@ impl
 
         // Prepare common request fields
         let mut request = PayuPaymentRequest {
-            amount: payu_amount,
+            amount: amount,
             pg: "UPI".to_string(),
             currency: router_data.request.currency.to_string(),
             order_id: Some(

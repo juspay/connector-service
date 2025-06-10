@@ -219,7 +219,7 @@ pub async fn call_connector_api(
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
                     Some(RequestContent::FormUrlEncoded(payload)) => {
-                       
+                        
                         client.form(&payload)
                     }
                     _ => client,
