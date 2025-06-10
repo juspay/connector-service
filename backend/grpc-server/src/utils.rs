@@ -5,7 +5,7 @@ use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
 use error_stack::Report;
 use http::request::Request;
-use hyperswitch_common_utils::errors::CustomResult;
+use common_utils::errors::CustomResult;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use tonic::metadata;
 
@@ -177,6 +177,7 @@ macro_rules! implement_connector_operation {
                 connector_auth_type: connector_auth_details,
                 request: specific_request_data,
                 response: Err(hyperswitch_domain_models::router_data::ErrorResponse::default()),
+                tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
             };
 
             // Execute connector processing

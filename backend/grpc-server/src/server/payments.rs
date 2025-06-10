@@ -39,7 +39,7 @@ use grpc_api_types::payments::{
     RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest,
     SubmitEvidenceResponse,
 };
-use hyperswitch_common_utils::errors::CustomResult;
+use common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -102,11 +102,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(payload.minor_amount),
+            amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
         };
 
@@ -121,6 +121,7 @@ impl Payments {
             connector_auth_type: connector_auth_details,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
         };
 
         // Execute connector processing
@@ -161,11 +162,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(0),
+            amount: common_utils::types::MinorUnit::new(0),
             currency,
         };
 
@@ -180,6 +181,7 @@ impl Payments {
             connector_auth_type: connector_auth_details,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
         };
 
         // Execute connector processing
@@ -346,10 +348,11 @@ impl PaymentService for Payments {
             PaymentsResponseData,
         > {
             flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
+            resource_common_data: payment_flow_data.clone(),
             connector_auth_type: connector_auth_details,
             request: payment_authorize_data,
             response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
         };
 
         // Execute connector processing
@@ -554,10 +557,11 @@ impl PaymentService for Payments {
             PaymentsResponseData,
         > = RouterDataV2 {
             flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
+            resource_common_data: payment_flow_data.clone(),
             connector_auth_type: connector_auth_details,
             request: setup_mandate_request_data,
             response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
         };
 
         let response = external_services::service::execute_connector_processing_step(
@@ -613,10 +617,11 @@ impl PaymentService for Payments {
             DisputeResponseData,
         > = RouterDataV2 {
             flow: std::marker::PhantomData,
-            resource_common_data: dispute_flow_data,
+            resource_common_data: dispute_flow_data.clone(),
             connector_auth_type: connector_auth_details,
             request: dispute_data,
             response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
         };
 
         let response = external_services::service::execute_connector_processing_step(
@@ -670,10 +675,11 @@ impl PaymentService for Payments {
             DisputeResponseData,
         > = RouterDataV2 {
             flow: std::marker::PhantomData,
-            resource_common_data: dispute_flow_data,
+            resource_common_data: dispute_flow_data.clone(),
             connector_auth_type: connector_auth_details,
             request: dispute_data,
             response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
         };
 
         let response = external_services::service::execute_connector_processing_step(

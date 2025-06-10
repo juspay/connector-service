@@ -4,8 +4,8 @@ mod tests {
     use domain_types::connector_types::{
         BoxedConnector, ConnectorServiceTrait, PaymentFlowData, PaymentsAuthorizeData,
     };
-    use hyperswitch_cards::CardNumber;
-    use hyperswitch_common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
+    use cards::CardNumber;
+    use common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
     use hyperswitch_domain_models::{
         payment_method_data::{Card, PaymentMethodData},
         router_request_types::BrowserInformation,
@@ -26,12 +26,12 @@ mod tests {
             },
             types::{ConnectorParams, Connectors},
         };
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
-        use hyperswitch_cards::CardNumber;
-        use hyperswitch_common_enums::{
+        use api_models::payments::{Address, PhoneDetails};
+        use cards::CardNumber;
+        use common_enums::{
             AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
         };
-        use hyperswitch_common_utils::{
+        use common_utils::{
             id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,
         };
         use hyperswitch_domain_models::{
@@ -446,7 +446,7 @@ mod tests {
             use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
             use domain_types::types::{ConnectorParams, Connectors};
             use hyperswitch_api_models::payments::{Address, PhoneDetails};
-            use hyperswitch_common_enums::Currency;
+            use common_enums::Currency;
             use hyperswitch_common_utils::pii::Email;
             use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
             use hyperswitch_domain_models::{
@@ -563,7 +563,7 @@ mod tests {
                     enrolled_for_3ds: false,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(hyperswitch_common_enums::PaymentMethodType::Credit),
+                    payment_method_type: Some(common_enums::PaymentMethodType::Credit),
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
@@ -739,7 +739,7 @@ mod tests {
         use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
         use domain_types::types::{ConnectorParams, Connectors};
         use hyperswitch_api_models::payments::{Address, PhoneDetails};
-        use hyperswitch_common_enums::Currency;
+        use common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
@@ -855,7 +855,7 @@ mod tests {
                 enrolled_for_3ds: false,
                 related_transaction_id: None,
                 payment_experience: None,
-                payment_method_type: Some(hyperswitch_common_enums::PaymentMethodType::Credit),
+                payment_method_type: Some(common_enums::PaymentMethodType::Credit),
                 customer_id: None,
                 request_incremental_authorization: false,
                 metadata: None,
@@ -904,7 +904,7 @@ mod tests {
         use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
         use domain_types::types::{ConnectorParams, Connectors};
         use hyperswitch_api_models::payments::{Address, PhoneDetails};
-        use hyperswitch_common_enums::Currency;
+        use common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
@@ -1020,7 +1020,7 @@ mod tests {
                 enrolled_for_3ds: false,
                 related_transaction_id: None,
                 payment_experience: None,
-                payment_method_type: Some(hyperswitch_common_enums::PaymentMethodType::Credit),
+                payment_method_type: Some(common_enums::PaymentMethodType::Credit),
                 customer_id: None,
                 request_incremental_authorization: false,
                 metadata: None,
@@ -1066,7 +1066,7 @@ mod tests {
 
         #[test]
         fn test_build_request_valid_order() {
-            use hyperswitch_common_enums::Currency;
+            use common_enums::Currency;
             use hyperswitch_common_utils::{
                 id_type::MerchantId, request::RequestContent, types::MinorUnit,
             };
@@ -1089,8 +1089,8 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: hyperswitch_common_enums::AttemptStatus::Pending,
-                    payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                    status: common_enums::AttemptStatus::Pending,
+                    payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::new(
@@ -1106,7 +1106,7 @@ mod tests {
                         None,
                         None,
                     ),
-                    auth_type: hyperswitch_common_enums::AuthenticationType::NoThreeDs,
+                    auth_type: common_enums::AuthenticationType::NoThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
@@ -1175,7 +1175,7 @@ mod tests {
 
         #[test]
         fn test_build_request_missing() {
-            use hyperswitch_common_enums::Currency;
+            use common_enums::Currency;
             use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
             use hyperswitch_domain_models::{
                 payment_address::PaymentAddress,
@@ -1194,12 +1194,12 @@ mod tests {
                     connector_customer: None,
                     payment_id: "".to_string(),
                     attempt_id: "".to_string(),
-                    status: hyperswitch_common_enums::AttemptStatus::Pending,
-                    payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                    status: common_enums::AttemptStatus::Pending,
+                    payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
                     address: PaymentAddress::default(),
-                    auth_type: hyperswitch_common_enums::AuthenticationType::NoThreeDs,
+                    auth_type: common_enums::AuthenticationType::NoThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
@@ -1274,7 +1274,7 @@ mod tests {
                 BoxedConnector, PaymentFlowData, PaymentsAuthorizeData,
             };
             use domain_types::types::{ConnectorParams, Connectors};
-            use hyperswitch_common_enums::{
+            use common_enums::{
                 AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
             };
             use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
@@ -1401,7 +1401,7 @@ mod tests {
         };
         use domain_types::types::{ConnectorParams, Connectors};
         use hyperswitch_api_models::payments::{Address, PhoneDetails};
-        use hyperswitch_common_enums::Currency;
+        use common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
@@ -1420,8 +1420,8 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: hyperswitch_common_enums::AttemptStatus::Pending,
-                payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                status: common_enums::AttemptStatus::Pending,
+                payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1437,7 +1437,7 @@ mod tests {
                     None,
                     None,
                 ),
-                auth_type: hyperswitch_common_enums::AuthenticationType::NoThreeDs,
+                auth_type: common_enums::AuthenticationType::NoThreeDs,
                 connector_meta_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
@@ -1517,7 +1517,7 @@ mod tests {
         use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
         use domain_types::types::{ConnectorParams, Connectors};
         use hyperswitch_api_models::payments::{Address, PhoneDetails};
-        use hyperswitch_common_enums::Currency;
+        use common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
@@ -1537,8 +1537,8 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: hyperswitch_common_enums::AttemptStatus::Pending,
-                payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                status: common_enums::AttemptStatus::Pending,
+                payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1554,7 +1554,7 @@ mod tests {
                     None,
                     None,
                 ),
-                auth_type: hyperswitch_common_enums::AuthenticationType::NoThreeDs,
+                auth_type: common_enums::AuthenticationType::NoThreeDs,
                 connector_meta_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,
@@ -1623,7 +1623,7 @@ mod tests {
         use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
         use domain_types::types::{ConnectorParams, Connectors};
         use hyperswitch_api_models::payments::{Address, PhoneDetails};
-        use hyperswitch_common_enums::Currency;
+        use common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
@@ -1643,8 +1643,8 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: hyperswitch_common_enums::AttemptStatus::Pending,
-                payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                status: common_enums::AttemptStatus::Pending,
+                payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
                 address: PaymentAddress::new(
@@ -1660,7 +1660,7 @@ mod tests {
                     None,
                     None,
                 ),
-                auth_type: hyperswitch_common_enums::AuthenticationType::NoThreeDs,
+                auth_type: common_enums::AuthenticationType::NoThreeDs,
                 connector_meta_data: None,
                 amount_captured: None,
                 minor_amount_captured: None,

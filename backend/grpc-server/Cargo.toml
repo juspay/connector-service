@@ -67,12 +67,12 @@ base64 = "0.21.2"
 rustc-hash = "2.0"
 gethostname = "0.5.0"
 once_cell = "1.19.0"
-hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
-hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
-hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
-hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
-hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
+hyperswitch_interfaces = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_interfaces", features = ["v1"] }
+hyperswitch_domain_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_domain_models", features = ["v1"] }
+cards = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/cards" }
+common_enums = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_enums" }
+common_utils = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_utils", features = ["async_ext", "metrics", "encryption_service", "keymanager"] }
+api_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/api_models", features = ["errors", "v1"] }
 
 [build-dependencies]
 cargo_metadata = "0.15.4"

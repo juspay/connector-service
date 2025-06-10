@@ -18,11 +18,11 @@ mime = "0.3.17"
 serde_json = "1.0.107"
 hex = "0.4.3"
 ring = { version = "0.17.8", features = ["std"] }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking"}
-hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
-hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
-hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package ="common_utils"}
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
+masking = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/masking" }
+hyperswitch_interfaces = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_interfaces", features = ["v1"] }
+hyperswitch_domain_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_domain_models", features = ["v1"] }
+common_utils = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_utils", features = ["async_ext", "metrics", "encryption_service", "keymanager"] }
+api_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/api_models", features = ["errors", "v1"] }
 strum = { version = "0.26.2", features = ["derive"] }
 reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
 base64 = "0.21.2"

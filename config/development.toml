@@ -23,3 +23,10 @@ bypass_proxy_urls = ["localhost", "local"]
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
+payu.base_url = "https://secure.payu.in"
+payu.payment_path = "/_payment"
+payu.verify_path = "/merchant/postservice"
+
+
+[connectors.payu.prod]
+base_url = "https://secure.payu.in"

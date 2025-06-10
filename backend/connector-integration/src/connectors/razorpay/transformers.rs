@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use error_stack::ResultExt;
-use hyperswitch_api_models::enums::{self, AttemptStatus, CardNetwork};
+use common_enums::{self, AttemptStatus, CardNetwork};
 
-use hyperswitch_cards::CardNumber;
-use hyperswitch_common_enums::RefundStatus;
-use hyperswitch_common_utils::{
+use cards::CardNumber;
+use common_enums::RefundStatus;
+use common_utils::{
     ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
 };
 
@@ -24,7 +24,7 @@ use hyperswitch_domain_models::{
     router_response_types::RedirectForm,
 };
 use hyperswitch_interfaces::errors;
-use hyperswitch_masking::Secret;
+use masking::Secret;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -36,7 +36,7 @@ pub enum Currency {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Amount {
-    pub currency: enums::Currency,
+    pub currency: common_enums::Currency,
     pub value: MinorUnit,
 }
 
@@ -85,7 +85,7 @@ pub enum AuthType {
 #[serde(rename_all = "snake_case")]
 pub struct Address {
     city: String,
-    country: enums::CountryAlpha2,
+    country: common_enums::CountryAlpha2,
     house_number_or_name: Secret<String>,
     postal_code: Secret<String>,
     state_or_province: Option<Secret<String>>,
@@ -256,7 +256,10 @@ fn extract_payment_method_and_data(
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
-        | PaymentMethodData::OpenBanking(_) => Err(
+        | PaymentMethodData::OpenBanking(_) 
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) 
+        | PaymentMethodData::NetworkToken(_) 
+        | PaymentMethodData::MobilePayment(_) => Err(
             hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
                 "Only Card payment method is supported for Razorpay".to_string(),
             ),
@@ -480,7 +483,7 @@ pub struct RazorpayRefundRequest {
     pub amount: MinorUnit,
 }
 
-impl ForeignTryFrom<RazorpayRefundStatus> for hyperswitch_common_enums::RefundStatus {
+impl ForeignTryFrom<RazorpayRefundStatus> for common_enums::RefundStatus {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
     fn foreign_try_from(item: RazorpayRefundStatus) -> Result<Self, Self::Error> {
         match item {
@@ -617,7 +620,7 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let status = hyperswitch_common_enums::RefundStatus::foreign_try_from(response.status)?;
+        let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
@@ -650,7 +653,7 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let status = hyperswitch_common_enums::RefundStatus::foreign_try_from(response.status)?;
+        let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
@@ -674,9 +677,9 @@ impl<F, Req>
         RazorpayResponse,
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
         u16,
-        Option<hyperswitch_api_models::enums::CaptureMethod>,
+        Option<common_enums::CaptureMethod>,
         bool,
-        Option<hyperswitch_api_models::enums::PaymentMethodType>,
+        Option<common_enums::PaymentMethodType>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
@@ -686,9 +689,9 @@ impl<F, Req>
             RazorpayResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
             u16,
-            Option<hyperswitch_api_models::enums::CaptureMethod>,
+            Option<common_enums::CaptureMethod>,
             bool,
-            Option<hyperswitch_api_models::enums::PaymentMethodType>,
+            Option<common_enums::PaymentMethodType>,
         ),
     ) -> Result<Self, Self::Error> {
         let is_manual_capture = false;

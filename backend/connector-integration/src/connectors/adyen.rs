@@ -10,10 +10,10 @@ use domain_types::{
         PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
     },
 };
-use hyperswitch_common_enums::{
+use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
-use hyperswitch_common_utils::{
+use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
 };
 use std::sync::LazyLock;
@@ -34,7 +34,7 @@ use hyperswitch_interfaces::{
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use hyperswitch_masking::{Mask, Maskable};
+use masking::{Mask, Maskable};
 
 use super::macros;
 use domain_types::{
@@ -218,6 +218,9 @@ impl ConnectorCommon for Adyen {
             reason: Some(response.message),
             attempt_status: None,
             connector_transaction_id: response.psp_reference,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
         })
     }
 }

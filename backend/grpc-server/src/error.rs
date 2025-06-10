@@ -143,7 +143,9 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingConnectorTransactionID
             | Self::MissingConnectorRefundID
             | Self::MissingConnectorRelatedTransactionID { .. }
-            | Self::InSufficientBalanceInPaymentMethod => {
+            | Self::InSufficientBalanceInPaymentMethod
+            | Self::NoConnectorWalletDetails
+            | Self::MissingConnectorMandateMetadata => {
                 ApplicationErrorResponse::Unprocessable(ApiError {
                     sub_code: "UNPROCESSABLE_ENTITY".to_string(),
                     error_identifier: 422,

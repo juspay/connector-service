@@ -1,7 +1,7 @@
 use domain_types::{errors::ApiClientError, types::Proxy};
 // use base64::engine::Engine;
 use error_stack::{report, ResultExt};
-use hyperswitch_common_utils::{
+use common_utils::{
     // consts::BASE64_ENGINE,
     ext_traits::AsyncExt,
     request::{Method, Request, RequestContent},
@@ -9,7 +9,7 @@ use hyperswitch_common_utils::{
 use hyperswitch_domain_models::{
     errors::api_error_response::ApiErrorResponse, router_data_v2::RouterDataV2,
 };
-use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
+use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -218,6 +218,10 @@ pub async fn call_connector_api(
                 let client = client.post(url);
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => {
+                        
+                        client.form(&payload)
+                    }
                     _ => client,
                 }
             }
@@ -247,8 +251,8 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<hyperswitch_masking::Secret<String>>,
-    _client_certificate_key: Option<hyperswitch_masking::Secret<String>>,
+    _client_certificate: Option<masking::Secret<String>>,
+    _client_certificate_key: Option<masking::Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
     get_base_client(proxy_config, should_bypass_proxy)
     // match (client_certificate, client_certificate_key) {
@@ -360,8 +364,8 @@ fn get_client_builder(
 }
 
 // pub fn create_identity_from_certificate_and_key(
-//     encoded_certificate: hyperswitch_masking::Secret<String>,
-//     encoded_certificate_key: hyperswitch_masking::Secret<String>,
+//     encoded_certificate: masking::Secret<String>,
+//     encoded_certificate_key: masking::Secret<String>,
 // ) -> Result<reqwest::Identity, error_stack::Report<ApiClientError>> {
 //     let decoded_certificate = BASE64_ENGINE
 //         .decode(encoded_certificate.expose())
@@ -383,7 +387,7 @@ fn get_client_builder(
 // }
 
 // pub fn create_certificate(
-//     encoded_certificate: hyperswitch_masking::Secret<String>,
+//     encoded_certificate: masking::Secret<String>,
 // ) -> Result<Vec<reqwest::Certificate>, error_stack::Report<ApiClientError>> {
 //     let decoded_certificate = BASE64_ENGINE
 //         .decode(encoded_certificate.expose())

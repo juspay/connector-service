@@ -6,12 +6,12 @@ edition = "2021"
 [dependencies]
 domain_types ={ version = "0.1.0", path = "../domain_types" }
 base64 = "0.21"
-hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" }
-hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils" }
-hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums" }
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
-hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" }
+hyperswitch_domain_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_domain_models", features = ["v1"] }
+common_utils = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_utils", features = ["async_ext", "metrics", "encryption_service", "keymanager"] }
+common_enums = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_enums" }
+api_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/api_models", features = ["errors", "v1"] }
+masking = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/masking" }
+hyperswitch_interfaces = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_interfaces", features = ["v1"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
 serde_qs = "0.12.0"
@@ -21,8 +21,14 @@ uuid = { version = "1", features = ["v4"] }
 error-stack = "0.4.0"
 strum = { version = "0.26", features = ["derive"] }
 time = "0.3.35"
+hex = "0.4.3"
 url = "2.5.0"
-hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
+cards = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/cards" }
 paste = "1.0"
 reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
 bytes = "1.6.0"
+tracing = { version = "0.1.40" }
+tracing-appender = { version = "0.2.3" }
+tracing-subscriber = { version = "0.3.18", default-features = true, features = ["env-filter", "json", "registry"] }
+tracing-attributes = "0.1.27"
+sha2 = "0.10"

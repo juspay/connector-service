@@ -710,7 +710,17 @@ message PaymentMethodData {
   oneof data {
     Card card = 1;
     WalletData wallet = 2;
+    UpiIntentData upi_intent = 3;
+    UpiCollectData upi_collect = 4;
   }
+}
+
+message UpiIntentData {
+  string upi_app = 1;  // UPI app name (e.g., "GPAY", "PHONEPE")
+}
+
+message UpiCollectData {
+  string vpa_id = 1;  // Virtual Payment Address (e.g., "customer@okbank")
 }
 
 message WalletData {
@@ -802,6 +812,7 @@ message AuthenticationData {
 enum PaymentMethod {
   CARD = 0;
   WALLET = 1;
+  UPI = 2;
 }
 
 message PaymentAddress {

@@ -8,14 +8,15 @@ grpc-api-types = { version = "0.1.0", path = "../grpc-api-types" }
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
 
 #third party dependencies
-hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
+hyperswitch_domain_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_domain_models", features = ["v1"] }
 thiserror = "1.0.49"
 strum = { version = "0.26", features = ["derive"] }
 serde = {version = "1.0.189" ,features = ["derive"]}
 serde_json = "1.0.107"
 error-stack = "0.4.1"
-hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
-hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
-hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
-hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" }
+common_enums = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_enums" }
+cards = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/cards" }
+common_utils = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/common_utils", features = ["async_ext", "metrics", "encryption_service", "keymanager"] }
+api_models = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/api_models", features = ["errors", "v1"] }
+hyperswitch_interfaces = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/hyperswitch_interfaces", features = ["v1"] }
+masking = { path = "/Users/utkarsh.pandey/Documents/repo/hyperswitch/crates/masking" }

@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use crate::types;
 use error_stack::ResultExt;
-use hyperswitch_common_utils::errors::CustomResult;
-use hyperswitch_common_utils::ext_traits::BytesExt;
+use common_utils::errors::CustomResult;
+use common_utils::ext_traits::BytesExt;
 use hyperswitch_domain_models::router_data_v2::RouterDataV2;
 use hyperswitch_interfaces::errors;
 
@@ -132,8 +132,10 @@ macro_rules! expand_fn_get_request_body {
                     router_data: req.clone(),
                 };
                 let request = bridge.request_body(input_data)?;
-                let form_data = <$curl_req as GetFormData>::get_form_data(&request);
-                Ok(Some(macro_types::RequestContent::FormData(form_data)))
+                tracing::debug!("Connector FormData: Creating form data for request");
+                // let form_data = <$curl_req as GetFormData>::get_form_data(&request);
+                tracing::info!("Connector FormData: Form data created successfully");
+                Ok(Some(macro_types::RequestContent::FormUrlEncoded(Box::new(request))))
             }
         }
     };
@@ -274,8 +276,8 @@ macro_rules! macro_connector_implementation {
                 $response,
             > for $connector
         {
-            fn get_http_method(&self) -> hyperswitch_common_utils::request::Method {
-                hyperswitch_common_utils::request::Method::$http_method_type
+            fn get_http_method(&self) -> common_utils::request::Method {
+                common_utils::request::Method::$http_method_type
             }
             $($function_def)*
             $(
@@ -420,7 +422,7 @@ macro_rules! create_all_prerequisites {
             #[derive(Clone)]
             pub struct $connector {
                 $(
-                    pub $converter_name: &'static (dyn hyperswitch_common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
+                    pub $converter_name: &'static (dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
                 )*
                 $(
                     [<$flow_name:snake>]: &'static (dyn BridgeRequestResponse<
@@ -434,7 +436,7 @@ macro_rules! create_all_prerequisites {
                 pub const fn new() -> &'static Self {
                     &Self{
                         $(
-                            $converter_name: &hyperswitch_common_utils::types::[<$amount_unit ForConnector>],
+                            $converter_name: &common_utils::types::[<$amount_unit ForConnector>],
                         )*
                         $(
                             [<$flow_name:snake>]: &Bridge::<
@@ -464,7 +466,7 @@ macro_rules! expand_imports {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
-            pub(super) use hyperswitch_common_utils::{
+            pub(super) use common_utils::{
                 errors::CustomResult, request::RequestContent,
             };
             pub(super) use hyperswitch_domain_models::router_data::ErrorResponse;
@@ -472,7 +474,7 @@ macro_rules! expand_imports {
             pub(super) use hyperswitch_interfaces::{
                 errors::ConnectorError, events::connector_api_logs::ConnectorEvent, types::Response,
             };
-            pub(super) use hyperswitch_masking::Maskable;
+            pub(super) use masking::Maskable;
         }
     };
 }
