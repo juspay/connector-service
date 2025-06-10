@@ -57,6 +57,29 @@ pub struct Proxy {
     pub bypass_proxy_urls: Vec<String>,
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod>
+    for hyperswitch_common_enums::CaptureMethod
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CaptureMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::CaptureMethod::Automatic => Ok(Self::Automatic),
+            grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
+            grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
+            grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "unsupported_capture_method".to_string(),
+                error_identifier: 4001,
+                error_message: format!("Capture method {:?} is not supported", value),
+                error_object: None,
+            }))),
+        }
+    }
+}
+
 impl ForeignTryFrom<i32> for hyperswitch_common_enums::CardNetwork {
     type Error = ApplicationErrorResponse;
 
@@ -398,6 +421,9 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
         };
 
         Ok(Self {
+            capture_method: Some(hyperswitch_common_enums::CaptureMethod::foreign_try_from(
+                value.capture_method(),
+            )?),
             payment_method_data: PaymentMethodData::foreign_try_from(
                 value.clone().payment_method_data.ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
@@ -432,15 +458,7 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             customer_name: None,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-            capture_method: value.capture_method.map(|cm| {
-                match cm {
-                    0 => hyperswitch_common_enums::CaptureMethod::Automatic,
-                    1 => hyperswitch_common_enums::CaptureMethod::Manual,
-                    2 => hyperswitch_common_enums::CaptureMethod::ManualMultiple,
-                    // Default to Automatic for any other value
-                    _ => hyperswitch_common_enums::CaptureMethod::Automatic,
-                }
-            }),
+
             router_return_url: value.return_url,
             complete_authorize_url: None,
             setup_future_usage: None,
