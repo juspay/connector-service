@@ -2226,25 +2226,6 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
     }
 }
 
-impl ForeignTryFrom<i32> for hyperswitch_common_enums::CaptureMethod {
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
-        match value {
-            0 => Ok(hyperswitch_common_enums::CaptureMethod::Automatic),
-            1 => Ok(hyperswitch_common_enums::CaptureMethod::Manual),
-            2 => Ok(hyperswitch_common_enums::CaptureMethod::ManualMultiple),
-            3 => Ok(hyperswitch_common_enums::CaptureMethod::Scheduled),
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CAPTURE_METHOD".to_owned(),
-                error_identifier: 401,
-                error_message: format!("Invalid value for capture_method: {}", value),
-                error_object: None,
-            })
-            .into()),
-        }
-    }
-}
-
 impl ForeignTryFrom<i32> for hyperswitch_common_enums::FutureUsage {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
