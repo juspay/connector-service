@@ -60,7 +60,7 @@ mod transformers;
 use super::macros;
 
 use self::transformers::{
-    PayuAuthType, PayuErrorCode, PayuErrorResponse, PayuPaymentRequest, PayuPaymentResponse,
+    PayuAuthType, PayuErrorResponse, PayuPaymentRequest, PayuPaymentResponse,
 };
 use crate::types::ResponseRouterData;
 
@@ -227,28 +227,27 @@ impl ConnectorCommon for Payu {
             // event_builder.add_data("payu_error_message", &response.error_message);
         }
 
-        // Map PayU error code to connector error
-        let _connector_error = response.error_code.to_connector_error();
-
         // Map PayU error codes to appropriate attempt status
-        let attempt_status = match response.error_code {
-            PayuErrorCode::InvalidVpa => AttemptStatus::Failure,
-            PayuErrorCode::UpiTimeout => AttemptStatus::Pending,
-            PayuErrorCode::UpiAppNotInstalled => AttemptStatus::AuthenticationFailed,
-            PayuErrorCode::UpiAppError => AttemptStatus::AuthenticationFailed,
-            PayuErrorCode::PaymentFailed => AttemptStatus::Failure,
+        let attempt_status = match response.error.as_str() {
+            "E108" | "EX108" => AttemptStatus::Failure, // Duplicate transaction
+            "E400" => AttemptStatus::Failure,           // Invalid parameters
+            "E401" => AttemptStatus::AuthenticationFailed, // Authentication failed
+            "E402" => AttemptStatus::Failure,           // Invalid hash
+            "E403" => AttemptStatus::Failure,           // Insufficient funds
+            "E404" => AttemptStatus::Failure,           // Invalid VPA
+            "E408" => AttemptStatus::Pending,           // Timeout
             _ => AttemptStatus::Failure,
         };
 
         Ok(ErrorResponse {
+            code: response.error.clone(),
+            message: response.message.clone(),
+            reason: Some(response.message.clone()),
             status_code: res.status_code,
-            code: response.error_code.as_ref().to_string(),
-            message: response.error_message.clone(),
-            reason: Some(response.error_message),
             attempt_status: Some(attempt_status),
             connector_transaction_id: None,
-            network_advice_code: None,
             network_decline_code: None,
+            network_advice_code: None,
             network_error_message: None,
         })
     }

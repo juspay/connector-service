@@ -88,6 +88,11 @@ message PaymentsAuthorizeResponse {
   optional string error_code = 9;
   optional string error_message = 10;
   optional string raw_connector_response = 11;
+  optional bytes connector_metadata = 12;
+  optional string transaction_token = 13;
+  optional string transaction_amount = 14;
+  optional string merchant_name = 15;
+  optional string merchant_vpa = 16;
 }
 
 message PaymentsSyncRequest {
@@ -369,7 +374,12 @@ message RedirectForm {
   oneof form_type {
     FormData form = 1;
     HtmlData html = 2;
+    UriData uri =3;
   }
+}
+
+message UriData{
+  string uri =1;
 }
 
 message FormData {

@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
-use error_stack::ResultExt;
 use common_enums::{self, AttemptStatus, CardNetwork};
+use error_stack::ResultExt;
 
 use cards::CardNumber;
 use common_enums::RefundStatus;
-use common_utils::{
-    ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
-};
+use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
@@ -256,9 +254,9 @@ fn extract_payment_method_and_data(
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
-        | PaymentMethodData::OpenBanking(_) 
-        | PaymentMethodData::CardDetailsForNetworkTransactionId(_) 
-        | PaymentMethodData::NetworkToken(_) 
+        | PaymentMethodData::OpenBanking(_)
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+        | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_) => Err(
             hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
                 "Only Card payment method is supported for Razorpay".to_string(),
@@ -728,6 +726,10 @@ impl<F, Req>
                     incremental_authorization_allowed: None,
                     mandate_reference: Box::new(None),
                     raw_connector_response: None,
+                    transaction_token: None,
+                    transaction_amount: None,
+                    merchant_name: None,
+                    merchant_vpa: None,
                 };
                 let error = None;
 
@@ -752,6 +754,10 @@ impl<F, Req>
                     incremental_authorization_allowed: None,
                     mandate_reference: Box::new(None),
                     raw_connector_response: None,
+                    transaction_token: None,
+                    transaction_amount: None,
+                    merchant_name: None,
+                    merchant_vpa: None,
                 };
                 let error = None;
 
@@ -1158,6 +1164,10 @@ impl<F, Req>
                 incremental_authorization_allowed: None,
                 mandate_reference: Box::new(None),
                 raw_connector_response: None,
+                transaction_token: None,
+                transaction_amount: None,
+                merchant_name: None,
+                merchant_vpa: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

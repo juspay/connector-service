@@ -287,6 +287,10 @@ pub enum PaymentsResponseData {
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
         raw_connector_response: Option<String>,
+        transaction_token: Option<String>,
+        transaction_amount: Option<String>,
+        merchant_name: Option<String>,
+        merchant_vpa: Option<String>,
     },
     SessionResponse {
         session_token: String,

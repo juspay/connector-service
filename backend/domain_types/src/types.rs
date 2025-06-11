@@ -999,6 +999,7 @@ pub fn generate_payment_authorize_response(
         PaymentsResponseData,
     >,
 ) -> Result<PaymentsAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
+    //need to change here 
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -1007,12 +1008,16 @@ pub fn generate_payment_authorize_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data,
-                connector_metadata: _,
+                connector_metadata ,
                 network_txn_id,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference: _,
                 raw_connector_response: _,
+                transaction_token,
+                transaction_amount,
+                merchant_name,
+                merchant_vpa,
             } => {
                 PaymentsAuthorizeResponse {
                     resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(resource_id)?),
@@ -1026,6 +1031,15 @@ pub fn generate_payment_authorize_response(
                                                 endpoint,
                                                 method: 0,
                                                 form_fields: HashMap::default(), //TODO
+                                            }
+                                        ))
+                                    })
+                                },
+                                hyperswitch_domain_models::router_response_types::RedirectForm::Uri { uri } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
+                                            grpc_api_types::payments::UriData {
+                                                uri,
                                             }
                                         ))
                                     })
@@ -1058,6 +1072,14 @@ pub fn generate_payment_authorize_response(
                     error_message: None,
                     error_code: None,
                     raw_connector_response: router_data_v2.resource_common_data.raw_connector_response.clone(),
+                    connector_metadata: connector_metadata.map(|metadata| {
+                        tracing::debug!("Serializing connector metadata: {:?}", metadata);
+                        serde_json::to_vec(&metadata).unwrap_or_default()
+                    }),
+                    transaction_token,
+                    transaction_amount,
+                    merchant_name,
+                    merchant_vpa,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1090,6 +1112,11 @@ pub fn generate_payment_authorize_response(
                     .resource_common_data
                     .raw_connector_response
                     .clone(),
+                connector_metadata: None,
+                transaction_token: None,
+                transaction_amount: None,
+                merchant_name: None,
+                merchant_vpa: None,
             }
         }
     };
@@ -1251,6 +1278,7 @@ pub fn generate_payment_void_response(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response: _,
+                ..
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -1331,6 +1359,7 @@ pub fn generate_payment_sync_response(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response: _,
+                ..
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -1908,6 +1937,7 @@ pub fn generate_payment_capture_response(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response: _,
+                ..
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
@@ -2179,6 +2209,7 @@ pub fn generate_setup_mandate_response(
                 incremental_authorization_allowed,
                 mandate_reference,
                 raw_connector_response: _,
+                ..
             } => {
                 SetupMandateResponse {
                     resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(resource_id)?),

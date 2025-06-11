@@ -1,4 +1,11 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
+use common_enums::{self, AttemptStatus, RefundStatus};
+use common_utils::{
+    errors::CustomResult,
+    ext_traits::{ByteSliceExt, OptionExt},
+    request::Method,
+    types::MinorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, DefendDispute, PSync, Refund, SetupMandate, SubmitEvidence,
@@ -12,13 +19,6 @@ use domain_types::{
     },
 };
 use error_stack::{Report, ResultExt};
-use common_enums::{self, AttemptStatus, RefundStatus};
-use common_utils::{
-    errors::CustomResult,
-    ext_traits::{ByteSliceExt, OptionExt},
-    request::Method,
-    types::MinorUnit,
-};
 
 use hyperswitch_domain_models::{
     payment_method_data::{Card, PaymentMethodData, WalletData},
@@ -625,9 +625,9 @@ impl
             | WalletData::PaypalSdk(_)
             | WalletData::WeChatPayQr(_)
             | WalletData::CashappQr(_)
-            | WalletData::Mifinity(_) 
-            | WalletData::AmazonPayRedirect(_) 
-            | WalletData::Paze(_) 
+            | WalletData::Mifinity(_)
+            | WalletData::AmazonPayRedirect(_)
+            | WalletData::Paze(_)
             | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
@@ -829,9 +829,9 @@ impl
                 | PaymentMethodData::RealTimePayment(_)
                 | PaymentMethodData::Upi(_)
                 | PaymentMethodData::OpenBanking(_)
-                | PaymentMethodData::CardToken(_) 
-                | PaymentMethodData::CardDetailsForNetworkTransactionId(_) 
-                | PaymentMethodData::NetworkToken(_) 
+                | PaymentMethodData::CardToken(_)
+                | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+                | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_) => Err(
                     hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
                         "payment method".into(),
@@ -1153,6 +1153,10 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             incremental_authorization_allowed: None,
             mandate_reference: Box::new(None),
             raw_connector_response: None,
+            transaction_token: None,
+            transaction_amount: None,
+            merchant_name: None,
+            merchant_vpa: None,
         };
 
         Ok(Self {
@@ -1226,6 +1230,10 @@ pub fn get_adyen_response(
         incremental_authorization_allowed: None,
         mandate_reference: Box::new(mandate_reference),
         raw_connector_response: None,
+        transaction_token: None,
+        transaction_amount: None,
+        merchant_name: None,
+        merchant_vpa: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1300,6 +1308,10 @@ pub fn get_redirection_response(
         incremental_authorization_allowed: None,
         mandate_reference: Box::new(None),
         raw_connector_response: None,
+        transaction_token: None,
+        transaction_amount: None,
+        merchant_name: None,
+        merchant_vpa: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1608,8 +1620,7 @@ fn get_recurring_processing_model(
 fn is_mandate_payment(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
 ) -> bool {
-    (item.request.setup_future_usage
-        == Some(common_enums::enums::FutureUsage::OffSession))
+    (item.request.setup_future_usage == Some(common_enums::enums::FutureUsage::OffSession))
         || item
             .request
             .mandate_id
@@ -1975,6 +1986,10 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 mandate_reference: Box::new(None),
                 raw_connector_response: None,
+                transaction_token: None,
+                transaction_amount: None,
+                merchant_name: None,
+                merchant_vpa: None,
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending,
@@ -2134,9 +2149,9 @@ impl
                 | PaymentMethodData::RealTimePayment(_)
                 | PaymentMethodData::Upi(_)
                 | PaymentMethodData::OpenBanking(_)
-                | PaymentMethodData::CardToken(_) 
-                | PaymentMethodData::CardDetailsForNetworkTransactionId(_) 
-                | PaymentMethodData::NetworkToken(_) 
+                | PaymentMethodData::CardToken(_)
+                | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+                | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_) => Err(
                     hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
                         "payment method".into(),
@@ -2314,8 +2329,7 @@ fn is_mandate_payment_for_setup_mandate(
         PaymentsResponseData,
     >,
 ) -> bool {
-    (item.request.setup_future_usage
-        == Some(common_enums::enums::FutureUsage::OffSession))
+    (item.request.setup_future_usage == Some(common_enums::enums::FutureUsage::OffSession))
         || item
             .request
             .mandate_id
@@ -2737,10 +2751,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
 pub(crate) fn get_dispute_stage_and_status(
     code: WebhookEventCode,
     dispute_status: Option<DisputeStatus>,
-) -> (
-    common_enums::DisputeStage,
-    common_enums::DisputeStatus,
-) {
+) -> (common_enums::DisputeStage, common_enums::DisputeStatus) {
     use common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
 
     match code {
