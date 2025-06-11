@@ -265,7 +265,8 @@ mod tests {
                         },
                         fiserv: ConnectorParams {
                             // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/".to_string(),
+                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
+                                .to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
@@ -388,7 +389,8 @@ mod tests {
                         },
                         fiserv: ConnectorParams {
                             // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/".to_string(),
+                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
+                                .to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
@@ -1393,7 +1395,8 @@ mod tests {
                         },
                         fiserv: ConnectorParams {
                             // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/".to_string(),
+                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
+                                .to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
