@@ -15,7 +15,6 @@ use hyperswitch_domain_models::{
 };
 
 use crate::types::ResponseRouterData;
-use crate::connectors::macros::GetFormData;
 
 // Authentication type for PayU
 #[derive(Debug, Clone)]
@@ -47,14 +46,6 @@ impl TryFrom<&ConnectorAuthType> for PayuAuthType {
     }
 }
 
-// UPI App details for PayU
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UpiAppConfig {
-    pub payu_code: String,    // PayU's internal code for the app
-    pub display_name: String, // Display name for the app
-    pub package_name: String, // Android package name (optional, for deep linking)
-    pub priority: i32,        // Display priority
-}
 
 // PayU payment request structure
 #[derive(Debug, Serialize)]
