@@ -7,8 +7,8 @@ use crate::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, FlowName, PSync, RSync, Refund,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -45,7 +45,7 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-
+use shared_metrics::metrics;
 use tracing::info;
 
 // Helper trait for payment operations
@@ -92,6 +92,7 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentsAuthorizeRequest,
+        connector_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -129,6 +130,7 @@ impl Payments {
             connector_integration,
             order_router_data,
             None,
+            connector_name,
         )
         .await
         .switch()
@@ -151,6 +153,7 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &SetupMandateRequest,
+        connector_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -188,6 +191,7 @@ impl Payments {
             connector_integration,
             order_router_data,
             None,
+            connector_name,
         )
         .await
         .switch()
@@ -299,75 +303,89 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentsAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let connector_auth_details =
-            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let payload = request.into_inner();
+        metrics::with_metrics_and_connector(
+            &FlowName::Authorize.to_string(),
+            &connector.to_string(),
+            || {
+                Box::pin(async {
+                    let connector_auth_details =
+                        auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                    let payload = request.into_inner();
 
-        //get connector data
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
+                    //get connector data
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        Authorize,
+                        PaymentFlowData,
+                        PaymentsAuthorizeData,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
 
-        // Create common request data
-        let mut payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| e.into_grpc_status())?;
+                    // Create common request data
+                    let mut payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
 
-        let should_do_order_create = connector_data.connector.should_do_order_create();
+                    let should_do_order_create = connector_data.connector.should_do_order_create();
 
-        if should_do_order_create {
-            self.handle_order_creation(
-                connector_data.clone(),
-                &mut payment_flow_data,
-                connector_auth_details.clone(),
-                &payload,
-            )
-            .await?;
-        }
+                    if should_do_order_create {
+                        self.handle_order_creation(
+                            connector_data.clone(),
+                            &mut payment_flow_data,
+                            connector_auth_details.clone(),
+                            &payload,
+                            &connector.to_string(),
+                        )
+                        .await?;
+                    }
 
-        // Create connector request data
-        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
-            .map_err(|e| e.into_grpc_status())?;
-        // Construct router data
-        let router_data = RouterDataV2::<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        > {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: payment_authorize_data,
-            response: Err(ErrorResponse::default()),
-        };
+                    // Create connector request data
+                    let payment_authorize_data =
+                        PaymentsAuthorizeData::foreign_try_from(payload.clone())
+                            .map_err(|e| e.into_grpc_status())?;
+                    // Construct router data
+                    let router_data = RouterDataV2::<
+                        Authorize,
+                        PaymentFlowData,
+                        PaymentsAuthorizeData,
+                        PaymentsResponseData,
+                    > {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: payment_authorize_data,
+                        response: Err(ErrorResponse::default()),
+                    };
 
-        // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            payload.all_keys_required,
+                    // Execute connector processing
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        payload.all_keys_required,
+                        &connector.to_string(),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Generate response
+                    let authorize_response =
+                        domain_types::types::generate_payment_authorize_response(response)
+                            .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(authorize_response))
+                })
+            },
         )
         .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        // Generate response
-        let authorize_response = domain_types::types::generate_payment_authorize_response(response)
-            .map_err(|e| e.into_grpc_status())?;
-
-        Ok(tonic::Response::new(authorize_response))
     }
 
     async fn payment_sync(
@@ -397,88 +415,105 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<IncomingWebhookResponse>, tonic::Status> {
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let connector_auth_details =
-            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let payload = request.into_inner();
+        metrics::with_metrics_and_connector(
+            &FlowName::IncomingWebhook.to_string(),
+            &connector.to_string(),
+            || {
+                Box::pin(async {
+                    let connector_auth_details =
+                        auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                    let payload = request.into_inner();
 
-        let request_details = payload
-            .request_details
-            .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-            .ok_or_else(|| {
-                tonic::Status::invalid_argument("missing request_details in the payload")
-            })?
-            .map_err(|e| e.into_grpc_status())?;
+                    let request_details = payload
+                        .request_details
+                        .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                        .ok_or_else(|| {
+                            tonic::Status::invalid_argument(
+                                "missing request_details in the payload",
+                            )
+                        })?
+                        .map_err(|e| e.into_grpc_status())?;
 
-        let webhook_secrets = payload
-            .webhook_secrets
-            .map(|details| {
-                domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(details)
-                    .map_err(|e| e.into_grpc_status())
-            })
-            .transpose()?;
+                    let webhook_secrets = payload
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
 
-        //get connector data
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-        let source_verified = connector_data
-            .connector
-            .verify_webhook_source(
-                request_details.clone(),
-                webhook_secrets.clone(),
-                // TODO: do we need to force authentication? we can make it optional
-                Some(connector_auth_details.clone()),
-            )
-            .switch()
-            .map_err(|e| e.into_grpc_status())?;
+                    let source_verified = connector_data
+                        .connector
+                        .verify_webhook_source(
+                            request_details.clone(),
+                            webhook_secrets.clone(),
+                            Some(connector_auth_details.clone()),
+                        )
+                        .switch()
+                        .map_err(|e| e.into_grpc_status())?;
 
-        let event_type = connector_data
-            .connector
-            .get_event_type(
-                request_details.clone(),
-                webhook_secrets.clone(),
-                Some(connector_auth_details.clone()),
-            )
-            .switch()
-            .map_err(|e| e.into_grpc_status())?;
+                    let event_type = connector_data
+                        .connector
+                        .get_event_type(
+                            request_details.clone(),
+                            webhook_secrets.clone(),
+                            Some(connector_auth_details.clone()),
+                        )
+                        .switch()
+                        .map_err(|e| e.into_grpc_status())?;
 
-        // Get content for the webhook based on the event type
-        let content = match event_type {
-            domain_types::connector_types::EventType::Payment => get_payments_webhook_content(
-                connector_data,
-                request_details,
-                webhook_secrets,
-                Some(connector_auth_details),
-            )
-            .await
-            .map_err(|e| e.into_grpc_status())?,
-            domain_types::connector_types::EventType::Refund => get_refunds_webhook_content(
-                connector_data,
-                request_details,
-                webhook_secrets,
-                Some(connector_auth_details),
-            )
-            .await
-            .map_err(|e| e.into_grpc_status())?,
-            domain_types::connector_types::EventType::Dispute => get_disputes_webhook_content(
-                connector_data,
-                request_details,
-                webhook_secrets,
-                Some(connector_auth_details),
-            )
-            .await
-            .map_err(|e| e.into_grpc_status())?,
-        };
+                    let content = match event_type {
+                        domain_types::connector_types::EventType::Payment => {
+                            get_payments_webhook_content(
+                                connector_data,
+                                request_details,
+                                webhook_secrets,
+                                Some(connector_auth_details),
+                            )
+                            .await
+                            .map_err(|e| e.into_grpc_status())?
+                        }
+                        domain_types::connector_types::EventType::Refund => {
+                            get_refunds_webhook_content(
+                                connector_data,
+                                request_details,
+                                webhook_secrets,
+                                Some(connector_auth_details),
+                            )
+                            .await
+                            .map_err(|e| e.into_grpc_status())?
+                        }
+                        domain_types::connector_types::EventType::Dispute => {
+                            get_disputes_webhook_content(
+                                connector_data,
+                                request_details,
+                                webhook_secrets,
+                                Some(connector_auth_details),
+                            )
+                            .await
+                            .map_err(|e| e.into_grpc_status())?
+                        }
+                    };
 
-        let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
-            .map_err(|e| e.into_grpc_status())?;
+                    let api_event_type =
+                        grpc_api_types::payments::EventType::foreign_try_from(event_type)
+                            .map_err(|e| e.into_grpc_status())?;
 
-        let response = IncomingWebhookResponse {
-            event_type: api_event_type.into(),
-            content: Some(content),
-            source_verified,
-        };
+                    let response = IncomingWebhookResponse {
+                        event_type: api_event_type.into(),
+                        content: Some(content),
+                        source_verified,
+                    };
 
-        Ok(tonic::Response::new(response))
+                    Ok(tonic::Response::new(response))
+                })
+            },
+        )
+        .await
     }
 
     async fn refund(
@@ -507,74 +542,82 @@ impl PaymentService for Payments {
         request: tonic::Request<SetupMandateRequest>,
     ) -> Result<tonic::Response<SetupMandateResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
-
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let connector_auth_details =
-            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-        let payload = request.into_inner();
+        metrics::with_metrics_and_connector(
+            &FlowName::SetupMandate.to_string(),
+            &connector.to_string(),
+            || {
+                Box::pin(async {
+                    let connector_auth_details =
+                        auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                    let payload = request.into_inner();
 
-        //get connector data
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-        // Get connector integration
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
 
-        // Create common request data
-        let mut payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| e.into_grpc_status())?;
+                    let mut payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
 
-        let should_do_order_create = connector_data.connector.should_do_order_create();
+                    let should_do_order_create = connector_data.connector.should_do_order_create();
 
-        if should_do_order_create {
-            self.handle_order_creation_for_setup_mandate(
-                connector_data.clone(),
-                &mut payment_flow_data,
-                connector_auth_details.clone(),
-                &payload,
-            )
-            .await?;
-        }
+                    if should_do_order_create {
+                        self.handle_order_creation_for_setup_mandate(
+                            connector_data.clone(),
+                            &mut payment_flow_data,
+                            connector_auth_details.clone(),
+                            &payload,
+                            &connector.to_string(),
+                        )
+                        .await?;
+                    }
 
-        let setup_mandate_request_data = SetupMandateRequestData::foreign_try_from(payload.clone())
-            .map_err(|e| e.into_grpc_status())?;
+                    let setup_mandate_request_data =
+                        SetupMandateRequestData::foreign_try_from(payload.clone())
+                            .map_err(|e| e.into_grpc_status())?;
 
-        // Create router data
-        let router_data: RouterDataV2<
-            SetupMandate,
-            PaymentFlowData,
-            SetupMandateRequestData,
-            PaymentsResponseData,
-        > = RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: setup_mandate_request_data,
-            response: Err(ErrorResponse::default()),
-        };
+                    let router_data: RouterDataV2<
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData,
+                        PaymentsResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: setup_mandate_request_data,
+                        response: Err(ErrorResponse::default()),
+                    };
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        &connector.to_string(),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    let setup_mandate_response = generate_setup_mandate_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(setup_mandate_response))
+                })
+            },
         )
         .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        // Generate response
-        let setup_mandate_response =
-            generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
-
-        Ok(tonic::Response::new(setup_mandate_response))
     }
 
     async fn accept_dispute(
@@ -582,57 +625,67 @@ impl PaymentService for Payments {
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
-        let metadata = request.metadata().clone();
-        let payload = request.into_inner();
-        let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        metrics::with_metrics_and_connector(
+            &FlowName::AcceptDispute.to_string(),
+            &connector.to_string(),
+            || {
+                Box::pin(async {
+                    let connector_auth_details =
+                        auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                    let payload = request.into_inner();
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        Accept,
+                        DisputeFlowData,
+                        AcceptDisputeData,
+                        DisputeResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
 
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            Accept,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
+                    let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
 
-        let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
-            .map_err(|e| e.into_grpc_status())?;
+                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
 
-        let dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| e.into_grpc_status())?;
+                    let router_data: RouterDataV2<
+                        Accept,
+                        DisputeFlowData,
+                        AcceptDisputeData,
+                        DisputeResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: dispute_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: dispute_data,
+                        response: Err(ErrorResponse::default()),
+                    };
 
-        let connector_auth_details =
-            auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        &connector.to_string(),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
-        let router_data: RouterDataV2<
-            Accept,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        > = RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: dispute_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: dispute_data,
-            response: Err(ErrorResponse::default()),
-        };
+                    let dispute_response = generate_accept_dispute_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
+                    Ok(tonic::Response::new(dispute_response))
+                })
+            },
         )
         .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        let dispute_response =
-            generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
-
-        Ok(tonic::Response::new(dispute_response))
     }
 
     async fn submit_evidence(
@@ -640,56 +693,67 @@ impl PaymentService for Payments {
         request: tonic::Request<SubmitEvidenceRequest>,
     ) -> Result<tonic::Response<SubmitEvidenceResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
-        let metadata = request.metadata().clone();
-        let payload = request.into_inner();
-        let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        metrics::with_metrics_and_connector(
+            &FlowName::SubmitEvidence.to_string(),
+            &connector.to_string(),
+            || {
+                Box::pin(async {
+                    let connector_auth_details =
+                        auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                    let payload = request.into_inner();
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            SubmitEvidence,
-            DisputeFlowData,
-            SubmitEvidenceData,
-            DisputeResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        SubmitEvidence,
+                        DisputeFlowData,
+                        SubmitEvidenceData,
+                        DisputeResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
 
-        let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
-            .map_err(|e| e.into_grpc_status())?;
+                    let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
 
-        let dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| e.into_grpc_status())?;
+                    let dispute_flow_data = DisputeFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
 
-        let connector_auth_details =
-            auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+                    let router_data: RouterDataV2<
+                        SubmitEvidence,
+                        DisputeFlowData,
+                        SubmitEvidenceData,
+                        DisputeResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: dispute_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: dispute_data,
+                        response: Err(ErrorResponse::default()),
+                    };
 
-        let router_data: RouterDataV2<
-            SubmitEvidence,
-            DisputeFlowData,
-            SubmitEvidenceData,
-            DisputeResponseData,
-        > = RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: dispute_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: dispute_data,
-            response: Err(ErrorResponse::default()),
-        };
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        &connector.to_string(),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
+                    let dispute_response = generate_submit_evidence_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    Ok(tonic::Response::new(dispute_response))
+                })
+            },
         )
         .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        let dispute_response =
-            generate_submit_evidence_response(response).map_err(|e| e.into_grpc_status())?;
-
-        Ok(tonic::Response::new(dispute_response))
     }
 }
 
