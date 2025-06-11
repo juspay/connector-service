@@ -1,11 +1,12 @@
+use base64::Engine;
 use domain_types::{errors::ApiClientError, types::Proxy};
 // use base64::engine::Engine;
-use error_stack::{report, ResultExt};
 use common_utils::{
     // consts::BASE64_ENGINE,
     ext_traits::AsyncExt,
     request::{Method, Request, RequestContent},
 };
+use error_stack::{report, ResultExt};
 use hyperswitch_domain_models::{
     errors::api_error_response::ApiErrorResponse, router_data_v2::RouterDataV2,
 };
@@ -138,7 +139,23 @@ where
                             }
                             tracing::Span::current()
                                 .record("status_code", tracing::field::display(status_code));
-
+                            tracing::info!("response raw body {:?}", body.response);
+                            // Decode base64 response body and parse as JSON
+                            if let Ok(decoded_bytes) =
+                                base64::engine::general_purpose::STANDARD.decode(&body.response)
+                            {
+                                if let Ok(decoded_string) = String::from_utf8(decoded_bytes) {
+                                    if let Ok(json_response) =
+                                        serde_json::from_str::<serde_json::Value>(&decoded_string)
+                                    {
+                                        tracing::info!(
+                                            "Decoded JSON response: {}",
+                                            serde_json::to_string_pretty(&json_response)
+                                                .unwrap_or_default()
+                                        );
+                                    }
+                                }
+                            }
                             let handle_response_result =
                                 connector.handle_response_v2(&router_data, None, body.clone());
 
@@ -218,10 +235,7 @@ pub async fn call_connector_api(
                 let client = client.post(url);
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
-                    Some(RequestContent::FormUrlEncoded(payload)) => {
-                        
-                        client.form(&payload)
-                    }
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
                     _ => client,
                 }
             }

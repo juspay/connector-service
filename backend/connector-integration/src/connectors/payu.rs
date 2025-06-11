@@ -55,6 +55,7 @@ use hyperswitch_interfaces::{
 use hex;
 use masking::{ExposeInterface, Maskable, Secret};
 use sha2::{Digest, Sha512};
+use base64::Engine;
 
 mod transformers;
 use super::macros;
@@ -153,11 +154,25 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
 
+            // Check if this is UPI Collect flow
+            let is_upi_collect = matches!(
+                &req.request.payment_method_data,
+                hyperswitch_domain_models::payment_method_data::PaymentMethodData::Upi(
+                    hyperswitch_domain_models::payment_method_data::UpiData::UpiCollect(_)
+                )
+            );
+
             // Basic headers for PayU requests
             let mut headers = vec![
                 ("Content-Type".to_string(), ("application/x-www-form-urlencoded".to_string().into())),
                 ("Accept".to_string(), ("application/json".to_string().into())),
             ];
+
+            // Add UPI Collect specific headers
+            if is_upi_collect {
+                headers.push(("X-PayU-Flow".to_string(), ("upi_collect".to_string().into())));
+                headers.push(("Accept".to_string(), ("text/plain".to_string().into()))); // Expect base64 response
+            }
 
             // Add mobile-specific headers if this is a UPI request from a mobile device
             if let Some(is_mobile) = req.request.metadata.as_ref()
@@ -169,7 +184,6 @@ macros::macro_connector_implementation!(
                 }
             }
 
-
             Ok(headers)
         }
 
@@ -179,15 +193,74 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             // Get base URL from the connectors configuration
             let base_url = &req.resource_common_data.connectors.payu.base_url;
-            let payment_path = "/_payment"; // PayU standard payment endpoint
+            
+            // Check payment method to determine the endpoint
+            let payment_path = match &req.request.payment_method_data {
+                hyperswitch_domain_models::payment_method_data::PaymentMethodData::Upi(upi_data) => {
+                    match upi_data {
+                        hyperswitch_domain_models::payment_method_data::UpiData::UpiCollect(_) => {
+                            "/_payment" // UPI Collect endpoint (returns base64)
+                        },
+                        hyperswitch_domain_models::payment_method_data::UpiData::UpiIntent(_) => {
+                            "/_payment" // UPI Intent endpoint (returns JSON)
+                        }
+                    }
+                },
+                _ => "/_payment" // Default endpoint
+            };
+            
             let url = format!("{}{}", base_url, payment_path);
-
-
+            
+            tracing::info!("PayU URL for payment method: {}", url);
             Ok(url)
+        }
+
+        fn preprocess_response(
+            &self,
+            data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            res: Response,
+        ) -> CustomResult<Response, errors::ConnectorError> {
+            // Check if this is UPI Collect flow which returns base64 response
+            let is_base64_response = matches!(
+                &data.request.payment_method_data,
+                hyperswitch_domain_models::payment_method_data::PaymentMethodData::Upi(
+                    hyperswitch_domain_models::payment_method_data::UpiData::UpiCollect(_)
+                )
+            );
+
+            if is_base64_response {
+                // For UPI Collect, PayU returns base64 encoded JSON
+                // We need to decode it before parsing
+                let response_str = String::from_utf8(res.response.to_vec())
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                
+                tracing::info!("PayU UPI Collect raw response: {}", response_str);
+
+                // Try to decode from base64
+                match base64::engine::general_purpose::STANDARD.decode(response_str.trim()) {
+                    Ok(decoded_bytes) => {
+                        tracing::info!("Successfully decoded base64 response for UPI Collect");
+                        Ok(Response {
+                            headers: res.headers,
+                            response: bytes::Bytes::from(decoded_bytes),
+                            status_code: res.status_code,
+                        })
+                    },
+                    Err(_) => {
+                        // If base64 decoding fails, assume it's already JSON and return as-is
+                        tracing::info!("Base64 decoding failed, treating as regular JSON response");
+                        Ok(res)
+                    }
+                }
+            } else {
+                // For UPI Intent and other flows, return response as-is
+                Ok(res)
+            }
         }
 
     }
 );
+
 
 impl ConnectorCommon for Payu {
     fn id(&self) -> &'static str {

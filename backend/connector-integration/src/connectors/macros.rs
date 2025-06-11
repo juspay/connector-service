@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use crate::types;
-use error_stack::ResultExt;
 use common_utils::errors::CustomResult;
 use common_utils::ext_traits::BytesExt;
+use error_stack::ResultExt;
 use hyperswitch_domain_models::router_data_v2::RouterDataV2;
 use hyperswitch_interfaces::errors;
 
@@ -191,13 +191,15 @@ macro_rules! expand_fn_handle_response {
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
             ConnectorError,
         > {
+            // Preprocess the response before parsing
+            let preprocessed_res = self.preprocess_response(data, res)?;
             paste::paste! {let bridge = self.[< $flow:snake >];}
-            let response_body = bridge.response(res.response)?;
+            let response_body = bridge.response(preprocessed_res.response)?;
             event_builder.map(|i| i.set_response_body(&response_body));
             let response_router_data = ResponseRouterData {
                 response: response_body,
                 router_data: data.clone(),
-                http_code: res.status_code,
+                http_code: preprocessed_res.status_code,
             };
             let result = bridge.router_data(response_router_data)?;
             Ok(result)
@@ -466,9 +468,7 @@ macro_rules! expand_imports {
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
-            pub(super) use common_utils::{
-                errors::CustomResult, request::RequestContent,
-            };
+            pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
             pub(super) use hyperswitch_domain_models::router_data::ErrorResponse;
             pub(super) use hyperswitch_domain_models::router_data_v2::RouterDataV2;
             pub(super) use hyperswitch_interfaces::{

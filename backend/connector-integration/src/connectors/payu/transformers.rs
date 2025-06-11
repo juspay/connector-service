@@ -1,3 +1,4 @@
+use base64::Engine;
 use common_enums::AttemptStatus;
 use common_utils::{pii::EmailStrategy, request::Method};
 use domain_types::{
@@ -112,7 +113,6 @@ pub struct PayuPaymentRequest {
     pub offer_id: Option<String>, // Offer ID
 
     // Internal fields for processing
-    #[serde(skip)]
     pub vpa: Option<String>, // Virtual Payment Address (for UPI Collect)
     #[serde(skip)]
     pub enforce_pay_method: Option<String>, // Force payment method
@@ -121,8 +121,6 @@ pub struct PayuPaymentRequest {
 }
 
 impl PayuPaymentRequest {
-    // Get UPI app configuration based on app name
-
     // Validate UPI VPA format
     pub fn validate_vpa(vpa: &str) -> bool {
         // Basic validation: UPI VPAs typically have format username@provider
@@ -220,12 +218,82 @@ pub struct PayuRedirectResponse {
     pub intent_url: Option<String>, // Android intent URL
 }
 
+// PayU collect response structure (for UPI Collect status)
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuCollectResponse {
+    pub status: String,
+    pub result: PayuCollectResult,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuCollectResult {
+    pub mihpayid: String,
+    pub mode: String,
+    pub status: String,
+    pub key: String,
+    pub txnid: String,
+    pub amount: String,
+    pub addedon: String,
+    pub productinfo: String,
+    pub firstname: String,
+    pub lastname: String,
+    pub address1: String,
+    pub address2: String,
+    pub city: String,
+    pub state: String,
+    pub country: String,
+    pub zipcode: String,
+    pub email: String,
+    pub phone: String,
+    pub udf1: String,
+    pub udf2: String,
+    pub udf3: String,
+    pub udf4: String,
+    pub udf5: String,
+    pub udf6: String,
+    pub udf7: String,
+    pub udf8: String,
+    pub udf9: String,
+    pub udf10: String,
+    pub card_token: String,
+    pub card_no: String,
+    pub field0: String,
+    pub field1: String,
+    pub field2: String,
+    pub field3: String,
+    pub field4: String,
+    pub field5: String,
+    pub field6: String,
+    pub field7: String,
+    pub field8: String,
+    pub field9: String,
+    pub payment_source: String,
+    #[serde(rename = "PG_TYPE")]
+    pub pg_type: String,
+    pub error: String,
+    #[serde(rename = "error_Message")]
+    pub error_message: String,
+    pub net_amount_debit: String,
+    pub discount: String,
+    pub offer_key: String,
+    pub offer_availed: String,
+    pub unmappedstatus: String,
+    pub hash: String,
+    pub bank_ref_no: String,
+    pub bank_ref_num: String,
+    pub bankcode: String,
+    pub surl: String,
+    pub curl: String,
+    pub furl: String,
+}
+
 // Combined PayU response type
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum PayuPaymentResponse {
     DirectResponse(PayuDirectResponse),
     RedirectResponse(PayuRedirectResponse),
+    CollectResponse(PayuCollectResponse),
     ErrorResponse(PayuErrorResponse),
 }
 
@@ -452,6 +520,9 @@ impl
             auth.salt.clone().expose()
         );
 
+        tracing::info!("PayU: Hash string components - key: {}, txnid: {}, amount: {}, productinfo: {}, firstname: {}, email: {}", 
+            auth.key.clone().expose(), txn_id, amount, product_info, first_name, email_for_hash);
+
         // Generate SHA512 hash
         let mut hasher = Sha512::new();
         hasher.update(hash_string.as_bytes());
@@ -477,8 +548,6 @@ impl
             .as_ref()
             .and_then(|meta| meta.user_agent.as_ref().map(|v| v.to_string()))
             .unwrap_or_else(|| "web".to_string());
-
-        // tracing::info!("PayU: Final amount for PayU request: {}", payu_amount);
 
         // Prepare common request fields
         let mut request = PayuPaymentRequest {
@@ -578,10 +647,10 @@ impl
         tracing::debug!("PayU: Processing payment method data");
         match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => {
-                tracing::debug!("PayU: UPI payment method detected");
+                tracing::info!("PayU: UPI payment method detected");
                 match upi_data {
                     payment_method_data::UpiData::UpiIntent(_intent_data) => {
-                        tracing::debug!("PayU: UPI Intent flow");
+                        tracing::info!("PayU: UPI Intent flow");
                         // Extract UPI app from the gRPC request UpiIntentData
                         // Since the UpiIntentData in domain model is empty, we get the app info from metadata
                         let app_name = router_data
@@ -598,11 +667,11 @@ impl
                         request.vpa = None;
                     }
                     payment_method_data::UpiData::UpiCollect(collect_data) => {
-                        tracing::debug!("PayU: UPI Collect flow");
+                        tracing::info!("PayU: UPI Collect flow");
                         // Get the VPA ID from the collect_data
                         if let Some(vpa_secret) = &collect_data.vpa_id {
                             let vpa_id = vpa_secret.clone().expose();
-
+                            tracing::info!("VPA ID ++ {:?}", vpa_id);
                             // Validate VPA format
                             if !Self::validate_vpa(&vpa_id) {
                                 return Err(errors::ConnectorError::InvalidDataFormat {
@@ -614,7 +683,8 @@ impl
                             // UPI Collect requires VPA
                             request.vpa = Some(vpa_id.clone());
                             request.upi_app_name = None;
-
+                            request.bankcode = "UPI".to_string();
+                            request.pg = "UPI".to_string();
                             // For Collect flow, set specific UPI parameters
                             request.enforce_pay_method = Some("upi_collect".to_string());
                         } else {
@@ -768,6 +838,55 @@ impl
                     raw_connector_response: serde_json::to_string(&redirect_response).ok(),
                     transaction_token: None,
                     transaction_amount: None,
+                    merchant_name: None,
+                    merchant_vpa: None,
+                };
+                router_data.response = Ok(payments_response_data);
+            }
+            PayuPaymentResponse::CollectResponse(collect_response) => {
+                // Handle collect response from PayU (typically for UPI Collect status check)
+                let status = match collect_response.result.status.to_lowercase().as_str() {
+                    "success" => AttemptStatus::Charged,
+                    "failure" | "failed" => AttemptStatus::Failure,
+                    "pending" | "in progress" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Pending,
+                };
+
+                router_data.resource_common_data.status = status;
+
+                let payments_response_data = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        collect_response.result.mihpayid.clone(),
+                    ),
+                    redirection_data: Box::new(None),
+                    connector_metadata: {
+                        let mut metadata = HashMap::new();
+                        metadata.insert("mode".to_string(), collect_response.result.mode.clone());
+                        metadata.insert(
+                            "bankcode".to_string(),
+                            collect_response.result.bankcode.clone(),
+                        );
+                        metadata.insert(
+                            "pg_type".to_string(),
+                            collect_response.result.pg_type.clone(),
+                        );
+                        metadata.insert(
+                            "unmappedstatus".to_string(),
+                            collect_response.result.unmappedstatus.clone(),
+                        );
+                        Some(serde_json::to_value(metadata).unwrap_or_default())
+                    },
+                    network_txn_id: if !collect_response.result.bank_ref_no.is_empty() {
+                        Some(collect_response.result.bank_ref_no.clone())
+                    } else {
+                        None
+                    },
+                    connector_response_reference_id: Some(collect_response.result.txnid.clone()),
+                    incremental_authorization_allowed: None,
+                    mandate_reference: Box::new(None),
+                    raw_connector_response: serde_json::to_string(&collect_response).ok(),
+                    transaction_token: None,
+                    transaction_amount: Some(collect_response.result.amount.clone()),
                     merchant_name: None,
                     merchant_vpa: None,
                 };
