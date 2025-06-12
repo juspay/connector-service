@@ -226,7 +226,7 @@ pub struct PaymentsAuthorizeData {
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<std::collections::HashMap<String, String>>,
     // New amount for amount frame work
     pub minor_amount: MinorUnit,
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
@@ -578,7 +578,7 @@ pub struct SetupMandateRequestData {
     pub return_url: Option<String>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub request_incremental_authorization: bool,
-    pub metadata: Option<serde_json::Value>,
+    pub metadata: Option<std::collections::HashMap<String, String>>,
     pub complete_authorize_url: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub merchant_order_reference_id: Option<String>,

@@ -401,11 +401,11 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
-impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
+impl ForeignTryFrom<(PaymentsAuthorizeRequest, std::collections::HashMap<String, String>)> for PaymentsAuthorizeData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: PaymentsAuthorizeRequest,
+        (value, metadata): (PaymentsAuthorizeRequest, std::collections::HashMap<String, String>),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
             Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
@@ -487,7 +487,7 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
                     error_object: None,
                 }))?,
             request_incremental_authorization: false,
-            metadata: None,
+            metadata: Some(metadata),
             merchant_order_reference_id: None,
             order_tax_amount: None,
             shipping_cost: None,

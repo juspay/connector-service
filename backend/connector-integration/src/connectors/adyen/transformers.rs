@@ -1695,7 +1695,7 @@ fn get_additional_data(
     }
 }
 
-pub fn get_risk_data(metadata: serde_json::Value) -> Option<RiskData> {
+pub fn get_risk_data(metadata: std::collections::HashMap<String, String>) -> Option<RiskData> {
     let item_i_d = get_str("riskdata.basket.item1.itemID", &metadata);
     let product_title = get_str("riskdata.basket.item1.productTitle", &metadata);
     let amount_per_item = get_str("riskdata.basket.item1.amountPerItem", &metadata);
@@ -1774,15 +1774,12 @@ pub fn get_risk_data(metadata: serde_json::Value) -> Option<RiskData> {
     })
 }
 
-fn get_str(key: &str, riskdata: &serde_json::Value) -> Option<String> {
-    riskdata
-        .get(key)
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
+fn get_str(key: &str, riskdata: &std::collections::HashMap<String, String>) -> Option<String> {
+    riskdata.get(key).cloned()
 }
 
-fn get_bool(key: &str, riskdata: &serde_json::Value) -> Option<bool> {
-    riskdata.get(key).and_then(|v| v.as_bool())
+fn get_bool(key: &str, riskdata: &std::collections::HashMap<String, String>) -> Option<bool> {
+    riskdata.get(key).and_then(|v| v.parse().ok())
 }
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]

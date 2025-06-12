@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
 use crate::consts;
+use common_utils::errors::CustomResult;
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
 use error_stack::Report;
 use http::request::Request;
-use common_utils::errors::CustomResult;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use tonic::metadata;
 
@@ -118,6 +118,24 @@ fn parse_metadata<'a>(
                 }))
             })
         })
+}
+
+pub fn extract_all_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<std::collections::HashMap<String, String>, ApplicationErrorResponse> {
+    let mut metadata_map = std::collections::HashMap::new();
+
+    // Iterate through all metadata keys and extract using parse_metadata
+    for key_and_value in metadata.iter() {
+        if let tonic::metadata::KeyAndValueRef::Ascii(key, _) = key_and_value {
+            let key_str = key.as_str();
+            if let Ok(value_str) = parse_metadata(metadata, key_str) {
+                metadata_map.insert(key_str.to_string(), value_str.to_string());
+            }
+        }
+    }
+
+    Ok(metadata_map)
 }
 
 #[macro_export]

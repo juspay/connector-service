@@ -45,6 +45,7 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use base64::prelude::*;
 
 use tracing::info;
 
@@ -306,6 +307,7 @@ impl PaymentService for Payments {
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let connector_auth_details =
             auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let metadata = request.metadata().clone();
         let payload = request.into_inner();
 
         //get connector data
@@ -338,7 +340,11 @@ impl PaymentService for Payments {
         }
 
         // Create connector request data
-        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
+        // Extract all metadata using utils function like API keys
+        let metadata_json = crate::utils::extract_all_metadata(&metadata)
+            .map_err(|e| e.into_grpc_status())?;
+        
+        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from((payload.clone(), metadata_json))
             .map_err(|e| e.into_grpc_status())?;
         // Construct router data
         let router_data = RouterDataV2::<
