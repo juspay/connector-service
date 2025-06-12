@@ -694,6 +694,16 @@ impl
                             .into());
                         }
                     }
+                    payment_method_data::UpiData::UpiQr(_qr_data) => {
+                        tracing::info!("PayU: UPI QR flow");
+                        // For UPI QR, PayU generates a QR code that customers can scan
+                        request.pg = "QR".to_string();
+                        request.bankcode = "UPIQR".to_string(); // UPIQR for UPI QR, BQR for Bharath QR
+                        request.txn_s2s_flow = 2;
+                        request.upi_app_name = None;
+                        request.vpa = None;
+                        request.enforce_pay_method = Some("upi_qr".to_string());
+                    }
                 }
             }
             _ => {

@@ -222,6 +222,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
                     };
                     Ok(PaymentMethodData::Upi(payment_method_data::UpiData::UpiCollect(collect_data)))
                 },
+                // Add UPI QR
+                grpc_api_types::payments::payment_method_data::Data::UpiQr(_upi_qr) => {
+                    // UpiQrData is empty in our current implementation
+                    let qr_data = payment_method_data::UpiQrData {};
+                    Ok(PaymentMethodData::Upi(payment_method_data::UpiData::UpiQr(qr_data)))
+                },
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
