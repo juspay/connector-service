@@ -7,4 +7,7 @@ pub use self::razorpay::Razorpay;
 pub mod payu;
 pub use self::payu::Payu;
 
+pub mod phonepe;
+pub use self::phonepe::PhonePe;
+
 pub mod macros;
