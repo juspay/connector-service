@@ -1,42 +1,170 @@
-use domain_types::connector_flow::Authorize;
-use domain_types::connector_types::{
-    PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+use domain_types::{
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData , PaymentsSyncData},
+    connector_flow::Authorize,
 };
-use error_stack::{ResultExt, Report};
-use hyperswitch_common_utils::errors::CustomResult;
-use hyperswitch_common_utils::request::Method;
+
+use hyperswitch_common_utils::{
+    types::FloatMajorUnit,   
+};
+
 use hyperswitch_domain_models::{
-    payment_method_data::PaymentMethodData,
-    router_data::ErrorResponse, // Added for XenditErrorResponse
+    payment_method_data::{PaymentMethodData},
+    router_data::{ConnectorAuthType,ErrorResponse}, // Added for XenditErrorResponse
     router_data_v2::RouterDataV2,
     router_request_types::ResponseId,
-    router_response_types::{self as hyperswitch_router_response_types}, // aliased
 };
-use crate::connectors::xendit::ForeignTryFrom;
-use hyperswitch_interfaces::errors;
+
+use hyperswitch_interfaces::{errors::{self ,ConnectorError}};
+
+use hyperswitch_common_enums::Currency;
+
+use hyperswitch_cards::CardNumber;
+
 use serde::{Deserialize, Serialize};
-use hyperswitch_masking::{ExposeInterface, Secret};
+
+use hyperswitch_masking::{PeekInterface, Secret};
+
+type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
+
+pub trait ForeignTryFrom<F>: Sized {
+    type Error;
+
+    fn foreign_try_from(from: F) -> Result<Self, Self::Error>;
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChannelProperties {
+    pub success_return_url: Option<String>,
+    pub failure_return_url: Option<String>,
+    pub skip_three_d_secure: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CardInformation {
+    pub card_number: CardNumber,
+    pub expiry_month: Secret<String>,
+    pub expiry_year: Secret<String>,
+    pub cvv: Secret<String>,
+    // pub cardholder_name: Secret<String>,
+    // pub cardholder_email: pii::Email,
+    // pub cardholder_phone_number: Secret<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CardInfo {
+    pub channel_properties: ChannelProperties,
+    pub card_information: CardInformation,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum TransactionType {
+    OneTimeUse,
+    MultipleUse,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum PaymentMethodType {
+    CARD,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum PaymentMethod {
+    Card(CardPaymentRequest),
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CardPaymentRequest {
+    #[serde(rename = "type")]
+    pub payment_type: PaymentMethodType,
+    pub card: CardInfo,
+    pub reusability: TransactionType,
+    pub reference_id: Secret<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PaymentStatus {
+    Pending,
+    RequiresAction,
+    Failed,
+    Succeeded,
+    AwaitingCapture,
+    Verified,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum MethodType {
+    Get,
+    Post,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Action {
+    pub method: MethodType,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PaymentMethodInfo {
+    pub id: Secret<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct XenditPaymentResponse {
+    pub id: String,
+    pub status: PaymentStatus,
+    pub actions: Option<Vec<Action>>,
+    pub payment_method: PaymentMethodInfo,
+    pub failure_code: Option<String>,
+    pub reference_id: Secret<String>,
+    pub amount: FloatMajorUnit,
+    pub currency: Currency,
+}
+
+pub struct XenditAuthType {
+    pub(super) api_key: Secret<String>,
+}
+
+impl TryFrom<&ConnectorAuthType> for XenditAuthType {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
+                api_key: api_key.to_owned(),
+            }),
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+pub struct XenditRouterData<T> {
+    pub amount: FloatMajorUnit, // The type of amount that a connector accepts, for example, String, i64, f64, etc.
+    pub router_data: T,
+}
+
+impl<T> From<(FloatMajorUnit, T)> for XenditRouterData<T> {
+    fn from((amount, item): (FloatMajorUnit, T)) -> Self {
+        Self {
+            amount,
+            router_data: item,
+        }
+    }
+}
 
 // Basic Request Structure from Hyperswitch Xendit
-#[derive(Debug, Clone, Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct XenditPaymentsRequest {
-    pub amount: i64,
-    pub currency: String, // Should be hyperswitch_common_enums::Currency, but matching Hyperswitch for now
-    pub payment_method: XenditPaymentMethod,
-    #[serde(rename = "external_id")]
-    pub merchant_payment_id: String,
-    pub description: Option<String>,
-    pub customer_id: Option<String>,
-    // Add other fields like billing_address, shipping_address, metadata, etc. as needed
-    // and based on Xendit API documentation for Payment Requests
-    // Example: some fields from Hyperswitch XenditPaymentRequest
-    pub statement_descriptor_suffix: Option<String>,
-    pub items: Option<Vec<XenditLineItem>>,
-    pub channel_properties: Option<XenditChannelProperties>,
-    // redirect URLs might be needed
-    pub success_redirect_url: Option<String>,
-    pub failure_redirect_url: Option<String>,
-    // metadata: Option<serde_json::Value> // if using direct serde_json::Value
+    pub amount: FloatMajorUnit,
+    pub currency: hyperswitch_common_enums::Currency,
+    pub capture_method: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_method: Option<PaymentMethod>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_method_id: Option<Secret<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub channel_properties: Option<ChannelProperties>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -54,7 +182,7 @@ pub struct XenditPaymentMethod {
     // ... other types like EWALLET, DIRECT_DEBIT etc.
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone,Serialize)]
 pub struct XenditCard {
     pub currency: String, // Should be hyperswitch_common_enums::Currency
     pub channel_properties: XenditCardChannelProperties,
@@ -67,7 +195,6 @@ pub struct XenditCardChannelProperties {
     pub skip_three_d_secure: Option<bool>,
     // cvv, card_number, expiry_month, expiry_year are part of PaymentMethodData in RouterData
     // but Xendit might expect them here for non-tokenized card payments.
-    // In Hyperswitch, these are obtained from PaymentMethodData::Card and put into the Xendit request.
     // For direct card details, the struct would be different:
     // card_number: Secret<String>,
     // expiry_month: Secret<String>,
@@ -94,21 +221,40 @@ pub struct XenditChannelProperties {
     pub customer_name: Option<String>, // Example, might not be Xendit specific
 }
 
-// Basic Response Structure from Hyperswitch Xendit
-#[derive(Debug, Clone, Deserialize)]
-pub struct XenditPaymentsResponse {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum XenditResponse {
+    Payment(XenditPaymentResponse),
+    Webhook(XenditWebhookEvent),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct XenditWebhookEvent {
+    pub event: XenditEventType,
+    pub data: EventDetails,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum XenditEventType {
+    #[serde(rename = "payment.succeeded")]
+    PaymentSucceeded,
+    #[serde(rename = "payment.awaiting_capture")]
+    PaymentAwaitingCapture,
+    #[serde(rename = "payment.failed")]
+    PaymentFailed,
+    #[serde(rename = "capture.succeeded")]
+    CaptureSucceeded,
+    #[serde(rename = "capture.failed")]
+    CaptureFailed,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EventDetails {
     pub id: String,
-    pub status: String, // e.g., PENDING, SUCCEEDED, FAILED
-    pub amount: i64,
-    pub currency: String, // Should be hyperswitch_common_enums::Currency
-    #[serde(rename = "external_id")]
-    pub merchant_payment_id: String,
-    pub payment_method: Option<XenditPaymentMethodResponseDetails>,
-    pub actions: Option<XenditPaymentActions>,
-    pub failure_code: Option<String>,
-    pub failure_reason: Option<String>,
-    // other fields like created, updated, description, customer_id etc.
-    // based on Xendit API documentation for Payment Requests response
+    pub payment_request_id: Option<String>,
+    pub amount: FloatMajorUnit,
+    pub currency: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -150,116 +296,263 @@ pub struct XenditErrorResponse {
     // errors: Option<Vec<XenditErrorDetail>>
 }
 
-// #[derive(Debug, Deserialize)]
-// pub struct XenditErrorDetail {
-//     pub field: String,
-//     pub message: String,
-// }
+fn is_auto_capture(data:&PaymentsAuthorizeData) -> Result<bool, ConnectorError> {
+    match data.capture_method {
+        Some(hyperswitch_common_enums::CaptureMethod::Automatic)
+        |None => Ok(true),
+        Some(hyperswitch_common_enums::CaptureMethod::Manual) => Ok(false),
+        Some(_) => Err(ConnectorError::CaptureMethodNotSupported),
+    }
+}
 
+fn is_auto_capture_psync(data:&PaymentsSyncData) -> Result<bool, ConnectorError> {
+    match data.capture_method {
+        Some(hyperswitch_common_enums::CaptureMethod::Automatic)
+        |None => Ok(true),
+        Some(hyperswitch_common_enums::CaptureMethod::Manual) => Ok(false),
+        Some(_) => Err(ConnectorError::CaptureMethodNotSupported),
+    }
+}
+
+fn map_payment_response_to_attempt_status(
+    response: XenditPaymentResponse,
+    is_auto_capture: bool,
+) -> hyperswitch_common_enums::AttemptStatus {
+    match response.status {
+        PaymentStatus::Failed => hyperswitch_common_enums::AttemptStatus::Failure,
+        PaymentStatus::Succeeded | PaymentStatus::Verified => {
+            if is_auto_capture {
+                hyperswitch_common_enums::AttemptStatus::Charged
+            } else {
+                hyperswitch_common_enums::AttemptStatus::Authorized
+            }
+        }
+        PaymentStatus::Pending => hyperswitch_common_enums::AttemptStatus::Pending,
+        PaymentStatus::RequiresAction => hyperswitch_common_enums::AttemptStatus::AuthenticationPending,
+        PaymentStatus::AwaitingCapture => hyperswitch_common_enums::AttemptStatus::Authorized,
+    }
+}
 
 // Transformer for Request: RouterData -> XenditPaymentsRequest
-impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>
-    for XenditPaymentsRequest
+impl
+    TryFrom<(
+        &XenditRouterData<
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    )> for XenditPaymentsRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = hyperswitch_interfaces::errors::ConnectorError;
     fn try_from(
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        value: (
+            &XenditRouterData<
+                &RouterDataV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData,
+                    PaymentsResponseData,
+                >,
+            >,
+        ),
     ) -> Result<Self, Self::Error> {
-        let card_details = match &req.request.payment_method_data {
-            PaymentMethodData::Card(cc) => Ok(cc),
-            _ => Err(errors::ConnectorError::NotImplemented(
-                "Only card payments are supported for Xendit Authorize".to_string(),
-            )),
-        }?;        
-
-        let xendit_card_channel_properties = XenditCardChannelProperties {
-            // Xendit needs to know if 3DS should be skipped. 
-            // This might come from req.request.enrolled_for_3ds or connector metadata
-            // Hyperswitch example: !xendit_card.three_ds.unwrap_or(true)
-            // Assuming false means skip_three_d_secure = true
-            skip_three_d_secure: if req.request.enrolled_for_3ds { Some(false) } else { Some(true) }, 
+        let (item,) = value;
+        let card_data = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => Ok(card),
+            _ => Err(ConnectorError::RequestEncodingFailed),
+        }?;
+        let capture_method = match is_auto_capture(&item.router_data.request)? {
+            true => "AUTOMATIC".to_string(),
+            false => "MANUAL".to_string(),
         };
 
-        let xendit_card = XenditCard {
-            currency: req.request.currency.to_string().to_uppercase(), // Xendit expects currency here for cards
-            channel_properties: xendit_card_channel_properties,
-        };
-
-        let payment_method = XenditPaymentMethod {
-            payment_method_type: XenditPaymentMethodType::Card,
-            card: Some(xendit_card),
-            reusability: "ONE_TIME_USE".to_string(), // Or based on req.request.setup_future_usage
-        };
-
-        Ok(Self {
-            amount: req.request.minor_amount.get_amount_as_i64(),
-            currency: req.request.currency.to_string().to_uppercase(),
-            merchant_payment_id: req.resource_common_data.connector_request_reference_id.clone(),
-            description: req.resource_common_data.description.clone(),
-            customer_id: req.resource_common_data.customer_id.as_ref().map(|c| c.get_string_repr().to_string()),
+        let currency= item.router_data.request.currency;
+        let amount = item.amount;
+        
+        let payment_method = Some(PaymentMethod::Card(CardPaymentRequest {
+            payment_type: PaymentMethodType::CARD,
+            reference_id: Secret::new(
+                item.router_data.connector_request_reference_id.clone(),
+            ),         
+            card: CardInfo {
+                channel_properties: ChannelProperties {
+                    success_return_url: item.router_data.request.router_return_url.clone(),
+                    failure_return_url: item.router_data.request.router_return_url.clone(),                
+                    skip_three_d_secure: !item.router_data.request.enrolled_for_3ds,
+                },
+                card_information: CardInformation {
+                    card_number: card_data.card_number.clone(),
+                    expiry_month: card_data.card_exp_month.clone(),
+                    expiry_year: card_data.card_exp_year.clone(),
+                    cvv: card_data.card_cvc.clone(),
+                    // cardholder_name_not_found
+                    // cardholder_name: Secret::new("Test User".to_string()),
+                    // cardholder_email: pii::Email::try_from("test@example.com".to_string())
+                    // .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
+                    // cardholder_phone_number: Secret::new("+1234567890".to_string()),
+                },
+            },
+            reusability:TransactionType::OneTimeUse,
+        }));
+        let payment_method_id= None;
+        let channel_properties= None;
+        Ok(XenditPaymentsRequest {
+            amount,
+            currency,
+            capture_method,
             payment_method,
-            statement_descriptor_suffix: req.request.statement_descriptor_suffix.clone(),
-            items: None, // TODO: Map if items are provided in RouterData and Xendit supports them
-            channel_properties: Some(XenditChannelProperties { // Basic channel props
-                 customer_name: req.request.customer_name.clone(),
-            }),
-            // Populate based on req.request.router_return_url or similar
-            success_redirect_url: req.request.router_return_url.clone(), 
-            failure_redirect_url: req.request.router_return_url.clone(), // Often same as success, or a specific failure URL
+            payment_method_id,
+            channel_properties,
         })
     }
 }
 
-// Transformer for Response: (XenditPaymentsResponse, RouterData) -> RouterDataV2 (for Authorize)
-impl ForeignTryFrom<(XenditPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>)> 
-    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> 
+impl<F>
+    ForeignTryFrom<(
+        XenditPaymentResponse,
+        RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>, u16,
+    )> for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
+    type Error = Error;
     fn foreign_try_from(
-        (xendit_response, mut router_data): 
-        (XenditPaymentsResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>)
+        (response, item,http_code): (
+            XenditPaymentResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            u16,
+        ),
     ) -> Result<Self, Self::Error> {
-        let status = match xendit_response.status.to_uppercase().as_str() {
-            "PENDING" => hyperswitch_common_enums::AttemptStatus::AuthenticationPending, // If redirection is present
-            "SUCCEEDED" | "PAID" => hyperswitch_common_enums::AttemptStatus::Charged,
-            "FAILED" => hyperswitch_common_enums::AttemptStatus::Failure,
-            _ => hyperswitch_common_enums::AttemptStatus::Pending, // Default, or map more specific Xendit statuses
-        };
+        let status = map_payment_response_to_attempt_status(
+            response.clone(),
+            is_auto_capture(&item.request)?,
+        );
 
-        let redirection_data = xendit_response.actions.as_ref().and_then(|actions| {
-            actions.desktop_redirect_url.as_ref().map(|url| {
-                hyperswitch_router_response_types::RedirectForm::Form {
-                    endpoint: url.clone(),
-                    method: Method::Get, // Xendit redirects are usually GET
-                    form_fields: std::collections::HashMap::new(), // No form fields for simple redirect
-                }
+        let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
+            Err(ErrorResponse {
+                code: response
+                    .failure_code
+                    .clone()
+                    .unwrap_or_else(|| "NO_ERROR_CODE".to_string()),
+                message: response
+                    .failure_code
+                    .clone()
+                    .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                reason: Some(
+                   response
+                        .failure_code
+                        .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                ),
+                attempt_status: None,
+                connector_transaction_id: Some(response.id.clone()),
+                status_code: http_code,
+                // network_advice_code: None,
+                // network_decline_code: None,
+                // network_error_message: None,
             })
-        });
-
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(xendit_response.id.clone()),
-            redirection_data: Box::new(redirection_data),
-            connector_metadata: None, // Can populate with raw response if needed
-            network_txn_id: None, // If Xendit provides this
-            connector_response_reference_id: Some(xendit_response.merchant_payment_id.clone()),
-            incremental_authorization_allowed: None, // Xendit specific?
+        } else {
+            
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+                redirection_data: 
+                   Box::new(None),
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(
+                    response.reference_id.peek().to_string(),
+                ),
+                incremental_authorization_allowed: None,            
+            })
         };
-        
-        router_data.response = Ok(payments_response_data);
-        router_data.resource_common_data.status = status;
-        // If error, populate error fields
-        if status == hyperswitch_common_enums::AttemptStatus::Failure {
-            router_data.response = Err(ErrorResponse {
-                code: xendit_response.failure_code.unwrap_or_else(|| "HS_XENDIT_FAILURE".to_string()),
-                message: xendit_response.failure_reason.unwrap_or_else(|| "Payment failed at Xendit".to_string()),
-                reason: None,
-                status_code: 0, // This should be http status code from connector if available
-                attempt_status: Some(status),
-                connector_transaction_id: Some(xendit_response.id),
-            });
-        }
-
-        Ok(router_data)
+       
+        Ok(Self {        
+            response,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.resource_common_data
+            },
+            ..item
+        })
     }
-} 
+}
+
+impl<F>
+    ForeignTryFrom<(
+        XenditResponse,
+        RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, u16,
+    )> for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = Error;
+    fn foreign_try_from(
+        (response, item,http_code): (
+            XenditResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        match response {
+            XenditResponse::Payment(payment_response) => {
+                let status = map_payment_response_to_attempt_status(
+                payment_response.clone(),
+                is_auto_capture_psync(&item.request)?,
+            );
+                let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
+                    Err(ErrorResponse {
+                        code: payment_response
+                            .failure_code
+                            .clone()
+                            .unwrap_or_else(|| "NO_ERROR_CODE".to_string()),
+                        message: payment_response
+                            .failure_code
+                            .clone()
+                            .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                        reason: Some(
+                            payment_response
+                                .failure_code
+                                .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                        ),
+                        attempt_status: None,
+                        connector_transaction_id: Some(payment_response.id.clone()),
+                        status_code: http_code,
+                        //network_advice_code: None,
+                        // network_decline_code: None,
+                        //network_error_message: None,
+                    })
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::NoResponseId,
+                        redirection_data: Box::new(None),
+                       // mandate_reference: Box::new(None),
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                      //  charges: None,
+                    })
+                };
+                Ok(Self {        
+                    response,
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.resource_common_data
+                    },
+                    ..item
+                })
+            }
+            XenditResponse::Webhook(webhook_event) => {
+                let status = match webhook_event.event {
+                    XenditEventType::PaymentSucceeded | XenditEventType::CaptureSucceeded => {
+                        hyperswitch_common_enums::AttemptStatus::Charged
+                    }
+                    XenditEventType::PaymentAwaitingCapture => hyperswitch_common_enums::AttemptStatus::Authorized,
+                    XenditEventType::PaymentFailed | XenditEventType::CaptureFailed => {
+                        hyperswitch_common_enums::AttemptStatus::Failure
+                    }
+                };
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.resource_common_data
+                    },
+                    ..item
+                })
+            }
+        }
+    }
+}
