@@ -38,6 +38,7 @@ pub enum ConnectorEnum {
     Adyen,
     Razorpay,
     Payu,
+    PhonePe,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -48,6 +49,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             2 => Ok(Self::Adyen),
             68 => Ok(Self::Razorpay),
             72 => Ok(Self::Payu),
+            73 => Ok(Self::PhonePe),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,

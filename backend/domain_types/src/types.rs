@@ -38,6 +38,7 @@ pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub payu: ConnectorParams,
+    pub phonepe: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -1025,6 +1026,9 @@ pub fn generate_payment_authorize_response(
                 merchant_name,
                 merchant_vpa,
             } => {
+               
+                    tracing::debug!("Redirection data present in payment authorize response: {:?}", redirection_data);
+                
                 PaymentsAuthorizeResponse {
                     resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(resource_id)?),
                     redirection_data: redirection_data.map(

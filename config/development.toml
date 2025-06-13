@@ -26,6 +26,7 @@ razorpay.base_url = "https://api.razorpay.com/"
 payu.base_url = "https://secure.payu.in"
 payu.payment_path = "/_payment"
 payu.verify_path = "/merchant/postservice"
+phonepe.base_url = "https://api.phonepe.com/apis/hermes"
 
 
 [connectors.payu.prod]
