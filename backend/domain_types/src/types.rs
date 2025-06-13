@@ -34,7 +34,7 @@ use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -42,14 +42,14 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, Clone, serde::Serialize)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
