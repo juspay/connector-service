@@ -21,6 +21,8 @@ use grpc_api_types::payments::{
 use hyperswitch_common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
+use hyperswitch_masking::Secret;
+// For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use hyperswitch_domain_models::mandates::MandateData;
 use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
@@ -34,8 +36,10 @@ use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
 #[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
 pub struct Connectors {
+    // Added pub
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
+    pub fiserv: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
@@ -51,6 +55,29 @@ pub struct Proxy {
     pub https_url: Option<String>,
     pub idle_pool_connection_timeout: Option<u64>,
     pub bypass_proxy_urls: Vec<String>,
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod>
+    for hyperswitch_common_enums::CaptureMethod
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CaptureMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::CaptureMethod::Automatic => Ok(Self::Automatic),
+            grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
+            grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
+            grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "unsupported_capture_method".to_string(),
+                error_identifier: 4001,
+                error_message: format!("Capture method {:?} is not supported", value),
+                error_object: None,
+            }))),
+        }
+    }
 }
 
 impl ForeignTryFrom<i32> for hyperswitch_common_enums::CardNetwork {
@@ -394,6 +421,9 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
         };
 
         Ok(Self {
+            capture_method: Some(hyperswitch_common_enums::CaptureMethod::foreign_try_from(
+                value.capture_method(),
+            )?),
             payment_method_data: PaymentMethodData::foreign_try_from(
                 value.clone().payment_method_data.ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
@@ -428,7 +458,7 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             customer_name: None,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-            capture_method: None,
+
             router_return_url: value.return_url,
             complete_authorize_url: None,
             setup_future_usage: None,
@@ -849,10 +879,12 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
     fn foreign_try_from(
         (value, connectors): (PaymentsAuthorizeRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let address = match value.address {
-            Some(address) => {
+        let address = match &value.address {
+            // Borrow value.address
+            Some(address_value) => {
+                // address_value is &grpc_api_types::payments::PaymentAddress
                 hyperswitch_domain_models::payment_address::PaymentAddress::foreign_try_from(
-                    address,
+                    (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
                 )?
             }
             None => {
@@ -869,15 +901,33 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::Card, //TODO
+            payment_method: hyperswitch_common_enums::PaymentMethod::foreign_try_from(
+                value.payment_method(),
+            )?, // Use direct enum
             address,
-            auth_type: hyperswitch_common_enums::AuthenticationType::default(),
+            auth_type: hyperswitch_common_enums::AuthenticationType::foreign_try_from(
+                value.auth_type(),
+            )?, // Use direct enum
             connector_request_reference_id: value.connector_request_reference_id,
             customer_id: None,
-            connector_customer: None,
+            connector_customer: value.connector_customer,
             description: None,
-            return_url: None,
-            connector_meta_data: None,
+            return_url: value.return_url.clone(),
+            connector_meta_data: {
+                value.connector_meta_data.map(|json_bytes_vec| {
+                    String::from_utf8(json_bytes_vec.to_vec())
+                        .map(|json_string| Secret::new(serde_json::Value::String(json_string)))
+                        .map_err(|utf8_error| {
+                            report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_DATA_FORMAT".to_string(),
+                                error_identifier: 400, // Using a generic 400
+                                error_message: "connector_meta_data is not a valid UTF-8 encoded JSON string".to_string(),
+                                error_object: None,
+                            }))
+                            .attach_printable(format!("Failed to convert connector_meta_data bytes to UTF-8 string: {}", utf8_error))
+                        })
+                }).transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+            },
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
@@ -1060,6 +1110,37 @@ pub fn generate_payment_authorize_response(
         }
     };
     Ok(response)
+}
+
+// ForeignTryFrom for PaymentMethod gRPC enum to internal enum
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
+    for hyperswitch_common_enums::PaymentMethod
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        item: grpc_api_types::payments::PaymentMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match item {
+            grpc_api_types::payments::PaymentMethod::Card => Ok(Self::Card),
+            grpc_api_types::payments::PaymentMethod::Wallet => Ok(Self::Wallet),
+        }
+    }
+}
+
+// ForeignTryFrom for AuthenticationType gRPC enum to internal enum
+impl ForeignTryFrom<grpc_api_types::payments::AuthenticationType>
+    for hyperswitch_common_enums::AuthenticationType
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        item: grpc_api_types::payments::AuthenticationType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match item {
+            grpc_api_types::payments::AuthenticationType::ThreeDs => Ok(Self::ThreeDs),
+            grpc_api_types::payments::AuthenticationType::NoThreeDs => Ok(Self::NoThreeDs),
+            // Add other mappings as needed
+        }
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::PaymentsSyncRequest> for PaymentsSyncData {
@@ -1664,8 +1745,36 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundsRequest> for RefundsData {
             reason: value.reason.clone(),
             webhook_url: None,
             refund_amount: value.refund_amount,
-            connector_metadata: None,
-            refund_connector_metadata: None,
+            connector_metadata: {
+                value.connector_metadata.map(|json_bytes_vec| {
+                    String::from_utf8(json_bytes_vec.to_vec())
+                        .map(serde_json::Value::String) // Should be Option<serde_json::Value>, not Secret
+                        .map_err(|utf8_error| {
+                            report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_DATA_FORMAT".to_string(),
+                                error_identifier: 400,
+                                error_message: "connector_metadata is not a valid UTF-8 encoded JSON string".to_string(),
+                                error_object: None,
+                            }))
+                            .attach_printable(format!("Failed to convert connector_metadata bytes to UTF-8 string: {}", utf8_error))
+                        })
+                }).transpose()?
+            },
+            refund_connector_metadata: {
+                value.refund_connector_metadata.map(|json_bytes_vec| {
+                    String::from_utf8(json_bytes_vec.to_vec())
+                        .map(|json_string| Secret::new(serde_json::Value::String(json_string)))
+                        .map_err(|utf8_error| {
+                            report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_DATA_FORMAT".to_string(),
+                                error_identifier: 400,
+                                error_message: "refund_connector_metadata is not a valid UTF-8 encoded JSON string".to_string(),
+                                error_object: None,
+                            }))
+                            .attach_printable(format!("Failed to convert refund_connector_metadata bytes to UTF-8 string: {}", utf8_error))
+                        })
+                }).transpose()?
+            },
             minor_payment_amount,
             minor_refund_amount,
             refund_status: hyperswitch_common_enums::RefundStatus::Pending,
@@ -1809,7 +1918,21 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentsCaptureRequest> for Paymen
             currency: hyperswitch_common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
-            connector_metadata: None,
+            connector_metadata: {
+                value.connector_meta_data.map(|json_bytes_vec| {
+                    String::from_utf8(json_bytes_vec.to_vec())
+                        .map(serde_json::Value::String)
+                        .map_err(|utf8_error| {
+                            report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_DATA_FORMAT".to_string(),
+                                error_identifier: 400, // Using a generic 400
+                                error_message: "connector_meta_data is not a valid UTF-8 encoded JSON string".to_string(),
+                                error_object: None,
+                            }))
+                            .attach_printable(format!("Failed to convert connector_meta_data bytes to UTF-8 string: {}", utf8_error))
+                        })
+                }).transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
+            },
         })
     }
 }
