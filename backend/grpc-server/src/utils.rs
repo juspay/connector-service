@@ -127,7 +127,7 @@ pub fn extract_all_metadata(
 
     // Iterate through all metadata keys and extract using parse_metadata
     for key_and_value in metadata.iter() {
-        if let tonic::metadata::KeyAndValueRef::Ascii(key, _) = key_and_value {
+        if let metadata::KeyAndValueRef::Ascii(key, _) = key_and_value {
             let key_str = key.as_str();
             if let Ok(value_str) = parse_metadata(metadata, key_str) {
                 metadata_map.insert(key_str.to_string(), value_str.to_string());

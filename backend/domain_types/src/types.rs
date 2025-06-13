@@ -508,7 +508,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
         let shipping = match value.shipping {
             Some(address) => {
                 let api_address = api_models::payments::Address::foreign_try_from(address)?;
-                Some(hyperswitch_domain_models::address::Address::foreign_try_from(api_address)?)
+                Some(hyperswitch_domain_models::address::Address::foreign_from(api_address))
             },
             None => None,
         };
@@ -516,7 +516,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
         let billing = match value.billing {
             Some(address) => {
                 let api_address = api_models::payments::Address::foreign_try_from(address)?;
-                Some(hyperswitch_domain_models::address::Address::foreign_try_from(api_address)?)
+                Some(hyperswitch_domain_models::address::Address::foreign_from(api_address))
             },
             None => None,
         };
@@ -524,7 +524,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
         let payment_method_billing = match value.payment_method_billing {
             Some(address) => {
                 let api_address = api_models::payments::Address::foreign_try_from(address)?;
-                Some(hyperswitch_domain_models::address::Address::foreign_try_from(api_address)?)
+                Some(hyperswitch_domain_models::address::Address::foreign_from(api_address))
             },
             None => None,
         };
@@ -2355,13 +2355,11 @@ pub fn generate_defend_dispute_response(
     }
 }
 
-impl ForeignTryFrom<api_models::payments::Address> for hyperswitch_domain_models::address::Address {
-    type Error = ApplicationErrorResponse;
-    
-    fn foreign_try_from(
+impl ForeignFrom<api_models::payments::Address> for hyperswitch_domain_models::address::Address {
+    fn foreign_from(
         value: api_models::payments::Address,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             address: value.address.map(|addr| hyperswitch_domain_models::address::AddressDetails {
                 city: addr.city,
                 country: addr.country,
@@ -2378,7 +2376,7 @@ impl ForeignTryFrom<api_models::payments::Address> for hyperswitch_domain_models
                 country_code: phone.country_code,
             }),
             email: value.email,
-        })
+        }
     }
 }
 
