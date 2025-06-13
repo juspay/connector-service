@@ -104,6 +104,10 @@ mod tests {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -264,6 +268,10 @@ mod tests {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -381,6 +389,10 @@ mod tests {
                         fiserv: ConnectorParams {
                             // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -522,6 +534,10 @@ mod tests {
                         },
                         fiserv: ConnectorParams { // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -822,6 +838,10 @@ mod tests {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    paypay: ConnectorParams {
+                        base_url: "".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -991,6 +1011,10 @@ mod tests {
                     },
                     fiserv: ConnectorParams { // Added fiserv
                         base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    paypay: ConnectorParams {
+                        base_url: "".to_string(),
                         dispute_base_url: None,
                     },
                 },
@@ -1163,6 +1187,10 @@ mod tests {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -1258,6 +1286,10 @@ mod tests {
                         },
                         fiserv: ConnectorParams { // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -1362,6 +1394,10 @@ mod tests {
                         fiserv: ConnectorParams {
                             // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        paypay: ConnectorParams {
+                            base_url: "".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -1507,6 +1543,10 @@ mod tests {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    paypay: ConnectorParams {
+                        base_url: "".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1628,6 +1668,10 @@ mod tests {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    paypay: ConnectorParams {
+                        base_url: "".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1736,6 +1780,10 @@ mod tests {
                     },
                     fiserv: ConnectorParams { // Added fiserv
                         base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    paypay: ConnectorParams {
+                        base_url: "".to_string(),
                         dispute_base_url: None,
                     },
                 },

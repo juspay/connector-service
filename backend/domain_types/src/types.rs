@@ -21,6 +21,7 @@ use grpc_api_types::payments::{
 use hyperswitch_common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
+use hyperswitch_domain_models::merchant_account;
 use hyperswitch_masking::Secret;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use hyperswitch_domain_models::mandates::MandateData;
@@ -40,6 +41,7 @@ pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
+    pub paypay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]

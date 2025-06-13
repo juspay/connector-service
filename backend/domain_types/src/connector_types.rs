@@ -38,6 +38,7 @@ pub enum ConnectorEnum {
     Adyen,
     Razorpay,
     Fiserv,
+    Paypay,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {

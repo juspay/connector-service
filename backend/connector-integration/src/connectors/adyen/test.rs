@@ -74,6 +74,10 @@ mod tests {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        paypay: ConnectorParams {
+                            base_url: String::new(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
                     raw_connector_response: None,
@@ -159,7 +163,6 @@ mod tests {
             let connector: BoxedConnector = Box::new(Adyen::new());
             let connector_data = ConnectorData {
                 connector,
-                connector_name: ConnectorEnum::Adyen,
             };
 
             let connector_integration: BoxedConnectorIntegrationV2<
@@ -242,6 +245,10 @@ mod tests {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        paypay: ConnectorParams {
+                            base_url: String::new(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
                     raw_connector_response: None,
@@ -289,8 +296,7 @@ mod tests {
 
             let connector: BoxedConnector = Box::new(Adyen::new());
             let connector_data = ConnectorData {
-                connector,
-                connector_name: ConnectorEnum::Adyen,
+                connector
             };
 
             let connector_integration: BoxedConnectorIntegrationV2<
@@ -410,7 +416,6 @@ mod tests {
         //     let connector: BoxedConnector = Box::new(Adyen::new());
         //     let connector_data = ConnectorData {
         //         connector,
-        //         connector_name: ConnectorEnum::Adyen,
         //     };
 
         //     let connector_integration: BoxedConnectorIntegrationV2<
