@@ -4,18 +4,19 @@ use crate::{
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{auth_from_metadata, connector_from_metadata},
 };
+use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     types::{generate_accept_dispute_response, generate_submit_evidence_response},
@@ -39,7 +40,6 @@ use grpc_api_types::payments::{
     RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest,
     SubmitEvidenceResponse,
 };
-use common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -146,6 +146,72 @@ impl Payments {
             ))),
         }
     }
+
+    async fn handle_session_token<T>(
+        &self,
+        connector_data: ConnectorData,
+        payment_flow_data: &mut PaymentFlowData,
+        connector_auth_details: ConnectorAuthType,
+        payload: &T,
+    ) -> Result<(), tonic::Status>
+    where
+        T: Clone,
+        SessionTokenRequestData: ForeignTryFrom<T, Error = ApplicationErrorResponse>,
+    {
+        // Get connector integration
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            CreateSessionToken,
+            PaymentFlowData,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        // Create session token request data using try_from_foreign
+        let session_token_request_data = SessionTokenRequestData::foreign_try_from(payload.clone())
+            .map_err(|e| e.into_grpc_status())?;
+
+        let session_token_router_data = RouterDataV2::<
+            CreateSessionToken,
+            PaymentFlowData,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details,
+            request: session_token_request_data,
+            response: Err(ErrorResponse::default()),
+            tenant_id: common_utils::id_type::TenantId::get_default_global_tenant_id(),
+        };
+
+        // Execute connector processing
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            session_token_router_data,
+            None,
+        )
+        .await
+        .switch()
+        .map_err(|e| e.into_grpc_status())?;
+
+        match response.response {
+            Ok(SessionTokenResponseData { session_token, .. }) => {
+                tracing::info!(
+                    "Session token created successfully: {}",
+                    session_token
+                );
+                payment_flow_data.session_token = Some(session_token);
+                Ok(())
+            }
+            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
+                "Session token creation error: {}",
+                message
+            ))),
+        }
+    }
+
     async fn handle_order_creation_for_setup_mandate(
         &self,
         connector_data: ConnectorData,
@@ -329,6 +395,18 @@ impl PaymentService for Payments {
 
         if should_do_order_create {
             self.handle_order_creation(
+                connector_data.clone(),
+                &mut payment_flow_data,
+                connector_auth_details.clone(),
+                &payload,
+            )
+            .await?;
+        }
+
+        let should_do_session_token = connector_data.connector.should_do_session_token();
+
+        if should_do_session_token {
+            self.handle_session_token(
                 connector_data.clone(),
                 &mut payment_flow_data,
                 connector_auth_details.clone(),

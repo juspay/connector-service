@@ -1,32 +1,6 @@
 pub mod test;
 pub mod transformers;
 use crate::{with_error_response_body, with_response_body};
-use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
-    },
-    connector_types::{
-        is_mandate_supported, ConnectorSpecifications, ConnectorValidation,
-        SupportedPaymentMethodsExt,
-    },
-    connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        IncomingWebhook, PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSyncV2,
-        PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
-        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
-        ValidationTrait, WebhookDetailsResponse,
-    },
-    types::{
-        CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
-        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
-        SupportedPaymentMethods,
-    },
-};
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
@@ -36,6 +10,33 @@ use common_utils::{
     pii::SecretSerdeValue,
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
+};
+use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
+    },
+    connector_types::{
+        is_mandate_supported, ConnectorSpecifications, ConnectorValidation,
+        SupportedPaymentMethodsExt,
+    },
+    connector_types::{
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
+        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
+        IncomingWebhook, PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSessionToken,
+        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
+        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
+        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
+        WebhookDetailsResponse,
+    },
+    types::{
+        CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
+        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+        SupportedPaymentMethods,
+    },
 };
 use std::sync::LazyLock;
 
@@ -82,6 +83,7 @@ impl ConnectorServiceTrait for Razorpay {}
 impl PaymentAuthorizeV2 for Razorpay {}
 impl PaymentSyncV2 for Razorpay {}
 impl PaymentOrderCreate for Razorpay {}
+impl PaymentSessionToken for Razorpay {}
 impl PaymentVoidV2 for Razorpay {}
 impl RefundSyncV2 for Razorpay {}
 impl RefundV2 for Razorpay {}
@@ -438,6 +440,16 @@ impl
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Razorpay
+{
 }
 
 impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>

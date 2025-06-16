@@ -8,17 +8,15 @@ use crate::types::{
     PaymentMethodTypeMetadata, SupportedPaymentMethods,
 };
 use crate::utils::ForeignTryFrom;
-use error_stack::ResultExt;
 use api_models::enums::Currency;
+use error_stack::ResultExt;
 use std::collections::HashSet;
 
 use common_enums::{
     AttemptStatus, AuthenticationType, CaptureMethod, DisputeStatus, EventClass, PaymentMethod,
     PaymentMethodType,
 };
-use common_utils::{
-    errors, errors::CustomResult, pii::SecretSerdeValue, types::MinorUnit,
-};
+use common_utils::{errors, errors::CustomResult, pii::SecretSerdeValue, types::MinorUnit};
 use hyperswitch_domain_models::{
     payment_method_data, payment_method_data::PaymentMethodData, router_data::ConnectorAuthType,
     router_request_types::SyncRequestType,
@@ -39,6 +37,7 @@ pub enum ConnectorEnum {
     Razorpay,
     Payu,
     PhonePe,
+    Paytm,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -50,6 +49,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             68 => Ok(Self::Razorpay),
             72 => Ok(Self::Payu),
             73 => Ok(Self::PhonePe),
+            74 => Ok(Self::Paytm),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,
@@ -67,6 +67,7 @@ pub trait ConnectorServiceTrait:
     + PaymentAuthorizeV2
     + PaymentSyncV2
     + PaymentOrderCreate
+    + PaymentSessionToken
     + PaymentVoidV2
     + IncomingWebhook
     + RefundV2
@@ -90,6 +91,10 @@ pub trait ValidationTrait {
     fn should_do_order_create(&self) -> bool {
         false
     }
+
+    fn should_do_session_token(&self) -> bool {
+        false
+    }
 }
 
 pub trait PaymentOrderCreate:
@@ -98,6 +103,16 @@ pub trait PaymentOrderCreate:
     PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse,
+>
+{
+}
+
+pub trait PaymentSessionToken:
+    ConnectorIntegrationV2<
+    connector_flow::CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
 >
 {
 }
@@ -314,6 +329,17 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenRequestData {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenResponseData {
+    pub session_token: String,
 }
 
 #[derive(Debug, Default, Clone)]

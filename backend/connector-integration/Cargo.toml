@@ -6,22 +6,22 @@ edition = "2021"
 [dependencies]
 domain_types = { version = "0.1.0", path = "../domain_types" }
 base64 = "0.21"
-hyperswitch_domain_models = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/hyperswitch_domain_models", features = [
+hyperswitch_domain_models = { path = "../../../hyperswitch/crates/hyperswitch_domain_models", features = [
     "v1",
 ] }
-common_utils = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/common_utils", features = [
+common_utils = { path = "../../../hyperswitch/crates/common_utils", features = [
     "async_ext",
     "metrics",
     "encryption_service",
     "keymanager",
 ] }
-common_enums = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/common_enums" }
-api_models = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/api_models", features = [
+common_enums = { path = "../../../hyperswitch/crates/common_enums" }
+api_models = { path = "../../../hyperswitch/crates/api_models", features = [
     "errors",
     "v1",
 ] }
-masking = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/masking" }
-hyperswitch_interfaces = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/hyperswitch_interfaces", features = [
+masking = { path = "../../../hyperswitch/crates/masking" }
+hyperswitch_interfaces = { path = "../../../hyperswitch/crates/hyperswitch_interfaces", features = [
     "v1",
 ] }
 serde = { version = "1.0.197", features = ["derive"] }
@@ -35,7 +35,7 @@ strum = { version = "0.26", features = ["derive"] }
 time = "0.3.35"
 hex = "0.4.3"
 url = "2.5.0"
-cards = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/cards" }
+cards = { path = "../../../hyperswitch/crates/cards" }
 paste = "1.0"
 reqwest = { version = "0.11.27", features = [
     "json",
@@ -53,3 +53,7 @@ tracing-subscriber = { version = "0.3.18", default-features = true, features = [
 ] }
 tracing-attributes = "0.1.27"
 sha2 = "0.10"
+aes = "0.8"
+cbc = "0.1"
+cipher = "0.4"
+rand = "0.8"
