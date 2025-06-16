@@ -34,29 +34,18 @@ pub struct DefendDispute;
 use strum_macros::Display;
 
 #[derive(Display)]
+#[strum(serialize_all = "snake_case")]
 pub enum FlowName {
-    #[strum(serialize = "authorize")]
     Authorize,
-    #[strum(serialize = "refund")]
     Refund,
-    #[strum(serialize = "rsync")]
     Rsync,
-    #[strum(serialize = "psync")]
     Psync,
-    #[strum(serialize = "void")]
     Void,
-    #[strum(serialize = "setup_mandate")]
     SetupMandate,
-    #[strum(serialize = "capture")]
     Capture,
-    #[strum(serialize = "accept_dispute")]
     AcceptDispute,
-    #[strum(serialize = "submit_evidence")]
     SubmitEvidence,
-    #[strum(serialize = "defend_dispute")]
     DefendDispute,
-    #[strum(serialize = "create_order")]
     CreateOrder,
-    #[strum(serialize = "incoming_webhook")]
     IncomingWebhook,
 }

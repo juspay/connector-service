@@ -13,61 +13,46 @@ const LATENCY_BUCKETS: &[f64] = &[
     0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
 ];
 
-// const MICROS_500: f64 = 0.0001;
-
 lazy_static! {
-    // pub static ref SUCCESS_BASED_ROUTING_METRICS_REQUEST: IntCounter = register_int_counter!(
-    //     "success_based_routing_metrics_request",
-    //     "total success based routing request received"
-    // )
-    // .unwrap();
-    // pub static ref SUCCESS_BASED_ROUTING_UPDATE_WINDOW_DECISION_REQUEST_TIME: Histogram =
-    //     register_histogram!(
-    //         "success_based_routing_update_window_decision_request_time",
-    //         "Time taken to process success based routing update window request (in seconds)",
-    //         #[allow(clippy::expect_used)]
-    //         exponential_buckets(MICROS_500, 2.0, 10).expect("failed to create histogram")
-    //     )
-    //     .unwrap();
-    pub static ref grpc_server_requests_total: IntCounterVec = register_int_counter_vec!(
-        "grpc_server_requests_total",
+    pub static ref GRPC_SERVER_REQUESTS_TOTAL: IntCounterVec = register_int_counter_vec!(
+        "GRPC_SERVER_REQUESTS_TOTAL",
         "Total number of gRPC requests received",
         &["flow","connector"]
     )
         .unwrap();
 
-    pub static ref grpc_server_requests_successful: IntCounterVec = register_int_counter_vec!(
-        "grpc_server_requests_successful",
+    pub static ref GRPC_SERVER_REQUESTS_SUCCESSFUL: IntCounterVec = register_int_counter_vec!(
+        "GRPC_SERVER_REQUESTS_SUCCESSFUL",
         "Total number of gRPC requests successful",
         &["flow","connector"]
     )
         .unwrap();
 
-    pub static ref grpc_server_request_latency: HistogramVec = register_histogram_vec!(
-        "grpc_server_request_latency_seconds",
+    pub static ref GRPC_SERVER_REQUEST_LATENCY: HistogramVec = register_histogram_vec!(
+        "GRPC_SERVER_REQUEST_LATENCY_SECONDS",
         "Request latency in seconds",
         &["flow", "connector"],
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
 
-    pub static ref external_service_api_calls_latency: HistogramVec = register_histogram_vec!(
-        "external_service_api_calls_latency_seconds",
+    pub static ref EXTERNAL_SERVICE_API_CALLS_LATENCY: HistogramVec = register_histogram_vec!(
+        "EXTERNAL_SERVICE_API_CALLS_LATENCY_SECONDS",
         "Latency of external service API calls",
         &["endpoint", "method"],
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
 
-    pub static ref external_service_total_api_calls: IntCounterVec = register_int_counter_vec!(
-        "external_service_total_api_calls",
+    pub static ref EXTERNAL_SERVICE_TOTAL_API_CALLS: IntCounterVec = register_int_counter_vec!(
+        "EXTERNAL_SERVICE_TOTAL_API_CALLS",
         "Total number of external service API calls",
         &["endpoint", "method"]
     )
     .unwrap();
 
-    pub static ref external_service_api_calls_errors: IntCounterVec = register_int_counter_vec!(
-        "external_service_api_calls_errors",
+    pub static ref EXTERNAL_SERVICE_API_CALLS_ERRORS: IntCounterVec = register_int_counter_vec!(
+        "EXTERNAL_SERVICE_API_CALLS_ERRORS",
         "Total number of errors in external service API calls",
         &["endpoint", "method", "error"]
     )
@@ -87,7 +72,7 @@ where
     let start_time = Instant::now();
 
     // Increment total requests counter
-    grpc_server_requests_total
+    GRPC_SERVER_REQUESTS_TOTAL
         .with_label_values(&[method_name, connector])
         .inc();
 
@@ -97,9 +82,9 @@ where
     // Record metrics based on result
     match &result {
         Ok(_) => {
-            grpc_server_requests_successful
-                .with_label_values(&[method_name, connector])
-                .inc();
+            GRPC_SERVER_REQUESTS_SUCCESSFUL
+                        .with_label_values(&[method_name, connector])
+                        .inc();
         }
         Err(_) => {
             // Could add error metrics here if needed
@@ -108,7 +93,7 @@ where
 
     // Record latency
     let duration = start_time.elapsed().as_secs_f64();
-    grpc_server_request_latency
+    GRPC_SERVER_REQUEST_LATENCY
         .with_label_values(&[method_name, connector])
         .observe(duration);
 

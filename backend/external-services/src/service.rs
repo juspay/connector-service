@@ -92,7 +92,7 @@ where
         Some(request) => {
             let url = request.url.clone();
             let method = request.method;
-            metrics::external_service_total_api_calls
+            metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
                 .with_label_values(&[connector_name, &method.to_string()])
                 .inc();
             let external_service_start_latency = tokio::time::Instant::now();
@@ -109,7 +109,7 @@ where
                     );
                 });
             let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
-            metrics::external_service_api_calls_latency
+            metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[connector_name, &method.to_string()])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
@@ -166,7 +166,7 @@ where
                             }?
                         }
                         Err(body) => {
-                            metrics::external_service_api_calls_errors
+                            metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
                                 .with_label_values(&[
                                     connector_name,
                                     &method.to_string(),

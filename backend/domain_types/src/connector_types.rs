@@ -36,9 +36,7 @@ use strum_macros::Display;
 #[derive(Clone, Debug, strum::EnumString, Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
-    #[strum(serialize = "adyen")]
     Adyen,
-    #[strum(serialize = "razorpay")]
     Razorpay,
 }
 
