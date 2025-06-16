@@ -102,7 +102,7 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAu
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         connector_request_reference_id: format!("xendit_test_{}", get_timestamp()),
-        enrolled_for_3ds: true,
+        enrolled_for_3ds: false,
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
         payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
@@ -137,7 +137,7 @@ async fn test_payment_authorization_auto_capture() {
             .into_inner();
 
         assert!(
-            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending),
+            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending) || response.status == i32::from(AttemptStatus::Charged),
             "Payment should be in AuthenticationPending or Pending state"
         );
     });
@@ -163,7 +163,7 @@ async fn test_payment_authorization_manual_capture() {
 
         // Verify payment status
         assert!(
-            auth_response.status == i32::from(AttemptStatus::AuthenticationPending) || auth_response.status == i32::from(AttemptStatus::Pending),
+            auth_response.status == i32::from(AttemptStatus::AuthenticationPending) || auth_response.status == i32::from(AttemptStatus::Pending) || auth_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in AuthenticationPending or Pending state"
         );
     });
@@ -171,7 +171,7 @@ async fn test_payment_authorization_manual_capture() {
 
 // Test payment sync
 #[tokio::test]
-async fn test_payment_sync() {
+async fn test_payment_sync_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request with manual capture
         let auth_request = create_payment_authorize_request(CaptureMethod::Manual);

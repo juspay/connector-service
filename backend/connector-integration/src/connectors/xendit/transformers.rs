@@ -4,7 +4,8 @@ use domain_types::{
 };
 
 use hyperswitch_common_utils::{
-    types::FloatMajorUnit,   
+    types::FloatMajorUnit,  
+    request::{Method}, 
 };
 
 use hyperswitch_domain_models::{
@@ -12,9 +13,12 @@ use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType,ErrorResponse}, // Added for XenditErrorResponse
     router_data_v2::RouterDataV2,
     router_request_types::ResponseId,
+    router_response_types::{RedirectForm},
 };
 
-use hyperswitch_interfaces::{errors::{self ,ConnectorError}};
+use std::collections::HashMap;
+
+use hyperswitch_interfaces::{errors::{self ,ConnectorError},consts::{NO_ERROR_CODE,NO_ERROR_MESSAGE}};
 
 use hyperswitch_common_enums::Currency;
 
@@ -429,15 +433,15 @@ impl<F>
                 code: response
                     .failure_code
                     .clone()
-                    .unwrap_or_else(|| "NO_ERROR_CODE".to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: response
                     .failure_code
                     .clone()
-                    .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 reason: Some(
                    response
                         .failure_code
-                        .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                        .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 ),
                 attempt_status: None,
                 connector_transaction_id: Some(response.id.clone()),
@@ -450,8 +454,21 @@ impl<F>
             
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: 
-                   Box::new(None),
+                redirection_data: match response.actions {
+                    Some(actions) if !actions.is_empty() => {
+                        actions.first().map_or(Box::new(None), |single_action| {
+                            Box::new(Some(RedirectForm::Form {
+                                endpoint: single_action.url.clone(),
+                                method: match single_action.method {
+                                    MethodType::Get => Method::Get,
+                                    MethodType::Post => Method::Post,
+                                },
+                                form_fields: HashMap::new(),
+                            }))
+                        })
+                    }
+                    _ => Box::new(None),
+                },
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(
@@ -497,15 +514,15 @@ impl<F>
                         code: payment_response
                             .failure_code
                             .clone()
-                            .unwrap_or_else(|| "NO_ERROR_CODE".to_string()),
+                            .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                         message: payment_response
                             .failure_code
                             .clone()
-                            .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                            .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                         reason: Some(
                             payment_response
                                 .failure_code
-                                .unwrap_or_else(|| "NO_ERROR_MESSAGE".to_string()),
+                                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                         ),
                         attempt_status: None,
                         connector_transaction_id: Some(payment_response.id.clone()),
@@ -518,12 +535,12 @@ impl<F>
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::NoResponseId,
                         redirection_data: Box::new(None),
-                       // mandate_reference: Box::new(None),
+                        // mandate_reference: Box::new(None),
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                      //  charges: None,
+                        // charges: None,
                     })
                 };
                 Ok(Self {        
