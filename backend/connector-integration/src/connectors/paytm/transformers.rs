@@ -3,22 +3,28 @@
 //! This module contains all the request and response structures for Paytm's UPI APIs,
 //! as well as the transformation logic to convert between our domain types and Paytm's expected formats.
 
+use base64::Engine;
+use cbc::{
+    cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
+    Encryptor,
+};
 use common_enums::Currency;
 use common_utils::types::MinorUnit;
 use common_utils::{errors::CustomResult, request::RequestContent};
 use domain_types::{
     connector_flow::{Authorize, CreateSessionToken},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, SessionTokenRequestData, SessionTokenResponseData},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, SessionTokenRequestData,
+        SessionTokenResponseData,
+    },
 };
 use hyperswitch_domain_models::payment_method_data::{PaymentMethodData, UpiData};
 use hyperswitch_domain_models::{router_data::ConnectorAuthType, router_data_v2::RouterDataV2};
 use hyperswitch_interfaces::errors;
 use masking::{PeekInterface, Secret};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use base64::Engine;
-use cbc::{cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit}, Encryptor};
-use rand::Rng;
 use std::collections::HashMap;
 
 // ============ CreateSessionToken (InitiateTransaction) Types ============
@@ -58,7 +64,7 @@ pub struct PaytmInitiateTransactionBody {
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PaytmAmount {
-    pub value: String,
+    pub value: MinorUnit,
     pub currency: String,
 }
 
@@ -114,7 +120,7 @@ pub struct PaytmResponseHead {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaytmInitiateTransactionResponseBody {
-    pub txn_token: String,
+    pub txn_token: Option<String>,
     #[serde(rename = "isPromoCodeValid")]
     pub is_promo_code_valid: Option<bool>,
     pub authenticated: Option<bool>,
@@ -153,7 +159,7 @@ pub struct PaytmProcessTransactionBody {
     pub request_type: String,
     pub mid: String,
     pub order_id: String,
-   
+
     pub payment_mode: String,
     pub payer_account: Option<String>,
     pub channel_code: Option<String>,
@@ -298,7 +304,7 @@ pub struct PaytmErrorBody {
 impl PaytmAmount {
     pub fn new(amount: MinorUnit, currency: &str) -> Self {
         Self {
-            value: format!("{:.2}", (amount.get_amount_as_i64() as f64) / 100.0),
+            value: amount,
             currency: currency.to_string(),
         }
     }
@@ -444,15 +450,8 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-    > for PaytmRouterData<PaymentsAuthorizeData>
+impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>
+    for PaytmRouterData<PaymentsAuthorizeData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -496,36 +495,33 @@ impl TryFrom<&PaytmRouterData<SessionTokenRequestData>> for PaytmInitiateTransac
 
     fn try_from(item: &PaytmRouterData<SessionTokenRequestData>) -> Result<Self, Self::Error> {
         let timestamp = get_current_timestamp();
-
         let body = PaytmInitiateTransactionBody {
-                request_type: "Payment".to_string(),
-                mid: item.merchant_id.clone(),
-                order_id: item.order_id.clone(),
-                website_name: item.website.clone(),
-                txn_amount: PaytmAmount::new(item.amount, &item.currency.to_string()),
-                user_info: PaytmUserInfo::new(
-                    item.customer_id.clone(),
-                    item.customer_mobile.clone(),
-                    item.customer_email.clone(),
-                    item.customer_name.clone(),
-                    None,
-                ),
-                enable_payment_mode: vec![PaytmPaymentMode::upi()],
-                disabled_payment_mode: None,
-                callback_url: item.callback_url.clone(),
-                extend_info: Some(PaytmExtendInfo::new(
-                    item.currency.to_string(),
-                    None,
-                    None,
-                    Some(item.order_id.clone()),
-                )),
-            };
+            request_type: "Payment".to_string(),
+            mid: item.merchant_id.clone(),
+            order_id: item.order_id.clone(),
+            website_name: item.website.clone(),
+            txn_amount: PaytmAmount::new(item.amount, &item.currency.to_string()),
+            user_info: PaytmUserInfo::new(
+                item.customer_id.clone(),
+                item.customer_mobile.clone(),
+                item.customer_email.clone(),
+                item.customer_name.clone(),
+                None,
+            ),
+            enable_payment_mode: vec![PaytmPaymentMode::upi()],
+            disabled_payment_mode: None,
+            callback_url: item.callback_url.clone(),
+            extend_info: Some(PaytmExtendInfo::new(
+                item.currency.to_string(),
+                None,
+                None,
+                Some(item.order_id.clone()),
+            )),
+        };
 
         tracing::info!("Paytm InitiateTransaction Request Body {}", item.key);
-        let signature = generate_signature(
-            &RequestContent::Json(Box::new(body.clone())),
-            &item.key,
-        )?;
+        let signature =
+            generate_signature(&RequestContent::Json(Box::new(body.clone())), &item.key)?;
 
         Ok(Self {
             head: PaytmRequestHead {
@@ -547,8 +543,12 @@ impl TryFrom<&PaytmRouterData<PaymentsAuthorizeData>> for PaytmProcessTransactio
         let timestamp = get_current_timestamp();
 
         // Extract session token from payment_flow_data if available
-        let session_token = item.session_token.as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "session_token" })?;
+        let session_token =
+            item.session_token
+                .as_ref()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "session_token",
+                })?;
 
         // Determine payment flow and payer account based on payment method data
         let (payment_mode, payer_account) = match &item.item.payment_method_data {
@@ -569,10 +569,13 @@ impl TryFrom<&PaytmRouterData<PaymentsAuthorizeData>> for PaytmProcessTransactio
                     }
                 }
             }
-            _ => return Err(errors::ConnectorError::NotSupported {
-                message: "Payment method not supported".to_string(),
-                connector: "Paytm",
-            }.into()),
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported".to_string(),
+                    connector: "Paytm",
+                }
+                .into())
+            }
         };
 
         Ok(Self {
@@ -586,7 +589,7 @@ impl TryFrom<&PaytmRouterData<PaymentsAuthorizeData>> for PaytmProcessTransactio
                 request_type: "NATIVE".to_string(),
                 mid: item.merchant_id.clone(),
                 order_id: item.order_id.clone(),
-                
+
                 payment_mode,
                 payer_account,
                 channel_code: None, // Can be populated if gateway method code is available
@@ -611,7 +614,15 @@ pub struct ResponseRouterData<T, F, Req, Resp> {
     pub http_code: u16,
 }
 
-impl TryFrom<ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>>
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaytmInitiateTransactionResponse,
+            CreateSessionToken,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        >,
+    >
     for RouterDataV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -622,11 +633,35 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionT
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>,
+        item: ResponseRouterData<
+            PaytmInitiateTransactionResponse,
+            CreateSessionToken,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
-        let session_token_response = SessionTokenResponseData {
-            session_token: item.response.body.txn_token.clone(),
-        };
+        // Check if the response indicates failure or missing token
+        if item.response.body.result_info.result_status == "F"
+            || item.response.body.txn_token.is_none()
+        {
+            return Ok(Self {
+                response: Err(hyperswitch_domain_models::router_data::ErrorResponse {
+                    code: item.response.body.result_info.result_code.clone(),
+                    message: item.response.body.result_info.result_msg.clone(),
+                    reason: Some(item.response.body.result_info.result_msg.clone()),
+                    status_code: item.http_code,
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                }),
+                ..item.data
+            });
+        }
+
+        let session_token = item.response.body.txn_token.unwrap();
+        let session_token_response = SessionTokenResponseData { session_token };
 
         Ok(Self {
             response: Ok(session_token_response),
@@ -635,18 +670,25 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionT
     }
 }
 
-impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, PaymentsAuthorizeData, PaymentsResponseData>>
-    for RouterDataV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData,
-        PaymentsResponseData,
-    >
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaytmProcessTransactionResponse,
+            Authorize,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<PaytmProcessTransactionResponse, Authorize, PaymentsAuthorizeData, PaymentsResponseData>,
+        item: ResponseRouterData<
+            PaytmProcessTransactionResponse,
+            Authorize,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         use common_enums::AttemptStatus;
         use hyperswitch_domain_models::router_response_types::RedirectForm;
@@ -669,173 +711,93 @@ impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, Paym
             });
         }
 
-        let _status = match item.response.body.result_info.result_status.as_str() {
-            "S" => AttemptStatus::AuthenticationPending, // Success but needs authentication
-            "PENDING" => AttemptStatus::AuthenticationPending,
-            _ => AttemptStatus::Pending,
+        // Determine redirection data based on payment method and response content
+        let redirection_data = match &item.data.request.payment_method_data {
+            PaymentMethodData::Upi(UpiData::UpiIntent(_)) => {
+                // For UPI Intent, prefer deep_link from deep_link_info, fallback to bank_form
+                if let Some(deep_link_info) = &item.response.body.deep_link_info {
+                    Some(RedirectForm::Uri {
+                        uri: deep_link_info.deep_link.clone(),
+                    })
+                } else if let Some(bank_form) = &item.response.body.bank_form {
+                    bank_form
+                        .redirect_form
+                        .as_ref()
+                        .map(|redirect_form| RedirectForm::Uri {
+                            uri: redirect_form.action_url.clone(),
+                        })
+                } else {
+                    None
+                }
+            }
+            _ => {
+                // For UPI Collect/QR and other methods, use bank_form if available
+                item.response.body.bank_form.as_ref().and_then(|bank_form| {
+                    bank_form
+                        .redirect_form
+                        .as_ref()
+                        .map(|redirect_form| RedirectForm::Uri {
+                            uri: redirect_form.action_url.clone(),
+                        })
+                })
+            }
         };
 
-        let response_data = if let Some(deep_link_info) = &item.response.body.deep_link_info {
-            // Check the original payment method to determine if redirection is needed
-            let redirection_data = match &item.data.request.payment_method_data {
-                PaymentMethodData::Upi(upi_data) => {
-                    match upi_data {
-                        UpiData::UpiIntent(_) => {
-                            // UPI Intent should redirect to allow user to choose UPI app
-                            let redirect_form_response = RedirectForm::Uri {
-                                uri: deep_link_info.deep_link.clone(),
-                            };
-                            Box::new(Some(redirect_form_response))
-                        }
-                        UpiData::UpiCollect(_) => {
-                            // UPI Collect is push notification - no redirection needed
-                            Box::new(None)
-                        }
-                        UpiData::UpiQr(_) => {
-                            // UPI QR might have deep link for Intent-like behavior
-                            if deep_link_info.deep_link.starts_with("upi://") {
-                                let redirect_form_response = RedirectForm::Uri {
-                                    uri: deep_link_info.deep_link.clone(),
-                                };
-                                Box::new(Some(redirect_form_response))
-                            } else {
-                                Box::new(None)
-                            }
-                        }
-                    }
-                }
-                _ => Box::new(None), // Other payment methods don't redirect
-            };
-
-            PaymentsResponseData::TransactionResponse {
-                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    deep_link_info.trans_id.clone()
-                ),
-                redirection_data,
-                mandate_reference: Box::new(None),
-                connector_metadata: None,
-                network_txn_id: Some(deep_link_info.trans_id.clone()),
-                connector_response_reference_id: Some(deep_link_info.cashier_request_id.clone()),
-                incremental_authorization_allowed: None,
-                raw_connector_response: None,
-                transaction_token: None,
-                transaction_amount: None,
-                merchant_name: None,
-                merchant_vpa: None,
-            }
-        } else if let Some(txn_info) = &item.response.body.txn_info {
-            // This is a transaction completion response with txnInfo
-            let _attempt_status = match txn_info.status.as_str() {
-                "TXN_SUCCESS" => AttemptStatus::Charged,
-                "TXN_FAILURE" => AttemptStatus::Failure,
-                "PENDING" => AttemptStatus::Pending,
-                _ => AttemptStatus::Pending,
-            };
-
-            PaymentsResponseData::TransactionResponse {
-                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    txn_info.txn_id.clone()
-                ),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
-                connector_metadata: None,
-                network_txn_id: Some(txn_info.bank_txn_id.clone()),
-                connector_response_reference_id: Some(txn_info.order_id.clone()),
-                incremental_authorization_allowed: None,
-                raw_connector_response: None,
-                transaction_token: None,
-                transaction_amount: Some(txn_info.txn_amount.clone()),
-                merchant_name: None,
-                merchant_vpa: None,
-            }
-        } else if let Some(bank_form) = &item.response.body.bank_form {
-            // For UPI payments, check if we have redirect form and payment method
-            if let Some(redirect_form) = &bank_form.redirect_form {
-                // Check the original payment method to determine if redirection is needed
-                let redirection_data = match &item.data.request.payment_method_data {
-                    PaymentMethodData::Upi(upi_data) => {
-                        match upi_data {
-                            UpiData::UpiIntent(_) => {
-                                // UPI Intent should redirect for polling/status check
-                                let redirect_form_response = RedirectForm::Uri {
-                                    uri: redirect_form.action_url.clone(),
-                                };
-                                Box::new(Some(redirect_form_response))
-                            }
-                            UpiData::UpiCollect(_) => {
-                                // UPI Collect is push notification - no redirection needed
-                                Box::new(None)
-                            }
-                            UpiData::UpiQr(_) => {
-                                // UPI QR might need redirect for polling
-                                let redirect_form_response = RedirectForm::Uri {
-                                    uri: redirect_form.action_url.clone(),
-                                };
-                                Box::new(Some(redirect_form_response))
-                            }
-                        }
-                    }
-                    _ => {
-                        // For other payment methods, use redirect if available
-                        let redirect_form_response = RedirectForm::Uri {
-                            uri: redirect_form.action_url.clone(),
-                        };
-                        Box::new(Some(redirect_form_response))
-                    }
-                };
-
-                PaymentsResponseData::TransactionResponse {
-                    resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                        item.response.body.result_info.result_code.clone()
-                    ),
-                    redirection_data,
-                    mandate_reference: Box::new(None),
-                    connector_metadata: None,
-                    network_txn_id: redirect_form.content.get("externalSrNo").cloned(),
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    raw_connector_response: None,
-                    transaction_token: redirect_form.content.get("txnToken").cloned(),
-                    transaction_amount: redirect_form.content.get("txnAmount").cloned(),
-                    merchant_name: None,
-                    merchant_vpa: redirect_form.content.get("MERCHANT_VPA").cloned(),
-                }
+        // Determine transaction ID and network details
+        let (resource_id, network_txn_id, connector_response_reference_id, transaction_amount) =
+            if let Some(deep_link_info) = &item.response.body.deep_link_info {
+                (
+                    deep_link_info.trans_id.clone(),
+                    Some(deep_link_info.trans_id.clone()),
+                    Some(deep_link_info.cashier_request_id.clone()),
+                    None,
+                )
+            } else if let Some(txn_info) = &item.response.body.txn_info {
+                (
+                    txn_info.txn_id.clone(),
+                    Some(txn_info.bank_txn_id.clone()),
+                    Some(txn_info.order_id.clone()),
+                    Some(txn_info.txn_amount.clone()),
+                )
             } else {
-                // No redirect form, return basic response
-                PaymentsResponseData::TransactionResponse {
-                    resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                        item.response.body.result_info.result_code.clone()
-                    ),
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(None),
-                    connector_metadata: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    raw_connector_response: None,
-                    transaction_token: None,
-                    transaction_amount: None,
-                    merchant_name: None,
-                    merchant_vpa: None,
-                }
-            }
-        } else {
-            PaymentsResponseData::TransactionResponse {
-                resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    item.response.body.result_info.result_code.clone()
-                ),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                raw_connector_response: None,
-                transaction_token: None,
-                transaction_amount: None,
-                merchant_name: None,
-                merchant_vpa: None,
-            }
+                (
+                    item.response.body.result_info.result_code.clone(),
+                    None,
+                    None,
+                    None,
+                )
+            };
+
+        // Extract additional fields from bank_form if available
+        let (transaction_token, merchant_vpa) = item
+            .response
+            .body
+            .bank_form
+            .as_ref()
+            .and_then(|bank_form| bank_form.redirect_form.as_ref())
+            .map(|redirect_form| {
+                (
+                    redirect_form.content.get("txnToken").cloned(),
+                    redirect_form.content.get("MERCHANT_VPA").cloned(),
+                )
+            })
+            .unwrap_or((None, None));
+
+        let response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                resource_id,
+            ),
+            redirection_data: Box::new(redirection_data),
+            mandate_reference: Box::new(None),
+            connector_metadata: None,
+            network_txn_id,
+            connector_response_reference_id,
+            incremental_authorization_allowed: None,
+            raw_connector_response: None,
+            transaction_token,
+            transaction_amount,
+            merchant_name: None,
+            merchant_vpa,
         };
 
         Ok(Self {
@@ -863,20 +825,14 @@ pub fn generate_customer_id(order_id: &str) -> String {
     format!("CUST_{}", order_id)
 }
 
-
-
-
 pub fn generate_signature(
     request_body: &RequestContent,
     key: &str,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Convert the request body to JSON string
     let params = match request_body {
-        RequestContent::Json(body) => {
-            serde_json::to_string(body).map_err(|_| {
-                errors::ConnectorError::RequestEncodingFailed
-            })?
-        }
+        RequestContent::Json(body) => serde_json::to_string(body)
+            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
         _ => return Err(errors::ConnectorError::RequestEncodingFailed.into()),
     };
 
@@ -885,14 +841,21 @@ pub fn generate_signature(
 
 /// Generate signature for Paytm authentication
 /// Equivalent to Python's generateSignature function
-fn generate_signature_by_string(params: &str, key: &str) -> CustomResult<String, errors::ConnectorError> {
+fn generate_signature_by_string(
+    params: &str,
+    key: &str,
+) -> CustomResult<String, errors::ConnectorError> {
     let salt = generate_random_string(4);
     calculate_checksum(params, key, &salt)
 }
 
 /// Calculate checksum by creating hash and encrypting it
 /// Equivalent to Python's calculateChecksum function
-fn calculate_checksum(params: &str, key: &str, salt: &str) -> CustomResult<String, errors::ConnectorError> {
+fn calculate_checksum(
+    params: &str,
+    key: &str,
+    salt: &str,
+) -> CustomResult<String, errors::ConnectorError> {
     let hash_string = calculate_hash(params, salt);
     encrypt(&hash_string, key)
 }
@@ -943,14 +906,13 @@ fn encrypt(input: &str, key: &str) -> CustomResult<String, errors::ConnectorErro
     // Create AES cipher in CBC mode
     type Aes128CbcEnc = Encryptor<aes::Aes128>;
     let encryptor = Aes128CbcEnc::new(&key_bytes.into(), IV.into());
-    
+
     // Encrypt the data with PKCS7 padding
-    let encrypted_data = encryptor.encrypt_padded_mut::<Pkcs7>(&mut buffer, input_bytes.len())
+    let encrypted_data = encryptor
+        .encrypt_padded_mut::<Pkcs7>(&mut buffer, input_bytes.len())
         .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
     // Encode to base64
     let encoded = base64::engine::general_purpose::STANDARD.encode(encrypted_data);
     Ok(encoded)
 }
-
-
