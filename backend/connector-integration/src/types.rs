@@ -1,20 +1,18 @@
 use domain_types::connector_types::{BoxedConnector, ConnectorEnum};
 
-use crate::connectors::{Adyen, Elavon, Fiserv, Razorpay};
+use crate::connectors::{Adyen, Elavon, Fiserv, Paypay, Razorpay};
 
 #[derive(Clone)]
 pub struct ConnectorData {
     pub connector: BoxedConnector,
-    pub connector_name: ConnectorEnum,
 }
+
+// Implement ConnectorServiceTrait for Paypay if not already implemented
 
 impl ConnectorData {
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
         let connector = Self::convert_connector(connector_name.clone());
-        Self {
-            connector,
-            connector_name: connector_name.clone(),
-        }
+        Self { connector }
     }
 
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector {
@@ -23,6 +21,7 @@ impl ConnectorData {
             ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
             ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
             ConnectorEnum::Elavon => Box::new(Elavon::new()),
+            ConnectorEnum::Paypay => Box::new(Paypay::new()),
         }
     }
 }

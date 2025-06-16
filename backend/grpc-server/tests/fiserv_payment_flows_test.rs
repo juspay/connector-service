@@ -202,8 +202,8 @@ fn create_refund_request(transaction_id: &str) -> RefundsRequest {
         connector_refund_id: None,
         reason: None,
         webhook_url: None,
-        connector_metadata: Some(metadata_json.as_bytes().to_vec()), // Add terminal_id for the main connector_metadata field
-        refund_connector_metadata: Some(metadata_json.as_bytes().to_vec()), // Add terminal_id for refund
+        connector_metadata: Some(metadata_json.as_bytes().to_vec()),
+        refund_connector_metadata: Some(metadata_json.as_bytes().to_vec()),
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,

@@ -5,8 +5,7 @@ mod tests {
         use crate::types::ConnectorData;
         use domain_types::connector_flow::Authorize;
         use domain_types::connector_types::{
-            BoxedConnector, ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData,
-            PaymentsResponseData,
+            BoxedConnector, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         };
         use domain_types::types::ConnectorParams;
         use domain_types::types::Connectors;
@@ -63,19 +62,24 @@ mod tests {
                     connector_http_status_code: None,
                     connectors: Connectors {
                         adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            base_url: String::new(),
+                            dispute_base_url: Some(String::new()),
                         },
                         razorpay: ConnectorParams {
-                            base_url: "https://sandbox.juspay.in/".to_string(),
+                            base_url: String::new(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                        fiserv: ConnectorParams {
+                            // Added fiserv
+                            base_url: String::new(),
+                            dispute_base_url: None,
+                        },
+                        paypay: ConnectorParams {
+                            base_url: String::new(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
+                            base_url: String::new(),
                             dispute_base_url: None,
                         },
                     },
@@ -161,10 +165,7 @@ mod tests {
             };
 
             let connector: BoxedConnector = Box::new(Adyen::new());
-            let connector_data = ConnectorData {
-                connector,
-                connector_name: ConnectorEnum::Adyen,
-            };
+            let connector_data = ConnectorData { connector };
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -235,19 +236,24 @@ mod tests {
                     connector_http_status_code: None,
                     connectors: Connectors {
                         adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
+                            base_url: String::new(),
+                            dispute_base_url: Some(String::new()),
                         },
                         razorpay: ConnectorParams {
-                            base_url: "https://sandbox.juspay.in/".to_string(),
+                            base_url: String::new(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                        fiserv: ConnectorParams {
+                            // Added fiserv
+                            base_url: String::new(),
+                            dispute_base_url: None,
+                        },
+                        paypay: ConnectorParams {
+                            base_url: String::new(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
+                            base_url: String::new(),
                             dispute_base_url: None,
                         },
                     },
@@ -296,10 +302,7 @@ mod tests {
             };
 
             let connector: BoxedConnector = Box::new(Adyen::new());
-            let connector_data = ConnectorData {
-                connector,
-                connector_name: ConnectorEnum::Adyen,
-            };
+            let connector_data = ConnectorData { connector };
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -418,7 +421,6 @@ mod tests {
         //     let connector: BoxedConnector = Box::new(Adyen::new());
         //     let connector_data = ConnectorData {
         //         connector,
-        //         connector_name: ConnectorEnum::Adyen,
         //     };
 
         //     let connector_integration: BoxedConnectorIntegrationV2<

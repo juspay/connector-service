@@ -40,7 +40,8 @@ pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
-    pub elavon: ConnectorParams, // Add your connector params
+    pub elavon: ConnectorParams,
+    pub paypay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -935,7 +936,7 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             session_token: None,
             reference_id: None,
             payment_method_token: None,
-            preprocessing_id: None,
+            preprocessing_id: value.merchant_order_reference_id.clone(),
             connector_api_version: None,
             test_mode: None,
             connector_http_status_code: None,
@@ -2078,13 +2079,13 @@ impl ForeignTryFrom<(SetupMandateRequest, Connectors)> for PaymentFlowData {
             description: None,
             return_url: None,
             connector_meta_data: None,
-            amount_captured: None,
+            amount_captured: Some(value.minor_amount),
             minor_amount_captured: None,
             access_token: None,
             session_token: None,
             reference_id: None,
-            payment_method_token: None,
-            preprocessing_id: None,
+            payment_method_token: value.payment_method_token.map(|t| t.token),
+            preprocessing_id: value.merchant_order_reference_id.clone(),
             connector_api_version: None,
             test_mode: None,
             connector_http_status_code: None,
@@ -2154,7 +2155,7 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
                     })
                 })?,
             )?,
-            amount: Some(0),
+            amount: Some(value.minor_amount),
             confirm: true,
             statement_descriptor_suffix: None,
             customer_acceptance: Some(
@@ -2206,7 +2207,7 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
                     error_object: None,
                 }))?,
             statement_descriptor: None,
-            merchant_order_reference_id: None,
+            merchant_order_reference_id: value.merchant_order_reference_id.clone(),
         })
     }
 }
