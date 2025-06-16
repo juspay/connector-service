@@ -182,7 +182,6 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
         multiple_capture_data: None,
         connector_meta_data: Some(metadata_json.as_bytes().to_vec()),
         all_keys_required: None,
-        merchant_order_reference_id: Some(format!("capture_order_{}", get_timestamp())),
     }
 }
 
@@ -203,8 +202,8 @@ fn create_refund_request(transaction_id: &str) -> RefundsRequest {
         connector_refund_id: None,
         reason: None,
         webhook_url: None,
-        connector_metadata: Some(metadata_json.as_bytes().to_vec()), // Add terminal_id for the main connector_metadata field
-        refund_connector_metadata: Some(metadata_json.as_bytes().to_vec()), // Add terminal_id for refund
+        connector_metadata: Some(metadata_json.as_bytes().to_vec()),
+        refund_connector_metadata: Some(metadata_json.as_bytes().to_vec()),
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,

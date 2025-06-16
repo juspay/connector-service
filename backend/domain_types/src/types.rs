@@ -1967,7 +1967,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentsCaptureRequest, Connector
             session_token: None,
             reference_id: None,
             payment_method_token: None,
-            preprocessing_id: value.merchant_order_reference_id.clone(),
+            preprocessing_id: None,
             connector_api_version: None,
             test_mode: None,
             connector_http_status_code: None,

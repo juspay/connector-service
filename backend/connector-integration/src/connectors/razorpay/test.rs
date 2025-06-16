@@ -250,27 +250,25 @@ mod tests {
                     minor_amount_captured: None,
                     access_token: None,
                     session_token: None,
-                    reference_id: Some("order_missing".to_string()),
+                    reference_id: None,
                     payment_method_token: None,
                     preprocessing_id: None,
                     connector_api_version: None,
-                    connector_request_reference_id: "ref_missing".to_string(),
+                    connector_request_reference_id: "".to_string(),
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
                         fiserv: ConnectorParams {
-                            // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
-                                .to_string(),
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
@@ -281,7 +279,7 @@ mod tests {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
-                },
+                    },
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -396,9 +394,7 @@ mod tests {
                             dispute_base_url: None,
                         },
                         fiserv: ConnectorParams {
-                            // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
-                                .to_string(),
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
@@ -409,7 +405,7 @@ mod tests {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
-                 },
+                    },
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -546,7 +542,7 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
@@ -558,7 +554,7 @@ mod tests {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
-                },
+                    },
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -852,7 +848,7 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
+                    fiserv: ConnectorParams {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
@@ -864,6 +860,7 @@ mod tests {
                         base_url: "".to_string(),
                         dispute_base_url: None,
                     },
+                },
                 raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1030,7 +1027,7 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
+                    fiserv: ConnectorParams {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
@@ -1042,6 +1039,7 @@ mod tests {
                         base_url: "".to_string(),
                         dispute_base_url: None,
                     },
+                },
                 raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1121,7 +1119,7 @@ mod tests {
 
         let http_response = Response {
         headers: None,
-        response: br#"{"razorpay_payment_id": "pay_xyz", "next": [ { "action": "redirect" "url": "https://api.razorpay.com/v1/payments/xyz/authenticate" } ]"#.to_vec().into(),
+        response: br#"{"razorpay_payment_id": "pay_xyz", "next": [ { "action": "redirect", "url": "https://api.razorpay.com/v1/payments/xyz/authenticate" } ]}"#.to_vec().into(),
         status_code: 200,
     };
 
@@ -1207,7 +1205,7 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
@@ -1219,6 +1217,7 @@ mod tests {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
+                    },
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1311,7 +1310,7 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
@@ -1323,6 +1322,7 @@ mod tests {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
+                    },
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1415,16 +1415,14 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
                         fiserv: ConnectorParams {
-                            // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
-                                .to_string(),
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
@@ -1435,7 +1433,7 @@ mod tests {
                             base_url: "".to_string(),
                             dispute_base_url: None,
                         },
-                },
+                    },
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1574,7 +1572,7 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
+                    fiserv: ConnectorParams {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
@@ -1586,6 +1584,7 @@ mod tests {
                         base_url: "".to_string(),
                         dispute_base_url: None,
                     },
+                },
                 raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1702,7 +1701,7 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
+                    fiserv: ConnectorParams {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
@@ -1714,6 +1713,7 @@ mod tests {
                         base_url: "".to_string(),
                         dispute_base_url: None,
                     },
+                },
                 raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1819,7 +1819,7 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
+                    fiserv: ConnectorParams {
                         base_url: "https://cert.api.fiserv.com/".to_string(),
                         dispute_base_url: None,
                     },
@@ -1831,6 +1831,7 @@ mod tests {
                         base_url: "".to_string(),
                         dispute_base_url: None,
                     },
+                },
                 raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {

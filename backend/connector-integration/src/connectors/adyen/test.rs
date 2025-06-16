@@ -69,7 +69,8 @@ mod tests {
                             base_url: String::new(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
+                            // Added fiserv
                             base_url: String::new(),
                             dispute_base_url: None,
                         },
@@ -242,7 +243,8 @@ mod tests {
                             base_url: String::new(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
+                            // Added fiserv
                             base_url: String::new(),
                             dispute_base_url: None,
                         },
