@@ -182,6 +182,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
         multiple_capture_data: None,
         connector_meta_data: Some(metadata_json.as_bytes().to_vec()),
         all_keys_required: None,
+        merchant_order_reference_id: Some(format!("capture_order_{}", get_timestamp())),
     }
 }
 

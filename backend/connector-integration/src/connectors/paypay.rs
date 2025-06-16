@@ -7,60 +7,46 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        is_mandate_supported, ConnectorSpecifications, ConnectorValidation,
-        SupportedPaymentMethodsExt,
-    },
-    connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        IncomingWebhook, PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSyncV2,
-        PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
+        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
+        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
-        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
-        ValidationTrait, WebhookDetailsResponse,
-    },
-    types::{
-        CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
-        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
-        SupportedPaymentMethods,
+        RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2,
+        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
     },
 };
-use hyperswitch_api_models::enums::Connector;
-use hyperswitch_common_enums::{
-    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
-};
+
+use base64::engine::general_purpose;
+use base64::Engine;
+use error_stack::{report, ResultExt};
+use hmac::{Hmac, Mac};
 use hyperswitch_common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    pii::SecretSerdeValue,
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
-use std::sync::LazyLock;
-
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
-use error_stack::{report, ResultExt};
 use hyperswitch_domain_models::{
-    payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::SyncRequestType,
 };
 use hyperswitch_interfaces::{
-    api::{self, CaptureSyncMethod, ConnectorCommon},
+    api::{self, ConnectorCommon},
     configs::Connectors,
     connector_integration_v2::ConnectorIntegrationV2,
     errors,
-    errors::ConnectorError,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-use transformers::{self as paypay};
+use md5;
+use serde_json::json;
+use sha2::Sha256;
 use transformers::ForeignTryFrom;
+use transformers::{self as paypay};
+
+type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Clone)]
 pub struct Paypay {
@@ -94,6 +80,79 @@ impl Paypay {
             amount_converter: &hyperswitch_common_utils::types::MinorUnitForConnector,
         }
     }
+
+    pub fn create_auth_header(
+        method: &str,
+        path: &str,
+        body: &str,
+        epoch: &str,
+        nonce: &str,
+        client_id: &str,
+        client_secret: &str,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let jsonified = body.to_string();
+        let isempty = ["undefined", "null", "", "{}"];
+
+        let (content_type, payload_hash) = if isempty.contains(&jsonified.as_str()) {
+            ("empty".to_string(), "empty".to_string())
+        } else {
+            let content_type = "application/json".to_string();
+            let combined = format!("{}{}", content_type, jsonified);
+            let digest = md5::compute(combined.as_bytes());
+            let payload_hash = general_purpose::STANDARD.encode(digest.0);
+            (content_type, payload_hash)
+        };
+
+        let signature_raw_data = format!(
+            "{}\n{}\n{}\n{}\n{}\n{}",
+            path, method, nonce, epoch, content_type, payload_hash
+        );
+
+        let mut mac = HmacSha256::new_from_slice(client_secret.as_bytes())
+            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+        mac.update(signature_raw_data.as_bytes());
+        let hashed = mac.finalize().into_bytes();
+        let hashed64 = general_purpose::STANDARD.encode(hashed);
+
+        let header = format!(
+            "{}:{}:{}:{}:{}",
+            client_id, hashed64, nonce, epoch, payload_hash
+        );
+
+        let auth_header = format!("hmac OPA-Auth:{}", header);
+
+        Ok(auth_header)
+    }
+
+    fn extract_body_string_and_value(
+        body: &Option<RequestContent>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        match body {
+            Some(RequestContent::Json(json_body)) => {
+                // Serialize the struct into a JSON string
+                let body_json_string = serde_json::to_string(&**json_body)
+                    .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+                Ok(body_json_string)
+            }
+            Some(other) => {
+                let fallback = json!({
+                    "note": "Non-JSON request content",
+                    "raw": format!("{:?}", other),
+                });
+
+                Ok(fallback.to_string())
+            }
+            None => Ok("null".to_string()),
+        }
+    }
+
+    fn extract_path_from_url(full_url: &str) -> CustomResult<&str, errors::ConnectorError> {
+        full_url
+            .find("/v")
+            .map(|start| &full_url[start..])
+            .ok_or_else(|| report!(errors::ConnectorError::RequestEncodingFailed))
+    }
 }
 
 impl ConnectorCommon for Paypay {
@@ -105,15 +164,11 @@ impl ConnectorCommon for Paypay {
     }
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        _auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = paypay::PaypayAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            "authorization".to_string(),
-            format!("Bearer {}", auth.key_id.peek()).into_masked(),
-        )])
+        Ok(vec![])
     }
+
     fn base_url(&self, _connectors: &Connectors) -> &'static str {
         "https://stg-api.sandbox.paypay.ne.jp/"
     }
@@ -144,24 +199,53 @@ impl ConnectorCommon for Paypay {
 impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
     for Paypay
 {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+
     fn get_headers(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-    where
-        Self: ConnectorIntegrationV2<
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
             Authorize,
             PaymentFlowData,
             PaymentsAuthorizeData,
             PaymentsResponseData,
-        >,
-    {
-        let mut header = vec![(
-            "content-type".to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
+
         Ok(header)
     }
 
@@ -170,7 +254,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok(format!(
-            "{}v1/subscription/payments",
+            "{}v2/payments",
             req.resource_common_data.connectors.paypay.base_url
         ))
     }
@@ -180,7 +264,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let paypay_router_data = paypay::PaypayRouterData {
-            amount: req.request.minor_amount,
+            amount: hyperswitch_common_utils::types::MinorUnit::new(req.request.amount),
             router_data: req,
         };
         let connector_req = paypay::PaypayPaymentRequest::try_from(&paypay_router_data)?;
@@ -237,17 +321,55 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 }
 
 // Empty implementations for unimplemented flows
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Paypay {
+impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Paypay
+{
+    fn get_http_method(&self) -> Method {
+        Method::Get
+    }
+
     fn get_headers(
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            "content-type".to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
+            PSync,
+            PaymentFlowData,
+            PaymentsSyncData,
+            PaymentsResponseData,
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
         Ok(header)
     }
 
@@ -255,14 +377,17 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         &self,
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        let merchant_payment_id = req.request.connector_transaction_id.get_connector_transaction_id()
+        let merchant_payment_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
             .change_context(errors::ConnectorError::MissingRequiredField {
                 field_name: "merchant_payment_id",
-            })?;
+            })?
+            .to_string();
         Ok(format!(
             "{}v2/payments/{}",
-            req.resource_common_data.connectors.paypay.base_url,
-            merchant_payment_id
+            req.resource_common_data.connectors.paypay.base_url, merchant_payment_id
         ))
     }
 
@@ -279,7 +404,10 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
         let response: paypay::PaypaySyncResponse = res
             .response
             .parse_struct("PaypaySyncResponse")
@@ -307,35 +435,78 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
     }
 }
 
-impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Paypay {
+impl
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Paypay
+{
     fn get_headers(
         &self,
-        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _req: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("CreateOrder not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "CreateOrder not implemented".into()
+        )))
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _req: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("CreateOrder not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "CreateOrder not implemented".into()
+        )))
     }
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _req: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("CreateOrder not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "CreateOrder not implemented".into()
+        )))
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _data: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
         _event_builder: Option<&mut ConnectorEvent>,
         _res: Response,
-    ) -> CustomResult<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("CreateOrder not implemented".into())))
+    ) -> CustomResult<
+        RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+        errors::ConnectorError,
+    > {
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "CreateOrder not implemented".into()
+        )))
     }
 
     fn get_error_response_v2(
@@ -343,101 +514,265 @@ impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData
         _res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("CreateOrder not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "CreateOrder not implemented".into()
+        )))
     }
 }
 
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Paypay {
+impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Paypay
+{
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+
     fn get_headers(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Capture not implemented".into())))
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
+            Capture,
+            PaymentFlowData,
+            PaymentsCaptureData,
+            PaymentsResponseData,
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
+        Ok(header)
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Capture not implemented".into())))
+        Ok(format!(
+            "{}v2/payments/capture",
+            req.resource_common_data.connectors.paypay.base_url
+        ))
     }
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Capture not implemented".into())))
+        let paypay_router_data = paypay::PaypayRouterData {
+            amount: req.request.minor_amount_to_capture,
+            router_data: req,
+        };
+        let connector_req = paypay::PaypayCaptureRequest::try_from(&paypay_router_data)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Capture not implemented".into())))
+        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: paypay::PaypayCaptureResponse = res
+            .response
+            .parse_struct("PaypayCaptureResponse")
+            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone()))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
         &self,
-        _res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Capture not implemented".into())))
+        self.build_error_response(res, event_builder)
     }
 }
 
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Paypay {
+impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Paypay
+{
+    fn get_http_method(&self) -> Method {
+        Method::Delete
+    }
+
     fn get_headers(
         &self,
-        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Void not implemented".into())))
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
+            Void,
+            PaymentFlowData,
+            PaymentVoidData,
+            PaymentsResponseData,
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
+        Ok(header)
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Void not implemented".into())))
+        let merchant_payment_id = req
+            .resource_common_data
+            .connector_request_reference_id
+            .clone();
+        Ok(format!(
+            "{}v2/payments/{}",
+            req.resource_common_data.connectors.paypay.base_url, merchant_payment_id
+        ))
     }
 
     fn get_request_body(
         &self,
         _req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Void not implemented".into())))
+        // Void is a DELETE request, so no request body needed
+        Ok(None)
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Void not implemented".into())))
+        data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: paypay::PaypayVoidResponse = res
+            .response
+            .parse_struct("PaypayVoidResponse")
+            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone()))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
         &self,
-        _res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Void not implemented".into())))
+        self.build_error_response(res, event_builder)
     }
 }
 
 impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Paypay {
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+
     fn get_headers(
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            "content-type".to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
+            Refund,
+            RefundFlowData,
+            RefundsData,
+            RefundsResponseData,
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
         Ok(header)
     }
 
@@ -468,7 +803,10 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, errors::ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        errors::ConnectorError,
+    > {
         let response: paypay::PaypayRefundResponse = res
             .response
             .parse_struct("PaypayRefundResponse")
@@ -476,11 +814,8 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((
-            response,
-            data.clone(),
-        ))
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((response, data.clone()))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -493,16 +828,52 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
 }
 
 impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Paypay {
+    fn get_http_method(&self) -> Method {
+        Method::Get
+    }
+
     fn get_headers(
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
-            "content-type".to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-        header.append(&mut api_key);
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
+            RSync,
+            RefundFlowData,
+            RefundSyncData,
+            RefundsResponseData,
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
         Ok(header)
     }
 
@@ -517,11 +888,10 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
         } else {
             req.request.connector_refund_id.clone()
         };
-        
+
         Ok(format!(
             "{}v2/refunds/{}",
-            req.resource_common_data.connectors.paypay.base_url,
-            merchant_refund_id
+            req.resource_common_data.connectors.paypay.base_url, merchant_refund_id
         ))
     }
 
@@ -538,7 +908,10 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
         data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
-    ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, errors::ConnectorError> {
+    ) -> CustomResult<
+        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        errors::ConnectorError,
+    > {
         let response: paypay::PaypayRsyncResponse = res
             .response
             .parse_struct("PaypayRsyncResponse")
@@ -546,11 +919,8 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((
-            response,
-            data.clone(),
-        ))
-        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((response, data.clone()))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -562,66 +932,170 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
     }
 }
 
-impl ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Paypay {
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Paypay
+{
+    fn get_http_method(&self) -> Method {
+        Method::Post
+    }
+
     fn get_headers(
         &self,
-        _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SetupMandate not implemented".into())))
+        let auth = paypay::PaypayAuthType::try_from(&req.connector_auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let timestamp = (chrono::Utc::now().timestamp() as u64).to_string();
+        let nonce = uuid::Uuid::new_v4().to_string();
+        let merchant_id = auth.merchant_id.peek();
+        let body = self.get_request_body(req)?;
+        let body_string = Self::extract_body_string_and_value(&body)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the full URL and use the complete path for authorization
+        let url = self.get_url(req)?;
+        let path = Self::extract_path_from_url(&url)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        // Get the HTTP method dynamically
+        let method = <Paypay as ConnectorIntegrationV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >>::get_http_method(self);
+        // Generate authorization header
+        let auth_header = Self::create_auth_header(
+            &method.to_string(),
+            path,
+            &body_string,
+            &timestamp,
+            &nonce,
+            auth.key_id.peek(),
+            auth.secret_key.peek(),
+        )
+        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+
+        let header = vec![
+            (
+                "X-ASSUME-MERCHANT".to_string(),
+                merchant_id.to_string().into(),
+            ),
+            ("Authorization".to_string(), auth_header.into_masked()),
+        ];
+        Ok(header)
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SetupMandate not implemented".into())))
+        Ok(format!(
+            "{}v1/subscription/payments",
+            req.resource_common_data.connectors.paypay.base_url
+        ))
     }
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        req: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SetupMandate not implemented".into())))
+        let amount = match req.request.amount {
+            Some(amount) => amount,
+            None => {
+                return Err(report!(errors::ConnectorError::MissingRequiredField {
+                    field_name: "amount",
+                }))
+            }
+        };
+        let paypay_router_data = paypay::PaypayRouterData {
+            amount: hyperswitch_common_utils::types::MinorUnit::new(amount),
+            router_data: req,
+        };
+        let connector_req = paypay::PaypaySetupMandateRequest::try_from(&paypay_router_data)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SetupMandate not implemented".into())))
+        data: &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData,
+            PaymentsResponseData,
+        >,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        errors::ConnectorError,
+    > {
+        let response: paypay::PaypaySetupMandateResponse = res
+            .response
+            .parse_struct("PaypaySetupMandateResponse")
+            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((response, data.clone()))
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
         &self,
-        _res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SetupMandate not implemented".into())))
+        self.build_error_response(res, event_builder)
     }
 }
 
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Paypay {
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Paypay
+{
     fn get_headers(
         &self,
         _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Accept not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "Accept not implemented".into()
+        )))
     }
 
     fn get_url(
         &self,
         _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Accept not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "Accept not implemented".into()
+        )))
     }
 
     fn get_request_body(
         &self,
         _req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Accept not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "Accept not implemented".into()
+        )))
     }
 
     fn handle_response_v2(
@@ -629,8 +1103,13 @@ impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeR
         _data: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         _event_builder: Option<&mut ConnectorEvent>,
         _res: Response,
-    ) -> CustomResult<RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Accept not implemented".into())))
+    ) -> CustomResult<
+        RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "Accept not implemented".into()
+        )))
     }
 
     fn get_error_response_v2(
@@ -638,39 +1117,75 @@ impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeR
         _res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("Accept not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "Accept not implemented".into()
+        )))
     }
 }
 
-impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Paypay {
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Paypay
+{
     fn get_headers(
         &self,
-        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SubmitEvidence not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "SubmitEvidence not implemented".into()
+        )))
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SubmitEvidence not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "SubmitEvidence not implemented".into()
+        )))
     }
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _req: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SubmitEvidence not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "SubmitEvidence not implemented".into()
+        )))
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        _data: &RouterDataV2<
+            SubmitEvidence,
+            DisputeFlowData,
+            SubmitEvidenceData,
+            DisputeResponseData,
+        >,
         _event_builder: Option<&mut ConnectorEvent>,
         _res: Response,
-    ) -> CustomResult<RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SubmitEvidence not implemented".into())))
+    ) -> CustomResult<
+        RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "SubmitEvidence not implemented".into()
+        )))
     }
 
     fn get_error_response_v2(
@@ -678,39 +1193,59 @@ impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData,
         _res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("SubmitEvidence not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "SubmitEvidence not implemented".into()
+        )))
     }
 }
 
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Paypay {
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Paypay
+{
     fn get_headers(
         &self,
         _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("DefendDispute not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "DefendDispute not implemented".into()
+        )))
     }
 
     fn get_url(
         &self,
         _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("DefendDispute not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "DefendDispute not implemented".into()
+        )))
     }
 
     fn get_request_body(
         &self,
         _req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("DefendDispute not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "DefendDispute not implemented".into()
+        )))
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        _data: &RouterDataV2<
+            DefendDispute,
+            DisputeFlowData,
+            DisputeDefendData,
+            DisputeResponseData,
+        >,
         _event_builder: Option<&mut ConnectorEvent>,
         _res: Response,
-    ) -> CustomResult<RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("DefendDispute not implemented".into())))
+    ) -> CustomResult<
+        RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        errors::ConnectorError,
+    > {
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "DefendDispute not implemented".into()
+        )))
     }
 
     fn get_error_response_v2(
@@ -718,6 +1253,8 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
         _res: Response,
         _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        Err(report!(errors::ConnectorError::NotImplemented("DefendDispute not implemented".into())))
+        Err(report!(errors::ConnectorError::NotImplemented(
+            "DefendDispute not implemented".into()
+        )))
     }
 }

@@ -21,7 +21,6 @@ use grpc_api_types::payments::{
 use hyperswitch_common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
-use hyperswitch_domain_models::merchant_account;
 use hyperswitch_masking::Secret;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use hyperswitch_domain_models::mandates::MandateData;
@@ -936,7 +935,7 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             session_token: None,
             reference_id: None,
             payment_method_token: None,
-            preprocessing_id: None,
+            preprocessing_id: value.merchant_order_reference_id.clone(),
             connector_api_version: None,
             test_mode: None,
             connector_http_status_code: None,
@@ -1967,7 +1966,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentsCaptureRequest, Connector
             session_token: None,
             reference_id: None,
             payment_method_token: None,
-            preprocessing_id: None,
+            preprocessing_id: value.merchant_order_reference_id.clone(),
             connector_api_version: None,
             test_mode: None,
             connector_http_status_code: None,
@@ -2079,13 +2078,13 @@ impl ForeignTryFrom<(SetupMandateRequest, Connectors)> for PaymentFlowData {
             description: None,
             return_url: None,
             connector_meta_data: None,
-            amount_captured: None,
+            amount_captured: Some(value.minor_amount),
             minor_amount_captured: None,
             access_token: None,
             session_token: None,
             reference_id: None,
-            payment_method_token: None,
-            preprocessing_id: None,
+            payment_method_token: value.payment_method_token.map(|t| t.token),
+            preprocessing_id: value.merchant_order_reference_id.clone(),
             connector_api_version: None,
             test_mode: None,
             connector_http_status_code: None,
@@ -2155,7 +2154,7 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
                     })
                 })?,
             )?,
-            amount: Some(0),
+            amount: Some(value.minor_amount),
             confirm: true,
             statement_descriptor_suffix: None,
             customer_acceptance: Some(
@@ -2207,7 +2206,7 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
                     error_object: None,
                 }))?,
             statement_descriptor: None,
-            merchant_order_reference_id: None,
+            merchant_order_reference_id: value.merchant_order_reference_id.clone(),
         })
     }
 }

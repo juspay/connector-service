@@ -1,6 +1,6 @@
 use domain_types::connector_types::{BoxedConnector, ConnectorEnum};
 
-use crate::connectors::{Adyen, Fiserv, Razorpay, Paypay};
+use crate::connectors::{Adyen, Fiserv, Paypay, Razorpay};
 // use crate::connectors::ConnectorServiceTrait; // Ensure the trait is in scope
 
 #[derive(Clone)]
@@ -13,9 +13,7 @@ pub struct ConnectorData {
 impl ConnectorData {
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
         let connector = Self::convert_connector(connector_name.clone());
-        Self {
-            connector,
-        }
+        Self { connector }
     }
 
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector {
@@ -33,4 +31,3 @@ pub struct ResponseRouterData<Response, RouterData> {
     pub router_data: RouterData,
     pub http_code: u16,
 }
-

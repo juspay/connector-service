@@ -5,8 +5,7 @@ mod tests {
         use crate::types::ConnectorData;
         use domain_types::connector_flow::Authorize;
         use domain_types::connector_types::{
-            BoxedConnector, ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData,
-            PaymentsResponseData,
+            BoxedConnector, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         };
         use domain_types::types::ConnectorParams;
         use domain_types::types::Connectors;
@@ -161,9 +160,7 @@ mod tests {
             };
 
             let connector: BoxedConnector = Box::new(Adyen::new());
-            let connector_data = ConnectorData {
-                connector,
-            };
+            let connector_data = ConnectorData { connector };
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -295,9 +292,7 @@ mod tests {
             };
 
             let connector: BoxedConnector = Box::new(Adyen::new());
-            let connector_data = ConnectorData {
-                connector
-            };
+            let connector_data = ConnectorData { connector };
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
