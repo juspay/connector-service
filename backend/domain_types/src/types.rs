@@ -305,6 +305,9 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
         };
 
         Ok(Self {
+            capture_method: Some(hyperswitch_common_enums::CaptureMethod::foreign_try_from(
+                value.capture_method(),
+            )?),
             payment_method_data: PaymentMethodData::foreign_try_from(
                 value.clone().payment_method_data.ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
@@ -339,7 +342,6 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             customer_name: None,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-            capture_method: None,
             router_return_url: value.return_url,
             complete_authorize_url: None,
             setup_future_usage: None,
@@ -790,7 +792,10 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: match value.access_token {
+                Some(token) => access_token_to_option_string(token),
+                None => None
+            },
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -1548,5 +1553,37 @@ pub fn generate_payment_capture_response(
                 error_code: Some(e.code),
             })
         }
+    }
+}
+
+
+impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod>
+    for hyperswitch_common_enums::CaptureMethod
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CaptureMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::CaptureMethod::Automatic => Ok(Self::Automatic),
+            grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
+            grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
+            grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
+            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "unsupported_capture_method".to_string(),
+                error_identifier: 4001,
+                error_message: format!("Capture method {:?} is not supported", value),
+                error_object: None,
+            }))),
+        }
+    }
+}
+
+fn access_token_to_option_string(token: grpc_api_types::payments::AccessToken) -> Option<String> {
+    if token.token.is_empty() {
+        None
+    } else {
+        Some(token.token)
     }
 }

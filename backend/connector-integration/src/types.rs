@@ -22,7 +22,7 @@ impl ConnectorData {
             ConnectorEnum::Adyen => Box::new(Adyen::new()),
             ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
             ConnectorEnum::Checkout => Box::new(Checkout::new()),
-            ConnectorEnum::Paypal => Box::new(Box::leak(Box::new(Paypal::new()))),
+            ConnectorEnum::Paypal => Box::new(Paypal::new()),
         }
     }
 }
