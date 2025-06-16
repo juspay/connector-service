@@ -43,3 +43,6 @@ pub fn missing_field_err(
         .into()
     })
 }
+
+pub mod xml_utils;
+pub use xml_utils::preprocess_xml_response_bytes;

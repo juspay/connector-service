@@ -10,4 +10,7 @@ pub use self::razorpay::Razorpay;
 
 pub use self::fiserv::Fiserv;
 
+pub mod elavon;
+pub use self::elavon::Elavon;
+
 pub mod macros;

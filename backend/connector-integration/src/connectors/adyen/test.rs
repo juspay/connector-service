@@ -74,6 +74,10 @@ mod tests {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
                     raw_connector_response: None,
@@ -240,6 +244,10 @@ mod tests {
                         },
                         fiserv: ConnectorParams { // Added fiserv
                             base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },

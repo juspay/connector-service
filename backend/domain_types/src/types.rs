@@ -40,6 +40,7 @@ pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
+    pub elavon: ConnectorParams, // Add your connector params
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
