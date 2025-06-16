@@ -1,4 +1,3 @@
-
 [log.console]
 enabled = true
 level = "DEBUG"
@@ -24,4 +23,5 @@ adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
 fiserv.base_url = "https://cert.api.fiservapps.com/"
+elavon.base_url = "https://api.demo.convergepay.com/VirtualMerchantDemo/"
 paypay.base_url = "https://stg-api.sandbox.paypay.ne.jp/"

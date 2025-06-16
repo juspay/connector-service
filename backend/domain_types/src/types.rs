@@ -40,6 +40,7 @@ pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
+    pub elavon: ConnectorParams,
     pub paypay: ConnectorParams,
 }
 

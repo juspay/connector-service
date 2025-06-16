@@ -211,6 +211,7 @@ pub async fn call_connector_api(
 
     let headers = request.headers.construct_header_map()?;
 
+    // Process and log the request body based on content type
     let request = {
         match request.method {
             Method::Get => client.get(url),
@@ -218,6 +219,13 @@ pub async fn call_connector_api(
                 let client = client.post(url);
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        // Use serde_json for XML conversion instead of quick_xml
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        client.body(body).header("Content-Type", "application/xml")
+                    }
                     _ => client,
                 }
             }

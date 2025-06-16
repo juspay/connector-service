@@ -14,4 +14,7 @@ pub use self::fiserv::Fiserv;
 
 pub use self::paypay::Paypay;
 
+pub mod elavon;
+pub use self::elavon::Elavon;
+
 pub mod macros;
