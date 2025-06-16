@@ -17,17 +17,15 @@ lazy_static! {
     pub static ref GRPC_SERVER_REQUESTS_TOTAL: IntCounterVec = register_int_counter_vec!(
         "GRPC_SERVER_REQUESTS_TOTAL",
         "Total number of gRPC requests received",
-        &["flow","connector"]
+        &["flow", "connector"]
     )
-        .unwrap();
-
+    .unwrap();
     pub static ref GRPC_SERVER_REQUESTS_SUCCESSFUL: IntCounterVec = register_int_counter_vec!(
         "GRPC_SERVER_REQUESTS_SUCCESSFUL",
         "Total number of gRPC requests successful",
-        &["flow","connector"]
+        &["flow", "connector"]
     )
-        .unwrap();
-
+    .unwrap();
     pub static ref GRPC_SERVER_REQUEST_LATENCY: HistogramVec = register_histogram_vec!(
         "GRPC_SERVER_REQUEST_LATENCY_SECONDS",
         "Request latency in seconds",
@@ -35,7 +33,6 @@ lazy_static! {
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
-
     pub static ref EXTERNAL_SERVICE_API_CALLS_LATENCY: HistogramVec = register_histogram_vec!(
         "EXTERNAL_SERVICE_API_CALLS_LATENCY_SECONDS",
         "Latency of external service API calls",
@@ -43,21 +40,18 @@ lazy_static! {
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
-
     pub static ref EXTERNAL_SERVICE_TOTAL_API_CALLS: IntCounterVec = register_int_counter_vec!(
         "EXTERNAL_SERVICE_TOTAL_API_CALLS",
         "Total number of external service API calls",
         &["endpoint", "method"]
     )
     .unwrap();
-
     pub static ref EXTERNAL_SERVICE_API_CALLS_ERRORS: IntCounterVec = register_int_counter_vec!(
         "EXTERNAL_SERVICE_API_CALLS_ERRORS",
         "Total number of errors in external service API calls",
         &["endpoint", "method", "error"]
     )
     .unwrap();
-
 }
 
 pub async fn with_metrics_and_connector<R, F, Fut>(
@@ -83,8 +77,8 @@ where
     match &result {
         Ok(_) => {
             GRPC_SERVER_REQUESTS_SUCCESSFUL
-                        .with_label_values(&[method_name, connector])
-                        .inc();
+                .with_label_values(&[method_name, connector])
+                .inc();
         }
         Err(_) => {
             // Could add error metrics here if needed

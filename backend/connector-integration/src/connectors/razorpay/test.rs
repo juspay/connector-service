@@ -100,6 +100,14 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        fiserv: ConnectorParams {
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -248,11 +256,21 @@ mod tests {
                     external_latency: None,
                     connectors: Connectors {
                         adyen: ConnectorParams {
-                            base_url: "".to_string(),
-                            dispute_base_url: Some("".to_string()),
+                            base_url: "https://checkout-test.adyen.com/".to_string(),
+                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
                         },
                         razorpay: ConnectorParams {
-                            base_url: "".to_string(),
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams {
+                            // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
+                                .to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -362,11 +380,21 @@ mod tests {
                     external_latency: None,
                     connectors: Connectors {
                         adyen: ConnectorParams {
-                            base_url: "".to_string(),
-                            dispute_base_url: Some("".to_string()),
+                            base_url: "https://checkout-test.adyen.com/".to_string(),
+                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
                         },
                         razorpay: ConnectorParams {
-                            base_url: "".to_string(),
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams {
+                            // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
+                                .to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -504,6 +532,14 @@ mod tests {
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -800,6 +836,14 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    fiserv: ConnectorParams { // Added fiserv
+                        base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    elavon: ConnectorParams {
+                        base_url: "https://api.elavon.com/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -848,7 +892,9 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                    user_agent: Some(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
+                    ),
                 }),
                 order_category: None,
                 session_token: None,
@@ -965,6 +1011,14 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    fiserv: ConnectorParams { // Added fiserv
+                        base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    elavon: ConnectorParams {
+                        base_url: "https://api.elavon.com/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1013,7 +1067,9 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                    user_agent: Some(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
+                    ),
                 }),
                 order_category: None,
                 session_token: None,
@@ -1129,6 +1185,14 @@ mod tests {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: domain_types::types::ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -1220,6 +1284,14 @@ mod tests {
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -1314,11 +1386,21 @@ mod tests {
                     external_latency: None,
                     connectors: Connectors {
                         adyen: ConnectorParams {
-                            base_url: "".to_string(),
-                            dispute_base_url: Some("".to_string()),
+                            base_url: "https://checkout-test.adyen.com/".to_string(),
+                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
                         },
                         razorpay: ConnectorParams {
-                            base_url: "".to_string(),
+                            base_url: "https://api.razorpay.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        fiserv: ConnectorParams {
+                            // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
+                                .to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -1460,6 +1542,14 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    fiserv: ConnectorParams { // Added fiserv
+                        base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    elavon: ConnectorParams {
+                        base_url: "https://api.elavon.com/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1577,6 +1667,14 @@ mod tests {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    fiserv: ConnectorParams { // Added fiserv
+                        base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    elavon: ConnectorParams {
+                        base_url: "https://api.elavon.com/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1681,6 +1779,14 @@ mod tests {
                     },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    fiserv: ConnectorParams { // Added fiserv
+                        base_url: "https://cert.api.fiserv.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    elavon: ConnectorParams {
+                        base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
                 },
