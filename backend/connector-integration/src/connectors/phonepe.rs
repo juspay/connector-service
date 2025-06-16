@@ -27,16 +27,16 @@
 
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorServiceTrait, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentAuthorizeV2, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
 };
 use hyperswitch_interfaces::connector_integration_v2::ConnectorIntegrationV2;
@@ -113,7 +113,7 @@ macros::create_all_prerequisites!(
         ) -> CustomResult<String, errors::ConnectorError> {
             // PhonePe checksum format:
             // sha256(base64EncodedPayload + apiPath + saltKey) + "###" + keyIndex
-            
+
             let checksum_string = format!(
                 "{}{}{}",
                 base64_payload,
@@ -191,13 +191,13 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let auth = PhonePeAuthType::try_from(&req.connector_auth_type)?;
-    
+
             // Generate the base64 payload to create checksum
             let phonepe_req = PhonePePaymentRequest::try_from(req.clone())?;
-            
-            
+
+
             let base64_payload = phonepe_req.request;
-            
+
             // Generate checksum
             let api_path = "/pg/v1/pay";
             let checksum = self.generate_phonepe_checksum(&auth, &base64_payload, api_path)?;
@@ -276,7 +276,10 @@ impl ConnectorCommon for PhonePe {
 
         Ok(ErrorResponse {
             code: response.code.clone(),
-            message: response.message.clone().unwrap_or_else(|| "Unknown error".to_string()),
+            message: response
+                .message
+                .clone()
+                .unwrap_or_else(|| "Unknown error".to_string()),
             reason: response.message.clone(),
             status_code: res.status_code,
             attempt_status: Some(attempt_status),
@@ -297,7 +300,10 @@ impl PaymentAuthorizeV2 for PhonePe {}
 // Stub implementations for unsupported flows - these will return NotImplemented errors
 impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for PhonePe {}
 
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for PhonePe {}
+impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for PhonePe
+{
+}
 
 impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for PhonePe
@@ -314,7 +320,20 @@ impl
 {
 }
 
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for PhonePe {}
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for PhonePe
+{
+}
+
+impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for PhonePe
+{
+}
 
 impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for PhonePe
@@ -352,6 +371,7 @@ impl domain_types::connector_types::RefundV2 for PhonePe {}
 impl domain_types::connector_types::RefundSyncV2 for PhonePe {}
 impl domain_types::connector_types::PaymentSyncV2 for PhonePe {}
 impl domain_types::connector_types::PaymentOrderCreate for PhonePe {}
+impl domain_types::connector_types::PaymentSessionToken for PhonePe {}
 impl domain_types::connector_types::PaymentVoidV2 for PhonePe {}
 impl domain_types::connector_types::IncomingWebhook for PhonePe {}
 impl domain_types::connector_types::PaymentCapture for PhonePe {}
@@ -360,5 +380,3 @@ impl domain_types::connector_types::AcceptDispute for PhonePe {}
 impl domain_types::connector_types::SubmitEvidenceV2 for PhonePe {}
 impl domain_types::connector_types::DisputeDefend for PhonePe {}
 impl domain_types::connector_types::ValidationTrait for PhonePe {}
-
-

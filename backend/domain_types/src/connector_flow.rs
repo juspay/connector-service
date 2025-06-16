@@ -30,3 +30,6 @@ pub struct SubmitEvidence;
 
 #[derive(Debug, Clone)]
 pub struct DefendDispute;
+
+#[derive(Debug, Clone)]
+pub struct CreateSessionToken;

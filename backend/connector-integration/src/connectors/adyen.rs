@@ -2,6 +2,12 @@ mod test;
 pub mod transformers;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
+use common_enums::{
+    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
+};
+use common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
+};
 use domain_types::{
     connector_types::{is_mandate_supported, ConnectorSpecifications},
     connector_types::{ConnectorValidation, SupportedPaymentMethodsExt},
@@ -9,12 +15,6 @@ use domain_types::{
         self, CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentMethodDataType,
         PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
     },
-};
-use common_enums::{
-    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
-};
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
 };
 use std::sync::LazyLock;
 
@@ -39,19 +39,19 @@ use masking::{Mask, Maskable};
 use super::macros;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
         DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, IncomingWebhook,
         PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SetupMandateRequestData,
-        SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
-        WebhookDetailsResponse,
+        PaymentFlowData, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2, PaymentVoidData,
+        PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SetupMandateV2,
+        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait, WebhookDetailsResponse,
     },
 };
 use transformers::{
@@ -313,12 +313,24 @@ impl ValidationTrait for Adyen {}
 
 impl PaymentOrderCreate for Adyen {}
 
+impl PaymentSessionToken for Adyen {}
+
 impl
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
+    > for Adyen
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
     > for Adyen
 {
 }

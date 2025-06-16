@@ -22,9 +22,9 @@ use crate::types::ResponseRouterData;
 // Authentication type for PhonePe
 #[derive(Debug, Clone)]
 pub struct PhonePeAuthType {
-    pub(crate) merchant_id: Secret<String>,  // PhonePe merchant ID
-    pub(crate) salt_key: Secret<String>,     // Salt key for checksum generation
-    pub(crate) salt_index: Secret<String>,   // Salt index (usually "1")
+    pub(crate) merchant_id: Secret<String>, // PhonePe merchant ID
+    pub(crate) salt_key: Secret<String>,    // Salt key for checksum generation
+    pub(crate) salt_index: Secret<String>,  // Salt index (usually "1")
 }
 
 impl TryFrom<&ConnectorAuthType> for PhonePeAuthType {
@@ -32,7 +32,11 @@ impl TryFrom<&ConnectorAuthType> for PhonePeAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
+            ConnectorAuthType::SignatureKey {
+                api_key,
+                key1,
+                api_secret,
+            } => Ok(Self {
                 merchant_id: api_key.to_owned(),
                 salt_key: key1.to_owned(),
                 salt_index: api_secret.to_owned(),
@@ -90,16 +94,16 @@ impl PhonePePaymentRequest {
     pub fn new(inner_payload: PhonePeInnerPayload) -> Result<Self, serde_json::Error> {
         // Convert inner payload to JSON
         let json_payload = serde_json::to_string(&inner_payload)?;
-        
+
         // Encode to base64
         let base64_payload = base64::engine::general_purpose::STANDARD.encode(json_payload);
-        
+
         Ok(Self {
             request: base64_payload,
             inner_payload,
         })
     }
-    
+
     pub fn get_inner_payload(&self) -> &PhonePeInnerPayload {
         &self.inner_payload
     }
@@ -205,21 +209,13 @@ pub enum PhonePePaymentResponse {
     Error(PhonePeErrorResponse),
 }
 
-
-
-
-impl
-    TryFrom<
-        
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        
-    > for PhonePePaymentRequest
+impl TryFrom<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>
+    for PhonePePaymentRequest
 {
     type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
 
     fn try_from(
         item: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        
     ) -> Result<Self, Self::Error> {
         let router_data = &item;
 
@@ -280,29 +276,30 @@ impl
 
         // Determine device context for UPI Intent
         let device_context = match &router_data.request.payment_method_data {
-            PaymentMethodData::Upi(payment_method_data::UpiData::UpiIntent(_)) => {
-                router_data
-                    .request
-                    .browser_info
-                    .as_ref()
-                    .and_then(|info| info.user_agent.as_ref())
-                    .and_then(|ua| {
-                        let ua_lower = ua.to_lowercase();
-                        if ua_lower.contains("android") {
-                            Some(PhonePeDeviceContext {
-                                device_os: "ANDROID".to_string(),
-                            })
-                        } else if ua_lower.contains("iphone") || ua_lower.contains("ipad") || ua_lower.contains("ios") {
-                            Some(PhonePeDeviceContext {
-                                device_os: "IOS".to_string(),
-                            })
-                        } else {
-                            Some(PhonePeDeviceContext {
-                                device_os: "WEB".to_string(),
-                            })
-                        }
-                    })
-            }
+            PaymentMethodData::Upi(payment_method_data::UpiData::UpiIntent(_)) => router_data
+                .request
+                .browser_info
+                .as_ref()
+                .and_then(|info| info.user_agent.as_ref())
+                .and_then(|ua| {
+                    let ua_lower = ua.to_lowercase();
+                    if ua_lower.contains("android") {
+                        Some(PhonePeDeviceContext {
+                            device_os: "ANDROID".to_string(),
+                        })
+                    } else if ua_lower.contains("iphone")
+                        || ua_lower.contains("ipad")
+                        || ua_lower.contains("ios")
+                    {
+                        Some(PhonePeDeviceContext {
+                            device_os: "IOS".to_string(),
+                        })
+                    } else {
+                        Some(PhonePeDeviceContext {
+                            device_os: "WEB".to_string(),
+                        })
+                    }
+                }),
             _ => None,
         };
 
@@ -312,7 +309,7 @@ impl
                 match upi_data {
                     payment_method_data::UpiData::UpiIntent(_intent_data) => {
                         tracing::info!("PhonePe: UPI Intent flow");
-                        
+
                         // Extract target UPI app from metadata if specified
                         let target_app = router_data
                             .request
@@ -328,7 +325,7 @@ impl
                     }
                     payment_method_data::UpiData::UpiQr(_qr_data) => {
                         tracing::info!("PhonePe: UPI QR flow");
-                        
+
                         PhonePePaymentInstrument {
                             instrument_type: "UPI_QR".to_string(),
                             target_app: None,
@@ -337,12 +334,12 @@ impl
                     }
                     payment_method_data::UpiData::UpiCollect(collect_data) => {
                         tracing::info!("PhonePe: UPI Collect flow");
-                        
+
                         // Get the VPA ID from the collect_data
                         if let Some(vpa_secret) = &collect_data.vpa_id {
                             let vpa_id = vpa_secret.clone().expose();
                             tracing::info!("PhonePe: VPA ID: {:?}", vpa_id);
-                            
+
                             // Validate VPA format
                             if !Self::validate_vpa(&vpa_id) {
                                 return Err(errors::ConnectorError::InvalidDataFormat {
@@ -386,14 +383,14 @@ impl
         };
 
         // Create final request with base64 encoding
-        let request = Self::new(inner_payload)
-            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+        let request =
+            Self::new(inner_payload).map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
         tracing::info!(
             "PhonePe: Successfully created payment request with merchant_transaction_id={}",
             request.inner_payload.merchant_transaction_id
         );
-        
+
         Ok(request)
     }
 }
@@ -432,7 +429,9 @@ impl
 {
     type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
 
-    fn try_from(value: ResponseRouterData<PhonePePaymentResponse, Self>) -> Result<Self, Self::Error> {
+    fn try_from(
+        value: ResponseRouterData<PhonePePaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
             response,
             mut router_data,
@@ -452,11 +451,18 @@ impl
                     if let Ok(success_json) = serde_json::to_string(&success_response) {
                         tracing::info!("PhonePe: Successful response received: {}", success_json);
                     } else {
-                        tracing::info!("PhonePe: Successful response received (could not serialize to JSON)");
+                        tracing::info!(
+                            "PhonePe: Successful response received (could not serialize to JSON)"
+                        );
                     }
 
                     // Set appropriate status based on payment flow
-                    let status = match success_response.data.instrument_response.instrument_type.as_str() {
+                    let status = match success_response
+                        .data
+                        .instrument_response
+                        .instrument_type
+                        .as_str()
+                    {
                         "UPI_INTENT" | "UPI_QR" => AttemptStatus::AuthenticationPending, // Needs user action
                         "UPI_COLLECT" => AttemptStatus::Pending, // Waiting for customer approval
                         _ => AttemptStatus::AuthenticationPending,
@@ -471,17 +477,26 @@ impl
                     );
 
                     // Create redirection data based on instrument type
-                    let redirection_data = match success_response.data.instrument_response.instrument_type.as_str() {
+                    let redirection_data = match success_response
+                        .data
+                        .instrument_response
+                        .instrument_type
+                        .as_str()
+                    {
                         "UPI_INTENT" => {
                             // For UPI Intent, create redirect to intent URL
                             tracing::info!("PhonePe: UPI Intent flow detected, creating redirect to intent URL {:?}", success_response.data.instrument_response.intent_url);
-                            if let Some(ref intent_url) = success_response.data.instrument_response.intent_url {
-                                Some(RedirectForm::Uri { uri: intent_url.clone() })
+                            if let Some(ref intent_url) =
+                                success_response.data.instrument_response.intent_url
+                            {
+                                Some(RedirectForm::Uri {
+                                    uri: intent_url.clone(),
+                                })
                             } else {
                                 None
                             }
                         }
-                        
+
                         "UPI_QR" => {
                             // For UPI QR, QR data is returned in metadata, no redirection needed
                             None
@@ -497,7 +512,11 @@ impl
                     let mut metadata = HashMap::new();
                     metadata.insert(
                         "instrument_type".to_string(),
-                        success_response.data.instrument_response.instrument_type.clone(),
+                        success_response
+                            .data
+                            .instrument_response
+                            .instrument_type
+                            .clone(),
                     );
 
                     // Add QR data if available
@@ -518,9 +537,13 @@ impl
                             success_response.data.merchant_transaction_id.clone(),
                         ),
                         redirection_data: Box::new(redirection_data),
-                        connector_metadata: Some(serde_json::to_value(metadata).unwrap_or_default()),
+                        connector_metadata: Some(
+                            serde_json::to_value(metadata).unwrap_or_default(),
+                        ),
                         network_txn_id: None,
-                        connector_response_reference_id: Some(success_response.data.merchant_transaction_id.clone()),
+                        connector_response_reference_id: Some(
+                            success_response.data.merchant_transaction_id.clone(),
+                        ),
                         incremental_authorization_allowed: None,
                         mandate_reference: Box::new(None),
                         raw_connector_response: serde_json::to_string(&success_response).ok(),
@@ -537,7 +560,10 @@ impl
                     router_data.response = Ok(payments_response_data);
                 } else {
                     // Success=false but still in success response structure
-                    tracing::warn!("PhonePe: Response marked as unsuccessful: {}", success_response.code);
+                    tracing::warn!(
+                        "PhonePe: Response marked as unsuccessful: {}",
+                        success_response.code
+                    );
                     router_data.resource_common_data.status = AttemptStatus::Failure;
 
                     let error_response = ErrorResponse {
@@ -546,7 +572,9 @@ impl
                         reason: Some(success_response.message.clone()),
                         status_code: http_code,
                         attempt_status: Some(AttemptStatus::Failure),
-                        connector_transaction_id: Some(success_response.data.merchant_transaction_id.clone()),
+                        connector_transaction_id: Some(
+                            success_response.data.merchant_transaction_id.clone(),
+                        ),
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
@@ -557,17 +585,20 @@ impl
             }
             PhonePePaymentResponse::Error(error_response) => {
                 // Error response from PhonePe
-                tracing::error!("PhonePe: Error response received: {} - {:?}", 
-                    error_response.code, error_response.message);
-                
+                tracing::error!(
+                    "PhonePe: Error response received: {} - {:?}",
+                    error_response.code,
+                    error_response.message
+                );
+
                 router_data.resource_common_data.status = AttemptStatus::Failure;
 
-                let error_message = error_response.message.clone().unwrap_or_else(|| "Unknown error".to_string());
-                let error_reason = format!("{}: {}", 
-                    error_response.code, 
-                    &error_message
-                );
-                
+                let error_message = error_response
+                    .message
+                    .clone()
+                    .unwrap_or_else(|| "Unknown error".to_string());
+                let error_reason = format!("{}: {}", error_response.code, &error_message);
+
                 let connector_error = ErrorResponse {
                     code: error_response.code.clone(),
                     message: error_message,
@@ -587,5 +618,3 @@ impl
         Ok(router_data)
     }
 }
-
-

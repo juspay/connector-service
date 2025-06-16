@@ -23,16 +23,16 @@
 
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorServiceTrait, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentAuthorizeV2, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
 };
 use hyperswitch_interfaces::connector_integration_v2::ConnectorIntegrationV2;
@@ -369,6 +369,16 @@ impl
 {
 }
 
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Payu
+{
+}
+
 impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Payu {}
 
 impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
@@ -407,6 +417,7 @@ impl domain_types::connector_types::RefundV2 for Payu {}
 impl domain_types::connector_types::RefundSyncV2 for Payu {}
 impl domain_types::connector_types::PaymentSyncV2 for Payu {}
 impl domain_types::connector_types::PaymentOrderCreate for Payu {}
+impl domain_types::connector_types::PaymentSessionToken for Payu {}
 impl domain_types::connector_types::PaymentVoidV2 for Payu {}
 impl domain_types::connector_types::IncomingWebhook for Payu {}
 impl domain_types::connector_types::PaymentCapture for Payu {}
