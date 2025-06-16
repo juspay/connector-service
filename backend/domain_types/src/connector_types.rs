@@ -35,6 +35,7 @@ use std::collections::HashMap;
 pub enum ConnectorEnum {
     Adyen,
     Razorpay,
+    RazorpayV2,
     Payu,
     PhonePe,
     Paytm,
@@ -47,6 +48,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
         match connector {
             2 => Ok(Self::Adyen),
             68 => Ok(Self::Razorpay),
+            69 => Ok(Self::RazorpayV2),
             72 => Ok(Self::Payu),
             73 => Ok(Self::PhonePe),
             74 => Ok(Self::Paytm),

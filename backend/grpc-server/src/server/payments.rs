@@ -198,10 +198,7 @@ impl Payments {
 
         match response.response {
             Ok(SessionTokenResponseData { session_token, .. }) => {
-                tracing::info!(
-                    "Session token created successfully: {}",
-                    session_token
-                );
+                tracing::info!("Session token created successfully: {}", session_token);
                 payment_flow_data.session_token = Some(session_token);
                 Ok(())
             }

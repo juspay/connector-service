@@ -38,6 +38,7 @@ use utoipa::ToSchema;
 pub struct Connectors {
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
+    pub razorpayv2: ConnectorParams,
     pub payu: ConnectorParams,
     pub phonepe: ConnectorParams,
     pub paytm: ConnectorParams,

@@ -185,9 +185,10 @@ impl
             SessionTokenResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Ok(vec![
-            ("Content-Type".to_string(), "application/json".into()),
-        ])
+        Ok(vec![(
+            "Content-Type".to_string(),
+            "application/json".into(),
+        )])
     }
 
     fn get_url(
@@ -201,10 +202,10 @@ impl
     ) -> CustomResult<String, errors::ConnectorError> {
         let auth = transformers::PaytmAuthType::try_from(&req.connector_auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        
+
         let order_id = &req.resource_common_data.connector_request_reference_id;
         let base_url = &req.resource_common_data.connectors.paytm.base_url;
-        
+
         Ok(format!(
             "{}/theia/api/v1/initiateTransaction?mid={}&orderId={}",
             base_url,
@@ -301,43 +302,33 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // Process transaction request doesn't need signature as it uses txn_token for authentication
-        Ok(vec![
-            ("Content-Type".to_string(), "application/json".into()),
-        ])
+        Ok(vec![(
+            "Content-Type".to_string(),
+            "application/json".into(),
+        )])
     }
 
     fn get_url(
         &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let auth = transformers::PaytmAuthType::try_from(&req.connector_auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        
+
         let order_id = &req.resource_common_data.connector_request_reference_id;
         let base_url = &req.resource_common_data.connectors.paytm.base_url;
-        
+
         Ok(format!(
             "{}/theia/api/v1/processTransaction?mid={}&orderId={}",
             base_url,
             auth.merchant_id.peek(),
             order_id
         ))
-        
     }
 
     fn get_request_body(
         &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
+        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let connector_router_data = transformers::PaytmRouterData::try_from(req)?;
         let connector_req =
@@ -356,12 +347,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
         let response: transformers::PaytmProcessTransactionResponse = res

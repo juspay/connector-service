@@ -3,22 +3,28 @@
 //! This module contains all the request and response structures for Paytm's UPI APIs,
 //! as well as the transformation logic to convert between our domain types and Paytm's expected formats.
 
+use base64::Engine;
+use cbc::{
+    cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
+    Encryptor,
+};
 use common_enums::Currency;
 use common_utils::types::MinorUnit;
 use common_utils::{errors::CustomResult, request::RequestContent};
 use domain_types::{
     connector_flow::{Authorize, CreateSessionToken},
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, SessionTokenRequestData, SessionTokenResponseData},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, SessionTokenRequestData,
+        SessionTokenResponseData,
+    },
 };
 use hyperswitch_domain_models::payment_method_data::{PaymentMethodData, UpiData};
 use hyperswitch_domain_models::{router_data::ConnectorAuthType, router_data_v2::RouterDataV2};
 use hyperswitch_interfaces::errors;
 use masking::{PeekInterface, Secret};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use base64::Engine;
-use cbc::{cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit}, Encryptor};
-use rand::Rng;
 use std::collections::HashMap;
 
 // ============ CreateSessionToken (InitiateTransaction) Types ============
@@ -153,7 +159,7 @@ pub struct PaytmProcessTransactionBody {
     pub request_type: String,
     pub mid: String,
     pub order_id: String,
-   
+
     pub payment_mode: String,
     pub payer_account: Option<String>,
     pub channel_code: Option<String>,
@@ -444,15 +450,8 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-    > for PaytmRouterData<PaymentsAuthorizeData>
+impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>
+    for PaytmRouterData<PaymentsAuthorizeData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -498,34 +497,32 @@ impl TryFrom<&PaytmRouterData<SessionTokenRequestData>> for PaytmInitiateTransac
         let timestamp = get_current_timestamp();
 
         let body = PaytmInitiateTransactionBody {
-                request_type: "Payment".to_string(),
-                mid: item.merchant_id.clone(),
-                order_id: item.order_id.clone(),
-                website_name: item.website.clone(),
-                txn_amount: PaytmAmount::new(item.amount, &item.currency.to_string()),
-                user_info: PaytmUserInfo::new(
-                    item.customer_id.clone(),
-                    item.customer_mobile.clone(),
-                    item.customer_email.clone(),
-                    item.customer_name.clone(),
-                    None,
-                ),
-                enable_payment_mode: vec![PaytmPaymentMode::upi()],
-                disabled_payment_mode: None,
-                callback_url: item.callback_url.clone(),
-                extend_info: Some(PaytmExtendInfo::new(
-                    item.currency.to_string(),
-                    None,
-                    None,
-                    Some(item.order_id.clone()),
-                )),
-            };
+            request_type: "Payment".to_string(),
+            mid: item.merchant_id.clone(),
+            order_id: item.order_id.clone(),
+            website_name: item.website.clone(),
+            txn_amount: PaytmAmount::new(item.amount, &item.currency.to_string()),
+            user_info: PaytmUserInfo::new(
+                item.customer_id.clone(),
+                item.customer_mobile.clone(),
+                item.customer_email.clone(),
+                item.customer_name.clone(),
+                None,
+            ),
+            enable_payment_mode: vec![PaytmPaymentMode::upi()],
+            disabled_payment_mode: None,
+            callback_url: item.callback_url.clone(),
+            extend_info: Some(PaytmExtendInfo::new(
+                item.currency.to_string(),
+                None,
+                None,
+                Some(item.order_id.clone()),
+            )),
+        };
 
         tracing::info!("Paytm InitiateTransaction Request Body {}", item.key);
-        let signature = generate_signature(
-            &RequestContent::Json(Box::new(body.clone())),
-            &item.key,
-        )?;
+        let signature =
+            generate_signature(&RequestContent::Json(Box::new(body.clone())), &item.key)?;
 
         Ok(Self {
             head: PaytmRequestHead {
@@ -547,8 +544,12 @@ impl TryFrom<&PaytmRouterData<PaymentsAuthorizeData>> for PaytmProcessTransactio
         let timestamp = get_current_timestamp();
 
         // Extract session token from payment_flow_data if available
-        let session_token = item.session_token.as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField { field_name: "session_token" })?;
+        let session_token =
+            item.session_token
+                .as_ref()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "session_token",
+                })?;
 
         // Determine payment flow and payer account based on payment method data
         let (payment_mode, payer_account) = match &item.item.payment_method_data {
@@ -569,10 +570,13 @@ impl TryFrom<&PaytmRouterData<PaymentsAuthorizeData>> for PaytmProcessTransactio
                     }
                 }
             }
-            _ => return Err(errors::ConnectorError::NotSupported {
-                message: "Payment method not supported".to_string(),
-                connector: "Paytm",
-            }.into()),
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported".to_string(),
+                    connector: "Paytm",
+                }
+                .into())
+            }
         };
 
         Ok(Self {
@@ -586,7 +590,7 @@ impl TryFrom<&PaytmRouterData<PaymentsAuthorizeData>> for PaytmProcessTransactio
                 request_type: "NATIVE".to_string(),
                 mid: item.merchant_id.clone(),
                 order_id: item.order_id.clone(),
-                
+
                 payment_mode,
                 payer_account,
                 channel_code: None, // Can be populated if gateway method code is available
@@ -611,7 +615,15 @@ pub struct ResponseRouterData<T, F, Req, Resp> {
     pub http_code: u16,
 }
 
-impl TryFrom<ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>>
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaytmInitiateTransactionResponse,
+            CreateSessionToken,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        >,
+    >
     for RouterDataV2<
         CreateSessionToken,
         PaymentFlowData,
@@ -622,7 +634,12 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionT
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionToken, SessionTokenRequestData, SessionTokenResponseData>,
+        item: ResponseRouterData<
+            PaytmInitiateTransactionResponse,
+            CreateSessionToken,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         let session_token_response = SessionTokenResponseData {
             session_token: item.response.body.txn_token.clone(),
@@ -635,18 +652,25 @@ impl TryFrom<ResponseRouterData<PaytmInitiateTransactionResponse, CreateSessionT
     }
 }
 
-impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, PaymentsAuthorizeData, PaymentsResponseData>>
-    for RouterDataV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData,
-        PaymentsResponseData,
-    >
+impl
+    TryFrom<
+        ResponseRouterData<
+            PaytmProcessTransactionResponse,
+            Authorize,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<PaytmProcessTransactionResponse, Authorize, PaymentsAuthorizeData, PaymentsResponseData>,
+        item: ResponseRouterData<
+            PaytmProcessTransactionResponse,
+            Authorize,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
     ) -> Result<Self, Self::Error> {
         use common_enums::AttemptStatus;
         use hyperswitch_domain_models::router_response_types::RedirectForm;
@@ -709,7 +733,7 @@ impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, Paym
 
             PaymentsResponseData::TransactionResponse {
                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    deep_link_info.trans_id.clone()
+                    deep_link_info.trans_id.clone(),
                 ),
                 redirection_data,
                 mandate_reference: Box::new(None),
@@ -734,7 +758,7 @@ impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, Paym
 
             PaymentsResponseData::TransactionResponse {
                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    txn_info.txn_id.clone()
+                    txn_info.txn_id.clone(),
                 ),
                 redirection_data: Box::new(None),
                 mandate_reference: Box::new(None),
@@ -786,7 +810,7 @@ impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, Paym
 
                 PaymentsResponseData::TransactionResponse {
                     resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                        item.response.body.result_info.result_code.clone()
+                        item.response.body.result_info.result_code.clone(),
                     ),
                     redirection_data,
                     mandate_reference: Box::new(None),
@@ -804,7 +828,7 @@ impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, Paym
                 // No redirect form, return basic response
                 PaymentsResponseData::TransactionResponse {
                     resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                        item.response.body.result_info.result_code.clone()
+                        item.response.body.result_info.result_code.clone(),
                     ),
                     redirection_data: Box::new(None),
                     mandate_reference: Box::new(None),
@@ -822,7 +846,7 @@ impl TryFrom<ResponseRouterData<PaytmProcessTransactionResponse, Authorize, Paym
         } else {
             PaymentsResponseData::TransactionResponse {
                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                    item.response.body.result_info.result_code.clone()
+                    item.response.body.result_info.result_code.clone(),
                 ),
                 redirection_data: Box::new(None),
                 mandate_reference: Box::new(None),
@@ -863,20 +887,14 @@ pub fn generate_customer_id(order_id: &str) -> String {
     format!("CUST_{}", order_id)
 }
 
-
-
-
 pub fn generate_signature(
     request_body: &RequestContent,
     key: &str,
 ) -> CustomResult<String, errors::ConnectorError> {
     // Convert the request body to JSON string
     let params = match request_body {
-        RequestContent::Json(body) => {
-            serde_json::to_string(body).map_err(|_| {
-                errors::ConnectorError::RequestEncodingFailed
-            })?
-        }
+        RequestContent::Json(body) => serde_json::to_string(body)
+            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
         _ => return Err(errors::ConnectorError::RequestEncodingFailed.into()),
     };
 
@@ -885,14 +903,21 @@ pub fn generate_signature(
 
 /// Generate signature for Paytm authentication
 /// Equivalent to Python's generateSignature function
-fn generate_signature_by_string(params: &str, key: &str) -> CustomResult<String, errors::ConnectorError> {
+fn generate_signature_by_string(
+    params: &str,
+    key: &str,
+) -> CustomResult<String, errors::ConnectorError> {
     let salt = generate_random_string(4);
     calculate_checksum(params, key, &salt)
 }
 
 /// Calculate checksum by creating hash and encrypting it
 /// Equivalent to Python's calculateChecksum function
-fn calculate_checksum(params: &str, key: &str, salt: &str) -> CustomResult<String, errors::ConnectorError> {
+fn calculate_checksum(
+    params: &str,
+    key: &str,
+    salt: &str,
+) -> CustomResult<String, errors::ConnectorError> {
     let hash_string = calculate_hash(params, salt);
     encrypt(&hash_string, key)
 }
@@ -943,14 +968,13 @@ fn encrypt(input: &str, key: &str) -> CustomResult<String, errors::ConnectorErro
     // Create AES cipher in CBC mode
     type Aes128CbcEnc = Encryptor<aes::Aes128>;
     let encryptor = Aes128CbcEnc::new(&key_bytes.into(), IV.into());
-    
+
     // Encrypt the data with PKCS7 padding
-    let encrypted_data = encryptor.encrypt_padded_mut::<Pkcs7>(&mut buffer, input_bytes.len())
+    let encrypted_data = encryptor
+        .encrypt_padded_mut::<Pkcs7>(&mut buffer, input_bytes.len())
         .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
     // Encode to base64
     let encoded = base64::engine::general_purpose::STANDARD.encode(encrypted_data);
     Ok(encoded)
 }
-
-
