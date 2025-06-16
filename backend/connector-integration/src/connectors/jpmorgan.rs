@@ -6,15 +6,13 @@ use domain_types::{
         RefundsResponseData, ConnectorServiceTrait, PaymentAuthorizeV2, PaymentSyncV2, PaymentOrderCreate, PaymentVoidV2, RefundSyncV2, RefundV2, ValidationTrait, IncomingWebhook, PaymentCreateOrderData, PaymentCreateOrderResponse, RefundSyncData as DomainRefundSyncData,
         PaymentCapture as DomainPaymentCapture,
     },
-    types::Connectors as DomainConnectors,
-    utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use hyperswitch_api_models::enums::{self as api_enums, AttemptStatus, RefundStatus};
 use hyperswitch_common_utils::{
     errors::CustomResult,
     request::{Method, RequestBuilder, RequestContent},
-    types::MinorUnit,
+    types::{AmountConvertor, MinorUnit, MinorUnitForConnector},
     ext_traits::ByteSliceExt,
 };
 use hyperswitch_domain_models::{
@@ -27,26 +25,44 @@ use hyperswitch_interfaces::{
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
-    configs::Connectors as HyperswitchConnectors,
+    configs::Connectors,
 };
-use hyperswitch_masking::{Maskable, PeekInterface, Secret};
-use serde::{Deserialize, Serialize};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
 pub mod transformers;
+use transformers::{self as jpmorgan, JpmorganErrorResponse, ForeignTryFrom};
+
+use crate::{with_error_response_body, with_response_body};
+
+fn convert_amount<T>(
+    amount_convertor: &dyn AmountConvertor<Output = T>,
+    amount: MinorUnit,
+    currency: hyperswitch_common_enums::Currency,
+) -> Result<T, error_stack::Report<errors::ConnectorError>> {
+    amount_convertor
+        .convert(amount, currency)
+        .change_context(errors::ConnectorError::AmountConversionFailed)
+}
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const MERCHANT_ID: &str = "Merchant-ID";
+    pub(crate) const REQUEST_ID: &str = "request-id";
 }
 
-
-pub struct Jpmorgan;
+#[derive(Clone)]
+pub struct Jpmorgan {
+    amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
+}
 
 impl Jpmorgan {
     pub fn new() -> &'static Self {
-        &Self
+        &Self {
+            amount_converter: &MinorUnitForConnector,
+        }
     }
 }
 
@@ -55,44 +71,46 @@ impl ConnectorCommon for Jpmorgan {
         "jpmorgan"
     }
 
+    fn get_currency_unit(&self) -> api::CurrencyUnit {
+        api::CurrencyUnit::Minor
+    }
+
     fn common_get_content_type(&self) -> &'static str {
         "application/json"
     }
 
-    fn base_url<'a>(&self, _connectors: &'a HyperswitchConnectors) -> &'a str {
-        "https://placeholder.jpmorgan.com"
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        &connectors.jpmorgan.base_url.as_ref()
     }
 
     fn build_error_response(
         &self,
         res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        let response: Result<transformers::JpmorganErrorResponse, _> = res
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let response: JpmorganErrorResponse = res
             .response
             .parse_struct("JpmorganErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed);
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        match response {
-            Ok(error_response) => Ok(ErrorResponse {
-                status_code: res.status_code,
-                code: error_response.response_code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-                message: error_response.response_message.unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-                reason: error_response.reason,
-                attempt_status: None,
-                connector_transaction_id: None,
-            }),
-            Err(e) => {
-                Ok(ErrorResponse {
-                    status_code: res.status_code,
-                    code: NO_ERROR_CODE.to_string(),
-                    message: NO_ERROR_MESSAGE.to_string(),
-                    reason: Some(format!("Failed to deserialize JPM error response: {:?}", e)),
-                    attempt_status: None,
-                    connector_transaction_id: None,
-                })
-            }
-        }
+        with_error_response_body!(event_builder, response);
+
+        let response_message = response
+            .response_message
+            .as_ref()
+            .map_or_else(|| "NO_ERROR_MESSAGE".to_string(), ToString::to_string);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.response_code,
+            message: response_message.clone(),
+            reason: Some(response_message),
+            attempt_status: None,
+            connector_transaction_id: None,
+            // network_advice_code: None,
+            // network_decline_code: None,
+            // network_error_message: None,
+        })
     }
 }
 
@@ -116,61 +134,82 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut header = vec![(
+        let mut headers = vec![(
             headers::CONTENT_TYPE.to_string(),
             self.common_get_content_type().to_string().into(),
         )];
-        let access_token = req.resource_common_data.access_token.clone().ok_or(
-            errors::ConnectorError::FailedToObtainAuthType
-        )?;
-
         let auth_header = (
             headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", access_token).into(),
+            format!(
+                "Bearer {}",
+                req.resource_common_data.access_token
+                    .clone()
+                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?
+            )
+            .into_masked(),
         );
-        header.push(auth_header);
-        Ok(header)
+        let request_id = (
+            headers::REQUEST_ID.to_string(),
+            req.resource_common_data.connector_request_reference_id
+                .clone()
+                .to_string()
+                .into_masked(),
+        );
+        let merchant_id = (
+            headers::MERCHANT_ID.to_string(),
+            req.resource_common_data.merchant_id.get_string_repr().to_string().into_masked(),
+        );
+        headers.push(auth_header);
+        headers.push(request_id);
+        headers.push(merchant_id);
+        Ok(headers)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
     }
 
     fn get_url(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}",
-            req.resource_common_data.connectors.jpmorgan.base_url,
-            "/payments/authorizations"
-        ))
+        Ok(format!("{}/payments", req.resource_common_data.connectors.jpmorgan.base_url))
     }
 
     fn get_request_body(
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data = transformers::JpmorganRouterData::try_from((req.request.minor_amount, req))?;
+        let amount: MinorUnit = convert_amount(
+            self.amount_converter,
+            req.request.minor_amount,
+            req.request.currency,
+        )?;
 
-        let connector_req = transformers::JpmorganPaymentsRequest::try_from(&connector_router_data)?;
+        let connector_router_data = jpmorgan::JpmorganRouterData::from((amount, req));
+        let connector_req = jpmorgan::JpmorganPaymentsRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>, errors::ConnectorError> {
-        let response: transformers::JpmorganPaymentsResponse = res
+        let response: jpmorgan::JpmorganPaymentsResponse = res
             .response
-            .parse_struct("JpmorganPaymentsResponse")
+            .parse_struct("Jpmorgan PaymentsAuthorizeResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
-        let response_wrapper = transformers::JpmorganResponseTransformWrapper {
+        with_response_body!(event_builder, response);
+        
+        RouterDataV2::foreign_try_from((
             response,
-            original_router_data_v2_authorize: data.clone(),
-            http_status_code: res.status_code,
-        };
-        RouterDataV2::foreign_try_from(response_wrapper)
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            data.clone(),
+            res.status_code,
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(

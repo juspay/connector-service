@@ -22,3 +22,4 @@ bypass_proxy_urls = ["localhost", "local"]
 adyen.base_url = "https://checkout-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
 checkout.base_url = "https://api.checkout.com/"
+jpmorgan.base_url = "https://api-mock.payments.jpmorgan.com/api/v2"

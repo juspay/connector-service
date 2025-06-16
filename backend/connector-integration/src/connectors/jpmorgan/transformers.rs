@@ -1,5 +1,3 @@
-// Basic structure for transformers.rs 
-
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, Void},
     connector_types::{
@@ -7,150 +5,190 @@ use domain_types::{
         PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, PaymentsSyncData,
     },
 };
+
 use error_stack::{ResultExt, report, Report};
-use hyperswitch_api_models::enums::{self as api_enums, AttemptStatus, RefundStatus};
+
+use hyperswitch_api_models::enums::{AttemptStatus, RefundStatus};
+
 use hyperswitch_common_utils::{
-    errors::CustomResult,
-    request::RequestContent, // Added for consistency, though not directly used in JPM transformers yet
     types::MinorUnit,
 };
+
+use hyperswitch_common_enums::CaptureMethod;
+
 use hyperswitch_domain_models::{
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{ self, PaymentMethodData},
     router_data::{ConnectorAuthType, ErrorResponse, RouterData}, // RouterData for TryFrom <(JpmorganPaymentsResponse, RouterData<...>), ...>
     router_data_v2::RouterDataV2,
-    router_request_types::{self as router_req_types, ResponseId}, // ResponseId is imported here
-    router_response_types::{self as router_res_types, MandateReference, RedirectForm},
+    router_request_types::{ResponseId}, // ResponseId is imported here
+    router_response_types::{MandateReference, RedirectForm},
 };
+
 use hyperswitch_interfaces::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, // Though JPM has its own error codes/messages
-    errors::{self as connector_errors, ConnectorError},
+    errors::{self, ConnectorError},
 };
+
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+
 use serde::{Deserialize, Serialize};
-use time::{Duration, OffsetDateTime};
-use url::Url;
-use domain_types::utils::ForeignTryFrom; // ENSURING THIS LINE IS CORRECT
 
 // Based on Hyperswitch Jpmorgan transformers.rs
-
-// Router Data wrapper (from guide)
-pub struct JpmorganRouterData<'a, T> { // Added lifetime for references in T
-    pub amount: MinorUnit, // Amount for the request
-    pub router_data: &'a RouterDataV2<Authorize, PaymentFlowData, T, PaymentsResponseData>, // Reference to original router data
+pub struct JpmorganRouterData<T> {
+    pub amount: MinorUnit,
+    pub router_data: T,
 }
 
-// We need a TryFrom for this to convert from (MinorUnit, &RouterDataV2)
-impl<'a> TryFrom<(MinorUnit, &'a RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>)> for JpmorganRouterData<'a, PaymentsAuthorizeData> {
-    type Error = error_stack::Report<connector_errors::ConnectorError>;
-    fn try_from((amount, item): (MinorUnit, &'a RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>)) -> Result<Self, Self::Error> {
-        Ok(Self {
+impl<T> From<(MinorUnit, T)> for JpmorganRouterData<T> {
+    fn from((amount, item): (MinorUnit, T)) -> Self {
+        Self {
             amount,
             router_data: item,
-        })
+        }
     }
 }
 
-
-// JPM specific request structures (inspired by Hyperswitch JpmorganPaymentsRequest)
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JpmorganPaymentsRequest {
-    // Based on Hyperswitch JpmorganPaymentsRequest, but simplified for Authorize
-    // capture_method: CapMethod, // Hyperswitch has this. Not directly in PaymentsAuthorizeData
-    amount: MinorUnit,
-    currency: api_enums::Currency,
-    merchant: JpmorganMerchant, // Simplified, Hyperswitch has more fields
-    payment_method_type: JpmorganPaymentMethodType, // Simplified Card for now
-    // extended_data: Option<JpmorganExtendedData>, // Optional, not adding for now
-    // transaction_interaction: String, // e.g., "CustomerPresent"
-    // message_type_identifier: String, // e.g., "AuthorizationRequest"
+#[derive(Debug, Default, Copy, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum CapMethod {
+    #[default]
+    Now,
+    Delayed,
+    Manual,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganPaymentsRequest {
+    capture_method: CapMethod,
+    amount: MinorUnit,
+    currency: hyperswitch_common_enums::Currency,
+    merchant: JpmorganMerchant,
+    payment_method_type: JpmorganPaymentMethodType,
+}
+
+#[derive(Serialize, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JpmorganMerchantSoftware {
+    company_name: Secret<String>,
+    product_name: Secret<String>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganMerchant {
-    merchant_id: String,
     merchant_software: JpmorganMerchantSoftware,
 }
 
-#[derive(Debug, Serialize)]
-pub struct JpmorganMerchantSoftware {
-    company_name: String,
-    product_name: String,
-}
-
-#[derive(Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganPaymentMethodType {
-    card: JpmorganCard, // Only card for now
-                       // ach: Option<JpmorganAch>, // Future scope
+    card: JpmorganCard,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganCard {
-    account_number: Secret<String>, // Card number
+    account_number: Secret<String>,
     expiry: Expiry,
-    // security_code: Option<Secret<String>>, // CVV - Hyperswitch has this conditionally
-    // card_holder_name: Option<Secret<String>>,
-    // entry_mode: String, // e.g. "ManualKeyed"
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Expiry {
-    month: Secret<String>,
-    year: Secret<String>,
+    month: Secret<i32>,
+    year: Secret<i32>,
 }
 
-// TryFrom to convert PaymentsAuthorizeData to JpmorganPaymentsRequest
-impl<'a> TryFrom<&JpmorganRouterData<'a, PaymentsAuthorizeData>> for JpmorganPaymentsRequest {
-    type Error = Report<connector_errors::ConnectorError>;
+pub trait ForeignTryFrom<F>: Sized {
+    type Error;
 
-    fn try_from(item: &JpmorganRouterData<'a, PaymentsAuthorizeData>) -> Result<Self, Self::Error> {
-        let card_data = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => card,
-            _ => Err(connector_errors::ConnectorError::NotImplemented(
-                "Only card payments are supported".to_string(),
-            ))?,
-        };
+    fn foreign_try_from(from: F) -> Result<Self, Self::Error>;
+}
 
-        Ok(Self {
-            amount: item.amount,
-            currency: item.router_data.request.currency,
-            merchant: JpmorganMerchant {
-                merchant_id: format!("{:?}", item.router_data.resource_common_data.merchant_id),
-                merchant_software: JpmorganMerchantSoftware {
-                    company_name: "JPMC".to_string(),
-                    product_name: "Hyperswitch".to_string(),
-                },
-            },
-            payment_method_type: JpmorganPaymentMethodType {
-                card: JpmorganCard {
-                    account_number: Secret::new(card_data.card_number.to_string()),
-                    expiry: Expiry {
-                        month: card_data.card_exp_month.clone(),
-                        year: card_data.card_exp_year.clone(),
-                    },
-                },
-            },
-        })
+pub(crate) const SELECTED_PAYMENT_METHOD: &str = "Selected payment method";
+
+pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {
+    format!("{} through {}", SELECTED_PAYMENT_METHOD, connector)
+}
+
+pub fn attempt_status_from_transaction_state(
+    transaction_state: JpmorganTransactionState,
+) -> AttemptStatus {
+    match transaction_state {
+        JpmorganTransactionState::Authorized => AttemptStatus::Authorized,
+        JpmorganTransactionState::Closed => AttemptStatus::Charged,
+        JpmorganTransactionState::Declined | JpmorganTransactionState::Error => {
+            AttemptStatus::Failure
+        }
+        JpmorganTransactionState::Pending => AttemptStatus::Pending,
+        JpmorganTransactionState::Voided => AttemptStatus::Voided,
     }
 }
 
-// JPM specific response structures (inspired by Hyperswitch JpmorganPaymentsResponse & JpmorganResponseStatus)
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpiryResponse {
+    month: Option<Secret<i32>>,
+    year: Option<Secret<i32>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CardTypeIndicators {
+    issuance_country_code: Option<Secret<String>>,
+    is_durbin_regulated: Option<bool>,
+    card_product_types: Secret<Vec<String>>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkResponse {
+    address_verification_result: Option<Secret<String>>,
+    address_verification_result_code: Option<Secret<String>>,
+    card_verification_result_code: Option<Secret<String>>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum JpmorganTransactionState {
+    Closed,
+    Authorized,
+    Voided,
+    #[default]
+    Pending,
+    Declined,
+    Error,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentMethodType {
+    card: Option<Card>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Card {
+    expiry: Option<ExpiryResponse>,
+    card_type: Option<Secret<String>>,
+    card_type_name: Option<Secret<String>>,
+    masked_account_number: Option<Secret<String>>,
+    card_type_indicators: Option<CardTypeIndicators>,
+    network_response: Option<NetworkResponse>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganPaymentsResponse {
-    pub transaction_id: String,
-    pub response_status: JpmorganTransactionStatus, // Renamed from JpmorganResponseStatus for clarity
-    pub response_code: String,
-    pub response_message: Option<String>,
-    // pub merchant: Option<JpmorganMerchantResponseData>,
-    // pub payment_method_type: Option<JpmorganPaymentMethodTypeResponse>,
-    // pub transaction_amount: Option<TransactionAmountResponseData>,
-    // pub auth_code: Option<String>,
-    // ... other fields from Hyperswitch response if needed
+    transaction_id: String,
+    request_id: String,
+    transaction_state: JpmorganTransactionState,
+    response_status: String,
+    response_code: String,
+    response_message: String,
+    payment_method_type: PaymentMethodType,
+    capture_method: Option<CapMethod>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -161,6 +199,160 @@ pub enum JpmorganTransactionStatus {
     Pending, 
 }
 
+fn map_capture_method(
+    capture_method: CaptureMethod,
+) -> Result<CapMethod, error_stack::Report<errors::ConnectorError>> {
+    match capture_method {
+        CaptureMethod::Automatic => Ok(CapMethod::Now),
+        CaptureMethod::Manual => Ok(CapMethod::Manual),
+        CaptureMethod::Scheduled
+        | CaptureMethod::ManualMultiple
+         => {
+            Err(errors::ConnectorError::NotImplemented("Capture Method".to_string()).into())
+        }
+    }
+}
+
+fn get_expiry_year_4_digit(card: &payment_method_data::Card) -> Secret<i32> {
+    let mut year = card.card_exp_year.peek().clone();
+    if year.len() == 2 {
+        year = format!("20{}", year);
+    }
+
+    let year_int: i32 = year
+        .parse()
+        .unwrap_or_else(|_| 0);
+    Secret::new(year_int)
+}
+
+fn get_expiry_month(card: &payment_method_data::Card) -> Secret<i32> {
+    let month = card.card_exp_month.peek().clone();
+
+    let month_int: i32 = month
+        .parse()
+        .unwrap_or_else(|_| 0);
+    Secret::new(month_int)
+}
+
+impl TryFrom<&JpmorganRouterData<&RouterDataV2<Authorize,PaymentFlowData,PaymentsAuthorizeData,PaymentsResponseData>>> for JpmorganPaymentsRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: &JpmorganRouterData<&RouterDataV2<Authorize,PaymentFlowData,PaymentsAuthorizeData,PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(req_card) => {
+                if item.router_data.request.enrolled_for_3ds {
+                    return Err(errors::ConnectorError::NotSupported {
+                        message: "3DS payments".to_string(),
+                        connector: "Jpmorgan",
+                    }
+                    .into());
+                }
+
+                let capture_method =
+                    map_capture_method(item.router_data.request.capture_method.unwrap_or_default());
+
+                let merchant_software = JpmorganMerchantSoftware {
+                    company_name: String::from("JPMC").into(),
+                    product_name: String::from("Hyperswitch").into(),
+                };
+
+                let merchant = JpmorganMerchant { merchant_software };
+
+                let expiry: Expiry = Expiry {
+                    month: get_expiry_month(&req_card),
+                    year: get_expiry_year_4_digit(&req_card),
+                };
+
+                let account_number = Secret::new(req_card.card_number.to_string());
+
+                let card = JpmorganCard {
+                    account_number,
+                    expiry,
+                };
+
+                let payment_method_type = JpmorganPaymentMethodType { card };
+
+                Ok(Self {
+                    capture_method: capture_method?,
+                    currency: item.router_data.request.currency,
+                    amount: item.amount,
+                    merchant,
+                    payment_method_type,
+                })
+            }
+            PaymentMethodData::CardRedirect(_)
+            | PaymentMethodData::Wallet(_)
+            | PaymentMethodData::PayLater(_)
+            | PaymentMethodData::BankRedirect(_)
+            | PaymentMethodData::BankDebit(_)
+            | PaymentMethodData::BankTransfer(_)
+            | PaymentMethodData::Crypto(_)
+            | PaymentMethodData::MandatePayment
+            | PaymentMethodData::Reward
+            | PaymentMethodData::RealTimePayment(_)
+            | PaymentMethodData::Upi(_)
+            | PaymentMethodData::Voucher(_)
+            | PaymentMethodData::GiftCard(_)
+            | PaymentMethodData::OpenBanking(_)
+            | PaymentMethodData::CardToken(_)
+             => Err(errors::ConnectorError::NotImplemented(
+                get_unimplemented_payment_method_error_message("jpmorgan"),
+            )
+            .into()),
+        }
+    }
+}
+
+impl<F>
+    ForeignTryFrom<(
+        JpmorganPaymentsResponse,
+        RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        u16,
+        
+    )> for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
+    fn foreign_try_from(
+        (response, data, _http_code): (
+            JpmorganPaymentsResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let transaction_state = match response.transaction_state {
+            JpmorganTransactionState::Closed => match response.capture_method {
+                Some(CapMethod::Now) => JpmorganTransactionState::Closed,
+                _ => JpmorganTransactionState::Authorized,
+            },
+            JpmorganTransactionState::Authorized => JpmorganTransactionState::Authorized,
+            JpmorganTransactionState::Voided => JpmorganTransactionState::Voided,
+            JpmorganTransactionState::Pending => JpmorganTransactionState::Pending,
+            JpmorganTransactionState::Declined => JpmorganTransactionState::Declined,
+            JpmorganTransactionState::Error => JpmorganTransactionState::Error,
+        };
+        let status = attempt_status_from_transaction_state(transaction_state);
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response.transaction_id.clone(),
+                ),
+                redirection_data: Box::new(None),
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(response.transaction_id.clone()),
+                incremental_authorization_allowed: None,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..data.resource_common_data
+            },
+            ..data
+        })
+    }
+}
+
 // Local wrapper for the response data to help with orphan rule
 pub struct JpmorganResponseTransformWrapper {
     pub response: JpmorganPaymentsResponse,
@@ -169,44 +361,41 @@ pub struct JpmorganResponseTransformWrapper {
 }
 
 // New ForeignTryFrom implementation using the local wrapper
-impl ForeignTryFrom<JpmorganResponseTransformWrapper> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> {
-    type Error = connector_errors::ConnectorError;
+// impl ForeignTryFrom<JpmorganResponseTransformWrapper> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> {
+//     type Error = connector_errors::ConnectorError;
 
-    fn foreign_try_from(
-        wrapper: JpmorganResponseTransformWrapper
-    ) -> Result<RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>, error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>> {
-        let mut router_data = wrapper.original_router_data_v2_authorize; 
-        let jpm_response = wrapper.response;
+//     fn foreign_try_from(
+//         wrapper: JpmorganResponseTransformWrapper
+//     ) -> Result<RouterDataV2<domain_types::connector_flow::Authorize, domain_types::connector_types::PaymentFlowData, domain_types::connector_types::PaymentsAuthorizeData, domain_types::connector_types::PaymentsResponseData>, error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>> {
+//         let mut router_data = wrapper.original_router_data_v2_authorize; 
+//         let jpm_response = wrapper.response;
 
-        let status = match jpm_response.response_status {
-            JpmorganTransactionStatus::Success => AttemptStatus::Authorized,
-            JpmorganTransactionStatus::Failure => AttemptStatus::Failure,
-            JpmorganTransactionStatus::Pending => AttemptStatus::Pending, 
-        };
+//         let status = match jpm_response.response_status {
+//             JpmorganTransactionStatus::Success => AttemptStatus::Authorized,
+//             JpmorganTransactionStatus::Failure => AttemptStatus::Failure,
+//             JpmorganTransactionStatus::Pending => AttemptStatus::Pending, 
+//         };
 
-        router_data.resource_common_data.status = status;
-        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(jpm_response.transaction_id.clone()),
-            redirection_data: Box::new(None), 
-            connector_metadata: None, 
-            network_txn_id: None, 
-            connector_response_reference_id: Some(jpm_response.transaction_id),
-            incremental_authorization_allowed: None, 
-        });
-        Ok(router_data)
-    }
-}
+//         router_data.resource_common_data.status = status;
+//         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
+//             resource_id: ResponseId::ConnectorTransactionId(jpm_response.transaction_id.clone()),
+//             redirection_data: Box::new(None), 
+//             connector_metadata: None, 
+//             network_txn_id: None, 
+//             connector_response_reference_id: Some(jpm_response.transaction_id),
+//             incremental_authorization_allowed: None, 
+//         });
+//         Ok(router_data)
+//     }
+// }
 
 // JPM Error Response Structure (from Hyperswitch)
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct JpmorganErrorResponse {
-    pub response_status: String, // This seems to be a string in HS error, not the enum
-    pub response_code: Option<String>, // Made Option as per HS, guide has non-optional
+    pub response_status: JpmorganTransactionStatus,
+    pub response_code: String,
     pub response_message: Option<String>,
-    pub reason: Option<String>, // Added for more detailed error, not in HS JpmorganErrorResponse directly
-                                // pub validation_errors: Option<Vec<JpmorganValidationErrors>>,
-                                // pub error_information: Option<JpmorganErrorInformation>,
 }
 
 // #[derive(Debug, Serialize, Deserialize, PartialEq)]
