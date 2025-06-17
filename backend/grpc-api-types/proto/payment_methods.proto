@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package ucs.v1;
+package ucs.v2;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
@@ -35,18 +35,18 @@ enum CardNetwork {
 // It contains a oneof field with all possible payment method categories
 message PaymentMethod {
   oneof payment_method {
-    CardPaymentMethodType card = 1;                      // Card-based payment methods
-    WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods
-    RTPPaymentMethodType rtp = 3;                        // Real-time payment methods
-    TokenPaymentMethodType token = 4;                    // Tokenized payment methods
-    BankTransferPaymentMethodType bank_transfer = 5;     // Bank transfer payment methods
-    OnlineBankingPaymentMethodType online_banking = 6;   // Online banking payment methods
-    BNPLPaymentMethodType bnpl = 7;                      // Buy now, pay later payment methods
-    MobilePaymentMethodType mobile_payment = 8;          // Mobile payment methods
-    CryptoCurrencyPaymentMethodType crypto = 9;          // Cryptocurrency payment methods
-    CashVoucherPaymentMethodType cash_voucher = 10;      // Cash and voucher payment methods
-    DirectDebitPaymentMethodType direct_debit = 11;      // Direct debit payment methods
-    OtherPaymentMethodType other = 12;                   // Other payment methods
+    CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
+    // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
+    // RTPPaymentMethodType rtp = 3;                        // Real-time payment methods - TODO: Not yet supported
+    TokenPaymentMethodType token = 4;                    // Tokenized payment methods - SUPPORTED
+    // BankTransferPaymentMethodType bank_transfer = 5;     // Bank transfer payment methods - TODO: Not yet supported
+    // OnlineBankingPaymentMethodType online_banking = 6;   // Online banking payment methods - TODO: Not yet supported
+    // BNPLPaymentMethodType bnpl = 7;                      // Buy now, pay later payment methods - TODO: Not yet supported
+    // MobilePaymentMethodType mobile_payment = 8;          // Mobile payment methods - TODO: Not yet supported
+    // CryptoCurrencyPaymentMethodType crypto = 9;          // Cryptocurrency payment methods - TODO: Not yet supported
+    // CashVoucherPaymentMethodType cash_voucher = 10;      // Cash and voucher payment methods - TODO: Not yet supported
+    // DirectDebitPaymentMethodType direct_debit = 11;      // Direct debit payment methods - TODO: Not yet supported
+    // OtherPaymentMethodType other = 12;                   // Other payment methods - TODO: Not yet supported
   }
 }
 
@@ -64,8 +64,9 @@ message CardPaymentMethodType {
   }
 }
 
-// Digital wallet payment methods category
+// Digital wallet payment methods category - TODO: Not yet supported
 // Includes mobile wallets and digital payment platforms
+/*
 message WalletPaymentMethodType {
   oneof wallet_type {
     AppleWallet apple_pay = 1;             // Apple Pay
@@ -80,9 +81,11 @@ message WalletPaymentMethodType {
     PazeWallet paze = 10;                  // Paze
   }
 }
+*/
 
-// Real-time payment methods category
+// Real-time payment methods category - TODO: Not yet supported
 // Includes instant payment systems and QR code-based payments
+/*
 message RTPPaymentMethodType {
   oneof rtp_type {
     UPI upi_collect = 1;                   // UPI Collect - Indian real-time payment system (collect flow)
@@ -92,9 +95,11 @@ message RTPPaymentMethodType {
     VietQR viet_qr = 5;                    // VietQR - Vietnamese QR code payment system
   }
 }
+*/
 
-// Bank transfer payment methods category
+// Bank transfer payment methods category - TODO: Not yet supported
 // Includes various bank transfer systems across different regions
+/*
 message BankTransferPaymentMethodType {
   oneof bank_transfer_type {
     ACH ach = 1;                           // Automated Clearing House - US bank transfer system
@@ -109,9 +114,11 @@ message BankTransferPaymentMethodType {
     PermataBankTransfer permata_bank_transfer = 10; // Permata Bank transfer in Indonesia
   }
 }
+*/
 
-// Online banking payment methods category
+// Online banking payment methods category - TODO: Not yet supported
 // Includes online banking systems and open banking initiatives
+/*
 message OnlineBankingPaymentMethodType {
   oneof online_banking_type {
     OnlineBankingThailand online_banking_thailand = 1;       // Thai online banking
@@ -132,9 +139,11 @@ message OnlineBankingPaymentMethodType {
     PSE pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
   }
 }
+*/
 
-// Buy now, pay later payment methods category
+// Buy now, pay later payment methods category - TODO: Not yet supported
 // Includes installment payment services
+/*
 message BNPLPaymentMethodType {
   oneof bnpl_type {
     Affirm affirm = 1;                                       // Affirm - US BNPL service
@@ -145,9 +154,11 @@ message BNPLPaymentMethodType {
     Walley walley = 6;                                       // Walley - Nordic BNPL service
   }
 }
+*/
 
-// Mobile payment methods category
+// Mobile payment methods category - TODO: Not yet supported
 // Includes mobile-specific payment solutions
+/*
 message MobilePaymentMethodType {
   oneof mobile_payment_type {
     Blik blik = 1;                                           // BLIK - Polish mobile payment system
@@ -167,16 +178,20 @@ message MobilePaymentMethodType {
     Vipps vipps = 15;                                        // Vipps - Norwegian mobile payment application
   }
 }
+*/
 
-// Cryptocurrency payment methods category
+// Cryptocurrency payment methods category - TODO: Not yet supported
+/*
 message CryptoCurrencyPaymentMethodType {
   oneof crypto_type {
     CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
   }
 }
+*/
 
-// Cash and voucher payment methods category
+// Cash and voucher payment methods category - TODO: Not yet supported
 // Includes convenience store payments and voucher systems
+/*
 message CashVoucherPaymentMethodType {
   oneof cash_voucher_type {
     Alfamart alfamart = 1;                                   // Alfamart - Indonesian convenience store payment
@@ -196,9 +211,11 @@ message CashVoucherPaymentMethodType {
     PayEasy pay_easy = 15;                                   // Pay-easy - Japanese bill payment service
   }
 }
+*/
 
-// Direct debit payment methods category
+// Direct debit payment methods category - TODO: Not yet supported
 // Includes direct debit systems across different regions
+/*
 message DirectDebitPaymentMethodType {
   oneof direct_debit_type {
     BancontactCard bancontact_card = 1;                      // Bancontact - Belgian debit card scheme
@@ -212,9 +229,11 @@ message DirectDebitPaymentMethodType {
     KNET knet = 9;                                           // KNET - Kuwait's national electronic banking service
   }
 }
+*/
 
-// Other payment methods category
+// Other payment methods category - TODO: Not yet supported
 // Includes payment methods that don't fit in other categories
+/*
 message OtherPaymentMethodType {
   oneof other_type {
     ClassicReward classic_reward = 1;                        // Classic Reward - Loyalty/reward points payment
@@ -225,6 +244,7 @@ message OtherPaymentMethodType {
     RedPagos red_pagos = 6;                                  // RedPagos - Uruguayan payment network
   }
 }
+*/
 
 // ============================================================================
 // PAYMENT METHOD DETAILS
@@ -270,9 +290,10 @@ message CardRedirect {
 }
 
 // ============================================================================
-// WALLET PAYMENT METHODS
+// WALLET PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
 
+/*
 // Apple Pay - Apple's mobile payment and digital wallet service
 message AppleWallet {
   // Payment data from Apple Pay
@@ -406,10 +427,13 @@ message PazeWallet {
   // Complete response from Paze
   string complete_response = 1;
 }
+*/
 
 // ============================================================================
-// REAL-TIME PAYMENT METHODS
+// REAL-TIME PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
 message UPI {
@@ -455,10 +479,13 @@ message PromptPay {
 message VietQR {
   // Fields will be added as needed for VietQR integration
 }
+*/
 
 // ============================================================================
-// BANK TRANSFER PAYMENT METHODS
+// BANK TRANSFER PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // ACH (Automated Clearing House) - US electronic funds transfer system
 message ACH {
@@ -509,10 +536,13 @@ message BCABankTransfer {
 message PermataBankTransfer {
   // Fields will be added as needed for Permata Bank Transfer integration
 }
+*/
 
 // ============================================================================
-// ONLINE BANKING PAYMENT METHODS
+// ONLINE BANKING PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // Thai online banking systems
 message OnlineBankingThailand {
@@ -593,10 +623,13 @@ message Przelewy24 {
 message PSE {
   // Fields will be added as needed for PSE integration
 }
+*/
 
 // ============================================================================
-// BUY NOW, PAY LATER PAYMENT METHODS
+// BUY NOW, PAY LATER PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // Affirm - US BNPL service
 message Affirm {
@@ -627,10 +660,13 @@ message PayBright {
 message Walley {
   // Fields will be added as needed for Walley integration
 }
+*/
 
 // ============================================================================
-// MOBILE PAYMENT METHODS
+// MOBILE PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // BLIK - Polish mobile payment system
 message Blik {
@@ -706,10 +742,13 @@ message Twint {
 message Vipps {
   // Fields will be added as needed for Vipps integration
 }
+*/
 
 // ============================================================================
-// CRYPTOCURRENCY PAYMENT METHODS
+// CRYPTOCURRENCY PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // Generic cryptocurrency payment
 message CryptoCurrency {
@@ -719,10 +758,13 @@ message CryptoCurrency {
   // Blockchain network
   optional string network = 2;
 }
+*/
 
 // ============================================================================
-// CASH/VOUCHER PAYMENT METHODS
+// CASH/VOUCHER PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // Alfamart - Indonesian convenience store payment
 message Alfamart {
@@ -803,10 +845,13 @@ message Seicomart {
 message PayEasy {
   // Fields will be added as needed for Pay-easy integration
 }
+*/
 
 // ============================================================================
-// DIRECT DEBIT PAYMENT METHODS
+// DIRECT DEBIT PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // Bancontact - Belgian debit card scheme
 message BancontactCard {
@@ -852,10 +897,13 @@ message MandiriVA {
 message KNET {
   // Fields will be added as needed for KNET integration
 }
+*/
 
 // ============================================================================
-// OTHER PAYMENT METHODS
+// OTHER PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
+
+/*
 
 // Classic Reward - Loyalty/reward points payment
 message ClassicReward {
@@ -890,3 +938,4 @@ message RedCompra {
 message RedPagos {
   // Fields will be added as needed for RedPagos integration
 }
+*/
