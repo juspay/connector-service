@@ -1001,7 +1001,9 @@ dependencies = [
  "hyperswitch_interfaces",
  "masking",
  "paste",
+ "quick-xml 0.31.0",
  "reqwest",
+ "ring",
  "serde",
  "serde_json",
  "serde_qs",
@@ -1009,6 +1011,7 @@ dependencies = [
  "serde_with",
  "strum 0.26.3",
  "time",
+ "tracing",
  "url",
  "uuid",
 ]
@@ -1304,10 +1307,12 @@ dependencies = [
  "grpc-api-types",
  "hyperswitch_domain_models",
  "hyperswitch_interfaces",
+ "masking",
  "serde",
  "serde_json",
  "strum 0.26.3",
  "thiserror 1.0.69",
+ "utoipa",
 ]
 
 [[package]]

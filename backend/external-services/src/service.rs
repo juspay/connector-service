@@ -16,6 +16,7 @@ use serde_json::json;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
+use domain_types::connector_types::RawConnectorResponse;
 use hyperswitch_interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
 };
@@ -27,12 +28,13 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    all_keys_required: Option<bool>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
     Req: Clone + 'static + std::fmt::Debug,
     Resp: Clone + 'static + std::fmt::Debug,
-    ResourceCommonData: Clone + 'static,
+    ResourceCommonData: Clone + 'static + RawConnectorResponse,
 {
     let span = tracing::info_span!(
         "ucs_outgoing_app_data",
@@ -141,7 +143,15 @@ where
                                 connector.handle_response_v2(&router_data, None, body.clone());
 
                             match handle_response_result {
-                                Ok(data) => Ok(data),
+                                Ok(mut data) => {
+                                    if all_keys_required.unwrap_or(false) {
+                                        let raw_response_string =
+                                            String::from_utf8(body.response.to_vec()).ok();
+                                        data.resource_common_data
+                                            .set_raw_connector_response(raw_response_string);
+                                    }
+                                    Ok(data)
+                                }
                                 Err(err) => Err(err),
                             }?
                         }
@@ -201,6 +211,7 @@ pub async fn call_connector_api(
 
     let headers = request.headers.construct_header_map()?;
 
+    // Process and log the request body based on content type
     let request = {
         match request.method {
             Method::Get => client.get(url),
@@ -208,6 +219,13 @@ pub async fn call_connector_api(
                 let client = client.post(url);
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        // Use serde_json for XML conversion instead of quick_xml
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        client.body(body).header("Content-Type", "application/xml")
+                    }
                     _ => client,
                 }
             }

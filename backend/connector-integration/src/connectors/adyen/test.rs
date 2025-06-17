@@ -22,13 +22,12 @@ mod tests {
         use hyperswitch_masking::Secret;
         use serde_json::json;
         use std::borrow::Cow;
-        use std::env;
         use std::marker::PhantomData;
         use std::str::FromStr;
         #[test]
         fn test_build_request_valid() {
-            let api_key = env::var("API_KEY").expect("API_KEY not set");
-            let key1 = env::var("KEY1").expect("KEY1 not set");
+            let api_key = "test_adyen_api_key".to_string(); // Hardcoded dummy value
+            let key1 = "test_adyen_key1".to_string(); // Hardcoded dummy value
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -65,14 +64,23 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
                             dispute_base_url: None,
                         },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -147,6 +155,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -166,31 +175,31 @@ mod tests {
             > = connector_data.connector.get_connector_integration_v2();
 
             let request = connector_integration.build_request_v2(&req).unwrap();
-            // let amount= request.unwrap()
-            // assert!(amount==1000);
-            // let request = request.expect("Failed to build request");
-            let req = request.as_ref().map(|request| {
-                let masked_request = match request.body.as_ref() {
-                    Some(request) => match request {
+            let req_body = request.as_ref().map(|request_val| {
+                let masked_request = match request_val.body.as_ref() {
+                    Some(request_content) => match request_content {
                         RequestContent::Json(i)
                         | RequestContent::FormUrlEncoded(i)
                         | RequestContent::Xml(i) => i.masked_serialize().unwrap_or(
                             json!({ "error": "failed to mask serialize connector request"}),
                         ),
-                        RequestContent::FormData(_) => json!({"requ est_type": "FORM_DATA"}),
+                        RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
                     None => serde_json::Value::Null,
                 };
                 masked_request
             });
-            println!("request: {:?}", req);
-            assert_eq!(req.as_ref().unwrap()["reference"], "conn_ref_123456789");
+            println!("request: {:?}", req_body);
+            assert_eq!(
+                req_body.as_ref().unwrap()["reference"],
+                "conn_ref_123456789"
+            );
         }
         #[test]
         fn test_build_request_missing() {
-            let api_key = env::var("API_KEY").expect("API_KEY not set");
-            let key1 = env::var("KEY1").expect("KEY1 not set");
+            let api_key = "test_adyen_api_key_missing".to_string(); // Hardcoded dummy value
+            let key1 = "test_adyen_key1_missing".to_string(); // Hardcoded dummy value
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -227,14 +236,23 @@ mod tests {
                     connectors: Connectors {
                         adyen: ConnectorParams {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
+                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
                         razorpay: ConnectorParams {
                             base_url: "https://sandbox.juspay.in/".to_string(),
                             dispute_base_url: None,
                         },
+                        fiserv: ConnectorParams { // Added fiserv
+                            base_url: "https://cert.api.fiserv.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        elavon: ConnectorParams {
+                            base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
+                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -272,6 +290,7 @@ mod tests {
                     shipping_cost: None,
                     merchant_account_id: None,
                     merchant_config_currency: None,
+                    all_keys_required: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
