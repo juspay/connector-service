@@ -62,7 +62,7 @@ service PaymentService {
   }
 
   // Accepts a dispute.
-  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) {
+  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) { // TODO: This should create a new dispute, not accept an existing one.
     option (google.api.http) = {
       post: "/v1/payment/dispute"
       body: "*"
@@ -112,6 +112,22 @@ service DisputeService {
   rpc Get(DisputeServiceGetRequest) returns (DisputeServiceGetResponse) {
     option (google.api.http) = {
       post: "/v1/dispute/get"
+      body: "*"
+    };
+  }
+
+  // Defends a dispute with a reason code.
+  rpc Defend(DisputeDefendRequest) returns (DisputeDefendResponse) {
+    option (google.api.http) = {
+      post: "/v1/dispute/defend"
+      body: "*"
+    };
+  }
+
+  // Accepts a dispute.
+  rpc Accept(AcceptDisputeRequest) returns (AcceptDisputeResponse) {
+    option (google.api.http) = {
+      post: "/v1/dispute/accept"
       body: "*"
     };
   }
