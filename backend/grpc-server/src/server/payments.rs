@@ -82,7 +82,6 @@ trait PaymentOperationsInternal {
     ) -> Result<tonic::Response<PaymentsCaptureResponse>, tonic::Status>;
 }
 
-#[derive(Clone)]
 pub struct Payments {
     pub config: Config,
 }
