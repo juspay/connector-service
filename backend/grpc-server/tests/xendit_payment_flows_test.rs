@@ -8,12 +8,10 @@ mod common;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_service_client::PaymentServiceClient, AttemptStatus, 
-        AuthenticationType, CaptureMethod, Currency, 
-        PaymentMethod, PaymentMethodType, PaymentsAuthorizeRequest, 
-        PaymentsAuthorizeResponse, PaymentsCaptureRequest, 
-        PaymentsSyncRequest, RefundStatus, RefundsRequest, 
-        RefundsResponse, RefundsSyncRequest
+        payment_service_client::PaymentServiceClient, AttemptStatus, AuthenticationType,
+        CaptureMethod, Currency, PaymentMethod, PaymentMethodType, PaymentsAuthorizeRequest,
+        PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsSyncRequest, RefundStatus,
+        RefundsRequest, RefundsResponse, RefundsSyncRequest,
     },
 };
 use std::env;
@@ -105,7 +103,9 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAu
                 },
             )),
         }),
-        return_url: Some("https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string()),
+        return_url: Some(
+            "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
+        ),
         email: Some(TEST_EMAIL.to_string()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
@@ -209,7 +209,9 @@ async fn test_payment_authorization_auto_capture() {
             .into_inner();
 
         assert!(
-            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending) || response.status == i32::from(AttemptStatus::Charged),
+            response.status == i32::from(AttemptStatus::AuthenticationPending)
+                || response.status == i32::from(AttemptStatus::Pending)
+                || response.status == i32::from(AttemptStatus::Charged),
             "Payment should be in AuthenticationPending or Pending state"
         );
     });
@@ -235,7 +237,9 @@ async fn test_payment_authorization_manual_capture() {
 
         // Verify payment status
         assert!(
-            auth_response.status == i32::from(AttemptStatus::AuthenticationPending) || auth_response.status == i32::from(AttemptStatus::Pending) || auth_response.status == i32::from(AttemptStatus::Authorized),
+            auth_response.status == i32::from(AttemptStatus::AuthenticationPending)
+                || auth_response.status == i32::from(AttemptStatus::Pending)
+                || auth_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in AuthenticationPending or Pending state"
         );
 
@@ -335,7 +339,9 @@ async fn test_refund() {
         let transaction_id = extract_transaction_id(&response);
 
         assert!(
-            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending) || response.status == i32::from(AttemptStatus::Charged),
+            response.status == i32::from(AttemptStatus::AuthenticationPending)
+                || response.status == i32::from(AttemptStatus::Pending)
+                || response.status == i32::from(AttemptStatus::Charged),
             "Payment should be in AuthenticationPending or Pending state"
         );
 
@@ -350,7 +356,8 @@ async fn test_refund() {
         add_xendit_metadata(&mut refund_grpc_request);
 
         // Send the refund request
-        let refund_response = client.refund(refund_grpc_request)
+        let refund_response = client
+            .refund(refund_grpc_request)
             .await
             .expect("gRPC refund call failed")
             .into_inner();
@@ -359,7 +366,7 @@ async fn test_refund() {
         assert!(
             refund_response.refund_status == i32::from(RefundStatus::RefundSuccess),
             "Refund should be in RefundSuccess state"
-        );       
+        );
     });
 }
 
@@ -385,7 +392,9 @@ async fn test_refund_sync() {
         let transaction_id = extract_transaction_id(&response);
 
         assert!(
-            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending) || response.status == i32::from(AttemptStatus::Charged),
+            response.status == i32::from(AttemptStatus::AuthenticationPending)
+                || response.status == i32::from(AttemptStatus::Pending)
+                || response.status == i32::from(AttemptStatus::Charged),
             "Payment should be in AuthenticationPending or Pending state"
         );
 
@@ -400,7 +409,8 @@ async fn test_refund_sync() {
         add_xendit_metadata(&mut refund_grpc_request);
 
         // Send the refund request
-        let refund_response = client.refund(refund_grpc_request)
+        let refund_response = client
+            .refund(refund_grpc_request)
             .await
             .expect("gRPC refund call failed")
             .into_inner();
@@ -409,22 +419,23 @@ async fn test_refund_sync() {
         assert!(
             refund_response.refund_status == i32::from(RefundStatus::RefundSuccess),
             "Refund should be in RefundSuccess state"
-        ); 
+        );
 
         let refund_id = extract_refund_id(&refund_response);
 
         // Wait a bit longer to ensure the refund is fully processed
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        
+
         // Create refund sync request
-        let refund_sync_request = create_refund_sync_request(&transaction_id,refund_id);
+        let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
 
         // Add metadata headers for refund sync request
         let mut refund_sync_grpc_request = Request::new(refund_sync_request);
         add_xendit_metadata(&mut refund_sync_grpc_request);
 
         // Send the refund sync request
-        let refund_sync_response = client.refund_sync(refund_sync_grpc_request)
+        let refund_sync_response = client
+            .refund_sync(refund_sync_grpc_request)
             .await
             .expect("gRPC refund sync call failed")
             .into_inner();
@@ -433,6 +444,6 @@ async fn test_refund_sync() {
         assert!(
             refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
             "Refund Sync should be in RefundSuccess state"
-        ); 
+        );
     });
 }

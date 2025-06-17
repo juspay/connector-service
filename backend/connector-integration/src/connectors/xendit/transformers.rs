@@ -1,29 +1,27 @@
 use domain_types::{
-    connector_flow::{Authorize, Capture}, 
+    connector_flow::{Authorize, Capture},
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, 
-        PaymentsResponseData , PaymentsSyncData, 
-        PaymentsCaptureData, RefundsData, RefundsResponseData, 
-        RefundFlowData, RefundSyncData, MandateReference,
-        ResponseId,
-    }
+        MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
+    },
 };
 
-use hyperswitch_common_utils::{
-    types::FloatMajorUnit,  
-    request::{Method}, 
-};
+use hyperswitch_common_utils::{request::Method, types::FloatMajorUnit};
 
 use hyperswitch_domain_models::{
-    payment_method_data::{PaymentMethodData},
-    router_data::{ConnectorAuthType,ErrorResponse}, // Added for XenditErrorResponse
+    payment_method_data::PaymentMethodData,
+    router_data::{ConnectorAuthType, ErrorResponse}, // Added for XenditErrorResponse
     router_data_v2::RouterDataV2,
-    router_response_types::{RedirectForm},
+    router_response_types::RedirectForm,
 };
 
 use std::collections::HashMap;
 
-use hyperswitch_interfaces::{errors::{self ,ConnectorError},consts::{NO_ERROR_CODE,NO_ERROR_MESSAGE}};
+use hyperswitch_interfaces::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::{self, ConnectorError},
+};
 
 use hyperswitch_common_enums::Currency;
 
@@ -31,7 +29,7 @@ use hyperswitch_cards::CardNumber;
 
 use serde::{Deserialize, Serialize};
 
-use hyperswitch_masking::{PeekInterface, Secret, ExposeInterface};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 
 type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
 
@@ -176,7 +174,8 @@ pub struct XenditPaymentsRequest {
     pub channel_properties: Option<ChannelProperties>,
 }
 
-#[derive(Debug, Clone, Serialize)]pub enum XenditPaymentMethodType {
+#[derive(Debug, Clone, Serialize)]
+pub enum XenditPaymentMethodType {
     #[serde(rename = "CARD")]
     Card,
     // ... other types like EWALLET, DIRECT_DEBIT etc.
@@ -246,23 +245,21 @@ pub struct XenditErrorResponse {
     pub error_code: Option<String>,
     pub message: Option<String>,
     pub reason: Option<String>, // This might not be standard, check Xendit docs
-    // Xendit might have more structured errors, e.g. a list of errors
-    // errors: Option<Vec<XenditErrorDetail>>
+                                // Xendit might have more structured errors, e.g. a list of errors
+                                // errors: Option<Vec<XenditErrorDetail>>
 }
 
-fn is_auto_capture(data:&PaymentsAuthorizeData) -> Result<bool, ConnectorError> {
+fn is_auto_capture(data: &PaymentsAuthorizeData) -> Result<bool, ConnectorError> {
     match data.capture_method {
-        Some(hyperswitch_common_enums::CaptureMethod::Automatic)
-        |None => Ok(true),
+        Some(hyperswitch_common_enums::CaptureMethod::Automatic) | None => Ok(true),
         Some(hyperswitch_common_enums::CaptureMethod::Manual) => Ok(false),
         Some(_) => Err(ConnectorError::CaptureMethodNotSupported),
     }
 }
 
-fn is_auto_capture_psync(data:&PaymentsSyncData) -> Result<bool, ConnectorError> {
+fn is_auto_capture_psync(data: &PaymentsSyncData) -> Result<bool, ConnectorError> {
     match data.capture_method {
-        Some(hyperswitch_common_enums::CaptureMethod::Automatic)
-        |None => Ok(true),
+        Some(hyperswitch_common_enums::CaptureMethod::Automatic) | None => Ok(true),
         Some(hyperswitch_common_enums::CaptureMethod::Manual) => Ok(false),
         Some(_) => Err(ConnectorError::CaptureMethodNotSupported),
     }
@@ -282,7 +279,9 @@ fn map_payment_response_to_attempt_status(
             }
         }
         PaymentStatus::Pending => hyperswitch_common_enums::AttemptStatus::Pending,
-        PaymentStatus::RequiresAction => hyperswitch_common_enums::AttemptStatus::AuthenticationPending,
+        PaymentStatus::RequiresAction => {
+            hyperswitch_common_enums::AttemptStatus::AuthenticationPending
+        }
         PaymentStatus::AwaitingCapture => hyperswitch_common_enums::AttemptStatus::Authorized,
     }
 }
@@ -318,18 +317,16 @@ impl
             false => "MANUAL".to_string(),
         };
 
-        let currency= item.router_data.request.currency;
+        let currency = item.router_data.request.currency;
         let amount = item.amount;
-        
+
         let payment_method = Some(PaymentMethod::Card(CardPaymentRequest {
             payment_type: PaymentMethodType::CARD,
-            reference_id: Secret::new(
-                item.router_data.connector_request_reference_id.clone(),
-            ),         
+            reference_id: Secret::new(item.router_data.connector_request_reference_id.clone()),
             card: CardInfo {
                 channel_properties: ChannelProperties {
                     success_return_url: item.router_data.request.router_return_url.clone(),
-                    failure_return_url: item.router_data.request.router_return_url.clone(),                
+                    failure_return_url: item.router_data.request.router_return_url.clone(),
                     skip_three_d_secure: !item.router_data.request.enrolled_for_3ds,
                 },
                 card_information: CardInformation {
@@ -344,10 +341,10 @@ impl
                     // cardholder_phone_number: Secret::new("+1234567890".to_string()),
                 },
             },
-            reusability:TransactionType::OneTimeUse,
+            reusability: TransactionType::OneTimeUse,
         }));
-        let payment_method_id= None;
-        let channel_properties= None;
+        let payment_method_id = None;
+        let channel_properties = None;
         Ok(XenditPaymentsRequest {
             amount,
             currency,
@@ -362,12 +359,13 @@ impl
 impl<F>
     ForeignTryFrom<(
         XenditPaymentResponse,
-        RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>, u16,
+        RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        u16,
     )> for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
     type Error = Error;
     fn foreign_try_from(
-        (response, item,http_code): (
+        (response, item, http_code): (
             XenditPaymentResponse,
             RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
             u16,
@@ -389,7 +387,7 @@ impl<F>
                     .clone()
                     .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 reason: Some(
-                   response
+                    response
                         .failure_code
                         .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 ),
@@ -401,7 +399,6 @@ impl<F>
                 // network_error_message: None,
             })
         } else {
-            
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: match response.actions {
@@ -428,15 +425,13 @@ impl<F>
                 },
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(
-                    response.reference_id.peek().to_string(),
-                ),
-                incremental_authorization_allowed: None,  
-                raw_connector_response: None,          
+                connector_response_reference_id: Some(response.reference_id.peek().to_string()),
+                incremental_authorization_allowed: None,
+                raw_connector_response: None,
             })
         };
-       
-        Ok(Self {        
+
+        Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
@@ -450,12 +445,13 @@ impl<F>
 impl<F>
     ForeignTryFrom<(
         XenditResponse,
-        RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, u16,
+        RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        u16,
     )> for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = Error;
     fn foreign_try_from(
-        (response, item,http_code): (
+        (response, item, http_code): (
             XenditResponse,
             RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             u16,
@@ -464,9 +460,9 @@ impl<F>
         match response {
             XenditResponse::Payment(payment_response) => {
                 let status = map_payment_response_to_attempt_status(
-                payment_response.clone(),
-                is_auto_capture_psync(&item.request)?,
-            );
+                    payment_response.clone(),
+                    is_auto_capture_psync(&item.request)?,
+                );
                 let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
                     Err(ErrorResponse {
                         code: payment_response
@@ -502,7 +498,7 @@ impl<F>
                         // charges: None,
                     })
                 };
-                Ok(Self {        
+                Ok(Self {
                     response,
                     resource_common_data: PaymentFlowData {
                         status,
@@ -516,7 +512,9 @@ impl<F>
                     XenditEventType::PaymentSucceeded | XenditEventType::CaptureSucceeded => {
                         hyperswitch_common_enums::AttemptStatus::Charged
                     }
-                    XenditEventType::PaymentAwaitingCapture => hyperswitch_common_enums::AttemptStatus::Authorized,
+                    XenditEventType::PaymentAwaitingCapture => {
+                        hyperswitch_common_enums::AttemptStatus::Authorized
+                    }
                     XenditEventType::PaymentFailed | XenditEventType::CaptureFailed => {
                         hyperswitch_common_enums::AttemptStatus::Failure
                     }
@@ -533,9 +531,19 @@ impl<F>
     }
 }
 
-impl TryFrom<XenditRouterData<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>> for XenditPaymentsCaptureRequest {
+impl
+    TryFrom<
+        XenditRouterData<
+            &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    > for XenditPaymentsCaptureRequest
+{
     type Error = hyperswitch_interfaces::errors::ConnectorError;
-    fn try_from(item: XenditRouterData<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: XenditRouterData<
+            &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             capture_amount: item.amount,
         })
@@ -548,15 +556,16 @@ pub struct XenditPaymentsCaptureRequest {
 }
 
 impl<F>
-   ForeignTryFrom<(
+    ForeignTryFrom<(
         XenditPaymentResponse,
-        RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, u16,
+        RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        u16,
     )> for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn foreign_try_from(
-        (response, item,http_code): (
+        (response, item, http_code): (
             XenditPaymentResponse,
             RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
             u16,
@@ -573,7 +582,8 @@ impl<F>
                     .failure_code
                     .clone()
                     .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-                reason: Some(response
+                reason: Some(
+                    response
                         .failure_code
                         .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
                 ),
@@ -591,15 +601,13 @@ impl<F>
                 mandate_reference: Box::new(None),
                 connector_metadata: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(
-                    response.reference_id.peek().to_string(),
-                ),
+                connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 //charges: None,
             })
         };
-        Ok(Self {        
+        Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
                 status,
@@ -617,9 +625,14 @@ pub struct XenditRefundRequest {
     pub reason: String,
 }
 
-impl<F> TryFrom<&XenditRouterData<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>> for XenditRefundRequest {
+impl<F>
+    TryFrom<&XenditRouterData<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for XenditRefundRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: &XenditRouterData<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: &XenditRouterData<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item.amount.to_owned(),
             payment_request_id: item.router_data.request.connector_transaction_id.clone(),
@@ -647,15 +660,16 @@ pub enum RefundStatus {
 }
 
 impl<F>
-   ForeignTryFrom<(
+    ForeignTryFrom<(
         RefundResponse,
-        RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, u16,
+        RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+        u16,
     )> for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn foreign_try_from(
-        (response, item,_http_code): (
+        (response, item, _http_code): (
             RefundResponse,
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
             u16,
@@ -683,15 +697,16 @@ impl From<RefundStatus> for hyperswitch_common_enums::RefundStatus {
 }
 
 impl<F>
-   ForeignTryFrom<(
+    ForeignTryFrom<(
         RefundResponse,
-        RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>, u16,
+        RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        u16,
     )> for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn foreign_try_from(
-        (response, item,_http_code): (
+        (response, item, _http_code): (
             RefundResponse,
             RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>,
             u16,
@@ -708,11 +723,8 @@ impl<F>
     }
 }
 
-fn is_mandate_payment(
-    item: &PaymentsAuthorizeData,
-) -> bool {
-    (item.setup_future_usage
-        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+fn is_mandate_payment(item: &PaymentsAuthorizeData) -> bool {
+    (item.setup_future_usage == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
         || item
             .mandate_id
             .as_ref()

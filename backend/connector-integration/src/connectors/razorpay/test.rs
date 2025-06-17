@@ -108,6 +108,14 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -273,6 +281,14 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -395,6 +411,14 @@ mod tests {
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -540,6 +564,14 @@ mod tests {
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -844,6 +876,14 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    xendit: ConnectorParams {
+                        base_url: "https://api.xendit.co/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1017,6 +1057,14 @@ mod tests {
                     },
                     elavon: ConnectorParams {
                         base_url: "https://api.elavon.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    xendit: ConnectorParams {
+                        base_url: "https://api.xendit.co/".to_string(),
                         dispute_base_url: None,
                     },
                 },
@@ -1193,6 +1241,14 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -1292,6 +1348,14 @@ mod tests {
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -1401,6 +1465,14 @@ mod tests {
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
                             dispute_base_url: None,
                         },
                     },
@@ -1550,6 +1622,14 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    xendit: ConnectorParams {
+                        base_url: "https://api.xendit.co/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1675,6 +1755,14 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    xendit: ConnectorParams {
+                        base_url: "https://api.xendit.co/".to_string(),
+                        dispute_base_url: None,
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1787,6 +1875,14 @@ mod tests {
                     },
                     elavon: ConnectorParams {
                         base_url: "https://api.elavon.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: None,
+                    },
+                    xendit: ConnectorParams {
+                        base_url: "https://api.xendit.co/".to_string(),
                         dispute_base_url: None,
                     },
                 },

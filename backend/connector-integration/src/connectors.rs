@@ -17,5 +17,3 @@ pub mod xendit;
 pub use self::xendit::Xendit;
 
 pub mod macros;
-
-
