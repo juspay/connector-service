@@ -227,3 +227,4 @@ pub async fn metrics_server_builder(config: configs::Config) -> Result<(), Confi
 
     Ok(())
 }
+
