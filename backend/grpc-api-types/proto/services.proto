@@ -1,142 +1,142 @@
-syntax = "proto3";
-
-package ucs.v2;
-
-import "google/api/annotations.proto";
-import "payment.proto";
-
-option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
-
-// ============================================================================
-// SERVICE DEFINITIONS
-// ============================================================================
-
-// Unified service definition for all payment related operations.
-service PaymentService {
-  // Authorizes a payment.
-  rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/authorize"
-      body: "*"
-    };
-  }
-  
-  // Synchronizes the status of a payment.
-  rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/get"
-      body: "*"
-    };
-  }
-  
-  // Voids an authorized payment.
-  rpc Void(PaymentServiceVoidRequest) returns (PaymentServiceVoidResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/void"
-      body: "*"
-    };
-  }
-  
-  // Captures a previously authorized payment.
-  rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/capture"
-      body: "*"
-    };
-  }
-
-  // Processes a refund request.
-  rpc Refund(PaymentServiceRefundRequest) returns (PaymentServiceRefundResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/refund"
-      body: "*"
-    };
-  }
-
-  // Sets up a mandate for future payments.
-  rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/register"
-      body: "*"
-    };
-  }
-
-  // Creates a new dispute.
-  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/dispute"
-      body: "*"
-    };
-  }
-
-  // Handles incoming webhooks from connectors.
-  // This will delegate to the appropriate service transform based on the event type.
-  rpc Transform(PaymentServiceTransformRequest) returns (PaymentServiceTransformResponse) {
-    option (google.api.http) = {
-      post: "/v1/payment/transform"
-      body: "*"
-    };
-  }
-}
-
-// Service for refund-specific operations.
-service RefundService {
-  // Synchronizes the status of a refund.
-  rpc Get(RefundServiceGetRequest) returns (RefundServiceGetResponse) {
-    option (google.api.http) = {
-      post: "/v1/refund/get"
-      body: "*"
-    };
-  }
-
-  // Handles incoming webhooks from connectors.
-  rpc Transform(RefundServiceTransformRequest) returns (RefundServiceTransformResponse) {
-    option (google.api.http) = {
-      post: "/v1/refund/transform"
-      body: "*"
-    };
-  }
-}
-
-// Service for dispute-specific operations.
-service DisputeService {
-  // Submits evidence for a dispute.
-  rpc SubmitEvidence(DisputeServiceSubmitEvidenceRequest) returns (DisputeServiceSubmitEvidenceResponse) {
-    option (google.api.http) = {
-      post: "/v1/dispute/submit_evidence"
-      body: "*"
-    };
-  }
-
-  // Retrieves dispute information or evidence submission status.
-  rpc Get(DisputeServiceGetRequest) returns (DisputeServiceGetResponse) {
-    option (google.api.http) = {
-      post: "/v1/dispute/get"
-      body: "*"
-    };
-  }
-
-  // Defends a dispute with a reason code.
-  rpc Defend(DisputeDefendRequest) returns (DisputeDefendResponse) {
-    option (google.api.http) = {
-      post: "/v1/dispute/defend"
-      body: "*"
-    };
-  }
-
-  // Accepts a dispute.
-  rpc Accept(AcceptDisputeRequest) returns (AcceptDisputeResponse) {
-    option (google.api.http) = {
-      post: "/v1/dispute/accept"
-      body: "*"
-    };
-  }
-
-  // Handles incoming webhooks from connectors.
-  rpc Transform(DisputeServiceTransformRequest) returns (DisputeServiceTransformResponse) {
-    option (google.api.http) = {
-      post: "/v1/dispute/transform"
-      body: "*"
-    };
-  }
-}
+syntax = "proto3"; 
+ 
+package ucs.v2; 
+ 
+import "google/api/annotations.proto"; 
+import "payment.proto"; 
+ 
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto"; 
+ 
+// ============================================================================ 
+// SERVICE DEFINITIONS 
+// ============================================================================ 
+ 
+// Unified service definition for all payment related operations. 
+service PaymentService { 
+  // Authorizes a payment. 
+  rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/authorize" 
+      body: "*" 
+    }; 
+  } 
+   
+  // Synchronizes the status of a payment. 
+  rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/get" 
+      body: "*" 
+    }; 
+  } 
+   
+  // Voids an authorized payment. 
+  rpc Void(PaymentServiceVoidRequest) returns (PaymentServiceVoidResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/void" 
+      body: "*" 
+    }; 
+  } 
+   
+  // Captures a previously authorized payment. 
+  rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/capture" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Processes a refund request. 
+  rpc Refund(PaymentServiceRefundRequest) returns (PaymentServiceRefundResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/refund" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Sets up a mandate for future payments. 
+  rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/register" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Creates a new dispute. 
+  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/dispute" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Handles incoming webhooks from connectors. 
+  // This will delegate to the appropriate service transform based on the event type. 
+  rpc Transform(PaymentServiceTransformRequest) returns (PaymentServiceTransformResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/payment/transform" 
+      body: "*" 
+    }; 
+  } 
+} 
+ 
+// Service for refund-specific operations. 
+service RefundService { 
+  // Synchronizes the status of a refund. 
+  rpc Get(RefundServiceGetRequest) returns (RefundServiceGetResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/refund/get" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Handles incoming webhooks from connectors. 
+  rpc Transform(RefundServiceTransformRequest) returns (RefundServiceTransformResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/refund/transform" 
+      body: "*" 
+    }; 
+  } 
+} 
+ 
+// Service for dispute-specific operations. 
+service DisputeService { 
+  // Submits evidence for a dispute. 
+  rpc SubmitEvidence(DisputeServiceSubmitEvidenceRequest) returns (DisputeServiceSubmitEvidenceResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/dispute/submit_evidence" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Retrieves dispute information or evidence submission status. 
+  rpc Get(DisputeServiceGetRequest) returns (DisputeServiceGetResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/dispute/get" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Defends a dispute with a reason code. 
+  rpc Defend(DisputeDefendRequest) returns (DisputeDefendResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/dispute/defend" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Accepts a dispute. 
+  rpc Accept(AcceptDisputeRequest) returns (AcceptDisputeResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/dispute/accept" 
+      body: "*" 
+    }; 
+  } 
+ 
+  // Handles incoming webhooks from connectors. 
+  rpc Transform(DisputeServiceTransformRequest) returns (DisputeServiceTransformResponse) { 
+    option (google.api.http) = { 
+      post: "/v1/dispute/transform" 
+      body: "*" 
+    }; 
+  } 
+} 

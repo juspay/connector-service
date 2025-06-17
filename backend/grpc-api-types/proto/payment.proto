@@ -1,1895 +1,1895 @@
-syntax = "proto3";
-
-package ucs.v2;
-
-import "google/api/annotations.proto";
-import "google/protobuf/empty.proto";
-import "google/protobuf/timestamp.proto";
-import "payment_methods.proto";
-
-option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
-
-// ============================================================================
-// COMMON MESSAGES
-// ============================================================================
-
-// HTTP methods.
-enum HttpMethod {
-  HTTP_METHOD_UNSPECIFIED = 0; // Default, unspecified HTTP method.
-  GET = 1;                     // HTTP GET method.
-  POST = 2;                    // HTTP POST method.
-  PUT = 3;                     // HTTP PUT method.
-  DELETE = 4;                  // HTTP DELETE method.
-}
-
-// Status of a payment attempt.
-enum PaymentStatus {
-  ATTEMPT_STATUS_UNSPECIFIED = 0; // Default value
-
-  // Initial states
-  STARTED = 1;
-  PAYMENT_METHOD_AWAITED = 22;    // Waiting for customer to provide payment method
-  DEVICE_DATA_COLLECTION_PENDING = 24; // Waiting for device data collection
-  CONFIRMATION_AWAITED = 23;      // Waiting for customer confirmation
-
-  // Authentication flow
-  AUTHENTICATION_PENDING = 4;
-  AUTHENTICATION_SUCCESSFUL = 5;
-  AUTHENTICATION_FAILED = 2;
-
-  // Authorization flow
-  AUTHORIZING = 9;
-  AUTHORIZED = 6;
-  AUTHORIZATION_FAILED = 7;
-
-  // Charging flow
-  CHARGED = 8;
-  PARTIAL_CHARGED = 17;
-  PARTIAL_CHARGED_AND_CHARGEABLE = 18; // Partially charged, remaining amount can be captured
-  AUTO_REFUNDED = 16;
-
-  // Capture flow
-  CAPTURE_INITIATED = 13;
-  CAPTURE_FAILED = 14;
-
-  // Void flow
-  VOID_INITIATED = 12;
-  VOIDED = 11;
-  VOID_FAILED = 15;
-
-  // Other payment flows
-  COD_INITIATED = 10; // Cash on Delivery initiated
-
-  // Terminal/fallback states
-  ROUTER_DECLINED = 3;
-  PENDING = 20;       // General pending state
-  FAILURE = 21;       // General failure state
-  UNRESOLVED = 19;    // Status could not be determined
-}
-
-// Status of a refund.
-enum RefundStatus {
-  REFUND_STATUS_UNSPECIFIED = 0; // Default value
-  REFUND_FAILURE = 1;
-  REFUND_MANUAL_REVIEW = 2;      // Refund requires manual review
-  REFUND_PENDING = 3;
-  REFUND_SUCCESS = 4;
-  REFUND_TRANSACTION_FAILURE = 5; // Failure at the transaction level for the refund
-}
-
-// Status of a dispute.
-enum DisputeStatus {
-  DISPUTE_STATUS_UNSPECIFIED = 0; // Default value
-  DISPUTE_OPENED = 1;
-  DISPUTE_EXPIRED = 2;
-  DISPUTE_ACCEPTED = 3;
-  DISPUTE_CANCELLED = 4;
-  DISPUTE_CHALLENGED = 5;         // Dispute is being challenged with evidence
-  DISPUTE_WON = 6;
-  DISPUTE_LOST = 7;
-}
-
-// Method for capturing a payment.
-enum CaptureMethod {
-  CAPTURE_METHOD_UNSPECIFIED = 0; // Default value
-  AUTOMATIC = 1;                  // Capture is done automatically after authorization.
-  MANUAL = 2;                     // Capture must be triggered manually.
-  MANUAL_MULTIPLE = 3;            // Multiple manual captures are possible.
-  SCHEDULED = 4;                  // Capture is scheduled for a later time.
-  SEQUENTIAL_AUTOMATIC = 5;       // Sequential automatic captures.
-}
-
-// Indicates how a payment method might be used in the future.
-enum FutureUsage {
-  FUTURE_USAGE_UNSPECIFIED = 0;   // Default value
-  OFF_SESSION = 1;                // For merchant-initiated transactions (e.g., subscriptions).
-  ON_SESSION = 2;                 // For customer-initiated transactions.
-}
-
-// Type of acceptance.
-enum AcceptanceType {
-  ACCEPTANCE_TYPE_UNSPECIFIED = 0; // Default value
-  ONLINE = 1;                      // Acceptance was given online.
-  OFFLINE = 2;                     // Acceptance was given offline.
-}
-
-// Type of authentication used for a payment.
-enum AuthenticationType {
-  AUTHENTICATION_TYPE_UNSPECIFIED = 0; // Default value
-  THREE_DS = 1;                        // 3D Secure authentication.
-  NO_THREE_DS = 2;                     // No 3D Secure, or 3DS explicitly bypassed.
-}
-
-// Preferred payment experience for the customer.
-enum PaymentExperience {
-  PAYMENT_EXPERIENCE_UNSPECIFIED = 0; // Default value
-  REDIRECT_TO_URL = 1;                // Redirect customer to a URL.
-  INVOKE_SDK_CLIENT = 2;              // Invoke a client-side SDK.
-  DISPLAY_QR_CODE = 3;                // Display a QR code.
-  ONE_CLICK = 4;                      // One-click payment experience.
-  LINK_WALLET = 5;                    // Link a digital wallet.
-  INVOKE_PAYMENT_APP = 6;             // Invoke a payment application.
-  DISPLAY_WAIT_SCREEN = 7;            // Display a waiting screen.
-  COLLECT_OTP = 8;                    // Collect an OTP from the customer.
-}
-
-// Type of event that a webhook can represent.
-enum EventType {
-  EVENT_TYPE_UNSPECIFIED = 0;         // Default, unspecified event type.
-  PAYMENT = 1;                        // Event related to a payment.
-  REFUND = 2;                         // Event related to a refund.
-  DISPUTE = 3;                        // Event related to a dispute.
-}
-
-// Enum for currency codes (ISO 4217).
-enum Currency {
-  CURRENCY_UNSPECIFIED = 0; // Default value
-  AED = 1;
-  AFN = 2;
-  ALL = 3;
-  AMD = 4;
-  ANG = 5;
-  AOA = 6;
-  ARS = 7;
-  AUD = 8;
-  AWG = 9;
-  AZN = 10;
-  BAM = 11;
-  BBD = 12;
-  BDT = 13;
-  BGN = 14;
-  BHD = 15;
-  BIF = 16;
-  BMD = 17;
-  BND = 18;
-  BOB = 19;
-  BRL = 20;
-  BSD = 21;
-  BTN = 22;
-  BWP = 23;
-  BYN = 24;
-  BZD = 25;
-  CAD = 26;
-  CDF = 27;
-  CHF = 28;
-  CLF = 29;
-  CLP = 30;
-  CNY = 31;
-  COP = 32;
-  CRC = 33;
-  CUC = 34;
-  CUP = 35;
-  CVE = 36;
-  CZK = 37;
-  DJF = 38;
-  DKK = 39;
-  DOP = 40;
-  DZD = 41;
-  EGP = 42;
-  ERN = 43;
-  ETB = 44;
-  EUR = 45;
-  FJD = 46;
-  FKP = 47;
-  GBP = 48;
-  GEL = 49;
-  GHS = 50;
-  GIP = 51;
-  GMD = 52;
-  GNF = 53;
-  GTQ = 54;
-  GYD = 55;
-  HKD = 56;
-  HNL = 57;
-  HRK = 58;
-  HTG = 59;
-  HUF = 60;
-  IDR = 61;
-  ILS = 62;
-  INR = 63;
-  IQD = 64;
-  IRR = 65;
-  ISK = 66;
-  JMD = 67;
-  JOD = 68;
-  JPY = 69;
-  KES = 70;
-  KGS = 71;
-  KHR = 72;
-  KMF = 73;
-  KPW = 74;
-  KRW = 75;
-  KWD = 76;
-  KYD = 77;
-  KZT = 78;
-  LAK = 79;
-  LBP = 80;
-  LKR = 81;
-  LRD = 82;
-  LSL = 83;
-  LYD = 84;
-  MAD = 85;
-  MDL = 86;
-  MGA = 87;
-  MKD = 88;
-  MMK = 89;
-  MNT = 90;
-  MOP = 91;
-  MRU = 92;
-  MUR = 93;
-  MVR = 94;
-  MWK = 95;
-  MXN = 96;
-  MYR = 97;
-  MZN = 98;
-  NAD = 99;
-  NGN = 100;
-  NIO = 101;
-  NOK = 102;
-  NPR = 103;
-  NZD = 104;
-  OMR = 105;
-  PAB = 106;
-  PEN = 107;
-  PGK = 108;
-  PHP = 109;
-  PKR = 110;
-  PLN = 111;
-  PYG = 112;
-  QAR = 113;
-  RON = 114;
-  RSD = 115;
-  RUB = 116;
-  RWF = 117;
-  SAR = 118;
-  SBD = 119;
-  SCR = 120;
-  SDG = 121;
-  SEK = 122;
-  SGD = 123;
-  SHP = 124;
-  SLE = 125;
-  SLL = 126;
-  SOS = 127;
-  SRD = 128;
-  SSP = 129;
-  STD = 130; // Obsolete, use STN
-  STN = 131;
-  SVC = 132;
-  SYP = 133;
-  SZL = 134;
-  THB = 135;
-  TJS = 136;
-  TMT = 137;
-  TND = 138;
-  TOP = 139;
-  TRY = 140;
-  TTD = 141;
-  TWD = 142;
-  TZS = 143;
-  UAH = 144;
-  UGX = 145;
-  USD = 146;
-  UYU = 147;
-  UZS = 148;
-  VES = 149;
-  VND = 150;
-  VUV = 151;
-  WST = 152;
-  XAF = 153;
-  XCD = 154;
-  XOF = 155;
-  XPF = 156;
-  YER = 157;
-  ZAR = 158;
-  ZMW = 159;
-  ZWL = 160;
-}
-
-// Connector enumeration.
-enum Connector {
-  CONNECTOR_UNSPECIFIED = 0; // Default value
-  ADYENPLATFORM = 1;
-  ACI = 2;
-  ADYEN = 3;
-  AIRWALLEX = 4;
-  AUTHORIZEDOTNET = 5;
-  BAMBORA = 6;
-  BAMBORAAPAC = 7;
-  BANKOFAMERICA = 8;
-  BILLWERK = 9;
-  BITPAY = 10;
-  BLUESNAP = 11;
-  BOKU = 12;
-  BRAINTREE = 13;
-  CASHTOCODE = 14;
-  CHARGEBEE = 15;
-  CHECKOUT = 16;
-  COINBASE = 17;
-  COINGATE = 18;
-  CRYPTOPAY = 19;
-  CTP_MASTERCARD = 20;
-  CTP_VISA = 21;
-  CYBERSOURCE = 22;
-  DATATRANS = 23;
-  DEUTSCHEBANK = 24;
-  DIGITALVIRGO = 25;
-  DLOCAL = 26;
-  EBANX = 27;
-  ELAVON = 28;
-  FISERV = 29;
-  FISERVEMEA = 30;
-  FIUU = 31;
-  FORTE = 32;
-  GETNET = 33;
-  GLOBALPAY = 34;
-  GLOBEPAY = 35;
-  GOCARDLESS = 36;
-  GPAYMENTS = 37;
-  HIPAY = 38;
-  HELCIM = 39;
-  INESPAY = 40;
-  IATAPAY = 41;
-  ITAUBANK = 42;
-  JPMORGAN = 43;
-  JUSPAYTHREEDSSERVER = 44;
-  KLARNA = 45;
-  MIFINITY = 46;
-  MOLLIE = 47;
-  MONERIS = 48;
-  MULTISAFEPAY = 49;
-  NETCETERA = 50;
-  NEXINETS = 51;
-  NEXIXPAY = 52;
-  NMI = 53;
-  NOMUPAY = 54;
-  NOON = 55;
-  NOVALNET = 56;
-  NUVEI = 57;
-  OPENNODE = 58;
-  PAYBOX = 59;
-  PAYME = 60;
-  PAYONE = 61;
-  PAYPAL = 62;
-  PAYSTACK = 63;
-  PAYU = 64;
-  PLACETOPAY = 65;
-  POWERTRANZ = 66;
-  PROPHETPAY = 67;
-  RAPYD = 68;
-  RAZORPAY = 69;
-  RECURLY = 70;
-  REDSYS = 71;
-  SHIFT4 = 72;
-  SQUARE = 73;
-  STAX = 74;
-  STRIPE = 75;
-  TAXJAR = 76;
-  THREEDSECUREIO = 77;
-  TRUSTPAY = 78;
-  TSYS = 79;
-  VOLT = 80;
-  WELLSFARGO = 81;
-  WISE = 82;
-  WORLDLINE = 83;
-  WORLDPAY = 84;
-  SIGNIFYD = 85;
-  PLAID = 86;
-  RISKIFIED = 87;
-  XENDIT = 88;
-  ZEN = 89;
-  ZSL = 90;
-}
-
-// Payment method types.
-enum PaymentMethodType {
-  PAYMENT_METHOD_TYPE_UNSPECIFIED = 0; // Default value
-  ACH = 1;
-  AFFIRM = 2;
-  AFTERPAY_CLEARPAY = 3;
-  ALFAMART = 4;
-  ALI_PAY = 5;
-  ALI_PAY_HK = 6;
-  ALMA = 7;
-  AMAZON_PAY = 8;
-  APPLE_PAY = 9;
-  ATOME = 10;
-  BACS = 11;
-  BANCONTACT_CARD = 12;
-  BECS = 13;
-  BENEFIT = 14;
-  BIZUM = 15;
-  BLIK = 16;
-  BOLETO = 17;
-  BCA_BANK_TRANSFER = 18;
-  BNI_VA = 19;
-  BRI_VA = 20;
-  CARD_REDIRECT = 21;
-  CIMB_VA = 22;
-  CLASSIC_REWARD = 23;
-  CREDIT = 24;
-  CRYPTO_CURRENCY = 25;
-  CASHAPP = 26;
-  DANA = 27;
-  DANAMON_VA = 28;
-  DEBIT = 29;
-  DUIT_NOW = 30;
-  EFECTY = 31;
-  EFT = 32;
-  EPS = 33;
-  FPS = 34;
-  EVOUCHER = 35;
-  GIROPAY = 36;
-  GIVEX = 37;
-  GOOGLE_PAY = 38;
-  GO_PAY = 39;
-  GCASH = 40;
-  IDEAL = 41;
-  INTERAC = 42;
-  INDOMARET = 43;
-  KAKAO_PAY = 44;
-  LOCAL_BANK_REDIRECT = 45;
-  MANDIRI_VA = 46;
-  KNET = 47;
-  MB_WAY = 48;
-  MOBILE_PAY = 49;
-  MOMO = 50;
-  MOMO_ATM = 51;
-  MULTIBANCO = 52;
-  ONLINE_BANKING_THAILAND = 53;
-  ONLINE_BANKING_CZECH_REPUBLIC = 54;
-  ONLINE_BANKING_FINLAND = 55;
-  ONLINE_BANKING_FPX = 56;
-  ONLINE_BANKING_POLAND = 57;
-  ONLINE_BANKING_SLOVAKIA = 58;
-  OXXO = 59;
-  PAGO_EFECTIVO = 60;
-  PERMATA_BANK_TRANSFER = 61;
-  OPEN_BANKING_UK = 62;
-  PAY_BRIGHT = 63;
-  PAZE = 64;
-  PIX = 65;
-  PAY_SAFE_CARD = 66;
-  PRZELEWY24 = 67;
-  PROMPT_PAY = 68;
-  PSE = 69;
-  RED_COMPRA = 70;
-  RED_PAGOS = 71;
-  SAMSUNG_PAY = 72;
-  SEPA = 73;
-  SEPA_BANK_TRANSFER = 74;
-  SOFORT = 75;
-  SWISH = 76;
-  TOUCH_N_GO = 77;
-  TRUSTLY = 78;
-  TWINT = 79;
-  UPI_COLLECT = 80;
-  UPI_INTENT = 81;
-  VIPPS = 82;
-  VIET_QR = 83;
-  VENMO = 84;
-  WALLEY = 85;
-  WE_CHAT_PAY = 86;
-  SEVEN_ELEVEN = 87;
-  LAWSON = 88;
-  MINI_STOP = 89;
-  FAMILY_MART = 90;
-  SEICOMART = 91;
-  PAY_EASY = 92;
-  LOCAL_BANK_TRANSFER = 93;
-  OPEN_BANKING_PIS = 94;
-  DIRECT_CARRIER_BILLING = 95;
-  INSTANT_BANK_TRANSFER = 96;
-}
-
-// Payment method enumeration.
-enum PaymentMethod {
-  PAYMENT_METHOD_UNSPECIFIED = 0; // Default value
-  CARD = 1;
-  WALLET = 2;
-}
-
-// Card network enumeration.
-enum CardNetwork {
-  CARD_NETWORK_UNSPECIFIED = 0; // Default value
-  VISA = 1;
-  MASTERCARD = 2;
-  AMERICAN_EXPRESS = 3;
-  JCB = 4;
-  DINERS_CLUB = 5;
-  DISCOVER = 6;
-  CARTES_BANCAIRES = 7;
-  UNION_PAY = 8;
-  RU_PAY = 9;
-  MAESTRO = 10;
-}
-
-// Dispute stage enumeration.
-enum DisputeStage {
-  DISPUTE_STAGE_UNSPECIFIED = 0; // Default value
-  PRE_DISPUTE = 1;
-  ACTIVE_DISPUTE = 2;
-  PRE_ARBITRATION = 3;
-}
-
-// Country Alpha-2 code enumeration.
-enum CountryAlpha2 {
-  COUNTRY_ALPHA2_UNSPECIFIED = 0; // Default value must be first
-  US = 1;
-  AF = 2;
-  AX = 3;
-  AL = 4;
-  DZ = 5;
-  AS = 6;
-  AD = 7;
-  AO = 8;
-  AI = 9;
-  AQ = 10;
-  AG = 11;
-  AR = 12;
-  AM = 13;
-  AW = 14;
-  AU = 15;
-  AT = 16;
-  AZ = 17;
-  BS = 18;
-  BH = 19;
-  BD = 20;
-  BB = 21;
-  BY = 22;
-  BE = 23;
-  BZ = 24;
-  BJ = 25;
-  BM = 26;
-  BT = 27;
-  BO = 28;
-  BQ = 29;
-  BA = 30;
-  BW = 31;
-  BV = 32;
-  BR = 33;
-  IO = 34;
-  BN = 35;
-  BG = 36;
-  BF = 37;
-  BI = 38;
-  KH = 39;
-  CM = 40;
-  CA = 41;
-  CV = 42;
-  KY = 43;
-  CF = 44;
-  TD = 45;
-  CL = 46;
-  CN = 47;
-  CX = 48;
-  CC = 49;
-  CO = 50;
-  KM = 51;
-  CG = 52;
-  CD = 53;
-  CK = 54;
-  CR = 55;
-  CI = 56;
-  HR = 57;
-  CU = 58;
-  CW = 59;
-  CY = 60;
-  CZ = 61;
-  DK = 62;
-  DJ = 63;
-  DM = 64;
-  DO = 65;
-  EC = 66;
-  EG = 67;
-  SV = 68;
-  GQ = 69;
-  ER = 70;
-  EE = 71;
-  ET = 72;
-  FK = 73;
-  FO = 74;
-  FJ = 75;
-  FI = 76;
-  FR = 77;
-  GF = 78;
-  PF = 79;
-  TF = 80;
-  GA = 81;
-  GM = 82;
-  GE = 83;
-  DE = 84;
-  GH = 85;
-  GI = 86;
-  GR = 87;
-  GL = 88;
-  GD = 89;
-  GP = 90;
-  GU = 91;
-  GT = 92;
-  GG = 93;
-  GN = 94;
-  GW = 95;
-  GY = 96;
-  HT = 97;
-  HM = 98;
-  VA = 99;
-  HN = 100;
-  HK = 101;
-  HU = 102;
-  IS = 103;
-  IN = 104;
-  ID = 105;
-  IR = 106;
-  IQ = 107;
-  IE = 108;
-  IM = 109;
-  IL = 110;
-  IT = 111;
-  JM = 112;
-  JP = 113;
-  JE = 114;
-  JO = 115;
-  KZ = 116;
-  KE = 117;
-  KI = 118;
-  KP = 119;
-  KR = 120;
-  KW = 121;
-  KG = 122;
-  LA = 123;
-  LV = 124;
-  LB = 125;
-  LS = 126;
-  LR = 127;
-  LY = 128;
-  LI = 129;
-  LT = 130;
-  LU = 131;
-  MO = 132;
-  MK = 133;
-  MG = 134;
-  MW = 135;
-  MY = 136;
-  MV = 137;
-  ML = 138;
-  MT = 139;
-  MH = 140;
-  MQ = 141;
-  MR = 142;
-  MU = 143;
-  YT = 144;
-  MX = 145;
-  FM = 146;
-  MD = 147;
-  MC = 148;
-  MN = 149;
-  ME = 150;
-  MS = 151;
-  MA = 152;
-  MZ = 153;
-  MM = 154;
-  NA = 155;
-  NR = 156;
-  NP = 157;
-  NL = 158;
-  NC = 159;
-  NZ = 160;
-  NI = 161;
-  NE = 162;
-  NG = 163;
-  NU = 164;
-  NF = 165;
-  MP = 166;
-  NO = 167;
-  OM = 168;
-  PK = 169;
-  PW = 170;
-  PS = 171;
-  PA = 172;
-  PG = 173;
-  PY = 174;
-  PE = 175;
-  PH = 176;
-  PN = 177;
-  PL = 178;
-  PT = 179;
-  PR = 180;
-  QA = 181;
-  RE = 182;
-  RO = 183;
-  RU = 184;
-  RW = 185;
-  BL = 186;
-  SH = 187;
-  KN = 188;
-  LC = 189;
-  MF = 190;
-  PM = 191;
-  VC = 192;
-  WS = 193;
-  SM = 194;
-  ST = 195;
-  SA = 196;
-  SN = 197;
-  RS = 198;
-  SC = 199;
-  SL = 200;
-  SG = 201;
-  SX = 202;
-  SK = 203;
-  SI = 204;
-  SB = 205;
-  SO = 206;
-  ZA = 207;
-  GS = 208;
-  SS = 209;
-  ES = 210;
-  LK = 211;
-  SD = 212;
-  SR = 213;
-  SJ = 214;
-  SZ = 215;
-  SE = 216;
-  CH = 217;
-  SY = 218;
-  TW = 219;
-  TJ = 220;
-  TZ = 221;
-  TH = 222;
-  TL = 223;
-  TG = 224;
-  TK = 225;
-  TO = 226;
-  TT = 227;
-  TN = 228;
-  TR = 229;
-  TM = 230;
-  TC = 231;
-  TV = 232;
-  UG = 233;
-  UA = 234;
-  AE = 235;
-  GB = 236;
-  UM = 237;
-  UY = 238;
-  UZ = 239;
-  VU = 240;
-  VE = 241;
-  VN = 242;
-  VG = 243;
-  VI = 244;
-  WF = 245;
-  EH = 246;
-  YE = 247;
-  ZM = 248;
-  ZW = 249;
-}
-
-// Represents a physical address with contact information.
-message Address {
-  // Personal Information
-  optional string first_name = 1 [(validate.rules).string = {min_len: 1}];
-  optional string last_name = 2 [(validate.rules).string = {min_len: 1}];
-  
-  // Address Details
-  optional string line1 = 3 [(validate.rules).string = {min_len: 1}];
-  optional string line2 = 4;
-  optional string line3 = 5;
-  optional string city = 6 [(validate.rules).string = {min_len: 1}];
-  optional string state = 7;
-  optional string zip_code = 8 [(validate.rules).string = {min_len: 1}];
-  optional CountryAlpha2 country_alpha2_code = 9;
-
-  // Contact Information
-  optional string email = 10 [(validate.rules).string.email = true];
-  optional string phone_number = 11 [(validate.rules).string = {min_len: 5}];
-  optional string phone_country_code = 12 [(validate.rules).string = {min_len: 1, max_len: 4}];
-}
-
-// Access token details.
-message AccessToken {
-  // The token string.
-  string token = 1 [(validate.rules).string = {min_len: 1}];
-  
-  // Expiration timestamp of the token (seconds since epoch).
-  int64 expires_at_seconds = 2 [(validate.rules).int64.gt = 0];
-}
-
-// Additional authentication data, typically from 3DS.
-message AuthenticationData {
-  // Electronic Commerce Indicator (ECI) from 3DS.
-  optional string eci = 1;
-  
-  // Cardholder Authentication Verification Value (CAVV).
-  string cavv = 2 [(validate.rules).string = {min_len: 1}];
-  
-  // 3DS Server Transaction ID.
-  optional string threeds_server_transaction_id = 3;
-  
-  // 3DS Message Version (e.g., "2.1.0", "2.2.0").
-  optional string message_version = 4;
-  
-  // Directory Server Transaction ID (DS Trans ID).
-  optional string ds_transaction_id = 5;
-}
-
-// Details of customer acceptance for mandates or terms.
-message CustomerAcceptance {
-  // Type of acceptance (e.g., online, offline).
-  AcceptanceType acceptance_type = 1;
-  
-  // Timestamp of when the acceptance was given.
-  google.protobuf.Timestamp accepted_at = 2;
-  
-  // Details if the acceptance was an online mandate.
-  optional OnlineMandate online_mandate_details = 3;
-}
-
-// Details for an online mandate acceptance.
-message OnlineMandate {
-  // IP address from which the mandate was accepted.
-  optional string ip_address = 1 [(validate.rules).string.ip = true];
-  
-  // User agent string of the browser used for mandate acceptance.
-  string user_agent = 2 [(validate.rules).string = {min_len: 1}];
-}
-
-// Information about the customer's browser.
-message BrowserInformation {
-  // Display Information
-  optional uint32 color_depth = 1;
-  optional uint32 screen_height = 5 [(validate.rules).uint32 = {gt: 0, lte: 10000}];
-  optional uint32 screen_width = 6 [(validate.rules).uint32 = {gt: 0, lte: 10000}];
-  
-  // Browser Settings
-  optional bool java_enabled = 2;
-  optional bool java_script_enabled = 3;
-  optional string language = 4;
-  optional int32 time_zone_offset_minutes = 7;
-  
-  // Browser Headers
-  optional string accept_header = 9;
-  optional string user_agent = 10;
-  optional string accept_language = 14;
-  
-  // Device Information
-  optional string ip_address = 8 [(validate.rules).string.ip = true];
-  optional string os_type = 11;
-  optional string os_version = 12;
-  optional string device_model = 13;
-}
-
-// Represents an identifier, which can be one of several types.
-message Identifier {
-  oneof id_type {
-    // Connector's transaction ID.
-    string id = 1 [(validate.rules).string = {min_len: 1}];
-    
-    // Encoded data representing the ID or related information.
-    string encoded_data = 2;
-    
-    // Indicates that no specific ID is returned or applicable.
-    google.protobuf.Empty no_response_id_marker = 3;
-  }
-}
-
-// Response ID from main branch (needed for compatibility)
-message ResponseId {
-  oneof id {
-    string connector_transaction_id = 1;
-    string encoded_data = 2;
-    bool no_response_id = 3; // Using bool as a presence indicator for NoResponseId
-  }
-}
-
-// Reference to a payment mandate.
-message MandateReference {
-  // Connector's unique identifier for the mandate.
-  optional string mandate_id = 1 [(validate.rules).string = {min_len: 1}];
-}
-
-// Container for various address types related to a payment.
-message PaymentAddress {
-  // Shipping address.
-  Address shipping_address = 1;
-  
-  // Customer Billing address.
-  Address billing_address = 2;
-}
-
-// Data for a redirection, can be either form data or raw HTML.
-message RedirectForm {
-  oneof form_type {
-    // Data for constructing an HTML form for redirection.
-    FormData form = 1;
-    
-    // Raw HTML data for redirection.
-    HtmlData html = 2;
-  }
-}
-
-// Represents data for an HTML form to be submitted.
-message FormData {
-  // The endpoint URL where the form should be submitted.
-  string endpoint = 1 [(validate.rules).string.uri = true];
-  
-  // HTTP method to be used for form submission (e.g., POST).
-  HttpMethod method = 2;
-  
-  // Key-value pairs representing the form fields.
-  map<string, string> form_fields = 3;
-}
-
-// Represents raw HTML data.
-message HtmlData {
-  // The HTML content as a string.
-  string html_data = 1 [(validate.rules).string = {min_len: 1}];
-}
-
-// Details of an HTTP request, typically for incoming webhooks.
-message RequestDetails {
-  // HTTP method of the request (e.g., GET, POST).
-  HttpMethod method = 1;
-  
-  // URI of the request.
-  optional string uri = 2;
-  
-  // Headers of the HTTP request.
-  map<string, string> headers = 3;
-  
-  // Body of the HTTP request.
-  bytes body = 4;
-  
-  // Query parameters of the request.
-  optional string query_params = 5;
-}
-
-// Secrets used for verifying connector webhooks.
-message ConnectorWebhookSecrets {
-  // Primary secret for webhook verification.
-  string secret = 1 [(validate.rules).string = {min_len: 1}];
-  
-  // Additional secret, if required by the connector.
-  optional string additional_secret = 2;
-}
-
-// Content of a webhook response, can be one of several types.
-message WebhookResponseContent {
-  oneof content {
-    // Content if the webhook is for a payment synchronization.
-    PaymentServiceGetResponse payments_response = 1;
-    
-    // Content if the webhook is for a refund synchronization.
-    RefundServiceGetResponse refunds_response = 2;
-    
-    // Content if the webhook is for a dispute synchronization.
-    DisputesSyncResponse disputes_response = 3;
-  }
-}
-
-// Data for a multiple capture request.
-message MultipleCaptureRequestData {
-  // Sequence number for this capture in a series of multiple captures.
-  int64 capture_sequence = 1 [(validate.rules).int64.gt = 0];
-  
-  // Reference for this specific capture.
-  string capture_reference = 2 [(validate.rules).string = {min_len: 1}];
-}
-
-// Represents a single piece of evidence for a dispute.
-message EvidenceDocument {
-  // Type of the evidence (e.g., "cancellation_policy", "receipt", "customer_communication").
-  string evidence_type = 1 [(validate.rules).string = {min_len: 1}];
-
-  // Content Options
-  // Content of the document, if it's a file.
-  optional bytes file_content = 2;
-  
-  // MIME type of the file (e.g., "application/pdf", "image/png"), if file_content is provided.
-  optional string file_mime_type = 3;
-  
-  // Identifier for the file if stored with an external provider.
-  optional string provider_file_id = 4;
-
-  // Textual content of the evidence, if it's not a file or in addition to a file.
-  optional string text_content = 5;
-}
-
-// Payment method data types
-message PaymentMethodData {
-  oneof data {
-    Card card = 1;
-    WalletData wallet = 2;
-  }
-}
-
-message WalletData {
-  oneof data {
-    GooglePayWalletData google_pay = 1;
-    ApplePayWalletData apple_pay = 2;
-  }
-}
-
-message GooglePayWalletData {
-  string type = 1;
-  string description = 2;
-  GooglePayPaymentMethodInfo info = 3;
-  GpayTokenizationData tokenization_data = 4;
-}
-
-message GooglePayPaymentMethodInfo {
-  string card_network = 1;
-  string card_details = 2;
-}
-
-message GpayTokenizationData {
-  string type = 1;
-  string token = 2;
-}
-
-message ApplePayWalletData {
-  string payment_data = 1;
-  ApplePayPaymentMethod payment_method = 2;
-  string transaction_identifier = 3;
-}
-
-message ApplePayPaymentMethod {
-  string display_name = 1;
-  string network = 2;
-  string pm_type = 3;
-}
-
-message Card {
-  string card_number = 1;
-  string card_exp_month = 2;
-  string card_exp_year = 3;
-  optional string card_holder_name = 4;
-  string card_cvc = 5;
-  optional string card_issuer = 6;
-  optional CardNetwork card_network = 7;
-  optional string card_type = 8;
-  optional string card_issuing_country = 9;
-  optional string bank_code = 10;
-  optional string nick_name = 11;
-}
-
-// Payment method token details.
-message PaymentMethodToken {
-  string token = 1;
-}
-
-// ============================================================================
-// SERVICE-SPECIFIC MESSAGES
-// ============================================================================
-
-// -------------------------
-// PaymentService Messages
-// -------------------------
-
-// Request message for authorizing a payment.
-message PaymentServiceAuthorizeRequest {
-  // Payment Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id
-  
-  // Amount Information
-  int64 amount = 2 [(validate.rules).int64.gt = 0]; // The amount for the payment in major currency units
-  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
-  int64 minor_amount = 4 [(validate.rules).int64.gt = 0]; // The minor amount for the payment (e.g., cents)
-  optional int64 order_tax_amount = 5; // Tax amount for the order
-  optional int64 shipping_cost = 6; // Cost of shipping for the order
-  
-  // Payment Method and Capture Settings
-  PaymentMethod payment_method = 7; // Payment method to be used
-  optional CaptureMethod capture_method = 8; // Method for capturing the payment
-  
-  // Customer Information
-  optional string email = 9 [(validate.rules).string.email = true]; // Email address of the customer
-  optional string customer_name = 10 [(validate.rules).string = {min_len: 1}]; // Name of the customer
-  optional string connector_customer_id = 11; // Customer ID as recognized by the connector
-  
-  // Address Information
-  PaymentAddress address = 12; // Billing and shipping address details
-  
-  // Authentication Details
-  AuthenticationType auth_type = 13; // Type of authentication to be used
-  bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure
-  optional AuthenticationData authentication_data = 15; // Additional authentication data
-  
-  // Metadata
-  map<string, string> connector_metadata = 16; // Additional metadata for the connector
-  
-  // URLs for Redirection and Webhooks
-  optional string return_url = 17 [(validate.rules).string.uri = true]; // URL to redirect after payment
-  optional string webhook_url = 18 [(validate.rules).string.uri = true]; // URL for webhook notifications
-  optional string complete_authorize_url = 19 [(validate.rules).string.uri = true]; // URL to complete authorization
-  
-  // Session and Token Information
-  optional AccessToken access_token = 20; // Access token for secure communication
-  optional string session_token = 21; // Session token, if applicable
-  
-  // Order Details
-  optional string order_category = 22; // Category of the order
-  optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
-  
-  // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 24; // Indicates future usage intention
-  optional bool off_session = 25; // Indicates if off-session transaction
-  bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested
-  optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested
-  
-  // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
-  optional BrowserInformation browser_info = 29; // Information about the customer's browser
-  optional PaymentExperience payment_experience = 30; // Preferred payment experience
-}
-
-// Response message for a payment authorization.
-message PaymentServiceAuthorizeResponse {
-  // Identification
-  Identifier transaction_id = 1; // Identifier for the resource created
-  
-  // Status Information
-  PaymentStatus status = 2; // Status of the payment attempt
-  optional string error_code = 3; // Error code if the authorization failed
-  optional string error_message = 4; // Error message if the authorization failed
-  
-  // Redirection and Transaction Details
-  optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
-  optional string network_txn_id = 6; // Transaction ID from the payment network
-  optional string response_ref_id = 7; // Renamed from connector_response_reference_id
-  
-  // Authorization Details
-  optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
-}
-
-// Request message for synchronizing payment status.
-message PaymentServiceGetRequest {
-  // Identification
-  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // The resource ID to synchronize
-  
-  // Reference
-  optional string request_ref_id = 2; // Renamed from connector_request_reference_id
-}
-
-// Response message for a payment status synchronization.
-message PaymentServiceGetResponse {
-  // Identification
-  Identifier transaction_id = 1; // Identifier for the synchronized resource
-  
-  // Status Information
-  PaymentStatus status = 2; // Current status of the payment attempt
-  optional string error_code = 3; // Error code if synchronization encountered an issue
-  optional string error_message = 4; // Error message if synchronization encountered an issue
-  
-  // Transaction Details
-  optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
-  optional string network_txn_id = 6; // Transaction ID from the payment network
-  optional string response_ref_id = 7; // Renamed from connector_response_reference_id
-}
-
-// Request message for voiding a payment.
-message PaymentServiceVoidRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id
-  
-  // Void Details
-  optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment
-  optional bool all_keys_required = 4;
-}
-
-// Response message for a payment void operation.
-message PaymentServiceVoidResponse {
-  // Identification
-  Identifier transaction_id = 1; // Identifier for the voided resource
-  
-  // Status Information
-  PaymentStatus status = 2; // Status of the payment attempt after voiding
-  optional string error_code = 3; // Error code if the void operation failed
-  optional string error_message = 4; // Error message if the void operation failed
-  
-  // Reference
-  optional string response_ref_id = 5; // Renamed from connector_response_reference_id
-}
-
-// Request message for capturing a payment.
-message PaymentServiceCaptureRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
-  
-  // Capture Details
-  int64 amount_to_capture = 3 [(validate.rules).int64.gt = 0]; // Amount to capture, in minor currency units
-  Currency currency = 4; // Currency of the amount to capture
-  
-  // Metadata
-  map<string, string> connector_metadata = 5; // Additional metadata for the connector
-  
-  // Multiple Capture Information
-  optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
-}
-
-// Response message for a payment capture operation.
-message PaymentServiceCaptureResponse {
-  // Identification
-  Identifier transaction_id = 1; // Identifier for the captured resource
-  
-  // Status Information
-  PaymentStatus status = 2; // Status of the payment after the capture attempt
-  optional string error_code = 3; // Error code if the capture failed
-  optional string error_message = 4; // Error message if the capture failed
-  
-  // Reference
-  optional string response_ref_id = 5; // Renamed from response_reference_id
-}
-
-// Request message for processing a refund.
-message PaymentServiceRefundRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund
-  string transaction_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
-  optional string refund_id = 4; // Connector's identifier for the refund
-  
-  // Amount Information
-  int64 payment_amount = 5 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units
-  Currency currency = 6; // Currency of the refund, ISO 4217 code
-  int64 minor_payment_amount = 7 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in minor currency units
-  int64 refund_amount = 8 [(validate.rules).int64.gt = 0]; // Actual amount to refund, in major units
-  int64 minor_refund_amount = 9 [(validate.rules).int64.gt = 0]; // Actual amount to refund in minor units
-  
-  // Refund Context
-  optional string reason = 10; // Reason for the refund
-  optional string webhook_url = 11 [(validate.rules).string.uri = true]; // URL for webhook notifications
-  optional string merchant_account_id = 12; // Merchant account ID for the refund
-  optional CaptureMethod capture_method = 13; // Capture method related to the original payment
-  
-  // Metadata
-  map<string, string> connector_metadata = 14; // Metadata specific to the connector
-  map<string, string> refund_connector_metadata = 15; // Metadata specific to the refund
-  
-  // Browser Information
-  optional BrowserInformation browser_info = 16; // Browser information, if relevant
-}
-
-// Response message for a refund operation.
-message PaymentServiceRefundResponse {
-  // Identification
-  optional string refund_id = 1; // Connector's ID for the refund
-  
-  // Status Information
-  RefundStatus refund_status = 2; // Status of the refund
-  optional string error_code = 3; // Error code if the refund failed
-  optional string error_message = 4; // Error message if the refund failed
-  
-  // Reference
-  optional string response_ref_id = 5; // Response reference ID for tracking
-}
-
-// Request message for creating a dispute.
-message PaymentServiceDisputeRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to raise the dispute for
-  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
-}
-
-// Response message for a dispute creation operation.
-message PaymentServiceDisputeResponse {
-  // Identification
-  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // Transaction ID the dispute was raised for
-  string dispute_id = 2; // Connector's unique identifier for the dispute
-  
-  // Status Information
-  DisputeStatus dispute_status = 3; // Status of the dispute after creation
-  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
-  optional string error_code = 5; // Error code if creating the dispute failed
-  optional string error_message = 6; // Error message if creating the dispute failed
-  
-  // Reference
-  optional string response_ref_id = 7; // Response reference ID for tracking
-}
-
-// Request message for setting up a mandate.
-message PaymentServiceRegisterRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id
-  
-  // Mandate Details
-  Currency currency = 2; // The currency for the mandate
-  PaymentMethod payment_method = 3; // Payment method to be used for the mandate
-  optional int64 minor_amount = 4; // Optional: Amount to authorize during mandate setup
-  
-  // Customer Information
-  optional string email = 5 [(validate.rules).string.email = true]; // Email address of the customer
-  optional string customer_name = 6; // Name of the customer
-  optional string connector_customer_id = 7; // Customer ID as recognized by the connector
-  
-  // Address Information
-  PaymentAddress address = 8; // Billing address details for the mandate
-  
-  // Authentication Details
-  AuthenticationType auth_type = 9; // Type of authentication to be used
-  bool enrolled_for_3ds = 10; // Indicates if the customer is enrolled for 3D Secure
-  optional AuthenticationData authentication_data = 11; // Additional authentication data
-  
-  // Metadata
-  map<string, string> connector_metadata = 12; // Additional metadata for the connector
-  
-  // URLs for Redirection and Webhooks
-  optional string return_url = 13 [(validate.rules).string.uri = true]; // URL to redirect after setup
-  optional string webhook_url = 14 [(validate.rules).string.uri = true]; // URL for webhook notifications
-  optional string complete_authorize_url = 15 [(validate.rules).string.uri = true]; // URL to complete authorization
-  
-  // Session and Token Information
-  optional AccessToken access_token = 16; // Access token for secure communication
-  optional string session_token = 17; // Session token, if applicable
-  
-  // Order Details
-  optional int64 order_tax_amount = 18; // Tax amount, if an initial payment is part of setup
-  optional string order_category = 19; // Category of the order/service related to the mandate
-  optional string merchant_order_reference_id = 20; // Merchant's internal reference ID
-  optional int64 shipping_cost = 21; // Shipping cost, if an initial payment is part of setup
-  
-  // Behavioral Flags and Preferences
-  optional FutureUsage setup_future_usage = 22; // Indicates future usage intention
-  optional bool off_session = 23; // Indicates if off-session process
-  bool request_incremental_authorization = 24; // Indicates if incremental authorization is requested
-  optional bool request_extended_authorization = 25; // Indicates if extended authorization is requested
-  
-  // Contextual Information
-  optional CustomerAcceptance customer_acceptance = 26; // Details of customer acceptance
-  optional BrowserInformation browser_info = 27; // Information about the customer's browser
-  optional PaymentExperience payment_experience = 28; // Preferred payment experience
-}
-
-// Response message for a mandate setup operation.
-message PaymentServiceRegisterResponse {
-  // Identification
-  Identifier resource_id = 1; // Identifier for the resource created
-  
-  // Status Information
-  PaymentStatus status = 2; // Status of the mandate setup attempt
-  optional string error_code = 3; // Error code if the mandate setup failed
-  optional string error_message = 4; // Error message if the mandate setup failed
-  
-  // Mandate Details
-  MandateReference mandate_reference = 5; // Reference to the created mandate
-  
-  // Redirection and Transaction Details
-  optional RedirectForm redirection_data = 6; // Data for redirecting the customer's browser
-  optional string network_txn_id = 7; // Renamed from network_transaction_id
-  optional string response_ref_id = 8; // Renamed from connector_response_reference_id
-  
-  // Authorization Details
-  optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
-}
-
-// Request message for PaymentService.Transform RPC
-message PaymentServiceTransformRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  
-  // Request Details
-  RequestDetails request_details = 2; // Details of the incoming HTTP request
-  
-  // Security
-  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
-}
-
-// Response message for PaymentService.Transform RPC
-message PaymentServiceTransformResponse {
-  // Event Information
-  EventType event_type = 1; // Type of event indicated by the webhook
-  
-  // Content
-  WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type
-  
-  // Verification
-  bool source_verified = 3; // Indicates if the source was successfully verified
-  
-  // Reference
-  optional string response_ref_id = 4; // Response reference ID for tracking
-}
-
-// -------------------------
-// RefundService Messages
-// -------------------------
-
-// Request message for synchronizing refund status.
-message RefundServiceGetRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  Identifier transaction_id = 2; // Renamed from connector_transaction_id
-  string refund_id = 3 [(validate.rules).string = {min_len: 1}]; // Refund identifier
-  
-  // Refund Details
-  optional string refund_reason = 4; // Reason for the refund, if provided during sync
-}
-
-// Response message for a refund status synchronization.
-message RefundServiceGetResponse {
-  // Identification
-  Identifier transaction_id = 1; // Identifier for the synchronized resource
-  string refund_id = 2; // Renamed from connector_refund_id
-  
-  // Status Information
-  RefundStatus status = 3; // Current status of the refund
-  optional string error_code = 4; // Error code if synchronization encountered an issue
-  optional string error_message = 5; // Error message if synchronization encountered an issue
-  
-  // Reference
-  optional string response_ref_id = 6; // Renamed from connector_response_reference_id
-}
-
-// Request message for RefundService.Transform RPC
-message RefundServiceTransformRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  
-  // Request Details
-  RequestDetails request_details = 2; // Details of the incoming HTTP request
-  
-  // Security
-  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
-}
-
-// Response message for RefundService.Transform RPC
-message RefundServiceTransformResponse {
-  // Event Information
-  EventType event_type = 1; // Type of event indicated by the webhook
-  
-  // Content
-  WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type
-  
-  // Verification
-  bool source_verified = 3; // Indicates if the source was successfully verified
-  
-  // Reference
-  optional string response_ref_id = 4; // Response reference ID for tracking
-}
-
-// -------------------------
-// DisputeService Messages
-// -------------------------
-
-// Request message for submitting evidence for a dispute.
-message DisputeServiceSubmitEvidenceRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  optional Identifier transaction_id = 2; // Merchant's unique identifier for the dispute
-  string dispute_id = 3; // Merchant's unique identifier for the dispute
-  
-  // Dates
-  optional google.protobuf.Timestamp service_date = 4; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 5; // Date of shipping, if applicable
-  
-  // Evidence
-  repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents
-}
-
-// Response message for a submit evidence operation.
-message DisputeServiceSubmitEvidenceResponse {
-  // Identification
-  optional string dispute_id = 1; // Connector's unique identifier for the dispute
-  repeated string submitted_evidence_ids = 2; // IDs of the submitted evidence documents
-  
-  // Status Information
-  DisputeStatus dispute_status = 3; // Status of the dispute after submitting evidence
-  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
-  optional string error_code = 5; // Error code if submitting evidence failed
-  optional string error_message = 6; // Error message if submitting evidence failed
-  
-  // Reference
-  optional string response_ref_id = 7; // Response reference ID for tracking
-}
-
-// Request message for retrieving dispute information.
-message DisputeServiceGetRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  optional string dispute_id = 2; // Merchant's unique identifier for the dispute
-  string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
-  
-  // Dates
-  optional google.protobuf.Timestamp service_date = 4; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 5; // Date of shipping, if applicable
-  
-  // Evidence
-  repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents
-}
-
-// Response message for a retrieve dispute information operation.
-message DisputeServiceGetResponse {
-  // Identification
-  optional string dispute_id = 1; // Connector's unique identifier for the dispute
-  
-  // Status Information
-  DisputeStatus dispute_status = 2; // Status of the dispute
-  optional string connector_status_code = 3; // Renamed from connector_dispute_status_code
-  optional string error_code = 4; // Error code if retrieval failed
-  optional string error_message = 5; // Error message if retrieval failed
-  
-  // Reference
-  optional string response_ref_id = 6; // Response reference ID for tracking
-}
-
-// Request message for DisputeService.Transform RPC
-message DisputeServiceTransformRequest {
-  // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  
-  // Request Details
-  RequestDetails request_details = 2; // Details of the incoming HTTP request
-  
-  // Security
-  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
-}
-
-// Response message for DisputeService.Transform RPC
-message DisputeServiceTransformResponse {
-  // Event Information
-  EventType event_type = 1; // Type of event indicated by the webhook
-  
-  // Content
-  WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type
-  
-  // Verification
-  bool source_verified = 3; // Indicates if the source was successfully verified
-  
-  // Reference
-  optional string response_ref_id = 4; // Response reference ID for tracking
-}
-
-// ============================================================================
-// COMPATIBILITY MESSAGES (from main branch)
-// ============================================================================
-
-// Legacy messages for backward compatibility
-message DisputesSyncResponse {
-  string dispute_id = 1;
-  DisputeStatus status = 17;
-  DisputeStage stage = 19;
-  optional string connector_response_reference_id = 2;
-  optional string dispute_message = 3;
-}
-
-// Accept dispute messages from main branch
-message AcceptDisputeRequest {
-  optional string dispute_id = 1;
-}
-
-message AcceptDisputeResponse {
-  optional string dispute_id = 1;
-  DisputeStatus dispute_status = 2;
-  optional string error_code = 4;
-  optional string error_message = 5;
-}
-
-// Submit evidence response from main branch
-message SubmitEvidenceResponse {
-  optional string connector_dispute_id = 1;
-  DisputeStatus dispute_status = 2;
-  optional string connector_dispute_status = 3;
-  optional string error_code = 4;
-  optional string error_message = 5;
-}
-
-// Legacy messages for backward compatibility with existing Rust code
-message PaymentsAuthorizeRequest {
-  int64 amount = 10;
-  Currency currency = 15;
-  PaymentMethod payment_method = 2;
-  PaymentMethodData payment_method_data = 14;
-  optional string connector_customer = 1;
-  PaymentAddress address = 3;
-  AuthenticationType auth_type = 4;
-  optional bytes connector_meta_data = 5;
-  optional AccessToken access_token = 6;
-  optional string session_token = 7;
-  optional PaymentMethodToken payment_method_token = 8;
-  string connector_request_reference_id = 9;
-  optional int64 order_tax_amount = 11;
-  optional string email = 12;
-  optional string customer_name = 13;
-  optional CaptureMethod capture_method = 16;
-  optional string return_url = 17;
-  optional string webhook_url = 18;
-  optional string complete_authorize_url = 19;
-  optional FutureUsage setup_future_usage = 20;
-  optional bool off_session = 21;
-  optional CustomerAcceptance customer_acceptance = 22;
-  optional BrowserInformation browser_info = 23;
-  optional string order_category = 24;
-  bool enrolled_for_3ds = 25;
-  optional PaymentExperience payment_experience = 26;
-  optional PaymentMethodType payment_method_type = 27;
-  bool request_incremental_authorization = 28;
-  optional AuthenticationData authentication_data = 29;
-  optional bool request_extended_authorization = 30;
-  int64 minor_amount = 31;
-  optional string merchant_order_reference_id = 32;
-  optional int64 shipping_cost = 33;
-  optional bool all_keys_required = 34;
-}
-
-message PaymentsAuthorizeResponse {
-  ResponseId resource_id = 1;
-  optional RedirectForm redirection_data = 2;
-  optional MandateReference mandate_reference = 4;
-  optional string network_txn_id = 5;
-  optional string connector_response_reference_id = 6;
-  optional bool incremental_authorization_allowed = 7;
-  PaymentStatus status = 8;
-  optional string error_code = 9;
-  optional string error_message = 10;
-  optional string raw_connector_response = 11;
-}
-
-message PaymentsSyncRequest {
-  string resource_id = 1;
-  optional string connector_request_reference_id = 2;
-  optional bool all_keys_required = 3;
-}
-
-message PaymentsSyncResponse {
-  ResponseId resource_id = 1;
-  PaymentStatus status = 2;
-  optional MandateReference mandate_reference = 3;
-  optional string network_txn_id = 4;
-  optional string connector_response_reference_id = 5;
-  optional string error_code = 9;
-  optional string error_message = 10;
-  optional string raw_connector_response = 11;
-}
-
-message RefundsSyncRequest {
-  string connector_refund_id = 2;
-  string connector_transaction_id = 1;
-  optional string refund_reason = 3;
-  optional bool all_keys_required = 4;
-}
-
-message RefundsSyncResponse {
-  optional string connector_refund_id = 1;
-  RefundStatus status = 2;
-  optional string connector_response_reference_id = 5;
-  optional string error_code = 9;
-  optional string error_message = 10;
-  optional string raw_connector_response = 11;
-}
-
-message PaymentsVoidRequest {
-  string connector_request_reference_id = 2;
-  optional string cancellation_reason = 1;
-  optional bool all_keys_required = 3;
-}
-
-message PaymentsVoidResponse {
-  ResponseId resource_id = 1;
-  optional string connector_response_reference_id = 3;
-  PaymentStatus status = 8;
-  optional string error_code = 4;
-  optional string error_message = 5;
-  optional string raw_connector_response = 11;
-}
-
-message PaymentsCaptureRequest {
-  string connector_transaction_id = 1;
-  int64 amount_to_capture = 2;
-  Currency currency = 15;
-  optional MultipleCaptureRequestData multiple_capture_data = 21;
-  optional bytes connector_meta_data = 3;
-  optional bool all_keys_required = 4;
-}
-
-message PaymentsCaptureResponse {
-  ResponseId resource_id = 1;
-  optional string connector_response_reference_id = 2;
-  PaymentStatus status = 8;
-  optional string error_code = 3;
-  optional string error_message = 4;
-  optional string raw_connector_response = 5;
-}
-
-message SetupMandateRequest {
-  Currency currency = 15;
-  PaymentMethod payment_method = 2;
-  PaymentMethodData payment_method_data = 14;
-  optional string connector_customer = 1;
-  PaymentAddress address = 3;
-  AuthenticationType auth_type = 4;
-  optional bytes connector_meta_data = 5;
-  optional AccessToken access_token = 6;
-  optional string session_token = 7;
-  optional PaymentMethodToken payment_method_token = 8;
-  string connector_request_reference_id = 9;
-  optional int64 order_tax_amount = 11;
-  optional string email = 12;
-  optional string customer_name = 13;
-  optional CaptureMethod capture_method = 16;
-  optional string return_url = 17;
-  optional string webhook_url = 18;
-  optional string complete_authorize_url = 19;
-  optional FutureUsage setup_future_usage = 20;
-  optional bool off_session = 21;
-  optional CustomerAcceptance customer_acceptance = 22;
-  optional BrowserInformation browser_info = 23;
-  optional string order_category = 24;
-  bool enrolled_for_3ds = 25;
-  optional PaymentExperience payment_experience = 26;
-  optional PaymentMethodType payment_method_type = 27;
-  bool request_incremental_authorization = 28;
-  optional AuthenticationData authentication_data = 29;
-  optional bool request_extended_authorization = 30;
-  int64 minor_amount = 31;
-  optional string merchant_order_reference_id = 32;
-  optional int64 shipping_cost = 33;
-}
-
-message SetupMandateResponse {
-  ResponseId resource_id = 1;
-  MandateReference mandate_reference = 4;
-  PaymentStatus status = 8;
-  optional RedirectForm redirection_data = 2;
-  optional string network_txn_id = 5;
-  optional string connector_response_reference_id = 6;
-  optional bool incremental_authorization_allowed = 7;
-  optional string error_code = 9;
-  optional string error_message = 10;
-  optional string raw_connector_response = 11;
-}
-
-message RefundsRequest {
-  string refund_id = 1;
-  string connector_transaction_id = 2;
-  optional string connector_refund_id = 3;
-  Currency currency = 15;
-  int64 payment_amount = 4;
-  optional string reason = 5;
-  optional string webhook_url = 6;
-  int64 refund_amount = 7;
-  optional bytes connector_metadata = 8;
-  optional bytes refund_connector_metadata = 9;
-  optional BrowserInformation browser_info = 23;
-  int64 minor_payment_amount = 10;
-  int64 minor_refund_amount = 11;
-  optional string merchant_account_id = 12;
-  optional CaptureMethod capture_method = 16;
-  optional bool all_keys_required = 17;
-}
-
-message RefundsResponse {
-  optional string connector_refund_id = 1;
-  RefundStatus refund_status = 36;
-  optional string error_code = 2;
-  optional string error_message = 3;
-  optional string raw_connector_response = 4;
-}
-
-message IncomingWebhookRequest {
-  RequestDetails request_details = 2;
-  optional ConnectorWebhookSecrets webhook_secrets = 3;
-}
-
-message IncomingWebhookResponse {
-  EventType event_type = 1;
-  WebhookResponseContent content = 2;
-  bool source_verified = 3;
-}
-
-// Also add alias for AttemptStatus to PaymentStatus for backward compatibility
-enum AttemptStatus {
-  ATTEMPT_STATUS_STARTED = 0;
-  ATTEMPT_STATUS_AUTHENTICATION_FAILED = 1;
-  ATTEMPT_STATUS_ROUTER_DECLINED = 2;
-  ATTEMPT_STATUS_AUTHENTICATION_PENDING = 3;
-  ATTEMPT_STATUS_AUTHENTICATION_SUCCESSFUL = 4;
-  ATTEMPT_STATUS_AUTHORIZED = 5;
-  ATTEMPT_STATUS_AUTHORIZATION_FAILED = 6;
-  ATTEMPT_STATUS_CHARGED = 7;
-  ATTEMPT_STATUS_AUTHORIZING = 8;
-  ATTEMPT_STATUS_COD_INITIATED = 9;
-  ATTEMPT_STATUS_VOIDED = 10;
-  ATTEMPT_STATUS_VOID_INITIATED = 11;
-  ATTEMPT_STATUS_CAPTURE_INITIATED = 12;
-  ATTEMPT_STATUS_CAPTURE_FAILED = 13;
-  ATTEMPT_STATUS_VOID_FAILED = 14;
-  ATTEMPT_STATUS_AUTO_REFUNDED = 15;
-  ATTEMPT_STATUS_PARTIAL_CHARGED = 16;
-  ATTEMPT_STATUS_PARTIAL_CHARGED_AND_CHARGEABLE = 17;
-  ATTEMPT_STATUS_UNRESOLVED = 18;
-  ATTEMPT_STATUS_PENDING = 19;
-  ATTEMPT_STATUS_FAILURE = 20;
-  ATTEMPT_STATUS_PAYMENT_METHOD_AWAITED = 21;
-  ATTEMPT_STATUS_CONFIRMATION_AWAITED = 22;
-  ATTEMPT_STATUS_DEVICE_DATA_COLLECTION_PENDING = 23;
-}
-
-// Defend dispute messages from main branch
-message DisputeDefendRequest {
-  string defense_reason_code = 1;
-  string dispute_id = 3;
-  optional bool all_keys_required = 34; // Indicates if all credential keys are required for defense
-}
-
-message DisputeDefendResponse {
-  DisputeStatus dispute_status = 1;
-  string dispute_id = 2;
-  optional string error_code = 3;
-  optional string error_message = 4;
-  optional string raw_connector_response = 11;
-}
-
-// Submit evidence request from main branch with detailed fields
-message SubmitEvidenceRequest {
-  optional string dispute_id = 1;
-  string connector_dispute_id = 2;
-  optional string access_activity_log = 3;
-  optional string billing_address = 4;
-  optional bytes cancellation_policy = 5;
-  optional string cancellation_policy_file_type = 6;
-  optional string cancellation_policy_provider_file_id = 7;
-  optional string cancellation_policy_disclosure = 8;
-  optional string cancellation_rebuttal = 9;
-  optional bytes customer_communication = 10;
-  optional string customer_communication_file_type = 11;
-  optional string customer_communication_provider_file_id = 12;
-  optional string customer_email_address = 13;
-  optional string customer_name = 14;
-  optional string customer_purchase_ip = 15;
-  optional bytes customer_signature = 16;
-  optional string customer_signature_file_type = 17;
-  optional string customer_signature_provider_file_id = 18;
-  optional string product_description = 19;
-  optional bytes receipt = 20;
-  optional string receipt_file_type = 21;
-  optional string receipt_provider_file_id = 22;
-  optional bytes refund_policy = 23;
-  optional string refund_policy_file_type = 24;
-  optional string refund_policy_provider_file_id = 25;
-  optional string refund_policy_disclosure = 26;
-  optional string refund_refusal_explanation = 27;
-  optional string service_date = 28;
-  optional bytes service_documentation = 29;
-  optional string service_documentation_file_type = 30;
-  optional string service_documentation_provider_file_id = 31;
-  optional string shipping_address = 32;
-  optional string shipping_carrier = 33;
-  optional string shipping_date = 50;
-  optional bytes shipping_documentation = 51;
-  optional string shipping_documentation_file_type = 52;
-  optional string shipping_documentation_provider_file_id = 37;
-  optional string shipping_tracking_number = 38;
-  optional bytes invoice_showing_distinct_transactions = 39;
-  optional string invoice_showing_distinct_transactions_file_type = 40;
-  optional string invoice_showing_distinct_transactions_provider_file_id = 41;
-  optional bytes recurring_transaction_agreement = 42;
-  optional string recurring_transaction_agreement_file_type = 43;
-  optional string recurring_transaction_agreement_provider_file_id = 44;
-  optional bytes uncategorized_file = 45;
-  optional string uncategorized_file_type = 46;
-  optional string uncategorized_file_provider_file_id = 47;
-  optional string uncategorized_text = 48;
-}
+syntax = "proto3"; 
+ 
+package ucs.v2; 
+ 
+import "google/api/annotations.proto"; 
+import "google/protobuf/empty.proto"; 
+import "google/protobuf/timestamp.proto"; 
+import "payment_methods.proto"; 
+ 
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto"; 
+ 
+// ============================================================================ 
+// COMMON MESSAGES 
+// ============================================================================ 
+ 
+// HTTP methods. 
+enum HttpMethod { 
+  HTTP_METHOD_UNSPECIFIED = 0; // Default, unspecified HTTP method. 
+  GET = 1;                     // HTTP GET method. 
+  POST = 2;                    // HTTP POST method. 
+  PUT = 3;                     // HTTP PUT method. 
+  DELETE = 4;                  // HTTP DELETE method. 
+} 
+ 
+// Status of a payment attempt. 
+enum PaymentStatus { 
+  ATTEMPT_STATUS_UNSPECIFIED = 0; // Default value 
+ 
+  // Initial states 
+  STARTED = 1; 
+  PAYMENT_METHOD_AWAITED = 22;    // Waiting for customer to provide payment method 
+  DEVICE_DATA_COLLECTION_PENDING = 24; // Waiting for device data collection 
+  CONFIRMATION_AWAITED = 23;      // Waiting for customer confirmation 
+ 
+  // Authentication flow 
+  AUTHENTICATION_PENDING = 4; 
+  AUTHENTICATION_SUCCESSFUL = 5; 
+  AUTHENTICATION_FAILED = 2; 
+ 
+  // Authorization flow 
+  AUTHORIZING = 9; 
+  AUTHORIZED = 6; 
+  AUTHORIZATION_FAILED = 7; 
+ 
+  // Charging flow 
+  CHARGED = 8; 
+  PARTIAL_CHARGED = 17; 
+  PARTIAL_CHARGED_AND_CHARGEABLE = 18; // Partially charged, remaining amount can be captured 
+  AUTO_REFUNDED = 16; 
+ 
+  // Capture flow 
+  CAPTURE_INITIATED = 13; 
+  CAPTURE_FAILED = 14; 
+ 
+  // Void flow 
+  VOID_INITIATED = 12; 
+  VOIDED = 11; 
+  VOID_FAILED = 15; 
+ 
+  // Other payment flows 
+  COD_INITIATED = 10; // Cash on Delivery initiated 
+ 
+  // Terminal/fallback states 
+  ROUTER_DECLINED = 3; 
+  PENDING = 20;       // General pending state 
+  FAILURE = 21;       // General failure state 
+  UNRESOLVED = 19;    // Status could not be determined 
+} 
+ 
+// Status of a refund. 
+enum RefundStatus { 
+  REFUND_STATUS_UNSPECIFIED = 0; // Default value 
+  REFUND_FAILURE = 1; 
+  REFUND_MANUAL_REVIEW = 2;      // Refund requires manual review 
+  REFUND_PENDING = 3; 
+  REFUND_SUCCESS = 4; 
+  REFUND_TRANSACTION_FAILURE = 5; // Failure at the transaction level for the refund 
+} 
+ 
+// Status of a dispute. 
+enum DisputeStatus { 
+  DISPUTE_STATUS_UNSPECIFIED = 0; // Default value 
+  DISPUTE_OPENED = 1; 
+  DISPUTE_EXPIRED = 2; 
+  DISPUTE_ACCEPTED = 3; 
+  DISPUTE_CANCELLED = 4; 
+  DISPUTE_CHALLENGED = 5;         // Dispute is being challenged with evidence 
+  DISPUTE_WON = 6; 
+  DISPUTE_LOST = 7; 
+} 
+ 
+// Method for capturing a payment. 
+enum CaptureMethod { 
+  CAPTURE_METHOD_UNSPECIFIED = 0; // Default value 
+  AUTOMATIC = 1;                  // Capture is done automatically after authorization. 
+  MANUAL = 2;                     // Capture must be triggered manually. 
+  MANUAL_MULTIPLE = 3;            // Multiple manual captures are possible. 
+  SCHEDULED = 4;                  // Capture is scheduled for a later time. 
+  SEQUENTIAL_AUTOMATIC = 5;       // Sequential automatic captures. 
+} 
+ 
+// Indicates how a payment method might be used in the future. 
+enum FutureUsage { 
+  FUTURE_USAGE_UNSPECIFIED = 0;   // Default value 
+  OFF_SESSION = 1;                // For merchant-initiated transactions (e.g., subscriptions). 
+  ON_SESSION = 2;                 // For customer-initiated transactions. 
+} 
+ 
+// Type of acceptance. 
+enum AcceptanceType { 
+  ACCEPTANCE_TYPE_UNSPECIFIED = 0; // Default value 
+  ONLINE = 1;                      // Acceptance was given online. 
+  OFFLINE = 2;                     // Acceptance was given offline. 
+} 
+ 
+// Type of authentication used for a payment. 
+enum AuthenticationType { 
+  AUTHENTICATION_TYPE_UNSPECIFIED = 0; // Default value 
+  THREE_DS = 1;                        // 3D Secure authentication. 
+  NO_THREE_DS = 2;                     // No 3D Secure, or 3DS explicitly bypassed. 
+} 
+ 
+// Preferred payment experience for the customer. 
+enum PaymentExperience { 
+  PAYMENT_EXPERIENCE_UNSPECIFIED = 0; // Default value 
+  REDIRECT_TO_URL = 1;                // Redirect customer to a URL. 
+  INVOKE_SDK_CLIENT = 2;              // Invoke a client-side SDK. 
+  DISPLAY_QR_CODE = 3;                // Display a QR code. 
+  ONE_CLICK = 4;                      // One-click payment experience. 
+  LINK_WALLET = 5;                    // Link a digital wallet. 
+  INVOKE_PAYMENT_APP = 6;             // Invoke a payment application. 
+  DISPLAY_WAIT_SCREEN = 7;            // Display a waiting screen. 
+  COLLECT_OTP = 8;                    // Collect an OTP from the customer. 
+} 
+ 
+// Type of event that a webhook can represent. 
+enum EventType { 
+  EVENT_TYPE_UNSPECIFIED = 0;         // Default, unspecified event type. 
+  PAYMENT = 1;                        // Event related to a payment. 
+  REFUND = 2;                         // Event related to a refund. 
+  DISPUTE = 3;                        // Event related to a dispute. 
+} 
+ 
+// Enum for currency codes (ISO 4217). 
+enum Currency { 
+  CURRENCY_UNSPECIFIED = 0; // Default value 
+  AED = 1; 
+  AFN = 2; 
+  ALL = 3; 
+  AMD = 4; 
+  ANG = 5; 
+  AOA = 6; 
+  ARS = 7; 
+  AUD = 8; 
+  AWG = 9; 
+  AZN = 10; 
+  BAM = 11; 
+  BBD = 12; 
+  BDT = 13; 
+  BGN = 14; 
+  BHD = 15; 
+  BIF = 16; 
+  BMD = 17; 
+  BND = 18; 
+  BOB = 19; 
+  BRL = 20; 
+  BSD = 21; 
+  BTN = 22; 
+  BWP = 23; 
+  BYN = 24; 
+  BZD = 25; 
+  CAD = 26; 
+  CDF = 27; 
+  CHF = 28; 
+  CLF = 29; 
+  CLP = 30; 
+  CNY = 31; 
+  COP = 32; 
+  CRC = 33; 
+  CUC = 34; 
+  CUP = 35; 
+  CVE = 36; 
+  CZK = 37; 
+  DJF = 38; 
+  DKK = 39; 
+  DOP = 40; 
+  DZD = 41; 
+  EGP = 42; 
+  ERN = 43; 
+  ETB = 44; 
+  EUR = 45; 
+  FJD = 46; 
+  FKP = 47; 
+  GBP = 48; 
+  GEL = 49; 
+  GHS = 50; 
+  GIP = 51; 
+  GMD = 52; 
+  GNF = 53; 
+  GTQ = 54; 
+  GYD = 55; 
+  HKD = 56; 
+  HNL = 57; 
+  HRK = 58; 
+  HTG = 59; 
+  HUF = 60; 
+  IDR = 61; 
+  ILS = 62; 
+  INR = 63; 
+  IQD = 64; 
+  IRR = 65; 
+  ISK = 66; 
+  JMD = 67; 
+  JOD = 68; 
+  JPY = 69; 
+  KES = 70; 
+  KGS = 71; 
+  KHR = 72; 
+  KMF = 73; 
+  KPW = 74; 
+  KRW = 75; 
+  KWD = 76; 
+  KYD = 77; 
+  KZT = 78; 
+  LAK = 79; 
+  LBP = 80; 
+  LKR = 81; 
+  LRD = 82; 
+  LSL = 83; 
+  LYD = 84; 
+  MAD = 85; 
+  MDL = 86; 
+  MGA = 87; 
+  MKD = 88; 
+  MMK = 89; 
+  MNT = 90; 
+  MOP = 91; 
+  MRU = 92; 
+  MUR = 93; 
+  MVR = 94; 
+  MWK = 95; 
+  MXN = 96; 
+  MYR = 97; 
+  MZN = 98; 
+  NAD = 99; 
+  NGN = 100; 
+  NIO = 101; 
+  NOK = 102; 
+  NPR = 103; 
+  NZD = 104; 
+  OMR = 105; 
+  PAB = 106; 
+  PEN = 107; 
+  PGK = 108; 
+  PHP = 109; 
+  PKR = 110; 
+  PLN = 111; 
+  PYG = 112; 
+  QAR = 113; 
+  RON = 114; 
+  RSD = 115; 
+  RUB = 116; 
+  RWF = 117; 
+  SAR = 118; 
+  SBD = 119; 
+  SCR = 120; 
+  SDG = 121; 
+  SEK = 122; 
+  SGD = 123; 
+  SHP = 124; 
+  SLE = 125; 
+  SLL = 126; 
+  SOS = 127; 
+  SRD = 128; 
+  SSP = 129; 
+  STD = 130; // Obsolete, use STN 
+  STN = 131; 
+  SVC = 132; 
+  SYP = 133; 
+  SZL = 134; 
+  THB = 135; 
+  TJS = 136; 
+  TMT = 137; 
+  TND = 138; 
+  TOP = 139; 
+  TRY = 140; 
+  TTD = 141; 
+  TWD = 142; 
+  TZS = 143; 
+  UAH = 144; 
+  UGX = 145; 
+  USD = 146; 
+  UYU = 147; 
+  UZS = 148; 
+  VES = 149; 
+  VND = 150; 
+  VUV = 151; 
+  WST = 152; 
+  XAF = 153; 
+  XCD = 154; 
+  XOF = 155; 
+  XPF = 156; 
+  YER = 157; 
+  ZAR = 158; 
+  ZMW = 159; 
+  ZWL = 160; 
+} 
+ 
+// Connector enumeration. 
+enum Connector { 
+  CONNECTOR_UNSPECIFIED = 0; // Default value 
+  ADYENPLATFORM = 1; 
+  ACI = 2; 
+  ADYEN = 3; 
+  AIRWALLEX = 4; 
+  AUTHORIZEDOTNET = 5; 
+  BAMBORA = 6; 
+  BAMBORAAPAC = 7; 
+  BANKOFAMERICA = 8; 
+  BILLWERK = 9; 
+  BITPAY = 10; 
+  BLUESNAP = 11; 
+  BOKU = 12; 
+  BRAINTREE = 13; 
+  CASHTOCODE = 14; 
+  CHARGEBEE = 15; 
+  CHECKOUT = 16; 
+  COINBASE = 17; 
+  COINGATE = 18; 
+  CRYPTOPAY = 19; 
+  CTP_MASTERCARD = 20; 
+  CTP_VISA = 21; 
+  CYBERSOURCE = 22; 
+  DATATRANS = 23; 
+  DEUTSCHEBANK = 24; 
+  DIGITALVIRGO = 25; 
+  DLOCAL = 26; 
+  EBANX = 27; 
+  ELAVON = 28; 
+  FISERV = 29; 
+  FISERVEMEA = 30; 
+  FIUU = 31; 
+  FORTE = 32; 
+  GETNET = 33; 
+  GLOBALPAY = 34; 
+  GLOBEPAY = 35; 
+  GOCARDLESS = 36; 
+  GPAYMENTS = 37; 
+  HIPAY = 38; 
+  HELCIM = 39; 
+  INESPAY = 40; 
+  IATAPAY = 41; 
+  ITAUBANK = 42; 
+  JPMORGAN = 43; 
+  JUSPAYTHREEDSSERVER = 44; 
+  KLARNA = 45; 
+  MIFINITY = 46; 
+  MOLLIE = 47; 
+  MONERIS = 48; 
+  MULTISAFEPAY = 49; 
+  NETCETERA = 50; 
+  NEXINETS = 51; 
+  NEXIXPAY = 52; 
+  NMI = 53; 
+  NOMUPAY = 54; 
+  NOON = 55; 
+  NOVALNET = 56; 
+  NUVEI = 57; 
+  OPENNODE = 58; 
+  PAYBOX = 59; 
+  PAYME = 60; 
+  PAYONE = 61; 
+  PAYPAL = 62; 
+  PAYSTACK = 63; 
+  PAYU = 64; 
+  PLACETOPAY = 65; 
+  POWERTRANZ = 66; 
+  PROPHETPAY = 67; 
+  RAPYD = 68; 
+  RAZORPAY = 69; 
+  RECURLY = 70; 
+  REDSYS = 71; 
+  SHIFT4 = 72; 
+  SQUARE = 73; 
+  STAX = 74; 
+  STRIPE = 75; 
+  TAXJAR = 76; 
+  THREEDSECUREIO = 77; 
+  TRUSTPAY = 78; 
+  TSYS = 79; 
+  VOLT = 80; 
+  WELLSFARGO = 81; 
+  WISE = 82; 
+  WORLDLINE = 83; 
+  WORLDPAY = 84; 
+  SIGNIFYD = 85; 
+  PLAID = 86; 
+  RISKIFIED = 87; 
+  XENDIT = 88; 
+  ZEN = 89; 
+  ZSL = 90; 
+} 
+ 
+// Payment method types. 
+enum PaymentMethodType { 
+  PAYMENT_METHOD_TYPE_UNSPECIFIED = 0; // Default value 
+  ACH = 1; 
+  AFFIRM = 2; 
+  AFTERPAY_CLEARPAY = 3; 
+  ALFAMART = 4; 
+  ALI_PAY = 5; 
+  ALI_PAY_HK = 6; 
+  ALMA = 7; 
+  AMAZON_PAY = 8; 
+  APPLE_PAY = 9; 
+  ATOME = 10; 
+  BACS = 11; 
+  BANCONTACT_CARD = 12; 
+  BECS = 13; 
+  BENEFIT = 14; 
+  BIZUM = 15; 
+  BLIK = 16; 
+  BOLETO = 17; 
+  BCA_BANK_TRANSFER = 18; 
+  BNI_VA = 19; 
+  BRI_VA = 20; 
+  CARD_REDIRECT = 21; 
+  CIMB_VA = 22; 
+  CLASSIC_REWARD = 23; 
+  CREDIT = 24; 
+  CRYPTO_CURRENCY = 25; 
+  CASHAPP = 26; 
+  DANA = 27; 
+  DANAMON_VA = 28; 
+  DEBIT = 29; 
+  DUIT_NOW = 30; 
+  EFECTY = 31; 
+  EFT = 32; 
+  EPS = 33; 
+  FPS = 34; 
+  EVOUCHER = 35; 
+  GIROPAY = 36; 
+  GIVEX = 37; 
+  GOOGLE_PAY = 38; 
+  GO_PAY = 39; 
+  GCASH = 40; 
+  IDEAL = 41; 
+  INTERAC = 42; 
+  INDOMARET = 43; 
+  KAKAO_PAY = 44; 
+  LOCAL_BANK_REDIRECT = 45; 
+  MANDIRI_VA = 46; 
+  KNET = 47; 
+  MB_WAY = 48; 
+  MOBILE_PAY = 49; 
+  MOMO = 50; 
+  MOMO_ATM = 51; 
+  MULTIBANCO = 52; 
+  ONLINE_BANKING_THAILAND = 53; 
+  ONLINE_BANKING_CZECH_REPUBLIC = 54; 
+  ONLINE_BANKING_FINLAND = 55; 
+  ONLINE_BANKING_FPX = 56; 
+  ONLINE_BANKING_POLAND = 57; 
+  ONLINE_BANKING_SLOVAKIA = 58; 
+  OXXO = 59; 
+  PAGO_EFECTIVO = 60; 
+  PERMATA_BANK_TRANSFER = 61; 
+  OPEN_BANKING_UK = 62; 
+  PAY_BRIGHT = 63; 
+  PAZE = 64; 
+  PIX = 65; 
+  PAY_SAFE_CARD = 66; 
+  PRZELEWY24 = 67; 
+  PROMPT_PAY = 68; 
+  PSE = 69; 
+  RED_COMPRA = 70; 
+  RED_PAGOS = 71; 
+  SAMSUNG_PAY = 72; 
+  SEPA = 73; 
+  SEPA_BANK_TRANSFER = 74; 
+  SOFORT = 75; 
+  SWISH = 76; 
+  TOUCH_N_GO = 77; 
+  TRUSTLY = 78; 
+  TWINT = 79; 
+  UPI_COLLECT = 80; 
+  UPI_INTENT = 81; 
+  VIPPS = 82; 
+  VIET_QR = 83; 
+  VENMO = 84; 
+  WALLEY = 85; 
+  WE_CHAT_PAY = 86; 
+  SEVEN_ELEVEN = 87; 
+  LAWSON = 88; 
+  MINI_STOP = 89; 
+  FAMILY_MART = 90; 
+  SEICOMART = 91; 
+  PAY_EASY = 92; 
+  LOCAL_BANK_TRANSFER = 93; 
+  OPEN_BANKING_PIS = 94; 
+  DIRECT_CARRIER_BILLING = 95; 
+  INSTANT_BANK_TRANSFER = 96; 
+} 
+ 
+// Payment method enumeration. 
+enum PaymentMethod { 
+  PAYMENT_METHOD_UNSPECIFIED = 0; // Default value 
+  CARD = 1; 
+  WALLET = 2; 
+} 
+ 
+// Card network enumeration. 
+enum CardNetwork { 
+  CARD_NETWORK_UNSPECIFIED = 0; // Default value 
+  VISA = 1; 
+  MASTERCARD = 2; 
+  AMERICAN_EXPRESS = 3; 
+  JCB = 4; 
+  DINERS_CLUB = 5; 
+  DISCOVER = 6; 
+  CARTES_BANCAIRES = 7; 
+  UNION_PAY = 8; 
+  RU_PAY = 9; 
+  MAESTRO = 10; 
+} 
+ 
+// Dispute stage enumeration. 
+enum DisputeStage { 
+  DISPUTE_STAGE_UNSPECIFIED = 0; // Default value 
+  PRE_DISPUTE = 1; 
+  ACTIVE_DISPUTE = 2; 
+  PRE_ARBITRATION = 3; 
+} 
+ 
+// Country Alpha-2 code enumeration. 
+enum CountryAlpha2 { 
+  COUNTRY_ALPHA2_UNSPECIFIED = 0; // Default value must be first 
+  US = 1; 
+  AF = 2; 
+  AX = 3; 
+  AL = 4; 
+  DZ = 5; 
+  AS = 6; 
+  AD = 7; 
+  AO = 8; 
+  AI = 9; 
+  AQ = 10; 
+  AG = 11; 
+  AR = 12; 
+  AM = 13; 
+  AW = 14; 
+  AU = 15; 
+  AT = 16; 
+  AZ = 17; 
+  BS = 18; 
+  BH = 19; 
+  BD = 20; 
+  BB = 21; 
+  BY = 22; 
+  BE = 23; 
+  BZ = 24; 
+  BJ = 25; 
+  BM = 26; 
+  BT = 27; 
+  BO = 28; 
+  BQ = 29; 
+  BA = 30; 
+  BW = 31; 
+  BV = 32; 
+  BR = 33; 
+  IO = 34; 
+  BN = 35; 
+  BG = 36; 
+  BF = 37; 
+  BI = 38; 
+  KH = 39; 
+  CM = 40; 
+  CA = 41; 
+  CV = 42; 
+  KY = 43; 
+  CF = 44; 
+  TD = 45; 
+  CL = 46; 
+  CN = 47; 
+  CX = 48; 
+  CC = 49; 
+  CO = 50; 
+  KM = 51; 
+  CG = 52; 
+  CD = 53; 
+  CK = 54; 
+  CR = 55; 
+  CI = 56; 
+  HR = 57; 
+  CU = 58; 
+  CW = 59; 
+  CY = 60; 
+  CZ = 61; 
+  DK = 62; 
+  DJ = 63; 
+  DM = 64; 
+  DO = 65; 
+  EC = 66; 
+  EG = 67; 
+  SV = 68; 
+  GQ = 69; 
+  ER = 70; 
+  EE = 71; 
+  ET = 72; 
+  FK = 73; 
+  FO = 74; 
+  FJ = 75; 
+  FI = 76; 
+  FR = 77; 
+  GF = 78; 
+  PF = 79; 
+  TF = 80; 
+  GA = 81; 
+  GM = 82; 
+  GE = 83; 
+  DE = 84; 
+  GH = 85; 
+  GI = 86; 
+  GR = 87; 
+  GL = 88; 
+  GD = 89; 
+  GP = 90; 
+  GU = 91; 
+  GT = 92; 
+  GG = 93; 
+  GN = 94; 
+  GW = 95; 
+  GY = 96; 
+  HT = 97; 
+  HM = 98; 
+  VA = 99; 
+  HN = 100; 
+  HK = 101; 
+  HU = 102; 
+  IS = 103; 
+  IN = 104; 
+  ID = 105; 
+  IR = 106; 
+  IQ = 107; 
+  IE = 108; 
+  IM = 109; 
+  IL = 110; 
+  IT = 111; 
+  JM = 112; 
+  JP = 113; 
+  JE = 114; 
+  JO = 115; 
+  KZ = 116; 
+  KE = 117; 
+  KI = 118; 
+  KP = 119; 
+  KR = 120; 
+  KW = 121; 
+  KG = 122; 
+  LA = 123; 
+  LV = 124; 
+  LB = 125; 
+  LS = 126; 
+  LR = 127; 
+  LY = 128; 
+  LI = 129; 
+  LT = 130; 
+  LU = 131; 
+  MO = 132; 
+  MK = 133; 
+  MG = 134; 
+  MW = 135; 
+  MY = 136; 
+  MV = 137; 
+  ML = 138; 
+  MT = 139; 
+  MH = 140; 
+  MQ = 141; 
+  MR = 142; 
+  MU = 143; 
+  YT = 144; 
+  MX = 145; 
+  FM = 146; 
+  MD = 147; 
+  MC = 148; 
+  MN = 149; 
+  ME = 150; 
+  MS = 151; 
+  MA = 152; 
+  MZ = 153; 
+  MM = 154; 
+  NA = 155; 
+  NR = 156; 
+  NP = 157; 
+  NL = 158; 
+  NC = 159; 
+  NZ = 160; 
+  NI = 161; 
+  NE = 162; 
+  NG = 163; 
+  NU = 164; 
+  NF = 165; 
+  MP = 166; 
+  NO = 167; 
+  OM = 168; 
+  PK = 169; 
+  PW = 170; 
+  PS = 171; 
+  PA = 172; 
+  PG = 173; 
+  PY = 174; 
+  PE = 175; 
+  PH = 176; 
+  PN = 177; 
+  PL = 178; 
+  PT = 179; 
+  PR = 180; 
+  QA = 181; 
+  RE = 182; 
+  RO = 183; 
+  RU = 184; 
+  RW = 185; 
+  BL = 186; 
+  SH = 187; 
+  KN = 188; 
+  LC = 189; 
+  MF = 190; 
+  PM = 191; 
+  VC = 192; 
+  WS = 193; 
+  SM = 194; 
+  ST = 195; 
+  SA = 196; 
+  SN = 197; 
+  RS = 198; 
+  SC = 199; 
+  SL = 200; 
+  SG = 201; 
+  SX = 202; 
+  SK = 203; 
+  SI = 204; 
+  SB = 205; 
+  SO = 206; 
+  ZA = 207; 
+  GS = 208; 
+  SS = 209; 
+  ES = 210; 
+  LK = 211; 
+  SD = 212; 
+  SR = 213; 
+  SJ = 214; 
+  SZ = 215; 
+  SE = 216; 
+  CH = 217; 
+  SY = 218; 
+  TW = 219; 
+  TJ = 220; 
+  TZ = 221; 
+  TH = 222; 
+  TL = 223; 
+  TG = 224; 
+  TK = 225; 
+  TO = 226; 
+  TT = 227; 
+  TN = 228; 
+  TR = 229; 
+  TM = 230; 
+  TC = 231; 
+  TV = 232; 
+  UG = 233; 
+  UA = 234; 
+  AE = 235; 
+  GB = 236; 
+  UM = 237; 
+  UY = 238; 
+  UZ = 239; 
+  VU = 240; 
+  VE = 241; 
+  VN = 242; 
+  VG = 243; 
+  VI = 244; 
+  WF = 245; 
+  EH = 246; 
+  YE = 247; 
+  ZM = 248; 
+  ZW = 249; 
+} 
+ 
+// Represents a physical address with contact information. 
+message Address { 
+  // Personal Information 
+  optional string first_name = 1 [(validate.rules).string = {min_len: 1}]; 
+  optional string last_name = 2 [(validate.rules).string = {min_len: 1}]; 
+   
+  // Address Details 
+  optional string line1 = 3 [(validate.rules).string = {min_len: 1}]; 
+  optional string line2 = 4; 
+  optional string line3 = 5; 
+  optional string city = 6 [(validate.rules).string = {min_len: 1}]; 
+  optional string state = 7; 
+  optional string zip_code = 8 [(validate.rules).string = {min_len: 1}]; 
+  optional CountryAlpha2 country_alpha2_code = 9; 
+ 
+  // Contact Information 
+  optional string email = 10 [(validate.rules).string.email = true]; 
+  optional string phone_number = 11 [(validate.rules).string = {min_len: 5}]; 
+  optional string phone_country_code = 12 [(validate.rules).string = {min_len: 1, max_len: 4}]; 
+} 
+ 
+// Access token details. 
+message AccessToken { 
+  // The token string. 
+  string token = 1 [(validate.rules).string = {min_len: 1}]; 
+   
+  // Expiration timestamp of the token (seconds since epoch). 
+  int64 expires_at_seconds = 2 [(validate.rules).int64.gt = 0]; 
+} 
+ 
+// Additional authentication data, typically from 3DS. 
+message AuthenticationData { 
+  // Electronic Commerce Indicator (ECI) from 3DS. 
+  optional string eci = 1; 
+   
+  // Cardholder Authentication Verification Value (CAVV). 
+  string cavv = 2 [(validate.rules).string = {min_len: 1}]; 
+   
+  // 3DS Server Transaction ID. 
+  optional string threeds_server_transaction_id = 3; 
+   
+  // 3DS Message Version (e.g., "2.1.0", "2.2.0"). 
+  optional string message_version = 4; 
+   
+  // Directory Server Transaction ID (DS Trans ID). 
+  optional string ds_transaction_id = 5; 
+} 
+ 
+// Details of customer acceptance for mandates or terms. 
+message CustomerAcceptance { 
+  // Type of acceptance (e.g., online, offline). 
+  AcceptanceType acceptance_type = 1; 
+   
+  // Timestamp of when the acceptance was given. 
+  google.protobuf.Timestamp accepted_at = 2; 
+   
+  // Details if the acceptance was an online mandate. 
+  optional OnlineMandate online_mandate_details = 3; 
+} 
+ 
+// Details for an online mandate acceptance. 
+message OnlineMandate { 
+  // IP address from which the mandate was accepted. 
+  optional string ip_address = 1 [(validate.rules).string.ip = true]; 
+   
+  // User agent string of the browser used for mandate acceptance. 
+  string user_agent = 2 [(validate.rules).string = {min_len: 1}]; 
+} 
+ 
+// Information about the customer's browser. 
+message BrowserInformation { 
+  // Display Information 
+  optional uint32 color_depth = 1; 
+  optional uint32 screen_height = 5 [(validate.rules).uint32 = {gt: 0, lte: 10000}]; 
+  optional uint32 screen_width = 6 [(validate.rules).uint32 = {gt: 0, lte: 10000}]; 
+   
+  // Browser Settings 
+  optional bool java_enabled = 2; 
+  optional bool java_script_enabled = 3; 
+  optional string language = 4; 
+  optional int32 time_zone_offset_minutes = 7; 
+   
+  // Browser Headers 
+  optional string accept_header = 9; 
+  optional string user_agent = 10; 
+  optional string accept_language = 14; 
+   
+  // Device Information 
+  optional string ip_address = 8 [(validate.rules).string.ip = true]; 
+  optional string os_type = 11; 
+  optional string os_version = 12; 
+  optional string device_model = 13; 
+} 
+ 
+// Represents an identifier, which can be one of several types. 
+message Identifier { 
+  oneof id_type { 
+    // Connector's transaction ID. 
+    string id = 1 [(validate.rules).string = {min_len: 1}]; 
+     
+    // Encoded data representing the ID or related information. 
+    string encoded_data = 2; 
+     
+    // Indicates that no specific ID is returned or applicable. 
+    google.protobuf.Empty no_response_id_marker = 3; 
+  } 
+} 
+ 
+// Response ID from main branch (needed for compatibility) 
+message ResponseId { 
+  oneof id { 
+    string connector_transaction_id = 1; 
+    string encoded_data = 2; 
+    bool no_response_id = 3; // Using bool as a presence indicator for NoResponseId 
+  } 
+} 
+ 
+// Reference to a payment mandate. 
+message MandateReference { 
+  // Connector's unique identifier for the mandate. 
+  optional string mandate_id = 1 [(validate.rules).string = {min_len: 1}]; 
+} 
+ 
+// Container for various address types related to a payment. 
+message PaymentAddress { 
+  // Shipping address. 
+  Address shipping_address = 1; 
+   
+  // Customer Billing address. 
+  Address billing_address = 2; 
+} 
+ 
+// Data for a redirection, can be either form data or raw HTML. 
+message RedirectForm { 
+  oneof form_type { 
+    // Data for constructing an HTML form for redirection. 
+    FormData form = 1; 
+     
+    // Raw HTML data for redirection. 
+    HtmlData html = 2; 
+  } 
+} 
+ 
+// Represents data for an HTML form to be submitted. 
+message FormData { 
+  // The endpoint URL where the form should be submitted. 
+  string endpoint = 1 [(validate.rules).string.uri = true]; 
+   
+  // HTTP method to be used for form submission (e.g., POST). 
+  HttpMethod method = 2; 
+   
+  // Key-value pairs representing the form fields. 
+  map<string, string> form_fields = 3; 
+} 
+ 
+// Represents raw HTML data. 
+message HtmlData { 
+  // The HTML content as a string. 
+  string html_data = 1 [(validate.rules).string = {min_len: 1}]; 
+} 
+ 
+// Details of an HTTP request, typically for incoming webhooks. 
+message RequestDetails { 
+  // HTTP method of the request (e.g., GET, POST). 
+  HttpMethod method = 1; 
+   
+  // URI of the request. 
+  optional string uri = 2; 
+   
+  // Headers of the HTTP request. 
+  map<string, string> headers = 3; 
+   
+  // Body of the HTTP request. 
+  bytes body = 4; 
+   
+  // Query parameters of the request. 
+  optional string query_params = 5; 
+} 
+ 
+// Secrets used for verifying connector webhooks. 
+message ConnectorWebhookSecrets { 
+  // Primary secret for webhook verification. 
+  string secret = 1 [(validate.rules).string = {min_len: 1}]; 
+   
+  // Additional secret, if required by the connector. 
+  optional string additional_secret = 2; 
+} 
+ 
+// Content of a webhook response, can be one of several types. 
+message WebhookResponseContent { 
+  oneof content { 
+    // Content if the webhook is for a payment synchronization. 
+    PaymentServiceGetResponse payments_response = 1; 
+     
+    // Content if the webhook is for a refund synchronization. 
+    RefundServiceGetResponse refunds_response = 2; 
+     
+    // Content if the webhook is for a dispute synchronization. 
+    DisputesSyncResponse disputes_response = 3; 
+  } 
+} 
+ 
+// Data for a multiple capture request. 
+message MultipleCaptureRequestData { 
+  // Sequence number for this capture in a series of multiple captures. 
+  int64 capture_sequence = 1 [(validate.rules).int64.gt = 0]; 
+   
+  // Reference for this specific capture. 
+  string capture_reference = 2 [(validate.rules).string = {min_len: 1}]; 
+} 
+ 
+// Represents a single piece of evidence for a dispute. 
+message EvidenceDocument { 
+  // Type of the evidence (e.g., "cancellation_policy", "receipt", "customer_communication"). 
+  string evidence_type = 1 [(validate.rules).string = {min_len: 1}]; 
+ 
+  // Content Options 
+  // Content of the document, if it's a file. 
+  optional bytes file_content = 2; 
+   
+  // MIME type of the file (e.g., "application/pdf", "image/png"), if file_content is provided. 
+  optional string file_mime_type = 3; 
+   
+  // Identifier for the file if stored with an external provider. 
+  optional string provider_file_id = 4; 
+ 
+  // Textual content of the evidence, if it's not a file or in addition to a file. 
+  optional string text_content = 5; 
+} 
+ 
+// Payment method data types 
+message PaymentMethodData { 
+  oneof data { 
+    Card card = 1; 
+    WalletData wallet = 2; 
+  } 
+} 
+ 
+message WalletData { 
+  oneof data { 
+    GooglePayWalletData google_pay = 1; 
+    ApplePayWalletData apple_pay = 2; 
+  } 
+} 
+ 
+message GooglePayWalletData { 
+  string type = 1; 
+  string description = 2; 
+  GooglePayPaymentMethodInfo info = 3; 
+  GpayTokenizationData tokenization_data = 4; 
+} 
+ 
+message GooglePayPaymentMethodInfo { 
+  string card_network = 1; 
+  string card_details = 2; 
+} 
+ 
+message GpayTokenizationData { 
+  string type = 1; 
+  string token = 2; 
+} 
+ 
+message ApplePayWalletData { 
+  string payment_data = 1; 
+  ApplePayPaymentMethod payment_method = 2; 
+  string transaction_identifier = 3; 
+} 
+ 
+message ApplePayPaymentMethod { 
+  string display_name = 1; 
+  string network = 2; 
+  string pm_type = 3; 
+} 
+ 
+message Card { 
+  string card_number = 1; 
+  string card_exp_month = 2; 
+  string card_exp_year = 3; 
+  optional string card_holder_name = 4; 
+  string card_cvc = 5; 
+  optional string card_issuer = 6; 
+  optional CardNetwork card_network = 7; 
+  optional string card_type = 8; 
+  optional string card_issuing_country = 9; 
+  optional string bank_code = 10; 
+  optional string nick_name = 11; 
+} 
+ 
+// Payment method token details. 
+message PaymentMethodToken { 
+  string token = 1; 
+} 
+ 
+// ============================================================================ 
+// SERVICE-SPECIFIC MESSAGES 
+// ============================================================================ 
+ 
+// ------------------------- 
+// PaymentService Messages 
+// ------------------------- 
+ 
+// Request message for authorizing a payment. 
+message PaymentServiceAuthorizeRequest { 
+  // Payment Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id 
+   
+  // Amount Information 
+  int64 amount = 2 [(validate.rules).int64.gt = 0]; // The amount for the payment in major currency units 
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code 
+  int64 minor_amount = 4 [(validate.rules).int64.gt = 0]; // The minor amount for the payment (e.g., cents) 
+  optional int64 order_tax_amount = 5; // Tax amount for the order 
+  optional int64 shipping_cost = 6; // Cost of shipping for the order 
+   
+  // Payment Method and Capture Settings 
+  PaymentMethod payment_method = 7; // Payment method to be used 
+  optional CaptureMethod capture_method = 8; // Method for capturing the payment 
+   
+  // Customer Information 
+  optional string email = 9 [(validate.rules).string.email = true]; // Email address of the customer 
+  optional string customer_name = 10 [(validate.rules).string = {min_len: 1}]; // Name of the customer 
+  optional string connector_customer_id = 11; // Customer ID as recognized by the connector 
+   
+  // Address Information 
+  PaymentAddress address = 12; // Billing and shipping address details 
+   
+  // Authentication Details 
+  AuthenticationType auth_type = 13; // Type of authentication to be used 
+  bool enrolled_for_3ds = 14; // Indicates if the customer is enrolled for 3D Secure 
+  optional AuthenticationData authentication_data = 15; // Additional authentication data 
+   
+  // Metadata 
+  map<string, string> connector_metadata = 16; // Additional metadata for the connector 
+   
+  // URLs for Redirection and Webhooks 
+  optional string return_url = 17 [(validate.rules).string.uri = true]; // URL to redirect after payment 
+  optional string webhook_url = 18 [(validate.rules).string.uri = true]; // URL for webhook notifications 
+  optional string complete_authorize_url = 19 [(validate.rules).string.uri = true]; // URL to complete authorization 
+   
+  // Session and Token Information 
+  optional AccessToken access_token = 20; // Access token for secure communication 
+  optional string session_token = 21; // Session token, if applicable 
+   
+  // Order Details 
+  optional string order_category = 22; // Category of the order 
+  optional string merchant_order_reference_id = 23; // Merchant's internal reference ID 
+   
+  // Behavioral Flags and Preferences 
+  optional FutureUsage setup_future_usage = 24; // Indicates future usage intention 
+  optional bool off_session = 25; // Indicates if off-session transaction 
+  bool request_incremental_authorization = 26; // Indicates if incremental authorization is requested 
+  optional bool request_extended_authorization = 27; // Indicates if extended authorization is requested 
+   
+  // Contextual Information 
+  optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance 
+  optional BrowserInformation browser_info = 29; // Information about the customer's browser 
+  optional PaymentExperience payment_experience = 30; // Preferred payment experience 
+} 
+ 
+// Response message for a payment authorization. 
+message PaymentServiceAuthorizeResponse { 
+  // Identification 
+  Identifier transaction_id = 1; // Identifier for the resource created 
+   
+  // Status Information 
+  PaymentStatus status = 2; // Status of the payment attempt 
+  optional string error_code = 3; // Error code if the authorization failed 
+  optional string error_message = 4; // Error message if the authorization failed 
+   
+  // Redirection and Transaction Details 
+  optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser 
+  optional string network_txn_id = 6; // Transaction ID from the payment network 
+  optional string response_ref_id = 7; // Renamed from connector_response_reference_id 
+   
+  // Authorization Details 
+  optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed 
+} 
+ 
+// Request message for synchronizing payment status. 
+message PaymentServiceGetRequest { 
+  // Identification 
+  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // The resource ID to synchronize 
+   
+  // Reference 
+  optional string request_ref_id = 2; // Renamed from connector_request_reference_id 
+} 
+ 
+// Response message for a payment status synchronization. 
+message PaymentServiceGetResponse { 
+  // Identification 
+  Identifier transaction_id = 1; // Identifier for the synchronized resource 
+   
+  // Status Information 
+  PaymentStatus status = 2; // Current status of the payment attempt 
+  optional string error_code = 3; // Error code if synchronization encountered an issue 
+  optional string error_message = 4; // Error message if synchronization encountered an issue 
+   
+  // Transaction Details 
+  optional MandateReference mandate_reference = 5; // Mandate reference, if applicable 
+  optional string network_txn_id = 6; // Transaction ID from the payment network 
+  optional string response_ref_id = 7; // Renamed from connector_response_reference_id 
+} 
+ 
+// Request message for voiding a payment. 
+message PaymentServiceVoidRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id 
+   
+  // Void Details 
+  optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment 
+  optional bool all_keys_required = 4; 
+} 
+ 
+// Response message for a payment void operation. 
+message PaymentServiceVoidResponse { 
+  // Identification 
+  Identifier transaction_id = 1; // Identifier for the voided resource 
+   
+  // Status Information 
+  PaymentStatus status = 2; // Status of the payment attempt after voiding 
+  optional string error_code = 3; // Error code if the void operation failed 
+  optional string error_message = 4; // Error message if the void operation failed 
+   
+  // Reference 
+  optional string response_ref_id = 5; // Renamed from connector_response_reference_id 
+} 
+ 
+// Request message for capturing a payment. 
+message PaymentServiceCaptureRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id 
+   
+  // Capture Details 
+  int64 amount_to_capture = 3 [(validate.rules).int64.gt = 0]; // Amount to capture, in minor currency units 
+  Currency currency = 4; // Currency of the amount to capture 
+   
+  // Metadata 
+  map<string, string> connector_metadata = 5; // Additional metadata for the connector 
+   
+  // Multiple Capture Information 
+  optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios 
+} 
+ 
+// Response message for a payment capture operation. 
+message PaymentServiceCaptureResponse { 
+  // Identification 
+  Identifier transaction_id = 1; // Identifier for the captured resource 
+   
+  // Status Information 
+  PaymentStatus status = 2; // Status of the payment after the capture attempt 
+  optional string error_code = 3; // Error code if the capture failed 
+  optional string error_message = 4; // Error message if the capture failed 
+   
+  // Reference 
+  optional string response_ref_id = 5; // Renamed from response_reference_id 
+} 
+ 
+// Request message for processing a refund. 
+message PaymentServiceRefundRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund 
+  string transaction_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id 
+  optional string refund_id = 4; // Connector's identifier for the refund 
+   
+  // Amount Information 
+  int64 payment_amount = 5 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units 
+  Currency currency = 6; // Currency of the refund, ISO 4217 code 
+  int64 minor_payment_amount = 7 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in minor currency units 
+  int64 refund_amount = 8 [(validate.rules).int64.gt = 0]; // Actual amount to refund, in major units 
+  int64 minor_refund_amount = 9 [(validate.rules).int64.gt = 0]; // Actual amount to refund in minor units 
+   
+  // Refund Context 
+  optional string reason = 10; // Reason for the refund 
+  optional string webhook_url = 11 [(validate.rules).string.uri = true]; // URL for webhook notifications 
+  optional string merchant_account_id = 12; // Merchant account ID for the refund 
+  optional CaptureMethod capture_method = 13; // Capture method related to the original payment 
+   
+  // Metadata 
+  map<string, string> connector_metadata = 14; // Metadata specific to the connector 
+  map<string, string> refund_connector_metadata = 15; // Metadata specific to the refund 
+   
+  // Browser Information 
+  optional BrowserInformation browser_info = 16; // Browser information, if relevant 
+} 
+ 
+// Response message for a refund operation. 
+message PaymentServiceRefundResponse { 
+  // Identification 
+  optional string refund_id = 1; // Connector's ID for the refund 
+   
+  // Status Information 
+  RefundStatus refund_status = 2; // Status of the refund 
+  optional string error_code = 3; // Error code if the refund failed 
+  optional string error_message = 4; // Error message if the refund failed 
+   
+  // Reference 
+  optional string response_ref_id = 5; // Response reference ID for tracking 
+} 
+ 
+// Request message for creating a dispute. 
+message PaymentServiceDisputeRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to raise the dispute for 
+  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier 
+} 
+ 
+// Response message for a dispute creation operation. 
+message PaymentServiceDisputeResponse { 
+  // Identification 
+  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // Transaction ID the dispute was raised for 
+  string dispute_id = 2; // Connector's unique identifier for the dispute 
+   
+  // Status Information 
+  DisputeStatus dispute_status = 3; // Status of the dispute after creation 
+  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code 
+  optional string error_code = 5; // Error code if creating the dispute failed 
+  optional string error_message = 6; // Error message if creating the dispute failed 
+   
+  // Reference 
+  optional string response_ref_id = 7; // Response reference ID for tracking 
+} 
+ 
+// Request message for setting up a mandate. 
+message PaymentServiceRegisterRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id 
+   
+  // Mandate Details 
+  Currency currency = 2; // The currency for the mandate 
+  PaymentMethod payment_method = 3; // Payment method to be used for the mandate 
+  optional int64 minor_amount = 4; // Optional: Amount to authorize during mandate setup 
+   
+  // Customer Information 
+  optional string email = 5 [(validate.rules).string.email = true]; // Email address of the customer 
+  optional string customer_name = 6; // Name of the customer 
+  optional string connector_customer_id = 7; // Customer ID as recognized by the connector 
+   
+  // Address Information 
+  PaymentAddress address = 8; // Billing address details for the mandate 
+   
+  // Authentication Details 
+  AuthenticationType auth_type = 9; // Type of authentication to be used 
+  bool enrolled_for_3ds = 10; // Indicates if the customer is enrolled for 3D Secure 
+  optional AuthenticationData authentication_data = 11; // Additional authentication data 
+   
+  // Metadata 
+  map<string, string> connector_metadata = 12; // Additional metadata for the connector 
+   
+  // URLs for Redirection and Webhooks 
+  optional string return_url = 13 [(validate.rules).string.uri = true]; // URL to redirect after setup 
+  optional string webhook_url = 14 [(validate.rules).string.uri = true]; // URL for webhook notifications 
+  optional string complete_authorize_url = 15 [(validate.rules).string.uri = true]; // URL to complete authorization 
+   
+  // Session and Token Information 
+  optional AccessToken access_token = 16; // Access token for secure communication 
+  optional string session_token = 17; // Session token, if applicable 
+   
+  // Order Details 
+  optional int64 order_tax_amount = 18; // Tax amount, if an initial payment is part of setup 
+  optional string order_category = 19; // Category of the order/service related to the mandate 
+  optional string merchant_order_reference_id = 20; // Merchant's internal reference ID 
+  optional int64 shipping_cost = 21; // Shipping cost, if an initial payment is part of setup 
+   
+  // Behavioral Flags and Preferences 
+  optional FutureUsage setup_future_usage = 22; // Indicates future usage intention 
+  optional bool off_session = 23; // Indicates if off-session process 
+  bool request_incremental_authorization = 24; // Indicates if incremental authorization is requested 
+  optional bool request_extended_authorization = 25; // Indicates if extended authorization is requested 
+   
+  // Contextual Information 
+  optional CustomerAcceptance customer_acceptance = 26; // Details of customer acceptance 
+  optional BrowserInformation browser_info = 27; // Information about the customer's browser 
+  optional PaymentExperience payment_experience = 28; // Preferred payment experience 
+} 
+ 
+// Response message for a mandate setup operation. 
+message PaymentServiceRegisterResponse { 
+  // Identification 
+  Identifier resource_id = 1; // Identifier for the resource created 
+   
+  // Status Information 
+  PaymentStatus status = 2; // Status of the mandate setup attempt 
+  optional string error_code = 3; // Error code if the mandate setup failed 
+  optional string error_message = 4; // Error message if the mandate setup failed 
+   
+  // Mandate Details 
+  MandateReference mandate_reference = 5; // Reference to the created mandate 
+   
+  // Redirection and Transaction Details 
+  optional RedirectForm redirection_data = 6; // Data for redirecting the customer's browser 
+  optional string network_txn_id = 7; // Renamed from network_transaction_id 
+  optional string response_ref_id = 8; // Renamed from connector_response_reference_id 
+   
+  // Authorization Details 
+  optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed 
+} 
+ 
+// Request message for PaymentService.Transform RPC 
+message PaymentServiceTransformRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+   
+  // Request Details 
+  RequestDetails request_details = 2; // Details of the incoming HTTP request 
+   
+  // Security 
+  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity 
+} 
+ 
+// Response message for PaymentService.Transform RPC 
+message PaymentServiceTransformResponse { 
+  // Event Information 
+  EventType event_type = 1; // Type of event indicated by the webhook 
+   
+  // Content 
+  WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type 
+   
+  // Verification 
+  bool source_verified = 3; // Indicates if the source was successfully verified 
+   
+  // Reference 
+  optional string response_ref_id = 4; // Response reference ID for tracking 
+} 
+ 
+// ------------------------- 
+// RefundService Messages 
+// ------------------------- 
+ 
+// Request message for synchronizing refund status. 
+message RefundServiceGetRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  Identifier transaction_id = 2; // Renamed from connector_transaction_id 
+  string refund_id = 3 [(validate.rules).string = {min_len: 1}]; // Refund identifier 
+   
+  // Refund Details 
+  optional string refund_reason = 4; // Reason for the refund, if provided during sync 
+} 
+ 
+// Response message for a refund status synchronization. 
+message RefundServiceGetResponse { 
+  // Identification 
+  Identifier transaction_id = 1; // Identifier for the synchronized resource 
+  string refund_id = 2; // Renamed from connector_refund_id 
+   
+  // Status Information 
+  RefundStatus status = 3; // Current status of the refund 
+  optional string error_code = 4; // Error code if synchronization encountered an issue 
+  optional string error_message = 5; // Error message if synchronization encountered an issue 
+   
+  // Reference 
+  optional string response_ref_id = 6; // Renamed from connector_response_reference_id 
+} 
+ 
+// Request message for RefundService.Transform RPC 
+message RefundServiceTransformRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+   
+  // Request Details 
+  RequestDetails request_details = 2; // Details of the incoming HTTP request 
+   
+  // Security 
+  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity 
+} 
+ 
+// Response message for RefundService.Transform RPC 
+message RefundServiceTransformResponse { 
+  // Event Information 
+  EventType event_type = 1; // Type of event indicated by the webhook 
+   
+  // Content 
+  WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type 
+   
+  // Verification 
+  bool source_verified = 3; // Indicates if the source was successfully verified 
+   
+  // Reference 
+  optional string response_ref_id = 4; // Response reference ID for tracking 
+} 
+ 
+// ------------------------- 
+// DisputeService Messages 
+// ------------------------- 
+ 
+// Request message for submitting evidence for a dispute. 
+message DisputeServiceSubmitEvidenceRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  optional Identifier transaction_id = 2; // Merchant's unique identifier for the dispute 
+  string dispute_id = 3; // Merchant's unique identifier for the dispute 
+   
+  // Dates 
+  optional google.protobuf.Timestamp service_date = 4; // Date of service, if applicable 
+  optional google.protobuf.Timestamp shipping_date = 5; // Date of shipping, if applicable 
+   
+  // Evidence 
+  repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents 
+} 
+ 
+// Response message for a submit evidence operation. 
+message DisputeServiceSubmitEvidenceResponse { 
+  // Identification 
+  optional string dispute_id = 1; // Connector's unique identifier for the dispute 
+  repeated string submitted_evidence_ids = 2; // IDs of the submitted evidence documents 
+   
+  // Status Information 
+  DisputeStatus dispute_status = 3; // Status of the dispute after submitting evidence 
+  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code 
+  optional string error_code = 5; // Error code if submitting evidence failed 
+  optional string error_message = 6; // Error message if submitting evidence failed 
+   
+  // Reference 
+  optional string response_ref_id = 7; // Response reference ID for tracking 
+} 
+ 
+// Request message for retrieving dispute information. 
+message DisputeServiceGetRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+  optional string dispute_id = 2; // Merchant's unique identifier for the dispute 
+  string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier 
+   
+  // Dates 
+  optional google.protobuf.Timestamp service_date = 4; // Date of service, if applicable 
+  optional google.protobuf.Timestamp shipping_date = 5; // Date of shipping, if applicable 
+   
+  // Evidence 
+  repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents 
+} 
+ 
+// Response message for a retrieve dispute information operation. 
+message DisputeServiceGetResponse { 
+  // Identification 
+  optional string dispute_id = 1; // Connector's unique identifier for the dispute 
+   
+  // Status Information 
+  DisputeStatus dispute_status = 2; // Status of the dispute 
+  optional string connector_status_code = 3; // Renamed from connector_dispute_status_code 
+  optional string error_code = 4; // Error code if retrieval failed 
+  optional string error_message = 5; // Error message if retrieval failed 
+   
+  // Reference 
+  optional string response_ref_id = 6; // Response reference ID for tracking 
+} 
+ 
+// Request message for DisputeService.Transform RPC 
+message DisputeServiceTransformRequest { 
+  // Identification 
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking 
+   
+  // Request Details 
+  RequestDetails request_details = 2; // Details of the incoming HTTP request 
+   
+  // Security 
+  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity 
+} 
+ 
+// Response message for DisputeService.Transform RPC 
+message DisputeServiceTransformResponse { 
+  // Event Information 
+  EventType event_type = 1; // Type of event indicated by the webhook 
+   
+  // Content 
+  WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type 
+   
+  // Verification 
+  bool source_verified = 3; // Indicates if the source was successfully verified 
+   
+  // Reference 
+  optional string response_ref_id = 4; // Response reference ID for tracking 
+} 
+ 
+// ============================================================================ 
+// COMPATIBILITY MESSAGES (from main branch) 
+// ============================================================================ 
+ 
+// Legacy messages for backward compatibility 
+message DisputesSyncResponse { 
+  string dispute_id = 1; 
+  DisputeStatus status = 17; 
+  DisputeStage stage = 19; 
+  optional string connector_response_reference_id = 2; 
+  optional string dispute_message = 3; 
+} 
+ 
+// Accept dispute messages from main branch 
+message AcceptDisputeRequest { 
+  optional string dispute_id = 1; 
+} 
+ 
+message AcceptDisputeResponse { 
+  optional string dispute_id = 1; 
+  DisputeStatus dispute_status = 2; 
+  optional string error_code = 4; 
+  optional string error_message = 5; 
+} 
+ 
+// Submit evidence response from main branch 
+message SubmitEvidenceResponse { 
+  optional string connector_dispute_id = 1; 
+  DisputeStatus dispute_status = 2; 
+  optional string connector_dispute_status = 3; 
+  optional string error_code = 4; 
+  optional string error_message = 5; 
+} 
+ 
+// Legacy messages for backward compatibility with existing Rust code 
+message PaymentsAuthorizeRequest { 
+  int64 amount = 10; 
+  Currency currency = 15; 
+  PaymentMethod payment_method = 2; 
+  PaymentMethodData payment_method_data = 14; 
+  optional string connector_customer = 1; 
+  PaymentAddress address = 3; 
+  AuthenticationType auth_type = 4; 
+  optional bytes connector_meta_data = 5; 
+  optional AccessToken access_token = 6; 
+  optional string session_token = 7; 
+  optional PaymentMethodToken payment_method_token = 8; 
+  string connector_request_reference_id = 9; 
+  optional int64 order_tax_amount = 11; 
+  optional string email = 12; 
+  optional string customer_name = 13; 
+  optional CaptureMethod capture_method = 16; 
+  optional string return_url = 17; 
+  optional string webhook_url = 18; 
+  optional string complete_authorize_url = 19; 
+  optional FutureUsage setup_future_usage = 20; 
+  optional bool off_session = 21; 
+  optional CustomerAcceptance customer_acceptance = 22; 
+  optional BrowserInformation browser_info = 23; 
+  optional string order_category = 24; 
+  bool enrolled_for_3ds = 25; 
+  optional PaymentExperience payment_experience = 26; 
+  optional PaymentMethodType payment_method_type = 27; 
+  bool request_incremental_authorization = 28; 
+  optional AuthenticationData authentication_data = 29; 
+  optional bool request_extended_authorization = 30; 
+  int64 minor_amount = 31; 
+  optional string merchant_order_reference_id = 32; 
+  optional int64 shipping_cost = 33; 
+  optional bool all_keys_required = 34; 
+} 
+ 
+message PaymentsAuthorizeResponse { 
+  ResponseId resource_id = 1; 
+  optional RedirectForm redirection_data = 2; 
+  optional MandateReference mandate_reference = 4; 
+  optional string network_txn_id = 5; 
+  optional string connector_response_reference_id = 6; 
+  optional bool incremental_authorization_allowed = 7; 
+  PaymentStatus status = 8; 
+  optional string error_code = 9; 
+  optional string error_message = 10; 
+  optional string raw_connector_response = 11; 
+} 
+ 
+message PaymentsSyncRequest { 
+  string resource_id = 1; 
+  optional string connector_request_reference_id = 2; 
+  optional bool all_keys_required = 3; 
+} 
+ 
+message PaymentsSyncResponse { 
+  ResponseId resource_id = 1; 
+  PaymentStatus status = 2; 
+  optional MandateReference mandate_reference = 3; 
+  optional string network_txn_id = 4; 
+  optional string connector_response_reference_id = 5; 
+  optional string error_code = 9; 
+  optional string error_message = 10; 
+  optional string raw_connector_response = 11; 
+} 
+ 
+message RefundsSyncRequest { 
+  string connector_refund_id = 2; 
+  string connector_transaction_id = 1; 
+  optional string refund_reason = 3; 
+  optional bool all_keys_required = 4; 
+} 
+ 
+message RefundsSyncResponse { 
+  optional string connector_refund_id = 1; 
+  RefundStatus status = 2; 
+  optional string connector_response_reference_id = 5; 
+  optional string error_code = 9; 
+  optional string error_message = 10; 
+  optional string raw_connector_response = 11; 
+} 
+ 
+message PaymentsVoidRequest { 
+  string connector_request_reference_id = 2; 
+  optional string cancellation_reason = 1; 
+  optional bool all_keys_required = 3; 
+} 
+ 
+message PaymentsVoidResponse { 
+  ResponseId resource_id = 1; 
+  optional string connector_response_reference_id = 3; 
+  PaymentStatus status = 8; 
+  optional string error_code = 4; 
+  optional string error_message = 5; 
+  optional string raw_connector_response = 11; 
+} 
+ 
+message PaymentsCaptureRequest { 
+  string connector_transaction_id = 1; 
+  int64 amount_to_capture = 2; 
+  Currency currency = 15; 
+  optional MultipleCaptureRequestData multiple_capture_data = 21; 
+  optional bytes connector_meta_data = 3; 
+  optional bool all_keys_required = 4; 
+} 
+ 
+message PaymentsCaptureResponse { 
+  ResponseId resource_id = 1; 
+  optional string connector_response_reference_id = 2; 
+  PaymentStatus status = 8; 
+  optional string error_code = 3; 
+  optional string error_message = 4; 
+  optional string raw_connector_response = 5; 
+} 
+ 
+message SetupMandateRequest { 
+  Currency currency = 15; 
+  PaymentMethod payment_method = 2; 
+  PaymentMethodData payment_method_data = 14; 
+  optional string connector_customer = 1; 
+  PaymentAddress address = 3; 
+  AuthenticationType auth_type = 4; 
+  optional bytes connector_meta_data = 5; 
+  optional AccessToken access_token = 6; 
+  optional string session_token = 7; 
+  optional PaymentMethodToken payment_method_token = 8; 
+  string connector_request_reference_id = 9; 
+  optional int64 order_tax_amount = 11; 
+  optional string email = 12; 
+  optional string customer_name = 13; 
+  optional CaptureMethod capture_method = 16; 
+  optional string return_url = 17; 
+  optional string webhook_url = 18; 
+  optional string complete_authorize_url = 19; 
+  optional FutureUsage setup_future_usage = 20; 
+  optional bool off_session = 21; 
+  optional CustomerAcceptance customer_acceptance = 22; 
+  optional BrowserInformation browser_info = 23; 
+  optional string order_category = 24; 
+  bool enrolled_for_3ds = 25; 
+  optional PaymentExperience payment_experience = 26; 
+  optional PaymentMethodType payment_method_type = 27; 
+  bool request_incremental_authorization = 28; 
+  optional AuthenticationData authentication_data = 29; 
+  optional bool request_extended_authorization = 30; 
+  int64 minor_amount = 31; 
+  optional string merchant_order_reference_id = 32; 
+  optional int64 shipping_cost = 33; 
+} 
+ 
+message SetupMandateResponse { 
+  ResponseId resource_id = 1; 
+  MandateReference mandate_reference = 4; 
+  PaymentStatus status = 8; 
+  optional RedirectForm redirection_data = 2; 
+  optional string network_txn_id = 5; 
+  optional string connector_response_reference_id = 6; 
+  optional bool incremental_authorization_allowed = 7; 
+  optional string error_code = 9; 
+  optional string error_message = 10; 
+  optional string raw_connector_response = 11; 
+} 
+ 
+message RefundsRequest { 
+  string refund_id = 1; 
+  string connector_transaction_id = 2; 
+  optional string connector_refund_id = 3; 
+  Currency currency = 15; 
+  int64 payment_amount = 4; 
+  optional string reason = 5; 
+  optional string webhook_url = 6; 
+  int64 refund_amount = 7; 
+  optional bytes connector_metadata = 8; 
+  optional bytes refund_connector_metadata = 9; 
+  optional BrowserInformation browser_info = 23; 
+  int64 minor_payment_amount = 10; 
+  int64 minor_refund_amount = 11; 
+  optional string merchant_account_id = 12; 
+  optional CaptureMethod capture_method = 16; 
+  optional bool all_keys_required = 17; 
+} 
+ 
+message RefundsResponse { 
+  optional string connector_refund_id = 1; 
+  RefundStatus refund_status = 36; 
+  optional string error_code = 2; 
+  optional string error_message = 3; 
+  optional string raw_connector_response = 4; 
+} 
+ 
+message IncomingWebhookRequest { 
+  RequestDetails request_details = 2; 
+  optional ConnectorWebhookSecrets webhook_secrets = 3; 
+} 
+ 
+message IncomingWebhookResponse { 
+  EventType event_type = 1; 
+  WebhookResponseContent content = 2; 
+  bool source_verified = 3; 
+} 
+ 
+// Also add alias for AttemptStatus to PaymentStatus for backward compatibility 
+enum AttemptStatus { 
+  ATTEMPT_STATUS_STARTED = 0; 
+  ATTEMPT_STATUS_AUTHENTICATION_FAILED = 1; 
+  ATTEMPT_STATUS_ROUTER_DECLINED = 2; 
+  ATTEMPT_STATUS_AUTHENTICATION_PENDING = 3; 
+  ATTEMPT_STATUS_AUTHENTICATION_SUCCESSFUL = 4; 
+  ATTEMPT_STATUS_AUTHORIZED = 5; 
+  ATTEMPT_STATUS_AUTHORIZATION_FAILED = 6; 
+  ATTEMPT_STATUS_CHARGED = 7; 
+  ATTEMPT_STATUS_AUTHORIZING = 8; 
+  ATTEMPT_STATUS_COD_INITIATED = 9; 
+  ATTEMPT_STATUS_VOIDED = 10; 
+  ATTEMPT_STATUS_VOID_INITIATED = 11; 
+  ATTEMPT_STATUS_CAPTURE_INITIATED = 12; 
+  ATTEMPT_STATUS_CAPTURE_FAILED = 13; 
+  ATTEMPT_STATUS_VOID_FAILED = 14; 
+  ATTEMPT_STATUS_AUTO_REFUNDED = 15; 
+  ATTEMPT_STATUS_PARTIAL_CHARGED = 16; 
+  ATTEMPT_STATUS_PARTIAL_CHARGED_AND_CHARGEABLE = 17; 
+  ATTEMPT_STATUS_UNRESOLVED = 18; 
+  ATTEMPT_STATUS_PENDING = 19; 
+  ATTEMPT_STATUS_FAILURE = 20; 
+  ATTEMPT_STATUS_PAYMENT_METHOD_AWAITED = 21; 
+  ATTEMPT_STATUS_CONFIRMATION_AWAITED = 22; 
+  ATTEMPT_STATUS_DEVICE_DATA_COLLECTION_PENDING = 23; 
+} 
+ 
+// Defend dispute messages from main branch 
+message DisputeDefendRequest { 
+  string defense_reason_code = 1; 
+  string dispute_id = 3; 
+  optional bool all_keys_required = 34; // Indicates if all credential keys are required for defense 
+} 
+ 
+message DisputeDefendResponse { 
+  DisputeStatus dispute_status = 1; 
+  string dispute_id = 2; 
+  optional string error_code = 3; 
+  optional string error_message = 4; 
+  optional string raw_connector_response = 11; 
+} 
+ 
+// Submit evidence request from main branch with detailed fields 
+message SubmitEvidenceRequest { 
+  optional string dispute_id = 1; 
+  string connector_dispute_id = 2; 
+  optional string access_activity_log = 3; 
+  optional string billing_address = 4; 
+  optional bytes cancellation_policy = 5; 
+  optional string cancellation_policy_file_type = 6; 
+  optional string cancellation_policy_provider_file_id = 7; 
+  optional string cancellation_policy_disclosure = 8; 
+  optional string cancellation_rebuttal = 9; 
+  optional bytes customer_communication = 10; 
+  optional string customer_communication_file_type = 11; 
+  optional string customer_communication_provider_file_id = 12; 
+  optional string customer_email_address = 13; 
+  optional string customer_name = 14; 
+  optional string customer_purchase_ip = 15; 
+  optional bytes customer_signature = 16; 
+  optional string customer_signature_file_type = 17; 
+  optional string customer_signature_provider_file_id = 18; 
+  optional string product_description = 19; 
+  optional bytes receipt = 20; 
+  optional string receipt_file_type = 21; 
+  optional string receipt_provider_file_id = 22; 
+  optional bytes refund_policy = 23; 
+  optional string refund_policy_file_type = 24; 
+  optional string refund_policy_provider_file_id = 25; 
+  optional string refund_policy_disclosure = 26; 
+  optional string refund_refusal_explanation = 27; 
+  optional string service_date = 28; 
+  optional bytes service_documentation = 29; 
+  optional string service_documentation_file_type = 30; 
+  optional string service_documentation_provider_file_id = 31; 
+  optional string shipping_address = 32; 
+  optional string shipping_carrier = 33; 
+  optional string shipping_date = 50; 
+  optional bytes shipping_documentation = 51; 
+  optional string shipping_documentation_file_type = 52; 
+  optional string shipping_documentation_provider_file_id = 37; 
+  optional string shipping_tracking_number = 38; 
+  optional bytes invoice_showing_distinct_transactions = 39; 
+  optional string invoice_showing_distinct_transactions_file_type = 40; 
+  optional string invoice_showing_distinct_transactions_provider_file_id = 41; 
+  optional bytes recurring_transaction_agreement = 42; 
+  optional string recurring_transaction_agreement_file_type = 43; 
+  optional string recurring_transaction_agreement_provider_file_id = 44; 
+  optional bytes uncategorized_file = 45; 
+  optional string uncategorized_file_type = 46; 
+  optional string uncategorized_file_provider_file_id = 47; 
+  optional string uncategorized_text = 48; 
+} 
