@@ -5,6 +5,7 @@ package ucs.v2;
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
 import "payment_methods.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
@@ -65,6 +66,30 @@ enum PaymentStatus {
   PENDING = 20;       // General pending state
   FAILURE = 21;       // General failure state
   UNRESOLVED = 19;    // Status could not be determined
+}
+
+// Status of a mandate setup attempt.
+enum MandateStatus {
+  MANDATE_STATUS_UNSPECIFIED = 0; // Default value
+
+  // Initial states
+  MANDATE_INITIATED = 1;           // Mandate setup has been initiated
+  MANDATE_PENDING = 2;             // Mandate setup is pending (waiting for processing)
+  
+  // Authentication flow
+  MANDATE_AUTHENTICATION_PENDING = 3;      // Waiting for customer authentication
+  MANDATE_AUTHENTICATION_SUCCESSFUL = 4;   // Customer authentication successful
+  MANDATE_AUTHENTICATION_FAILED = 5;       // Customer authentication failed
+
+  // Setup completion states
+  MANDATE_ESTABLISHED = 6;         // Mandate has been successfully established
+  MANDATE_FAILED = 7;              // Mandate setup failed
+  MANDATE_CANCELLED = 8;           // Mandate setup was cancelled
+  MANDATE_EXPIRED = 9;             // Mandate setup expired
+
+  // Terminal/fallback states
+  MANDATE_ROUTER_DECLINED = 10;    // Mandate declined by router
+  MANDATE_UNRESOLVED = 11;         // Status could not be determined
 }
 
 // Status of a refund.
@@ -134,11 +159,11 @@ enum PaymentExperience {
 }
 
 // Type of event that a webhook can represent.
-enum EventType {
-  EVENT_TYPE_UNSPECIFIED = 0;         // Default, unspecified event type.
-  PAYMENT = 1;                        // Event related to a payment.
-  REFUND = 2;                         // Event related to a refund.
-  DISPUTE = 3;                        // Event related to a dispute.
+enum WebhookEventType {
+  WEBHOOK_EVENT_TYPE_UNSPECIFIED = 0;  // Default, unspecified webhook event type.
+  WEBHOOK_PAYMENT = 1;                 // Webhook event related to a payment.
+  WEBHOOK_REFUND = 2;                  // Webhook event related to a refund.
+  WEBHOOK_DISPUTE = 3;                 // Webhook event related to a dispute.
 }
 
 // Enum for currency codes (ISO 4217).
@@ -502,27 +527,7 @@ enum PaymentMethodType {
   INSTANT_BANK_TRANSFER = 96;
 }
 
-// Payment method enumeration.
-enum PaymentMethod {
-  PAYMENT_METHOD_UNSPECIFIED = 0; // Default value
-  CARD = 1;
-  WALLET = 2;
-}
 
-// Card network enumeration.
-enum CardNetwork {
-  CARD_NETWORK_UNSPECIFIED = 0; // Default value
-  VISA = 1;
-  MASTERCARD = 2;
-  AMERICAN_EXPRESS = 3;
-  JCB = 4;
-  DINERS_CLUB = 5;
-  DISCOVER = 6;
-  CARTES_BANCAIRES = 7;
-  UNION_PAY = 8;
-  RU_PAY = 9;
-  MAESTRO = 10;
-}
 
 // Dispute stage enumeration.
 enum DisputeStage {
@@ -813,7 +818,7 @@ message AccessToken {
   string token = 1 [(validate.rules).string = {min_len: 1}];
   
   // Expiration timestamp of the token (seconds since epoch).
-  int64 expires_at_seconds = 2 [(validate.rules).int64.gt = 0];
+  int64 expires_in_seconds = 2 [(validate.rules).int64.gt = 0];
 }
 
 // Additional authentication data, typically from 3DS.
@@ -958,7 +963,7 @@ message RequestDetails {
 }
 
 // Secrets used for verifying connector webhooks.
-message ConnectorWebhookSecrets {
+message WebhookSecrets {
   // Primary secret for webhook verification.
   string secret = 1 [(validate.rules).string = {min_len: 1}];
   
@@ -1020,7 +1025,7 @@ message EvidenceDocument {
 // Request message for authorizing a payment.
 message PaymentServiceAuthorizeRequest {
   // Payment Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id
+  Identifier request_ref_id = 1; // Renamed from connector_request_reference_id
   
   // Amount Information
   int64 amount = 2 [(validate.rules).int64.gt = 0]; // The amount for the payment in major currency units
@@ -1096,7 +1101,7 @@ message PaymentServiceAuthorizeResponse {
 // Request message for synchronizing payment status.
 message PaymentServiceGetRequest {
   // Identification
-  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // The resource ID to synchronize
+  Identifier transaction_id = 1; // The resource ID to synchronize
   
   // Reference
   optional string request_ref_id = 2; // Renamed from connector_request_reference_id
@@ -1121,8 +1126,8 @@ message PaymentServiceGetResponse {
 // Request message for voiding a payment.
 message PaymentServiceVoidRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  Identifier transaction_id = 2; // Renamed from connector_request_reference_id
   
   // Void Details
   optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment
@@ -1180,27 +1185,26 @@ message PaymentServiceRefundRequest {
   string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
   string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund
   string transaction_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
-  optional string refund_id = 4; // Connector's identifier for the refund
   
   // Amount Information
-  int64 payment_amount = 5 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units
-  Currency currency = 6; // Currency of the refund, ISO 4217 code
-  int64 minor_payment_amount = 7 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in minor currency units
-  int64 refund_amount = 8 [(validate.rules).int64.gt = 0]; // Actual amount to refund, in major units
-  int64 minor_refund_amount = 9 [(validate.rules).int64.gt = 0]; // Actual amount to refund in minor units
+  int64 payment_amount = 4 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units
+  Currency currency = 5; // Currency of the refund, ISO 4217 code
+  int64 minor_payment_amount = 6 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in minor currency units
+  int64 refund_amount = 7 [(validate.rules).int64.gt = 0]; // Actual amount to refund, in major units
+  int64 minor_refund_amount = 8 [(validate.rules).int64.gt = 0]; // Actual amount to refund in minor units
   
   // Refund Context
-  optional string reason = 10; // Reason for the refund
-  optional string webhook_url = 11 [(validate.rules).string.uri = true]; // URL for webhook notifications
-  optional string merchant_account_id = 12; // Merchant account ID for the refund
-  optional CaptureMethod capture_method = 13; // Capture method related to the original payment
+  optional string reason = 9; // Reason for the refund
+  optional string webhook_url = 10 [(validate.rules).string.uri = true]; // URL for webhook notifications
+  optional string merchant_account_id = 11; // Merchant account ID for the refund
+  optional CaptureMethod capture_method = 12; // Capture method related to the original payment
   
   // Metadata
-  map<string, string> connector_metadata = 14; // Metadata specific to the connector
-  map<string, string> refund_connector_metadata = 15; // Metadata specific to the refund
+  map<string, string> connector_metadata = 13; // Metadata specific to the connector
+  map<string, string> refund_connector_metadata = 14; // Metadata specific to the refund
   
   // Browser Information
-  optional BrowserInformation browser_info = 16; // Browser information, if relevant
+  optional BrowserInformation browser_info = 15; // Browser information, if relevant
 }
 
 // Response message for a refund operation.
@@ -1297,10 +1301,10 @@ message PaymentServiceRegisterRequest {
 // Response message for a mandate setup operation.
 message PaymentServiceRegisterResponse {
   // Identification
-  Identifier resource_id = 1; // Identifier for the resource created
+  Identifier registration_id = 1; // Identifier for the mandate registration
   
   // Status Information
-  PaymentStatus status = 2; // Status of the mandate setup attempt
+  MandateStatus status = 2; // Status of the mandate setup attempt
   optional string error_code = 3; // Error code if the mandate setup failed
   optional string error_message = 4; // Error message if the mandate setup failed
   
@@ -1325,13 +1329,13 @@ message PaymentServiceTransformRequest {
   RequestDetails request_details = 2; // Details of the incoming HTTP request
   
   // Security
-  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
+  optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
 }
 
 // Response message for PaymentService.Transform RPC
 message PaymentServiceTransformResponse {
   // Event Information
-  EventType event_type = 1; // Type of event indicated by the webhook
+  WebhookEventType event_type = 1; // Type of event indicated by the webhook
   
   // Content
   WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type
@@ -1382,13 +1386,13 @@ message RefundServiceTransformRequest {
   RequestDetails request_details = 2; // Details of the incoming HTTP request
   
   // Security
-  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
+  optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
 }
 
 // Response message for RefundService.Transform RPC
 message RefundServiceTransformResponse {
   // Event Information
-  EventType event_type = 1; // Type of event indicated by the webhook
+  WebhookEventType event_type = 1; // Type of event indicated by the webhook
   
   // Content
   WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type
@@ -1441,28 +1445,38 @@ message DisputeServiceGetRequest {
   string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
   optional string dispute_id = 2; // Merchant's unique identifier for the dispute
   string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
-  
-  // Dates
-  optional google.protobuf.Timestamp service_date = 4; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 5; // Date of shipping, if applicable
-  
-  // Evidence
-  repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents
 }
 
 // Response message for a retrieve dispute information operation.
 message DisputeServiceGetResponse {
   // Identification
   optional string dispute_id = 1; // Connector's unique identifier for the dispute
+  optional Identifier transaction_id = 2; // Transaction ID associated with the dispute
   
   // Status Information
-  DisputeStatus dispute_status = 2; // Status of the dispute
-  optional string connector_status_code = 3; // Renamed from connector_dispute_status_code
-  optional string error_code = 4; // Error code if retrieval failed
-  optional string error_message = 5; // Error message if retrieval failed
+  DisputeStatus dispute_status = 3; // Status of the dispute
+  DisputeStage dispute_stage = 4; // Current stage of the dispute
+  optional string connector_status_code = 5; // Renamed from connector_dispute_status_code
+  optional string error_code = 6; // Error code if retrieval failed
+  optional string error_message = 7; // Error message if retrieval failed
+  
+  // Dispute Details
+  optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
+  optional Currency dispute_currency = 9; // Currency of the disputed amount
+  optional google.protobuf.Timestamp dispute_date = 10; // Date when dispute was created
+  optional google.protobuf.Timestamp service_date = 11; // Date of service, if applicable
+  optional google.protobuf.Timestamp shipping_date = 12; // Date of shipping, if applicable
+  optional google.protobuf.Timestamp due_date = 13; // Due date for response to dispute
+  
+  // Evidence
+  repeated EvidenceDocument evidence_documents = 14; // Collection of evidence documents submitted
+  
+  // Additional Context
+  optional string dispute_reason = 15; // Reason for the dispute
+  optional string dispute_message = 16; // Message from the disputor
   
   // Reference
-  optional string response_ref_id = 6; // Response reference ID for tracking
+  optional string response_ref_id = 17; // Response reference ID for tracking
 }
 
 // Request message for DisputeService.Transform RPC
@@ -1474,13 +1488,13 @@ message DisputeServiceTransformRequest {
   RequestDetails request_details = 2; // Details of the incoming HTTP request
   
   // Security
-  optional ConnectorWebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
+  optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
 }
 
 // Response message for DisputeService.Transform RPC
 message DisputeServiceTransformResponse {
   // Event Information
-  EventType event_type = 1; // Type of event indicated by the webhook
+  WebhookEventType event_type = 1; // Type of event indicated by the webhook
   
   // Content
   WebhookResponseContent content = 2; // Content of the webhook, parsed into a specific response type
@@ -1492,6 +1506,59 @@ message DisputeServiceTransformResponse {
   optional string response_ref_id = 4; // Response reference ID for tracking
 }
 
+// -------------------------
+// Missing Dispute Service Messages
+// -------------------------
+
+// Request message for defending a dispute.
+message DisputeDefendRequest {
+  // Identification
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to defend dispute for
+  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
+  
+  // Defend Details
+  optional string reason_code = 4; // Reason code for defending the dispute
+}
+
+// Response message for defending a dispute.
+message DisputeDefendResponse {
+  // Identification
+  string dispute_id = 1; // Connector's unique identifier for the dispute
+  
+  // Status Information
+  DisputeStatus dispute_status = 2; // Status of the dispute after defending
+  optional string connector_status_code = 3; // Connector status code
+  optional string error_code = 4; // Error code if defending failed
+  optional string error_message = 5; // Error message if defending failed
+  
+  // Reference
+  optional string response_ref_id = 6; // Response reference ID for tracking
+}
+
+// Request message for accepting a dispute.
+message AcceptDisputeRequest {
+  // Identification
+  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to accept dispute for
+  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
+}
+
+// Response message for accepting a dispute.
+message AcceptDisputeResponse {
+  // Identification
+  string dispute_id = 1; // Connector's unique identifier for the dispute
+  
+  // Status Information
+  DisputeStatus dispute_status = 2; // Status of the dispute after accepting
+  optional string connector_status_code = 3; // Connector status code
+  optional string error_code = 4; // Error code if accepting failed
+  optional string error_message = 5; // Error message if accepting failed
+  
+  // Reference
+  optional string response_ref_id = 6; // Response reference ID for tracking
+}
+
 // ============================================================================
 // COMPATIBILITY MESSAGES (from main branch)
 // ============================================================================
@@ -1499,10 +1566,10 @@ message DisputeServiceTransformResponse {
 // Legacy messages for backward compatibility
 message DisputesSyncResponse {
   string dispute_id = 1;
-  DisputeStatus status = 17;
-  DisputeStage stage = 19;
   optional string connector_response_reference_id = 2;
   optional string dispute_message = 3;
+  DisputeStatus status = 4;
+  DisputeStage stage = 5;
 }
 
 
