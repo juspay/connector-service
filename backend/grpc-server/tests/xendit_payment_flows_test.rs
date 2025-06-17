@@ -5,14 +5,15 @@
 use grpc_server::{app, configs};
 mod common;
 
-use base64::{engine::general_purpose, Engine};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        payment_service_client::PaymentServiceClient, AttemptStatus, AuthenticationType,
-        CaptureMethod, Currency, PaymentMethod, PaymentMethodType, PaymentsAuthorizeRequest,
-        PaymentsAuthorizeResponse, PaymentsCaptureRequest, PaymentsSyncRequest, RefundStatus,
-        RefundsRequest, RefundsSyncRequest,
+        payment_service_client::PaymentServiceClient, AttemptStatus, 
+        AuthenticationType, CaptureMethod, Currency, 
+        PaymentMethod, PaymentMethodType, PaymentsAuthorizeRequest, 
+        PaymentsAuthorizeResponse, PaymentsCaptureRequest, 
+        PaymentsSyncRequest, RefundStatus, RefundsRequest, 
+        RefundsResponse, RefundsSyncRequest
     },
 };
 use std::env;
@@ -72,9 +73,16 @@ fn extract_transaction_id(response: &PaymentsAuthorizeResponse) -> String {
     }
 }
 
-fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAuthorizeRequest {
+// Helper function to extract connector Refund ID from response
+fn extract_refund_id(response: &RefundsResponse) -> &String {
+    match &response.connector_refund_id {
+        Some(id) => id,
+        None => panic!("Resource ID is None"),
+    }
+}
 
-    // Initialize with all required fields
+// Helper function to create a payment authorize request
+fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentsAuthorizeRequest {
     PaymentsAuthorizeRequest {
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
@@ -116,6 +124,66 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentsSyncRequest {
         resource_id: transaction_id.to_string(),
         connector_request_reference_id: Some(format!("xendit_sync_{}", get_timestamp())),
     }
+}
+
+// Helper function to create a payment capture request
+fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureRequest {
+    PaymentsCaptureRequest {
+        connector_transaction_id: transaction_id.to_string(),
+        amount_to_capture: TEST_AMOUNT,
+        currency: i32::from(Currency::Idr),
+        multiple_capture_data: None,
+        connector_meta_data: None,
+    }
+}
+
+// Helper function to create a refund request
+fn create_refund_request(transaction_id: &str) -> RefundsRequest {
+    RefundsRequest {
+        refund_id: format!("refund_{}", get_timestamp()),
+        connector_transaction_id: transaction_id.to_string(),
+        currency: i32::from(Currency::Idr),
+        payment_amount: TEST_AMOUNT,
+        refund_amount: TEST_AMOUNT,
+        minor_payment_amount: TEST_AMOUNT,
+        minor_refund_amount: TEST_AMOUNT,
+        connector_refund_id: None,
+        reason: None,
+        webhook_url: None,
+        connector_metadata: None,
+        refund_connector_metadata: None,
+        browser_info: None,
+        merchant_account_id: None,
+        capture_method: None,
+    }
+}
+
+// Helper function to create a refund sync request
+fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundsSyncRequest {
+    RefundsSyncRequest {
+        connector_transaction_id: transaction_id.to_string(),
+        connector_refund_id: refund_id.to_string(),
+        refund_reason: None,
+    }
+}
+
+// Test for basic health check
+#[tokio::test]
+async fn test_health() {
+    grpc_test!(client, HealthClient<Channel>, {
+        let response = client
+            .check(Request::new(HealthCheckRequest {
+                service: "connector_service".to_string(),
+            }))
+            .await
+            .expect("Failed to call health check")
+            .into_inner();
+
+        assert_eq!(
+            response.status(),
+            grpc_api_types::health_check::health_check_response::ServingStatus::Serving
+        );
+    });
 }
 
 // Test payment authorization with auto capture
@@ -166,26 +234,6 @@ async fn test_payment_authorization_manual_capture() {
             auth_response.status == i32::from(AttemptStatus::AuthenticationPending) || auth_response.status == i32::from(AttemptStatus::Pending) || auth_response.status == i32::from(AttemptStatus::Authorized),
             "Payment should be in AuthenticationPending or Pending state"
         );
-    });
-}
-
-// Test payment sync
-#[tokio::test]
-async fn test_payment_sync_manual_capture() {
-    grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Create the payment authorization request with manual capture
-        let auth_request = create_payment_authorize_request(CaptureMethod::Manual);
-
-        // Add metadata headers for auth request
-        let mut auth_grpc_request = Request::new(auth_request);
-        add_xendit_metadata(&mut auth_grpc_request);
-
-        // Send the auth request
-        let auth_response = client
-            .payment_authorize(auth_grpc_request)
-            .await
-            .expect("gRPC payment_authorize call failed")
-            .into_inner();
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
@@ -193,24 +241,24 @@ async fn test_payment_sync_manual_capture() {
         // Add delay of 15 seconds
         tokio::time::sleep(std::time::Duration::from_secs(15)).await;
 
-        // Create sync request
-        let sync_request = create_payment_sync_request(&transaction_id);
+        // Create capture request
+        let capture_request = create_payment_capture_request(&transaction_id);
 
-        // Add metadata headers for sync request
-        let mut sync_grpc_request = Request::new(sync_request);
-        add_xendit_metadata(&mut sync_grpc_request);
+        // Add metadata headers for capture request - make sure they include the terminal_id
+        let mut capture_grpc_request = Request::new(capture_request);
+        add_xendit_metadata(&mut capture_grpc_request);
 
-        // Send the sync request
-        let sync_response = client
-            .payment_sync(sync_grpc_request)
+        // Send the capture request
+        let capture_response = client
+            .payment_capture(capture_grpc_request)
             .await
-            .expect("gRPC payment_sync call failed")
+            .expect("gRPC payment_capture call failed")
             .into_inner();
 
-        // Verify the sync response
+        // Verify payment status is charged after capture
         assert!(
-            sync_response.status == i32::from(AttemptStatus::Authorized),
-            "Payment should be in Authorized state"
+            capture_response.status == i32::from(AttemptStatus::Charged),
+            "Payment should be in CHARGED state after capture"
         );
     });
 }
@@ -258,5 +306,129 @@ async fn test_payment_sync_auto_capture() {
             sync_response.status == i32::from(AttemptStatus::Charged),
             "Payment should be in Charged state"
         );
+    });
+}
+
+// Test refund flow - handles both success and error cases
+#[tokio::test]
+async fn test_refund() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Create the payment authorization request
+        let request = create_payment_authorize_request(CaptureMethod::Automatic);
+
+        // Add metadata headers
+        let mut grpc_request = Request::new(request);
+        add_xendit_metadata(&mut grpc_request);
+
+        // Send the request
+        let response = client
+            .payment_authorize(grpc_request)
+            .await
+            .expect("gRPC payment_authorize call failed")
+            .into_inner();
+
+        // Extract the transaction ID
+        let transaction_id = extract_transaction_id(&response);
+
+        assert!(
+            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending) || response.status == i32::from(AttemptStatus::Charged),
+            "Payment should be in AuthenticationPending or Pending state"
+        );
+
+        // Wait a bit longer to ensure the payment is fully processed
+        tokio::time::sleep(tokio::time::Duration::from_secs(12)).await;
+
+        // Create refund request
+        let refund_request = create_refund_request(&transaction_id);
+
+        // Add metadata headers for refund request
+        let mut refund_grpc_request = Request::new(refund_request);
+        add_xendit_metadata(&mut refund_grpc_request);
+
+        // Send the refund request
+        let refund_response = client.refund(refund_grpc_request)
+            .await
+            .expect("gRPC refund call failed")
+            .into_inner();
+
+        // Verify the refund response
+        assert!(
+            refund_response.refund_status == i32::from(RefundStatus::RefundSuccess),
+            "Refund should be in RefundSuccess state"
+        );       
+    });
+}
+
+// Test refund sync flow - runs as a separate test since refund + sync is complex
+#[tokio::test]
+async fn test_refund_sync() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Create the payment authorization request
+        let request = create_payment_authorize_request(CaptureMethod::Automatic);
+
+        // Add metadata headers
+        let mut grpc_request = Request::new(request);
+        add_xendit_metadata(&mut grpc_request);
+
+        // Send the request
+        let response = client
+            .payment_authorize(grpc_request)
+            .await
+            .expect("gRPC payment_authorize call failed")
+            .into_inner();
+
+        // Extract the transaction ID
+        let transaction_id = extract_transaction_id(&response);
+
+        assert!(
+            response.status == i32::from(AttemptStatus::AuthenticationPending) || response.status == i32::from(AttemptStatus::Pending) || response.status == i32::from(AttemptStatus::Charged),
+            "Payment should be in AuthenticationPending or Pending state"
+        );
+
+        // Wait a bit longer to ensure the payment is fully processed
+        tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
+
+        // Create refund request
+        let refund_request = create_refund_request(&transaction_id);
+
+        // Add metadata headers for refund request
+        let mut refund_grpc_request = Request::new(refund_request);
+        add_xendit_metadata(&mut refund_grpc_request);
+
+        // Send the refund request
+        let refund_response = client.refund(refund_grpc_request)
+            .await
+            .expect("gRPC refund call failed")
+            .into_inner();
+
+        // Verify the refund response
+        assert!(
+            refund_response.refund_status == i32::from(RefundStatus::RefundSuccess),
+            "Refund should be in RefundSuccess state"
+        ); 
+
+        let refund_id = extract_refund_id(&refund_response);
+
+        // Wait a bit longer to ensure the refund is fully processed
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        
+        // Create refund sync request
+        let refund_sync_request = create_refund_sync_request(&transaction_id,refund_id);
+
+        // Add metadata headers for refund sync request
+        let mut refund_sync_grpc_request = Request::new(refund_sync_request);
+        add_xendit_metadata(&mut refund_sync_grpc_request);
+
+        // Send the refund sync request
+        let refund_sync_response = client.refund_sync(refund_sync_grpc_request)
+            .await
+            .expect("gRPC refund sync call failed")
+            .into_inner();
+
+        // Verify the refund sync response
+        assert!(
+            refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
+            "Refund Sync should be in RefundSuccess state"
+        ); 
     });
 }

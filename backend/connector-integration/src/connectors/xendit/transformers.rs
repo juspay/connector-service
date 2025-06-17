@@ -1,6 +1,5 @@
 use domain_types::{
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData , PaymentsSyncData},
-    connector_flow::Authorize,
+    connector_flow::{Authorize, Capture}, connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData , PaymentsSyncData, PaymentsCaptureData, RefundsData, RefundsResponseData, RefundFlowData, RefundSyncData}
 };
 
 use hyperswitch_common_utils::{
@@ -123,7 +122,7 @@ pub struct XenditPaymentResponse {
     pub payment_method: PaymentMethodInfo,
     pub failure_code: Option<String>,
     pub reference_id: Secret<String>,
-    pub amount: FloatMajorUnit,
+    pub amount: Option<FloatMajorUnit>,
     pub currency: Currency,
 }
 
@@ -171,39 +170,10 @@ pub struct XenditPaymentsRequest {
     pub channel_properties: Option<ChannelProperties>,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct XenditPaymentMethod {
-    #[serde(rename = "type")]
-    pub payment_method_type: XenditPaymentMethodType,
-    pub card: Option<XenditCard>,
-    // other payment method types like ewallet, direct_debit etc.
-    pub reusability: String, // DIRECT_DEBIT, ONE_TIME_USE - from Hyperswitch
-}
-
 #[derive(Debug, Clone, Serialize)]pub enum XenditPaymentMethodType {
     #[serde(rename = "CARD")]
     Card,
     // ... other types like EWALLET, DIRECT_DEBIT etc.
-}
-
-#[derive(Debug, Clone,Serialize)]
-pub struct XenditCard {
-    pub currency: String, // Should be hyperswitch_common_enums::Currency
-    pub channel_properties: XenditCardChannelProperties,
-    // card specific fields if any apart from channel_properties
-    // E.g., if tokenizing: token_id
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct XenditCardChannelProperties {
-    pub skip_three_d_secure: Option<bool>,
-    // cvv, card_number, expiry_month, expiry_year are part of PaymentMethodData in RouterData
-    // but Xendit might expect them here for non-tokenized card payments.
-    // For direct card details, the struct would be different:
-    // card_number: Secret<String>,
-    // expiry_month: Secret<String>,
-    // expiry_year: Secret<String>,
-    // cvv: Secret<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -213,16 +183,6 @@ pub struct XenditLineItem {
     pub price: i64,
     pub category: Option<String>,
     pub url: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct XenditChannelProperties {
-    // Fields for specific channels if required, e.g., for redirect flows
-    // mobile_number: Option<String> for some eWallets etc.
-    // success_return_url, failure_return_url are at top level in Hyperswitch Xendit
-    // but some connectors put them here.
-    // For cards, often skip_three_d_secure is here, but Hyperswitch Xendit has it in XenditCard.channel_properties
-    pub customer_name: Option<String>, // Example, might not be Xendit specific
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -259,22 +219,6 @@ pub struct EventDetails {
     pub payment_request_id: Option<String>,
     pub amount: FloatMajorUnit,
     pub currency: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct XenditPaymentMethodResponseDetails {
-    #[serde(rename = "type")]
-    pub payment_method_type: String, // CARD, EWALLET etc.
-    // card specific details
-    pub card: Option<XenditCardResponseDetails>,
-    // other payment method details
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct XenditCardResponseDetails {
-    pub last_four_digits: Option<String>,
-    pub brand: Option<String>,
-    // other card details
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -571,5 +515,177 @@ impl<F>
                 })
             }
         }
+    }
+}
+
+impl TryFrom<XenditRouterData<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>> for XenditPaymentsCaptureRequest {
+    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    fn try_from(item: XenditRouterData<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            capture_amount: item.amount,
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct XenditPaymentsCaptureRequest {
+    pub capture_amount: FloatMajorUnit,
+}
+
+impl<F>
+   ForeignTryFrom<(
+        XenditPaymentResponse,
+        RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, u16,
+    )> for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn foreign_try_from(
+        (response, item,http_code): (
+            XenditPaymentResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let status = map_payment_response_to_attempt_status(response.clone(), true);
+        let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
+            Err(ErrorResponse {
+                code: response
+                    .failure_code
+                    .clone()
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+                message: response
+                    .failure_code
+                    .clone()
+                    .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                reason: Some(response
+                        .failure_code
+                        .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+                ),
+                attempt_status: None,
+                connector_transaction_id: None,
+                status_code: http_code,
+                // network_advice_code: None,
+                // network_decline_code: None,
+                // network_error_message: None,
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::NoResponseId,
+                redirection_data: Box::new(None),
+                //mandate_reference: Box::new(None),
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: Some(
+                    response.reference_id.peek().to_string(),
+                ),
+                incremental_authorization_allowed: None,
+                //charges: None,
+            })
+        };
+        Ok(Self {        
+            response,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.resource_common_data
+            },
+            ..item
+        })
+    }
+}
+
+#[derive(Default, Debug, Serialize)]
+pub struct XenditRefundRequest {
+    pub amount: FloatMajorUnit,
+    pub payment_request_id: String,
+    pub reason: String,
+}
+
+impl<F> TryFrom<&XenditRouterData<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>> for XenditRefundRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &XenditRouterData<&RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount: item.amount.to_owned(),
+            payment_request_id: item.router_data.request.connector_transaction_id.clone(),
+            reason: "REQUESTED_BY_CUSTOMER".to_string(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RefundResponse {
+    pub id: String,
+    pub status: RefundStatus,
+    pub amount: FloatMajorUnit,
+    pub currency: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum RefundStatus {
+    RequiresAction,
+    Succeeded,
+    Failed,
+    Pending,
+    Cancelled,
+}
+
+impl<F>
+   ForeignTryFrom<(
+        RefundResponse,
+        RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, u16,
+    )> for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn foreign_try_from(
+        (response, item,_http_code): (
+            RefundResponse,
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: response.id,
+                refund_status: hyperswitch_common_enums::RefundStatus::from(response.status),
+            }),
+            ..item
+        })
+    }
+}
+
+impl From<RefundStatus> for hyperswitch_common_enums::RefundStatus {
+    fn from(item: RefundStatus) -> Self {
+        match item {
+            RefundStatus::Succeeded => Self::Success,
+            RefundStatus::Failed | RefundStatus::Cancelled => Self::Failure,
+            RefundStatus::Pending | RefundStatus::RequiresAction => Self::Pending,
+        }
+    }
+}
+
+impl<F>
+   ForeignTryFrom<(
+        RefundResponse,
+        RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>, u16,
+    )> for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn foreign_try_from(
+        (response, item,_http_code): (
+            RefundResponse,
+            RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            u16,
+        ),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            response: Ok(RefundsResponseData {
+                connector_refund_id: response.id,
+                refund_status: hyperswitch_common_enums::RefundStatus::from(response.status),
+            }),
+            ..item
+        })
     }
 }

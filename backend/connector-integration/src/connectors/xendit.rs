@@ -1,6 +1,6 @@
 pub mod transformers; 
 
-use transformers::{self as xendit,ForeignTryFrom};
+use transformers::{self as xendit, ForeignTryFrom, XenditPaymentsCaptureRequest};
 
 use domain_types::{
     connector_types::{
@@ -301,88 +301,6 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
     }
 }
 
-impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Xendit {
-    // ... implementation ...
-    fn get_headers(
-        &self,
-        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_headers for CreateOrder".to_string()).into())
-    }
-
-    fn get_url(
-        &self,
-        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_url for CreateOrder".to_string()).into())
-    }
-
-    fn get_request_body(
-        &self,
-        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_request_body for CreateOrder".to_string()).into())
-    }
-
-    fn handle_response_v2(
-        &self,
-        _data: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("handle_response_v2 for CreateOrder".to_string()).into())
-    }
-    
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundsData, RefundsResponseData> for Xendit {
-    // ... implementation ...
-    fn get_headers(
-        &self,
-        _req: &RouterDataV2<RSync, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_headers for RSync".to_string()).into())
-    }
-
-    fn get_url(
-        &self,
-        _req: &RouterDataV2<RSync, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_url for RSync".to_string()).into())
-    }
-
-    fn get_request_body(
-        &self,
-        _req: &RouterDataV2<RSync, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_request_body for RSync".to_string()).into())
-    }
-
-    fn handle_response_v2(
-        &self,
-        _data: &RouterDataV2<RSync, RefundFlowData, RefundsData, RefundsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundsData, RefundsResponseData>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("handle_response_v2 for RSync".to_string()).into())
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
 impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Xendit {
     // ... implementation ...
     fn get_headers(
@@ -425,35 +343,59 @@ impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResp
 }
 
 impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Xendit {
-    // ... implementation ...
     fn get_headers(
         &self,
-        _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_headers for Refund".to_string()).into())
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut api_key);
+        Ok(header)
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_url for Refund".to_string()).into())
+        Ok(format!("{}/refunds", req.resource_common_data.connectors.xendit.base_url))
     }
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_request_body for Refund".to_string()).into())
+        let amount = convert_amount(
+            self.amount_converter,
+            req.request.minor_refund_amount,
+            req.request.currency,
+        )?;
+        let connector_router_data = xendit::XenditRouterData::from((amount, req));
+        let connector_req = xendit::XenditRefundRequest::try_from(&connector_router_data)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
+        data: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
     ) -> CustomResult<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("handle_response_v2 for Refund".to_string()).into())
+        let response: xendit::RefundResponse = res
+            .response
+            .parse_struct("xendit RefundResponse")
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((
+            response,
+            data.clone(),
+            res.status_code,
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -465,35 +407,67 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
     }
 }
 impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Xendit {
-    // ... implementation ...
     fn get_headers(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_headers for Capture".to_string()).into())
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut api_key);
+        Ok(header)
     }
 
     fn get_url(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_url for Capture".to_string()).into())
+        let connector_payment_id = req.request.connector_transaction_id.get_connector_transaction_id().unwrap_or_else(|err| format!("{:?}", err));
+        Ok(format!(
+            "{}/payment_requests/{connector_payment_id}/captures",
+            req.resource_common_data.connectors.xendit.base_url,
+        ))
     }
 
     fn get_request_body(
         &self,
-        _req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("get_request_body for Capture".to_string()).into())
+        let amount_to_capture = convert_amount(
+            self.amount_converter,
+            req.request.minor_amount_to_capture,
+            req.request.currency,
+        )?;      
+        let connector_router_data = xendit::XenditRouterData::from((amount_to_capture, req));
+        let connector_req =
+            XenditPaymentsCaptureRequest::try_from(connector_router_data)?;
+        Ok(Some(RequestContent::Json(Box::new(connector_req))))  
     }
 
     fn handle_response_v2(
         &self,
-        _data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        _event_builder: Option<&mut ConnectorEvent>,
-        _res: Response,
-    ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, errors::ConnectorError> {
-        Err(errors::ConnectorError::NotImplemented("handle_response_v2 for Capture".to_string()).into())
+        data: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        errors::ConnectorError,
+    >{
+        let response: xendit::XenditPaymentResponse = res
+            .response
+            .parse_struct("Xendit PaymentsResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from ((
+            response,
+            data.clone(),
+            res.status_code,
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -636,5 +610,125 @@ impl ConnectorIntegrationV2<
     RefundSyncData,
     RefundsResponseData,
 > for Xendit {
-    // Implement the required trait functions here
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<
+            RSync,
+            RefundFlowData,
+            RefundSyncData,
+            RefundsResponseData,
+        >,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let mut header = vec![(
+            headers::CONTENT_TYPE.to_string(),
+            "application/json".to_string().into(),
+        )];
+        let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+        header.append(&mut api_key);
+        Ok(header)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<
+            RSync,
+            RefundFlowData,
+            RefundSyncData,
+            RefundsResponseData,
+        >,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        let connector_refund_id = req.request.connector_refund_id.clone();
+        Ok(format!(
+            "{}/refunds/{}",
+            req.resource_common_data.connectors.xendit.base_url,
+            connector_refund_id
+        ))
+    }
+
+    fn get_http_method(&self) -> Method {
+        Method::Get
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<
+            RSync,
+            RefundFlowData,
+            RefundSyncData,
+            RefundsResponseData,
+        >,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<
+            RSync,
+            RefundFlowData,
+            RefundSyncData,
+            RefundsResponseData,
+        >,
+        errors::ConnectorError,
+    > {
+        let response: xendit::RefundResponse = res
+            .response
+            .parse_struct("xendit RefundResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_response_body!(event_builder, response);
+
+        RouterDataV2::foreign_try_from((
+            response,
+            data.clone(),
+            res.status_code,
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
+
+impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Xendit {
+    // ... implementation ...
+    fn get_headers(
+        &self,
+        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("get_headers for CreateOrder".to_string()).into())
+    }
+
+    fn get_url(
+        &self,
+        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("get_url for CreateOrder".to_string()).into())
+    }
+
+    fn get_request_body(
+        &self,
+        _req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("get_request_body for CreateOrder".to_string()).into())
+    }
+
+    fn handle_response_v2(
+        &self,
+        _data: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        _event_builder: Option<&mut ConnectorEvent>,
+        _res: Response,
+    ) -> CustomResult<RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>, errors::ConnectorError> {
+        Err(errors::ConnectorError::NotImplemented("handle_response_v2 for CreateOrder".to_string()).into())
+    }
+    
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
 }
