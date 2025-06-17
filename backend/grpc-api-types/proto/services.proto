@@ -61,8 +61,8 @@ service PaymentService {
     };
   }
 
-  // Accepts a dispute.
-  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) { // TODO: This should create a new dispute, not accept an existing one.
+  // Creates a new dispute.
+  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) {
     option (google.api.http) = {
       post: "/v1/payment/dispute"
       body: "*"

@@ -880,8 +880,8 @@ message BrowserInformation {
   optional string device_model = 13;
 }
 
-// Represents a response identifier, which can be one of several types.
-message TransactionId {
+// Represents an identifier, which can be one of several types.
+message Identifier {
   oneof id_type {
     // Connector's transaction ID.
     string id = 1 [(validate.rules).string = {min_len: 1}];
@@ -1147,7 +1147,7 @@ message PaymentServiceAuthorizeRequest {
 // Response message for a payment authorization.
 message PaymentServiceAuthorizeResponse {
   // Identification
-  TransactionId transaction_id = 1; // Identifier for the resource created
+  Identifier transaction_id = 1; // Identifier for the resource created
   
   // Status Information
   PaymentStatus status = 2; // Status of the payment attempt
@@ -1175,7 +1175,7 @@ message PaymentServiceGetRequest {
 // Response message for a payment status synchronization.
 message PaymentServiceGetResponse {
   // Identification
-  TransactionId transaction_id = 1; // Identifier for the synchronized resource
+  Identifier transaction_id = 1; // Identifier for the synchronized resource
   
   // Status Information
   PaymentStatus status = 2; // Current status of the payment attempt
@@ -1202,7 +1202,7 @@ message PaymentServiceVoidRequest {
 // Response message for a payment void operation.
 message PaymentServiceVoidResponse {
   // Identification
-  TransactionId transaction_id = 1; // Identifier for the voided resource
+  Identifier transaction_id = 1; // Identifier for the voided resource
   
   // Status Information
   PaymentStatus status = 2; // Status of the payment attempt after voiding
@@ -1233,7 +1233,7 @@ message PaymentServiceCaptureRequest {
 // Response message for a payment capture operation.
 message PaymentServiceCaptureResponse {
   // Identification
-  TransactionId transaction_id = 1; // Identifier for the captured resource
+  Identifier transaction_id = 1; // Identifier for the captured resource
   
   // Status Information
   PaymentStatus status = 2; // Status of the payment after the capture attempt
@@ -1250,7 +1250,7 @@ message PaymentServiceRefundRequest {
   string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
   string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund
   string transaction_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
-  optional string connector_refund_id = 4; // Connector's identifier for the refund
+  optional string refund_id = 4; // Connector's identifier for the refund
   
   // Amount Information
   int64 payment_amount = 5 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units
@@ -1276,7 +1276,7 @@ message PaymentServiceRefundRequest {
 // Response message for a refund operation.
 message PaymentServiceRefundResponse {
   // Identification
-  optional string connector_refund_id = 1; // Connector's ID for the refund
+  optional string refund_id = 1; // Connector's ID for the refund
   
   // Status Information
   RefundStatus refund_status = 2; // Status of the refund
@@ -1287,28 +1287,28 @@ message PaymentServiceRefundResponse {
   optional string response_ref_id = 5; // Response reference ID for tracking
 }
 
-// Request message for accepting a dispute.
-message PaymentServiceDisputeRequest { // TODO: add the `transaction_id` to raise the dispute for
+// Request message for creating a dispute.
+message PaymentServiceDisputeRequest {
   // Identification
   string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  optional string transaction_id = 2; // Merchant's unique identifier for the dispute
-  string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier // we don't need this 
+  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to raise the dispute for
+  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
 
-// Response message for an accept dispute operation.
+// Response message for a dispute creation operation.
 message PaymentServiceDisputeResponse {
   // Identification
-  // TODO: add the `transaction_id` to raise the dispute for
-  string dispute_id = 1; // Connector's unique identifier for the dispute
+  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // Transaction ID the dispute was raised for
+  string dispute_id = 2; // Connector's unique identifier for the dispute
   
   // Status Information
-  DisputeStatus dispute_status = 2; // Status of the dispute after acceptance
-  optional string connector_status_code = 3; // Renamed from connector_dispute_status_code
-  optional string error_code = 4; // Error code if accepting the dispute failed
-  optional string error_message = 5; // Error message if accepting the dispute failed
+  DisputeStatus dispute_status = 3; // Status of the dispute after creation
+  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
+  optional string error_code = 5; // Error code if creating the dispute failed
+  optional string error_message = 6; // Error message if creating the dispute failed
   
   // Reference
-  optional string response_ref_id = 6; // Response reference ID for tracking
+  optional string response_ref_id = 7; // Response reference ID for tracking
 }
 
 // Request message for setting up a mandate.
@@ -1367,7 +1367,7 @@ message PaymentServiceRegisterRequest {
 // Response message for a mandate setup operation.
 message PaymentServiceRegisterResponse {
   // Identification
-  TransactionId resource_id = 1; // Identifier for the resource created
+  Identifier resource_id = 1; // Identifier for the resource created
   
   // Status Information
   PaymentStatus status = 2; // Status of the mandate setup attempt
@@ -1421,8 +1421,8 @@ message PaymentServiceTransformResponse {
 message RefundServiceGetRequest {
   // Identification
   string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  TransactionId transaction_id = 2; // Renamed from connector_transaction_id
-  string refund_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_refund_id // TODO: we can't take refund_id in refund create request
+  Identifier transaction_id = 2; // Renamed from connector_transaction_id
+  string refund_id = 3 [(validate.rules).string = {min_len: 1}]; // Refund identifier
   
   // Refund Details
   optional string refund_reason = 4; // Reason for the refund, if provided during sync
@@ -1431,7 +1431,7 @@ message RefundServiceGetRequest {
 // Response message for a refund status synchronization.
 message RefundServiceGetResponse {
   // Identification
-  TransactionId transaction_id = 1; // Identifier for the synchronized resource
+  Identifier transaction_id = 1; // Identifier for the synchronized resource
   string refund_id = 2; // Renamed from connector_refund_id
   
   // Status Information
@@ -1478,7 +1478,7 @@ message RefundServiceTransformResponse {
 message DisputeServiceSubmitEvidenceRequest {
   // Identification
   string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
-  optional TransactionId transaction_id = 2; // Merchant's unique identifier for the dispute
+  optional Identifier transaction_id = 2; // Merchant's unique identifier for the dispute
   string dispute_id = 3; // Merchant's unique identifier for the dispute
   
   // Dates
@@ -1490,18 +1490,19 @@ message DisputeServiceSubmitEvidenceRequest {
 }
 
 // Response message for a submit evidence operation.
-message DisputeServiceSubmitEvidenceResponse { // TODO: we might need the submitted document's ID in the response
+message DisputeServiceSubmitEvidenceResponse {
   // Identification
   optional string dispute_id = 1; // Connector's unique identifier for the dispute
+  repeated string submitted_evidence_ids = 2; // IDs of the submitted evidence documents
   
   // Status Information
-  DisputeStatus dispute_status = 2; // Status of the dispute after submitting evidence
-  optional string connector_status_code = 3; // Renamed from connector_dispute_status_code
-  optional string error_code = 4; // Error code if submitting evidence failed
-  optional string error_message = 5; // Error message if submitting evidence failed
+  DisputeStatus dispute_status = 3; // Status of the dispute after submitting evidence
+  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
+  optional string error_code = 5; // Error code if submitting evidence failed
+  optional string error_message = 6; // Error message if submitting evidence failed
   
   // Reference
-  optional string response_ref_id = 6; // Response reference ID for tracking
+  optional string response_ref_id = 7; // Response reference ID for tracking
 }
 
 // Request message for retrieving dispute information.
@@ -1522,7 +1523,7 @@ message DisputeServiceGetRequest {
 // Response message for a retrieve dispute information operation.
 message DisputeServiceGetResponse {
   // Identification
-  optional string connector_dispute_id = 1; // Connector's unique identifier for the dispute
+  optional string dispute_id = 1; // Connector's unique identifier for the dispute
   
   // Status Information
   DisputeStatus dispute_status = 2; // Status of the dispute
@@ -1830,7 +1831,7 @@ enum AttemptStatus {
 message DisputeDefendRequest {
   string defense_reason_code = 1;
   string dispute_id = 3;
-  optional bool all_keys_required = 34; // TODO: what's this for?
+  optional bool all_keys_required = 34; // Indicates if all credential keys are required for defense
 }
 
 message DisputeDefendResponse {
