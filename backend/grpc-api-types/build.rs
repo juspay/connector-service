@@ -1,4 +1,5 @@
 use std::{env, path::PathBuf};
+use prost::Message;
 
 mod cargo_workspace {
     /// Verify that the cargo metadata workspace packages format matches that expected by
@@ -64,41 +65,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
 
-    let generator = tonic_build::configure().service_generator();
-    let web_generator = g2h::BridgeGenerator::new(generator);
-
-    prost_build::Config::new()
-        .service_generator(Box::new(web_generator))
+    // First, build a simple config to get the FileDescriptorSet
+    let mut temp_config = prost_build::Config::new();
+    temp_config
         .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
-        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-        .field_attribute(
-            "PaymentsAuthorizeRequest.currency",
-            "#[serde(deserialize_with = \"crate::deserialize_enum_from_string\")]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.payment_method",
-            "#[serde(deserialize_with = \"crate::deserialize_enum_from_string\")]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.auth_type",
-            "#[serde(deserialize_with = \"crate::deserialize_enum_from_string\")]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.payment_method_type",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.capture_method",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.setup_future_usage",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.payment_experience",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
+        .compile_protos(
+            &["proto/payment.proto", "proto/health_check.proto"],
+            &["proto"],
+        )?;
+
+    // Read the FileDescriptorSet to detect enums automatically
+    let descriptor_bytes = std::fs::read(out_dir.join("connector_service_descriptor.bin"))?;
+    let file_descriptor_set = prost_types::FileDescriptorSet::decode(&*descriptor_bytes)?;
+
+    // Generate enum deserializer code using g2h
+    let enum_config = g2h::BridgeGenerator::with_tonic_build()
+        .with_string_enums()
+        .build_enum_config();
+    
+    let deserializer_code = enum_config.generate_enum_deserializer_code(&file_descriptor_set);
+    std::fs::write(out_dir.join("enum_deserializer.rs"), deserializer_code)?;
+
+    // Clean up old build artifacts to avoid conflicts
+    let _ = std::fs::remove_file(out_dir.join("ucs.payments.rs"));
+    let _ = std::fs::remove_file(out_dir.join("grpc.health.v1.rs"));
+
+    // Now use g2h with automatic enum detection
+    enum_config
+        .build_prost_config_with_descriptors(&file_descriptor_set)
+        .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
         .compile_protos(
             &["proto/payment.proto", "proto/health_check.proto"],
             &["proto"],
