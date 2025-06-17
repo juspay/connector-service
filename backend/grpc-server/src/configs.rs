@@ -1,10 +1,9 @@
-use std::path::PathBuf;
-
-use domain_types::types::{Connectors, Proxy};
-
 use crate::{consts, error::ConfigurationError, logger::config::Log};
+use domain_types::types::{Connectors, Proxy};
+use std::path::PathBuf;
+// use serde::{de::{self, Deserializer, MapAccess, Visitor}, Deserialize};
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct Config {
     pub server: Server,
     pub metrics: MetricsServer,
@@ -13,7 +12,7 @@ pub struct Config {
     pub connectors: Connectors,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -21,13 +20,13 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]
