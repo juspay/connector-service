@@ -9,10 +9,14 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse,
         ConnectorServiceTrait, IncomingWebhook, PaymentAuthorizeV2, 
         PaymentCapture, PaymentOrderCreate, PaymentSyncV2, PaymentVoidV2, 
-        RefundSyncData, RefundSyncV2, RefundV2, ValidationTrait
+        RefundSyncData, RefundSyncV2, RefundV2, ValidationTrait,
+        SubmitEvidenceV2, SubmitEvidenceData, DisputeFlowData, DisputeResponseData,
+        DisputeDefend, DisputeDefendData,
+        AcceptDispute, AcceptDisputeData, 
+        SetupMandateV2, SetupMandateRequestData
     },
     connector_flow::{
-        Authorize, Capture, PSync, RSync, Refund, Void, CreateOrder,
+        Authorize, Capture, PSync, RSync, Refund, Void, CreateOrder, SubmitEvidence, DefendDispute, Accept, SetupMandate
     }
 };
 
@@ -41,7 +45,7 @@ use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 
 use hyperswitch_common_enums::Currency;
 
-use crate::{ with_response_body};
+use crate::{ with_response_body, with_error_response_body};
 
 use base64::Engine;
 
@@ -115,12 +119,14 @@ impl ConnectorCommon for Xendit {
     fn build_error_response(
         &self,
         res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: transformers::XenditErrorResponse = res
             .response
             .parse_struct("XenditErrorResponse")
             .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
 
         Ok(ErrorResponse {
             status_code: res.status_code,
@@ -144,6 +150,10 @@ impl RefundSyncV2 for Xendit {}
 impl RefundV2 for Xendit {}
 impl PaymentCapture for Xendit {}
 impl IncomingWebhook for Xendit {}
+impl SubmitEvidenceV2 for Xendit {}
+impl DisputeDefend for Xendit {}
+impl AcceptDispute for Xendit {}
+impl SetupMandateV2 for Xendit {}
 
 fn convert_amount<T>(
     amount_convertor: &dyn AmountConvertor<Output = T>,
@@ -731,4 +741,30 @@ impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         self.build_error_response(res, event_builder)
     }
+}
+
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Xendit
+{
+}
+
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Xendit
+{
+}
+
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Xendit
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Xendit
+{
 }

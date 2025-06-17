@@ -1,5 +1,12 @@
 use domain_types::{
-    connector_flow::{Authorize, Capture}, connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData , PaymentsSyncData, PaymentsCaptureData, RefundsData, RefundsResponseData, RefundFlowData, RefundSyncData}
+    connector_flow::{Authorize, Capture}, 
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, 
+        PaymentsResponseData , PaymentsSyncData, 
+        PaymentsCaptureData, RefundsData, RefundsResponseData, 
+        RefundFlowData, RefundSyncData, MandateReference,
+        ResponseId,
+    }
 };
 
 use hyperswitch_common_utils::{
@@ -11,7 +18,6 @@ use hyperswitch_domain_models::{
     payment_method_data::{PaymentMethodData},
     router_data::{ConnectorAuthType,ErrorResponse}, // Added for XenditErrorResponse
     router_data_v2::RouterDataV2,
-    router_request_types::ResponseId,
     router_response_types::{RedirectForm},
 };
 
@@ -25,7 +31,7 @@ use hyperswitch_cards::CardNumber;
 
 use serde::{Deserialize, Serialize};
 
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret, ExposeInterface};
 
 type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
 
@@ -235,7 +241,7 @@ pub struct XenditPaymentActions {
 }
 
 // Xendit Error Response Structure (from Hyperswitch xendit.rs)
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct XenditErrorResponse {
     pub error_code: Option<String>,
     pub message: Option<String>,
@@ -413,12 +419,20 @@ impl<F>
                     }
                     _ => Box::new(None),
                 },
+                mandate_reference: match is_mandate_payment(&item.request) {
+                    true => Box::new(Some(MandateReference {
+                        connector_mandate_id: Some(response.payment_method.id.expose()),
+                        payment_method_id: None,
+                    })),
+                    false => Box::new(None),
+                },
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(
                     response.reference_id.peek().to_string(),
                 ),
-                incremental_authorization_allowed: None,            
+                incremental_authorization_allowed: None,  
+                raw_connector_response: None,          
             })
         };
        
@@ -479,11 +493,12 @@ impl<F>
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::NoResponseId,
                         redirection_data: Box::new(None),
-                        // mandate_reference: Box::new(None),
+                        mandate_reference: Box::new(None),
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
+                        raw_connector_response: None,
                         // charges: None,
                     })
                 };
@@ -573,13 +588,14 @@ impl<F>
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
                 redirection_data: Box::new(None),
-                //mandate_reference: Box::new(None),
+                mandate_reference: Box::new(None),
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(
                     response.reference_id.peek().to_string(),
                 ),
                 incremental_authorization_allowed: None,
+                raw_connector_response: None,
                 //charges: None,
             })
         };
@@ -649,6 +665,7 @@ impl<F>
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: hyperswitch_common_enums::RefundStatus::from(response.status),
+                raw_connector_response: None,
             }),
             ..item
         })
@@ -684,8 +701,21 @@ impl<F>
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: hyperswitch_common_enums::RefundStatus::from(response.status),
+                raw_connector_response: None,
             }),
             ..item
         })
     }
+}
+
+fn is_mandate_payment(
+    item: &PaymentsAuthorizeData,
+) -> bool {
+    (item.setup_future_usage
+        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+        || item
+            .mandate_id
+            .as_ref()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+            .is_some()
 }

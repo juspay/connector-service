@@ -123,6 +123,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentsSyncRequest {
     PaymentsSyncRequest {
         resource_id: transaction_id.to_string(),
         connector_request_reference_id: Some(format!("xendit_sync_{}", get_timestamp())),
+        all_keys_required: None,
     }
 }
 
@@ -134,6 +135,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentsCaptureReques
         currency: i32::from(Currency::Idr),
         multiple_capture_data: None,
         connector_meta_data: None,
+        all_keys_required: None,
     }
 }
 
@@ -155,6 +157,7 @@ fn create_refund_request(transaction_id: &str) -> RefundsRequest {
         browser_info: None,
         merchant_account_id: None,
         capture_method: None,
+        all_keys_required: None,
     }
 }
 
@@ -164,6 +167,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundsS
         connector_transaction_id: transaction_id.to_string(),
         connector_refund_id: refund_id.to_string(),
         refund_reason: None,
+        all_keys_required: None,
     }
 }
 
