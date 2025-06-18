@@ -1,6 +1,16 @@
 pub mod test;
 pub mod transformers;
 use crate::{with_error_response_body, with_response_body};
+use common_enums::{
+    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
+};
+use common_utils::{
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    pii::SecretSerdeValue,
+    request::{Method, RequestContent},
+    types::{AmountConvertor, MinorUnit},
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -26,16 +36,6 @@ use domain_types::{
         PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
         SupportedPaymentMethods,
     },
-};
-use hyperswitch_common_enums::{
-    AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
-};
-use hyperswitch_common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    pii::SecretSerdeValue,
-    request::{Method, RequestContent},
-    types::{AmountConvertor, MinorUnit},
 };
 use std::sync::LazyLock;
 
@@ -94,7 +94,7 @@ impl DisputeDefend for Razorpay {}
 impl Razorpay {
     pub const fn new() -> &'static Self {
         &Self {
-            amount_converter: &hyperswitch_common_utils::types::MinorUnitForConnector,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
         }
     }
 }

@@ -1,0 +1,10 @@
+[package]
+name = "common_enums"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
+strum = { version = "0.26.2", features = ["derive"] }
+hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models" }

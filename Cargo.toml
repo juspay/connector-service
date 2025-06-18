@@ -5,6 +5,10 @@ members = [
   "backend/connector-integration",
   "backend/external-services",
   "backend/grpc-server", 
+  "backend/common_utils",
+  "backend/api_models",
+  "backend/domain_types",
+  "backend/common_enums",
   "sdk/rust-grpc-client"
 ]
 exclude = [

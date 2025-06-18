@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
 use crate::consts;
+use common_utils::errors::CustomResult;
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
 use error_stack::Report;
 use http::request::Request;
-use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use tonic::metadata;
 

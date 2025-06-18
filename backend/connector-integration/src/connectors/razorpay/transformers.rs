@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 
+use common_enums::{enums, AttemptStatus, CardNetwork};
 use error_stack::ResultExt;
-use hyperswitch_common_enums::{enums, AttemptStatus, CardNetwork};
 
-use hyperswitch_cards::CardNumber;
-use hyperswitch_common_enums::RefundStatus;
-use hyperswitch_common_utils::{
-    ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
-};
+use cards::CardNumber;
+use common_enums::RefundStatus;
+use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
@@ -480,7 +478,7 @@ pub struct RazorpayRefundRequest {
     pub amount: MinorUnit,
 }
 
-impl ForeignTryFrom<RazorpayRefundStatus> for hyperswitch_common_enums::RefundStatus {
+impl ForeignTryFrom<RazorpayRefundStatus> for common_enums::RefundStatus {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
     fn foreign_try_from(item: RazorpayRefundStatus) -> Result<Self, Self::Error> {
         match item {
@@ -617,7 +615,7 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let status = hyperswitch_common_enums::RefundStatus::foreign_try_from(response.status)?;
+        let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
@@ -650,7 +648,7 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let status = hyperswitch_common_enums::RefundStatus::foreign_try_from(response.status)?;
+        let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,

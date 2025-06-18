@@ -10,16 +10,13 @@ use crate::types::{
 };
 use crate::utils::ForeignTryFrom;
 use error_stack::ResultExt;
-use hyperswitch_common_enums::Currency;
 use std::collections::HashSet;
 
-use hyperswitch_common_enums::{
-    AttemptStatus, AuthenticationType, CaptureMethod, DisputeStatus, EventClass, PaymentMethod,
-    PaymentMethodType,
+use common_enums::{
+    AttemptStatus, AuthenticationType, CaptureMethod, Currency, DisputeStatus, EventClass,
+    PaymentMethod, PaymentMethodType,
 };
-use hyperswitch_common_utils::{
-    errors, errors::CustomResult, pii::SecretSerdeValue, types::MinorUnit,
-};
+use common_utils::{errors, errors::CustomResult, pii::SecretSerdeValue, types::MinorUnit};
 use hyperswitch_domain_models::{
     payment_method_data, payment_method_data::PaymentMethodData, router_data::ConnectorAuthType,
     router_request_types::SyncRequestType,
@@ -149,8 +146,8 @@ pub trait RawConnectorResponse {
 
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
-    pub merchant_id: hyperswitch_common_utils::id_type::MerchantId,
-    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+    pub merchant_id: common_utils::id_type::MerchantId,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub connector_customer: Option<String>,
     pub payment_id: String,
     pub attempt_id: String,
@@ -160,7 +157,7 @@ pub struct PaymentFlowData {
     pub return_url: Option<String>,
     pub address: PaymentAddress,
     pub auth_type: AuthenticationType,
-    pub connector_meta_data: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
+    pub connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
@@ -206,28 +203,28 @@ pub struct PaymentsAuthorizeData {
     /// ```
     pub amount: i64,
     pub order_tax_amount: Option<MinorUnit>,
-    pub email: Option<hyperswitch_common_utils::pii::Email>,
+    pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
     pub complete_authorize_url: Option<String>,
     // Mandates
     pub mandate_id: Option<api_models::payments::MandateIds>,
-    pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
     pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
     pub enrolled_for_3ds: bool,
     pub related_transaction_id: Option<String>,
-    pub payment_experience: Option<hyperswitch_common_enums::PaymentExperience>,
-    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
-    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+    pub payment_experience: Option<common_enums::PaymentExperience>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
     // New amount for amount frame work
@@ -238,7 +235,7 @@ pub struct PaymentsAuthorizeData {
     pub merchant_order_reference_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
-    pub merchant_config_currency: Option<hyperswitch_common_enums::Currency>,
+    pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
 }
 
@@ -246,13 +243,13 @@ pub struct PaymentsAuthorizeData {
 pub struct PaymentsSyncData {
     pub connector_transaction_id: ResponseId,
     pub encoded_data: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
     pub connector_meta: Option<serde_json::Value>,
     pub sync_type: SyncRequestType,
     pub mandate_id: Option<api_models::payments::MandateIds>,
-    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
-    pub currency: hyperswitch_common_enums::Currency,
-    pub payment_experience: Option<hyperswitch_common_enums::PaymentExperience>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub currency: common_enums::Currency,
+    pub payment_experience: Option<common_enums::PaymentExperience>,
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
 }
@@ -318,21 +315,21 @@ pub struct RefundSyncData {
     pub connector_transaction_id: String,
     pub connector_refund_id: String,
     pub reason: Option<String>,
-    pub refund_connector_metadata: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
-    pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub refund_connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
+    pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefundsResponseData {
     pub connector_refund_id: String,
-    pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefundFlowData {
-    pub status: hyperswitch_common_enums::RefundStatus,
+    pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
@@ -347,7 +344,7 @@ impl RawConnectorResponse for RefundFlowData {
 #[derive(Debug, Clone)]
 pub struct WebhookDetailsResponse {
     pub resource_id: Option<ResponseId>,
-    pub status: hyperswitch_common_enums::AttemptStatus,
+    pub status: common_enums::AttemptStatus,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -356,7 +353,7 @@ pub struct WebhookDetailsResponse {
 #[derive(Debug, Clone)]
 pub struct RefundWebhookDetailsResponse {
     pub connector_refund_id: Option<String>,
-    pub status: hyperswitch_common_enums::RefundStatus,
+    pub status: common_enums::RefundStatus,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -365,8 +362,8 @@ pub struct RefundWebhookDetailsResponse {
 #[derive(Debug, Clone)]
 pub struct DisputeWebhookDetailsResponse {
     pub dispute_id: String,
-    pub status: hyperswitch_common_enums::DisputeStatus,
-    pub stage: hyperswitch_common_enums::DisputeStage,
+    pub status: common_enums::DisputeStatus,
+    pub stage: common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
 }
@@ -526,18 +523,18 @@ pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
     pub refund_amount: i64,
     pub connector_metadata: Option<serde_json::Value>,
-    pub refund_connector_metadata: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
+    pub refund_connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub minor_payment_amount: MinorUnit,
     pub minor_refund_amount: MinorUnit,
-    pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub refund_status: common_enums::RefundStatus,
     pub merchant_account_id: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -550,7 +547,7 @@ pub struct MultipleCaptureRequestData {
 pub struct PaymentsCaptureData {
     pub amount_to_capture: i64,
     pub minor_amount_to_capture: MinorUnit,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
@@ -558,7 +555,7 @@ pub struct PaymentsCaptureData {
 
 #[derive(Debug, Clone)]
 pub struct SetupMandateRequestData {
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
     pub amount: Option<i64>,
     pub confirm: bool,
@@ -566,24 +563,24 @@ pub struct SetupMandateRequestData {
     pub statement_descriptor: Option<String>,
     pub customer_acceptance: Option<hyperswitch_domain_models::mandates::CustomerAcceptance>,
     pub mandate_id: Option<api_models::payments::MandateIds>,
-    pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
     pub setup_mandate_details: Option<hyperswitch_domain_models::mandates::MandateData>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
     pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
-    pub email: Option<hyperswitch_common_utils::pii::Email>,
+    pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
     pub return_url: Option<String>,
-    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
     pub complete_authorize_url: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
     pub merchant_order_reference_id: Option<String>,
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
-    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -700,7 +697,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
         &self,
         capture_method: Option<CaptureMethod>,
         payment_method: PaymentMethod,
-        pmt: Option<hyperswitch_common_enums::PaymentMethodType>,
+        pmt: Option<common_enums::PaymentMethodType>,
     ) -> CustomResult<(), ConnectorError> {
         let capture_method = capture_method.unwrap_or_default();
         let is_default_capture_method = [CaptureMethod::Automatic].contains(&capture_method);

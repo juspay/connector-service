@@ -1,9 +1,9 @@
-use error_stack::{report, ResultExt};
-use hyperswitch_common_enums::enums;
-use hyperswitch_common_utils::{
+use common_enums::enums;
+use common_utils::{
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
+use error_stack::{report, ResultExt};
 use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -55,7 +55,7 @@ pub enum Source {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardData {
-    pub card_data: hyperswitch_cards::CardNumber,
+    pub card_data: cards::CardNumber,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub security_code: Secret<String>,

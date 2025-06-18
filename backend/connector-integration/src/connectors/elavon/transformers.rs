@@ -1,3 +1,9 @@
+use cards::CardNumber;
+use common_enums::{
+    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
+    FutureUsage,
+};
+use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -8,12 +14,6 @@ use domain_types::{
     payment_address::PaymentAddress,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_cards::CardNumber;
-use hyperswitch_common_enums::{
-    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
-    FutureUsage,
-};
-use hyperswitch_common_utils::types::StringMajorUnit;
 use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
@@ -97,7 +97,7 @@ pub struct CardPaymentRequest {
     pub ssl_exp_date: Secret<String>,
     pub ssl_cvv2cvc2: Option<Secret<String>>,
     pub ssl_cvv2cvc2_indicator: Option<i32>,
-    pub ssl_email: Option<hyperswitch_common_utils::pii::Email>,
+    pub ssl_email: Option<common_utils::pii::Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssl_add_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1125,14 +1125,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
             ElavonResult::Success(success_payload) => {
                 match success_payload.ssl_transaction_type.as_deref() {
                     Some("RETURN") => match success_payload.ssl_result {
-                        SslResult::Approved => hyperswitch_common_enums::RefundStatus::Success,
-                        SslResult::Declined => hyperswitch_common_enums::RefundStatus::Failure,
-                        SslResult::Other(_) => hyperswitch_common_enums::RefundStatus::Pending,
+                        SslResult::Approved => common_enums::RefundStatus::Success,
+                        SslResult::Declined => common_enums::RefundStatus::Failure,
+                        SslResult::Other(_) => common_enums::RefundStatus::Pending,
                     },
-                    _ => hyperswitch_common_enums::RefundStatus::Pending,
+                    _ => common_enums::RefundStatus::Pending,
                 }
             }
-            _ => hyperswitch_common_enums::RefundStatus::Failure,
+            _ => common_enums::RefundStatus::Failure,
         };
 
         // Build the response data
@@ -1249,18 +1249,18 @@ pub struct ElavonRSyncResponse {
 // Function to determine refund status from RSync response
 pub fn get_refund_status_from_elavon_sync_response(
     elavon_response: &ElavonRSyncResponse,
-) -> hyperswitch_common_enums::RefundStatus {
+) -> common_enums::RefundStatus {
     match elavon_response.ssl_transaction_type {
         SyncTransactionType::Return => match elavon_response.ssl_trans_status {
-            TransactionSyncStatus::STL => hyperswitch_common_enums::RefundStatus::Success,
-            TransactionSyncStatus::PEN => hyperswitch_common_enums::RefundStatus::Pending,
-            TransactionSyncStatus::OPN => hyperswitch_common_enums::RefundStatus::Pending,
-            TransactionSyncStatus::REV => hyperswitch_common_enums::RefundStatus::ManualReview,
+            TransactionSyncStatus::STL => common_enums::RefundStatus::Success,
+            TransactionSyncStatus::PEN => common_enums::RefundStatus::Pending,
+            TransactionSyncStatus::OPN => common_enums::RefundStatus::Pending,
+            TransactionSyncStatus::REV => common_enums::RefundStatus::ManualReview,
             TransactionSyncStatus::PST
             | TransactionSyncStatus::FPR
-            | TransactionSyncStatus::PRE => hyperswitch_common_enums::RefundStatus::Failure,
+            | TransactionSyncStatus::PRE => common_enums::RefundStatus::Failure,
         },
-        _ => hyperswitch_common_enums::RefundStatus::Pending,
+        _ => common_enums::RefundStatus::Pending,
     }
 }
 

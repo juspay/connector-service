@@ -328,8 +328,8 @@ checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
 name = "api_models"
 version = "0.1.0"
 dependencies = [
- "common_enums",
- "common_utils",
+ "common_enums 0.1.0",
+ "common_utils 0.1.0",
  "masking",
  "serde",
  "serde_json",
@@ -342,9 +342,9 @@ version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
  "actix-web",
- "cards",
- "common_enums",
- "common_utils",
+ "cards 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_enums 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "error-stack 0.4.1",
  "euclid",
  "masking",
@@ -778,9 +778,23 @@ dependencies = [
 [[package]]
 name = "cards"
 version = "0.1.0"
+dependencies = [
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "error-stack 0.4.1",
+ "masking",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "time",
+]
+
+[[package]]
+name = "cards"
+version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
- "common_utils",
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "error-stack 0.4.1",
  "masking",
  "router_env",
@@ -925,6 +939,16 @@ checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 [[package]]
 name = "common_enums"
 version = "0.1.0"
+dependencies = [
+ "api_models 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "serde",
+ "strum 0.26.3",
+ "utoipa",
+]
+
+[[package]]
+name = "common_enums"
+version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
  "diesel",
@@ -939,13 +963,39 @@ dependencies = [
 [[package]]
 name = "common_utils"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "common_enums 0.1.0",
+ "diesel",
+ "error-stack 0.4.1",
+ "futures",
+ "http 1.3.1",
+ "masking",
+ "quick-xml 0.31.0",
+ "reqwest",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "strum 0.26.3",
+ "thiserror 1.0.69",
+ "time",
+ "url",
+ "utoipa",
+ "uuid",
+]
+
+[[package]]
+name = "common_utils"
+version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "blake3",
  "bytes",
- "common_enums",
+ "common_enums 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "diesel",
  "error-stack 0.4.1",
  "futures",
@@ -1004,9 +1054,9 @@ dependencies = [
  "api_models 0.1.0",
  "base64 0.21.7",
  "bytes",
- "cards",
- "common_enums",
- "common_utils",
+ "cards 0.1.0",
+ "common_enums 0.1.0",
+ "common_utils 0.1.0",
  "domain_types",
  "error-stack 0.4.1",
  "hyperswitch_domain_models",
@@ -1253,8 +1303,8 @@ version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
  "async-bb8-diesel",
- "common_enums",
- "common_utils",
+ "common_enums 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "diesel",
  "error-stack 0.4.1",
  "masking",
@@ -1312,9 +1362,9 @@ name = "domain_types"
 version = "0.1.0"
 dependencies = [
  "api_models 0.1.0",
- "cards",
- "common_enums",
- "common_utils",
+ "cards 0.1.0",
+ "common_enums 0.1.0",
+ "common_utils 0.1.0",
  "error-stack 0.4.1",
  "grpc-api-types",
  "hyperswitch_domain_models",
@@ -1437,8 +1487,8 @@ name = "euclid"
 version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
- "common_enums",
- "common_utils",
+ "common_enums 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "euclid_macros",
  "hyperswitch_constraint_graph",
  "once_cell",
@@ -1471,7 +1521,7 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "clap",
- "common_utils",
+ "common_utils 0.1.0",
  "config",
  "domain_types",
  "error-stack 0.4.1",
@@ -1777,10 +1827,10 @@ dependencies = [
  "api_models 0.1.0",
  "axum 0.8.3",
  "base64 0.21.7",
- "cards",
+ "cards 0.1.0",
  "cargo_metadata 0.15.4",
- "common_enums",
- "common_utils",
+ "common_enums 0.1.0",
+ "common_utils 0.1.0",
  "config",
  "connector-integration",
  "domain_types",
@@ -2111,9 +2161,9 @@ dependencies = [
  "actix-web",
  "api_models 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "async-trait",
- "cards",
- "common_enums",
- "common_utils",
+ "cards 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_enums 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "diesel_models",
  "error-stack 0.4.1",
  "futures",
@@ -2141,8 +2191,8 @@ dependencies = [
  "api_models 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "async-trait",
  "bytes",
- "common_enums",
- "common_utils",
+ "common_enums 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
+ "common_utils 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "dyn-clone",
  "error-stack 0.4.1",
  "http 0.2.12",

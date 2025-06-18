@@ -1,4 +1,11 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
+use common_enums::{enums, AttemptStatus, RefundStatus};
+use common_utils::{
+    errors::CustomResult,
+    ext_traits::{ByteSliceExt, OptionExt},
+    request::Method,
+    types::MinorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, DefendDispute, PSync, Refund, SetupMandate, SubmitEvidence,
@@ -12,13 +19,6 @@ use domain_types::{
     },
 };
 use error_stack::{Report, ResultExt};
-use hyperswitch_common_enums::{enums, AttemptStatus, RefundStatus};
-use hyperswitch_common_utils::{
-    errors::CustomResult,
-    ext_traits::{ByteSliceExt, OptionExt},
-    request::Method,
-    types::MinorUnit,
-};
 
 use hyperswitch_domain_models::{
     payment_method_data::{Card, PaymentMethodData, WalletData},
@@ -71,7 +71,7 @@ pub enum ConnectorError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdyenCard {
-    number: hyperswitch_cards::CardNumber,
+    number: cards::CardNumber,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     cvc: Option<Secret<String>>,
@@ -472,9 +472,9 @@ pub struct AdyenPaymentRequest {
     store_payment_method: Option<bool>,
     shopper_name: Option<ShopperName>,
     #[serde(rename = "shopperIP")]
-    shopper_ip: Option<Secret<String, hyperswitch_common_utils::pii::IpAddress>>,
+    shopper_ip: Option<Secret<String, common_utils::pii::IpAddress>>,
     shopper_locale: Option<String>,
-    shopper_email: Option<hyperswitch_common_utils::pii::Email>,
+    shopper_email: Option<common_utils::pii::Email>,
     shopper_statement: Option<String>,
     social_security_number: Option<Secret<String>>,
     telephone_number: Option<Secret<String>>,
@@ -960,7 +960,7 @@ pub struct RedirectionResponse {
 pub struct AdyenRedirectAction {
     payment_method_type: PaymentType,
     url: Option<Url>,
-    method: Option<hyperswitch_common_utils::request::Method>,
+    method: Option<common_utils::request::Method>,
     #[serde(rename = "type")]
     type_of_response: ActionType,
     data: Option<std::collections::HashMap<String, String>>,
@@ -1023,7 +1023,7 @@ pub trait ForeignTryFrom<F>: Sized {
 fn get_adyen_payment_status(
     is_manual_capture: bool,
     adyen_status: AdyenStatus,
-    _pmt: Option<hyperswitch_common_enums::PaymentMethodType>,
+    _pmt: Option<common_enums::PaymentMethodType>,
 ) -> AttemptStatus {
     match adyen_status {
         AdyenStatus::AuthenticationFinished => AttemptStatus::AuthenticationSuccessful,
@@ -1116,7 +1116,7 @@ pub enum AdyenVoidStatus {
     Processing,
 }
 
-impl ForeignTryFrom<AdyenVoidStatus> for hyperswitch_common_enums::AttemptStatus {
+impl ForeignTryFrom<AdyenVoidStatus> for common_enums::AttemptStatus {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
     fn foreign_try_from(item: AdyenVoidStatus) -> Result<Self, Self::Error> {
         match item {
@@ -1164,10 +1164,10 @@ pub fn get_adyen_response(
     response: AdyenResponse,
     is_capture_manual: bool,
     status_code: u16,
-    pmt: Option<hyperswitch_common_enums::enums::PaymentMethodType>,
+    pmt: Option<common_enums::enums::PaymentMethodType>,
 ) -> CustomResult<
     (
-        hyperswitch_common_enums::enums::AttemptStatus,
+        common_enums::enums::AttemptStatus,
         Option<hyperswitch_domain_models::router_data::ErrorResponse>,
         PaymentsResponseData,
     ),
@@ -1176,7 +1176,7 @@ pub fn get_adyen_response(
     let status = get_adyen_payment_status(is_capture_manual, response.result_code, pmt);
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
-        || status == hyperswitch_common_enums::enums::AttemptStatus::Failure
+        || status == common_enums::enums::AttemptStatus::Failure
     {
         Some(hyperswitch_domain_models::router_data::ErrorResponse {
             code: response
@@ -1188,7 +1188,7 @@ pub fn get_adyen_response(
                 .unwrap_or_else(|| hyperswitch_interfaces::consts::NO_ERROR_MESSAGE.to_string()),
             reason: response.refusal_reason,
             status_code,
-            attempt_status: Some(hyperswitch_common_enums::enums::AttemptStatus::Failure),
+            attempt_status: Some(common_enums::enums::AttemptStatus::Failure),
             connector_transaction_id: Some(response.psp_reference.clone()),
         })
     } else {
@@ -1225,10 +1225,10 @@ pub fn get_redirection_response(
     response: RedirectionResponse,
     is_manual_capture: bool,
     status_code: u16,
-    pmt: Option<hyperswitch_common_enums::enums::PaymentMethodType>,
+    pmt: Option<common_enums::enums::PaymentMethodType>,
 ) -> CustomResult<
     (
-        hyperswitch_common_enums::enums::AttemptStatus,
+        common_enums::enums::AttemptStatus,
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
@@ -1237,7 +1237,7 @@ pub fn get_redirection_response(
     let status = get_adyen_payment_status(is_manual_capture, response.result_code.clone(), pmt);
     let error = if response.refusal_reason.is_some()
         || response.refusal_reason_code.is_some()
-        || status == hyperswitch_common_enums::enums::AttemptStatus::Failure
+        || status == common_enums::enums::AttemptStatus::Failure
     {
         Some(ErrorResponse {
             code: response
@@ -1539,8 +1539,8 @@ pub fn get_webhook_object_from_body(
 }
 
 fn build_shopper_reference(
-    customer_id: &Option<hyperswitch_common_utils::id_type::CustomerId>,
-    merchant_id: hyperswitch_common_utils::id_type::MerchantId,
+    customer_id: &Option<common_utils::id_type::CustomerId>,
+    merchant_id: common_utils::id_type::MerchantId,
 ) -> Option<String> {
     customer_id.clone().map(|c_id| {
         format!(
@@ -1567,7 +1567,7 @@ fn get_recurring_processing_model(
         }))?;
 
     match (item.request.setup_future_usage, item.request.off_session) {
-        (Some(hyperswitch_common_enums::enums::FutureUsage::OffSession), _) => {
+        (Some(common_enums::enums::FutureUsage::OffSession), _) => {
             let shopper_reference = format!(
                 "{}_{}",
                 item.merchant_id.get_string_repr(),
@@ -1596,8 +1596,7 @@ fn get_recurring_processing_model(
 fn is_mandate_payment(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
 ) -> bool {
-    (item.request.setup_future_usage
-        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+    (item.request.setup_future_usage == Some(common_enums::enums::FutureUsage::OffSession))
         || item
             .request
             .mandate_id
@@ -1632,7 +1631,7 @@ fn get_additional_data(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
 ) -> Option<AdditionalData> {
     let (authorisation_type, manual_capture) = match item.request.capture_method {
-        Some(hyperswitch_common_enums::enums::CaptureMethod::Manual)
+        Some(common_enums::enums::CaptureMethod::Manual)
         | Some(enums::CaptureMethod::ManualMultiple) => {
             (Some(AuthType::PreAuth), Some("true".to_string()))
         }
@@ -1642,7 +1641,7 @@ fn get_additional_data(
 
     let execute_three_d = if matches!(
         item.resource_common_data.auth_type,
-        hyperswitch_common_enums::enums::AuthenticationType::ThreeDs
+        common_enums::enums::AuthenticationType::ThreeDs
     ) {
         Some("true".to_string())
     } else {
@@ -1862,7 +1861,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
             http_code: _,
         } = value;
 
-        let status = hyperswitch_common_enums::enums::RefundStatus::Pending;
+        let status = common_enums::enums::RefundStatus::Pending;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.psp_reference,
@@ -2216,7 +2215,7 @@ fn get_recurring_processing_model_for_setup_mandate(
         }))?;
 
     match (item.request.setup_future_usage, item.request.off_session) {
-        (Some(hyperswitch_common_enums::enums::FutureUsage::OffSession), _) => {
+        (Some(common_enums::enums::FutureUsage::OffSession), _) => {
             let shopper_reference = format!(
                 "{}_{}",
                 item.merchant_id.get_string_repr(),
@@ -2251,7 +2250,7 @@ fn get_additional_data_for_setup_mandate(
     >,
 ) -> Option<AdditionalData> {
     let (authorisation_type, manual_capture) = match item.request.capture_method {
-        Some(hyperswitch_common_enums::enums::CaptureMethod::Manual)
+        Some(common_enums::enums::CaptureMethod::Manual)
         | Some(enums::CaptureMethod::ManualMultiple) => {
             (Some(AuthType::PreAuth), Some("true".to_string()))
         }
@@ -2261,7 +2260,7 @@ fn get_additional_data_for_setup_mandate(
 
     let execute_three_d = if matches!(
         item.resource_common_data.auth_type,
-        hyperswitch_common_enums::enums::AuthenticationType::ThreeDs
+        common_enums::enums::AuthenticationType::ThreeDs
     ) {
         Some("true".to_string())
     } else {
@@ -2299,8 +2298,7 @@ fn is_mandate_payment_for_setup_mandate(
         PaymentsResponseData,
     >,
 ) -> bool {
-    (item.request.setup_future_usage
-        == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+    (item.request.setup_future_usage == Some(common_enums::enums::FutureUsage::OffSession))
         || item
             .request
             .mandate_id
@@ -2363,7 +2361,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
             .is_some_and(|r| r.success);
 
         if success {
-            let status = hyperswitch_common_enums::DisputeStatus::DisputeAccepted;
+            let status = common_enums::DisputeStatus::DisputeAccepted;
 
             let dispute_response_data = DisputeResponseData {
                 dispute_status: status,
@@ -2559,7 +2557,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
             .is_some_and(|r| r.success);
 
         if success {
-            let status = hyperswitch_common_enums::DisputeStatus::DisputeChallenged;
+            let status = common_enums::DisputeStatus::DisputeChallenged;
 
             let dispute_response_data = DisputeResponseData {
                 dispute_status: status,
@@ -2713,11 +2711,8 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
 pub(crate) fn get_dispute_stage_and_status(
     code: WebhookEventCode,
     dispute_status: Option<DisputeStatus>,
-) -> (
-    hyperswitch_common_enums::DisputeStage,
-    hyperswitch_common_enums::DisputeStatus,
-) {
-    use hyperswitch_common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
+) -> (common_enums::DisputeStage, common_enums::DisputeStatus) {
+    use common_enums::{DisputeStage, DisputeStatus as HSDisputeStatus};
 
     match code {
         WebhookEventCode::NotificationOfChargeback => {
