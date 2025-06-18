@@ -1,6 +1,6 @@
-use hyperswitch_common_enums as api_enums;
-use hyperswitch_common_utils::ext_traits::ConfigExt;
-use hyperswitch_common_utils::pii::Email;
+use common_enums as api_enums;
+use common_utils::ext_traits::ConfigExt;
+use common_utils::pii::Email;
 use masking::{PeekInterface, Secret};
 use utoipa::ToSchema;
 

@@ -1,11 +1,11 @@
 use domain_types::{errors::ApiClientError, types::Proxy};
 // use base64::engine::Engine;
-use error_stack::{report, ResultExt};
-use hyperswitch_common_utils::{
+use common_utils::{
     // consts::BASE64_ENGINE,
     ext_traits::AsyncExt,
     request::{Method, Request, RequestContent},
 };
+use error_stack::{report, ResultExt};
 use hyperswitch_domain_models::{
     errors::api_error_response::ApiErrorResponse, router_data_v2::RouterDataV2,
 };

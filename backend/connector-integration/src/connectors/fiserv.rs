@@ -1,3 +1,6 @@
+use common_utils::{
+    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::FloatMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -15,9 +18,6 @@ use domain_types::{
     },
 };
 use error_stack::ResultExt;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::FloatMajorUnit,
-};
 
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},

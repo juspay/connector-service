@@ -5,6 +5,9 @@ use crate::types::ResponseRouterData;
 use crate::utils::preprocess_xml_response_bytes;
 use crate::with_error_response_body;
 use bytes::Bytes;
+use common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -21,9 +24,6 @@ use domain_types::{
     },
 };
 use error_stack::ResultExt;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
-};
 use hyperswitch_domain_models::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -102,7 +102,7 @@ impl ConnectorCommon for Elavon {
                         code: error_payload.error_code.unwrap_or_else(|| "".to_string()),
                         message: error_payload.error_message,
                         reason: error_payload.error_name,
-                        attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: error_payload.ssl_txn_id,
                     }),
                     elavon::ElavonResult::Success(success_payload) => Ok(ErrorResponse {
@@ -113,7 +113,7 @@ impl ConnectorCommon for Elavon {
                             "Unexpected success: {:?}",
                             success_payload.ssl_result_message
                         )),
-                        attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: Some(success_payload.ssl_txn_id),
                     }),
                 }
@@ -134,7 +134,7 @@ impl ConnectorCommon for Elavon {
                     code: "".to_string(),
                     message,
                     reason,
-                    attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
                     connector_transaction_id: None,
                 })
             }

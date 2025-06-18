@@ -16,7 +16,7 @@ strum = { version = "0.26", features = ["derive"] }
 serde = {version = "1.0.189" ,features = ["derive"]}
 serde_json = "1.0.107"
 error-stack = "0.4.1"
-hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
-hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
-hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
+common_enums = { version = "*", path = "../common_enums" }
+cards = { version = "0.1.0", path = "../cards" }
+common_utils = { version = "0.1.0", path = "../common_utils" }
 hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" }
