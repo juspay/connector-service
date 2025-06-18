@@ -1654,6 +1654,7 @@ version = "0.3.1"
 dependencies = [
  "cargo_metadata 0.19.2",
  "heck 0.5.0",
+ "prost",
  "prost-build",
  "prost-types",
  "quote",

@@ -78,20 +78,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let descriptor_bytes = std::fs::read(out_dir.join("connector_service_descriptor.bin"))?;
     let file_descriptor_set = prost_types::FileDescriptorSet::decode(&*descriptor_bytes)?;
 
-    // Generate enum deserializer code using g2h
-    let enum_config = g2h::BridgeGenerator::with_tonic_build()
-        .with_string_enums()
-        .build_enum_config();
-    
-    let deserializer_code = enum_config.generate_enum_deserializer_code(&file_descriptor_set);
-    std::fs::write(out_dir.join("enum_deserializer.rs"), deserializer_code)?;
-
     // Clean up old build artifacts to avoid conflicts
     let _ = std::fs::remove_file(out_dir.join("ucs.payments.rs"));
     let _ = std::fs::remove_file(out_dir.join("grpc.health.v1.rs"));
 
-    // Now use g2h with automatic enum detection
-    enum_config
+    // Now use g2h with automatic enum detection and inclusion
+    g2h::BridgeGenerator::with_tonic_build()
+        .with_string_enums()
+        .build_enum_config()
         .build_prost_config_with_descriptors(&file_descriptor_set)
         .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
         .compile_protos(
