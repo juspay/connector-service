@@ -16,4 +16,7 @@ pub use self::phonepe::PhonePe;
 pub mod paytm;
 pub use self::paytm::Paytm;
 
+pub mod cashfree;
+pub use self::cashfree::Cashfree;
+
 pub mod macros;

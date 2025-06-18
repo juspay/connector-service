@@ -35,10 +35,7 @@ impl RazorpayV2AuthType {
     pub fn generate_authorization_header(&self) -> String {
         let credentials = format!("{}:{}", self.api_key.peek(), self.api_secret.peek());
         let encoded = STANDARD.encode(credentials);
-        tracing::info!(
-            "Generated RazorpayV2 authorization header: {}",
-            encoded
-        );
+        tracing::info!("Generated RazorpayV2 authorization header: {}", encoded);
         format!("Basic {}", encoded)
     }
 }
@@ -74,7 +71,9 @@ pub struct RazorpayV2RouterData<T> {
 impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from((amount, item, order_id): (MinorUnit, T,  Option<String>)) -> Result<Self, Self::Error> {
+    fn try_from(
+        (amount, item, order_id): (MinorUnit, T, Option<String>),
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
             order_id,
@@ -308,7 +307,12 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
             None
         };
 
-        let order_id = item.order_id.as_ref().ok_or(errors::ConnectorError::MissingRequiredField { field_name: "order_id" })?;
+        let order_id =
+            item.order_id
+                .as_ref()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "order_id",
+                })?;
 
         Ok(Self {
             amount: amount_in_minor_units,

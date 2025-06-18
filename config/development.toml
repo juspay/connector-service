@@ -29,6 +29,7 @@ payu.payment_path = "/_payment"
 payu.verify_path = "/merchant/postservice"
 phonepe.base_url = "https://api.phonepe.com/apis/hermes"
 paytm.base_url = "https://securestage.paytmpayments.com"
+cashfree.base_url = "https://api.cashfree.com/"
 
 
 [connectors.payu.prod]

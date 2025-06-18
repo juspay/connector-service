@@ -53,6 +53,7 @@ tracing-subscriber = { version = "0.3.18", default-features = true, features = [
 ] }
 tracing-attributes = "0.1.27"
 sha2 = "0.10"
+hmac = "0.12"
 aes = "0.8"
 cbc = "0.1"
 cipher = "0.4"

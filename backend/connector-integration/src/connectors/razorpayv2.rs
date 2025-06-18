@@ -192,10 +192,6 @@ impl
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-
-
-        
- 
         let connector_router_data =
             razorpayv2::RazorpayV2RouterData::try_from((req.request.amount, &req.request, None))?;
         let connector_req =
@@ -280,7 +276,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         )];
         let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
         headers.append(&mut auth_headers);
-       
+
         Ok(headers)
     }
 
@@ -299,9 +295,8 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         // For authorize, we need the order_id from the connector_request_reference_id or payment_id
         let order_id = req
             .resource_common_data
-            .reference_id.as_ref()
-            
-            
+            .reference_id
+            .as_ref()
             .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
                 field_name: "reference_id",
             })?

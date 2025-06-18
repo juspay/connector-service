@@ -39,6 +39,7 @@ pub enum ConnectorEnum {
     Payu,
     PhonePe,
     Paytm,
+    Cashfree,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -52,6 +53,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             72 => Ok(Self::Payu),
             73 => Ok(Self::PhonePe),
             74 => Ok(Self::Paytm),
+            75 => Ok(Self::Cashfree),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,
@@ -256,6 +258,9 @@ pub struct PaymentsAuthorizeData {
     pub merchant_account_id: Option<String>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+    /// API version key for connectors supporting multiple API versions (e.g., "v1", "v2", "new", "legacy")
+    /// This field allows connectors to choose between different API implementations
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -337,6 +342,9 @@ pub struct PaymentCreateOrderResponse {
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
+    /// API version key for connectors supporting multiple API versions (e.g., "v1", "v2", "new", "legacy")
+    /// This field allows connectors to choose between different API implementations for session token creation
+    pub version: Option<String>,
 }
 
 #[derive(Debug, Clone)]

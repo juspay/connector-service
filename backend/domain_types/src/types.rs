@@ -42,6 +42,7 @@ pub struct Connectors {
     pub payu: ConnectorParams,
     pub phonepe: ConnectorParams,
     pub paytm: ConnectorParams,
+    pub cashfree: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -508,6 +509,7 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             merchant_account_id: None,
             merchant_config_currency: None,
             all_keys_required: value.all_keys_required,
+            version: None, // Default to None, can be set by the client
         })
     }
 }
@@ -1008,6 +1010,7 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for SessionTokenRequestData {
         Ok(Self {
             amount: common_utils::types::MinorUnit::new(value.minor_amount),
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            version: None, // Default to None, can be set by the client
         })
     }
 }

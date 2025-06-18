@@ -75,21 +75,21 @@ base64 = "0.21.2"
 rustc-hash = "2.0"
 gethostname = "0.5.0"
 once_cell = "1.19.0"
-hyperswitch_interfaces = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/hyperswitch_interfaces", features = [
+hyperswitch_interfaces = { path = "../../../hyperswitch/crates/hyperswitch_interfaces", features = [
     "v1",
 ] }
-hyperswitch_domain_models = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/hyperswitch_domain_models", features = [
+hyperswitch_domain_models = { path = "../../../hyperswitch/crates/hyperswitch_domain_models", features = [
     "v1",
 ] }
-cards = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/cards" }
-common_enums = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/common_enums" }
-common_utils = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/common_utils", features = [
+cards = { path = "../../../hyperswitch/crates/cards" }
+common_enums = { path = "../../../hyperswitch/crates/common_enums" }
+common_utils = { path = "../../../hyperswitch/crates/common_utils", features = [
     "async_ext",
     "metrics",
     "encryption_service",
     "keymanager",
 ] }
-api_models = { path = "/Users/shivral.somani/Documents/Repos/hyper_switch/hyperswitch/crates/api_models", features = [
+api_models = { path = "../../../hyperswitch/crates/api_models", features = [
     "errors",
     "v1",
 ] }
