@@ -1052,7 +1052,7 @@ message PaymentServiceAuthorizeRequest {
   optional AuthenticationData authentication_data = 15; // Additional authentication data
   
   // Metadata
-  map<string, string> connector_metadata = 16; // Additional metadata for the connector
+  map<string, string> metadata = 16; // Additional metadata for the connector
   
   // URLs for Redirection and Webhooks
   optional string return_url = 17 [(validate.rules).string.uri = true]; // URL to redirect after payment
@@ -1143,7 +1143,7 @@ message PaymentServiceGetResponse {
   optional string email = 21; // Email address of the customer
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
-  map<string, string> connector_metadata = 24; // Additional metadata from the connector
+  map<string, string> metadata = 24; // Additional metadata from the connector
 }
 
 // Request message for voiding a payment.
@@ -1182,7 +1182,7 @@ message PaymentServiceCaptureRequest {
   Currency currency = 4; // Currency of the amount to capture
   
   // Metadata
-  map<string, string> connector_metadata = 5; // Additional metadata for the connector
+  map<string, string> metadata = 5; // Additional metadata for the connector
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
@@ -1223,8 +1223,8 @@ message PaymentServiceRefundRequest {
   optional CaptureMethod capture_method = 12; // Capture method related to the original payment
   
   // Metadata
-  map<string, string> connector_metadata = 13; // Metadata specific to the connector
-  map<string, string> refund_connector_metadata = 14; // Metadata specific to the refund
+  map<string, string> metadata = 13; // Metadata specific to the connector
+  map<string, string> refund_metadata = 14; // Metadata specific to the refund
   
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
@@ -1292,7 +1292,7 @@ message PaymentServiceRegisterRequest {
   optional AuthenticationData authentication_data = 11; // Additional authentication data
   
   // Metadata
-  map<string, string> connector_metadata = 12; // Additional metadata for the connector
+  map<string, string> metadata = 12; // Additional metadata for the connector
   
   // URLs for Redirection and Webhooks
   optional string return_url = 13 [(validate.rules).string.uri = true]; // URL to redirect after setup
@@ -1416,8 +1416,8 @@ message RefundServiceGetResponse {
   optional string customer_name = 16; // Name of the customer
   optional string email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
-  map<string, string> connector_metadata = 19; // Additional metadata from the connector
-  map<string, string> refund_connector_metadata = 20; // Refund-specific metadata from the connector
+  map<string, string> metadata = 19; // Additional metadata from the connector
+  map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
 }
 
 // Request message for RefundService.Transform RPC
