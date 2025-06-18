@@ -1,5 +1,4 @@
 use std::{env, path::PathBuf};
-use prost::Message;
 
 mod cargo_workspace {
     /// Verify that the cargo metadata workspace packages format matches that expected by
@@ -65,32 +64,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
 
-    // First, build a simple config to get the FileDescriptorSet
-    let mut temp_config = prost_build::Config::new();
-    temp_config
-        .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
-        .compile_protos(
-            &["proto/payment.proto", "proto/health_check.proto"],
-            &["proto"],
-        )?;
-
-    // Read the FileDescriptorSet to detect enums automatically
-    let descriptor_bytes = std::fs::read(out_dir.join("connector_service_descriptor.bin"))?;
-    let file_descriptor_set = prost_types::FileDescriptorSet::decode(&*descriptor_bytes)?;
-
     // Clean up old build artifacts to avoid conflicts
     let _ = std::fs::remove_file(out_dir.join("ucs.payments.rs"));
     let _ = std::fs::remove_file(out_dir.join("grpc.health.v1.rs"));
 
-    // Now use g2h with automatic enum detection and inclusion
+    // Use g2h with automatic string enum support - simplified API handles everything
     g2h::BridgeGenerator::with_tonic_build()
         .with_string_enums()
-        .build_enum_config()
-        .build_prost_config_with_descriptors(&file_descriptor_set)
-        .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
-        .compile_protos(
+        .compile_protos_with_string_enums_and_descriptor(
             &["proto/payment.proto", "proto/health_check.proto"],
             &["proto"],
+            Some(out_dir.join("connector_service_descriptor.bin")),
         )?;
 
     Ok(())
