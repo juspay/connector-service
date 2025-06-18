@@ -64,41 +64,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
 
-    let generator = tonic_build::configure().service_generator();
-    let web_generator = g2h::BridgeGenerator::new(generator);
+    // Clean up old build artifacts to avoid conflicts
+    let _ = std::fs::remove_file(out_dir.join("ucs.payments.rs"));
+    let _ = std::fs::remove_file(out_dir.join("grpc.health.v1.rs"));
 
-    prost_build::Config::new()
-        .service_generator(Box::new(web_generator))
+    // Use g2h with automatic string enum support and generate descriptor set
+    g2h::BridgeGenerator::with_tonic_build()
+        .with_string_enums()
         .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
-        .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
-        .field_attribute(
-            "PaymentsAuthorizeRequest.currency",
-            "#[serde(deserialize_with = \"crate::deserialize_enum_from_string\")]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.payment_method",
-            "#[serde(deserialize_with = \"crate::deserialize_enum_from_string\")]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.auth_type",
-            "#[serde(deserialize_with = \"crate::deserialize_enum_from_string\")]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.payment_method_type",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.capture_method",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.setup_future_usage",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
-        .field_attribute(
-            "PaymentsAuthorizeRequest.payment_experience",
-            "#[serde(deserialize_with = \"crate::deserialize_option_enum_from_string\", default)]",
-        )
         .compile_protos(
             &["proto/payment.proto", "proto/health_check.proto"],
             &["proto"],
