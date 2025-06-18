@@ -1121,6 +1121,29 @@ message PaymentServiceGetResponse {
   optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
   optional string network_txn_id = 6; // Transaction ID from the payment network
   optional Identifier response_ref_id = 7; // Renamed from connector_response_reference_id
+  
+  // Payment Details
+  optional int64 amount = 8; // Payment amount in major currency units
+  optional int64 minor_amount = 9; // Payment amount in minor currency units
+  optional Currency currency = 10; // Currency of the payment
+  optional int64 captured_amount = 11; // Amount that has been captured
+  optional int64 minor_captured_amount = 12; // Captured amount in minor currency units
+  optional PaymentMethodType payment_method_type = 13; // Type of payment method used
+  optional CaptureMethod capture_method = 14; // Capture method for the payment
+  optional AuthenticationType auth_type = 15; // Type of authentication used
+  
+  // Timestamps
+  optional google.protobuf.Timestamp created_at = 16; // When the payment was created
+  optional google.protobuf.Timestamp updated_at = 17; // When the payment was last updated
+  optional google.protobuf.Timestamp authorized_at = 18; // When the payment was authorized
+  optional google.protobuf.Timestamp captured_at = 19; // When the payment was captured
+  
+  // Additional Context
+  optional string customer_name = 20; // Name of the customer
+  optional string email = 21; // Email address of the customer
+  optional string connector_customer_id = 22; // Customer ID as recognized by the connector
+  optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
+  map<string, string> connector_metadata = 24; // Additional metadata from the connector
 }
 
 // Request message for voiding a payment.
@@ -1375,6 +1398,26 @@ message RefundServiceGetResponse {
   
   // Reference
   optional Identifier response_ref_id = 6; // Renamed from connector_response_reference_id
+  
+  // Refund Details
+  optional int64 refund_amount = 7; // Refunded amount in major currency units
+  optional int64 minor_refund_amount = 8; // Refunded amount in minor currency units
+  optional Currency refund_currency = 9; // Currency of the refund
+  optional int64 payment_amount = 10; // Original payment amount in major currency units
+  optional int64 minor_payment_amount = 11; // Original payment amount in minor currency units
+  optional string refund_reason = 12; // Reason for the refund
+  
+  // Timestamps
+  optional google.protobuf.Timestamp created_at = 13; // When the refund was created
+  optional google.protobuf.Timestamp updated_at = 14; // When the refund was last updated
+  optional google.protobuf.Timestamp processed_at = 15; // When the refund was processed
+  
+  // Additional Context
+  optional string customer_name = 16; // Name of the customer
+  optional string email = 17; // Email address of the customer
+  optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
+  map<string, string> connector_metadata = 19; // Additional metadata from the connector
+  map<string, string> refund_connector_metadata = 20; // Refund-specific metadata from the connector
 }
 
 // Request message for RefundService.Transform RPC
