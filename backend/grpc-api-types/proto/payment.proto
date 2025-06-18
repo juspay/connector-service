@@ -830,7 +830,7 @@ message AuthenticationData {
   string cavv = 2 [(validate.rules).string = {min_len: 1}];
   
   // 3DS Server Transaction ID.
-  optional string threeds_server_transaction_id = 3;
+  optional Identifier threeds_server_transaction_id = 3;
   
   // 3DS Message Version (e.g., "2.1.0", "2.2.0").
   optional string message_version = 4;
@@ -1175,7 +1175,7 @@ message PaymentServiceVoidResponse {
 message PaymentServiceCaptureRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
+  Identifier transaction_id = 2; // Renamed from connector_transaction_id
   
   // Capture Details
   int64 amount_to_capture = 3 [(validate.rules).int64.gt = 0]; // Amount to capture, in minor currency units
@@ -1207,7 +1207,7 @@ message PaymentServiceRefundRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund
-  string transaction_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
+  Identifier transaction_id = 3; // Renamed from connector_transaction_id
   
   // Amount Information
   int64 payment_amount = 4 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units
@@ -1269,7 +1269,7 @@ message RefundResponse {
 message PaymentServiceDisputeRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to raise the dispute for
+  Identifier transaction_id = 2; // Transaction ID to raise the dispute for
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
 
@@ -1661,7 +1661,7 @@ message DisputeServiceTransformResponse {
 message DisputeDefendRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to defend dispute for
+  Identifier transaction_id = 2; // Transaction ID to defend dispute for
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
   
   // Defend Details
@@ -1687,7 +1687,7 @@ message DisputeDefendResponse {
 message AcceptDisputeRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
-  string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to accept dispute for
+  Identifier transaction_id = 2; // Transaction ID to accept dispute for
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
 
