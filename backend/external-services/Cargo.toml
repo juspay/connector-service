@@ -22,7 +22,7 @@ hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1
 hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
 hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
 hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package ="common_utils"}
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
+api_models = { version = "0.1.0", path = "../api_models" }
 strum = { version = "0.26.2", features = ["derive"] }
 reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
 base64 = "0.21.2"

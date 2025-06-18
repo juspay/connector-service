@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use error_stack::ResultExt;
-use hyperswitch_api_models::enums::{self, AttemptStatus, CardNetwork};
+use hyperswitch_common_enums::{enums, AttemptStatus, CardNetwork};
 
 use hyperswitch_cards::CardNumber;
 use hyperswitch_common_enums::RefundStatus;
@@ -674,9 +674,9 @@ impl<F, Req>
         RazorpayResponse,
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
         u16,
-        Option<hyperswitch_api_models::enums::CaptureMethod>,
+        Option<enums::CaptureMethod>,
         bool,
-        Option<hyperswitch_api_models::enums::PaymentMethodType>,
+        Option<enums::PaymentMethodType>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
     type Error = hyperswitch_interfaces::errors::ConnectorError;
@@ -686,9 +686,9 @@ impl<F, Req>
             RazorpayResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
             u16,
-            Option<hyperswitch_api_models::enums::CaptureMethod>,
+            Option<enums::CaptureMethod>,
             bool,
-            Option<hyperswitch_api_models::enums::PaymentMethodType>,
+            Option<enums::PaymentMethodType>,
         ),
     ) -> Result<Self, Self::Error> {
         let is_manual_capture = false;

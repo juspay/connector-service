@@ -3,13 +3,14 @@ use crate::connector_flow::{
     SubmitEvidence, Void,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
+use crate::payment_address::PaymentAddress;
 use crate::types::{
     ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
     PaymentMethodTypeMetadata, SupportedPaymentMethods,
 };
 use crate::utils::ForeignTryFrom;
 use error_stack::ResultExt;
-use hyperswitch_api_models::enums::Currency;
+use hyperswitch_common_enums::Currency;
 use std::collections::HashSet;
 
 use hyperswitch_common_enums::{
@@ -157,7 +158,7 @@ pub struct PaymentFlowData {
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
-    pub address: hyperswitch_domain_models::payment_address::PaymentAddress,
+    pub address: PaymentAddress,
     pub auth_type: AuthenticationType,
     pub connector_meta_data: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
     pub amount_captured: Option<i64>,
@@ -216,7 +217,7 @@ pub struct PaymentsAuthorizeData {
     pub webhook_url: Option<String>,
     pub complete_authorize_url: Option<String>,
     // Mandates
-    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
+    pub mandate_id: Option<api_models::payments::MandateIds>,
     pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
     pub off_session: Option<bool>,
     pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
@@ -248,7 +249,7 @@ pub struct PaymentsSyncData {
     pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
     pub connector_meta: Option<serde_json::Value>,
     pub sync_type: SyncRequestType,
-    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
+    pub mandate_id: Option<api_models::payments::MandateIds>,
     pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
     pub currency: hyperswitch_common_enums::Currency,
     pub payment_experience: Option<hyperswitch_common_enums::PaymentExperience>,
@@ -564,7 +565,7 @@ pub struct SetupMandateRequestData {
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
     pub customer_acceptance: Option<hyperswitch_domain_models::mandates::CustomerAcceptance>,
-    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
+    pub mandate_id: Option<api_models::payments::MandateIds>,
     pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
     pub off_session: Option<bool>,
     pub setup_mandate_details: Option<hyperswitch_domain_models::mandates::MandateData>,

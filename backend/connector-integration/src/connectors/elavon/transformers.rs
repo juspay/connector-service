@@ -5,6 +5,7 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId as DomainResponseId,
     },
+    payment_address::PaymentAddress,
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_cards::CardNumber;
@@ -14,7 +15,6 @@ use hyperswitch_common_enums::{
 };
 use hyperswitch_common_utils::types::StringMajorUnit;
 use hyperswitch_domain_models::{
-    payment_address::PaymentAddress,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,

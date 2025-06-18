@@ -10,6 +10,7 @@ use crate::connector_types::{
     ResponseId, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
+use crate::payment_address::PaymentAddress;
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
@@ -24,7 +25,6 @@ use hyperswitch_common_utils::pii::Email;
 use hyperswitch_masking::Secret;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use hyperswitch_domain_models::mandates::MandateData;
-use hyperswitch_domain_models::payment_address::PaymentAddress;
 use hyperswitch_domain_models::{
     payment_method_data::{self, PaymentMethodData},
     router_data_v2::RouterDataV2,
@@ -493,31 +493,23 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
-    for hyperswitch_domain_models::payment_address::PaymentAddress
-{
+impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress> for PaymentAddress {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentAddress,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let shipping = match value.shipping {
-            Some(address) => Some(hyperswitch_api_models::payments::Address::foreign_try_from(
-                address,
-            )?),
+            Some(address) => Some(api_models::payments::Address::foreign_try_from(address)?),
             None => None,
         };
 
         let billing = match value.billing {
-            Some(address) => Some(hyperswitch_api_models::payments::Address::foreign_try_from(
-                address,
-            )?),
+            Some(address) => Some(api_models::payments::Address::foreign_try_from(address)?),
             None => None,
         };
 
         let payment_method_billing = match value.payment_method_billing {
-            Some(address) => Some(hyperswitch_api_models::payments::Address::foreign_try_from(
-                address,
-            )?),
+            Some(address) => Some(api_models::payments::Address::foreign_try_from(address)?),
             None => None,
         };
 
@@ -530,9 +522,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Address>
-    for hyperswitch_api_models::payments::Address
-{
+impl ForeignTryFrom<grpc_api_types::payments::Address> for api_models::payments::Address {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,
@@ -553,18 +543,14 @@ impl ForeignTryFrom<grpc_api_types::payments::Address>
         Ok(Self {
             address: match value.address {
                 Some(address_details) => Some(
-                    hyperswitch_api_models::payments::AddressDetails::foreign_try_from(
-                        address_details,
-                    )?,
+                    api_models::payments::AddressDetails::foreign_try_from(address_details)?,
                 ),
                 None => None,
             },
             phone: match value.phone {
-                Some(phone_details) => Some(
-                    hyperswitch_api_models::payments::PhoneDetails::foreign_try_from(
-                        phone_details,
-                    )?,
-                ),
+                Some(phone_details) => Some(api_models::payments::PhoneDetails::foreign_try_from(
+                    phone_details,
+                )?),
                 None => None,
             },
             email,
@@ -837,7 +823,7 @@ impl ForeignTryFrom<i32> for hyperswitch_common_enums::CountryAlpha2 {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::AddressDetails>
-    for hyperswitch_api_models::payments::AddressDetails
+    for api_models::payments::AddressDetails
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
@@ -860,9 +846,7 @@ impl ForeignTryFrom<grpc_api_types::payments::AddressDetails>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PhoneDetails>
-    for hyperswitch_api_models::payments::PhoneDetails
-{
+impl ForeignTryFrom<grpc_api_types::payments::PhoneDetails> for api_models::payments::PhoneDetails {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::PhoneDetails,
@@ -884,7 +868,7 @@ impl ForeignTryFrom<(PaymentsAuthorizeRequest, Connectors)> for PaymentFlowData 
             // Borrow value.address
             Some(address_value) => {
                 // address_value is &grpc_api_types::payments::PaymentAddress
-                hyperswitch_domain_models::payment_address::PaymentAddress::foreign_try_from(
+                PaymentAddress::foreign_try_from(
                     (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
                 )?
             }
@@ -951,14 +935,7 @@ impl ForeignTryFrom<(PaymentsVoidRequest, Connectors)> for PaymentFlowData {
     fn foreign_try_from(
         (value, connectors): (PaymentsVoidRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let address: PaymentAddress = {
-            hyperswitch_domain_models::payment_address::PaymentAddress::new(
-                None,
-                None,
-                None,
-                Some(false),
-            )
-        };
+        let address: PaymentAddress = { PaymentAddress::new(None, None, None, Some(false)) };
         Ok(Self {
             merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1191,7 +1168,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentsSyncRequest, Connectors)>
             attempt_id: "ATTEMPT_ID".to_string(),
             status: hyperswitch_common_enums::AttemptStatus::Pending,
             payment_method: hyperswitch_common_enums::PaymentMethod::Card, // Default
-            address: hyperswitch_domain_models::payment_address::PaymentAddress::default(),
+            address: PaymentAddress::default(),
             auth_type: hyperswitch_common_enums::AuthenticationType::default(),
             connector_request_reference_id: value
                 .connector_request_reference_id
@@ -1952,7 +1929,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentsCaptureRequest, Connector
             attempt_id: "ATTEMPT_ID".to_string(),
             status: hyperswitch_common_enums::AttemptStatus::Pending,
             payment_method: hyperswitch_common_enums::PaymentMethod::Card, // Default
-            address: hyperswitch_domain_models::payment_address::PaymentAddress::default(),
+            address: PaymentAddress::default(),
             auth_type: hyperswitch_common_enums::AuthenticationType::default(),
             connector_request_reference_id: value.connector_transaction_id,
             customer_id: None,
@@ -2050,11 +2027,7 @@ impl ForeignTryFrom<(SetupMandateRequest, Connectors)> for PaymentFlowData {
         (value, connectors): (SetupMandateRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match value.address {
-            Some(address) => {
-                hyperswitch_domain_models::payment_address::PaymentAddress::foreign_try_from(
-                    address,
-                )?
-            }
+            Some(address) => PaymentAddress::foreign_try_from(address)?,
             None => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_ADDRESS".to_owned(),

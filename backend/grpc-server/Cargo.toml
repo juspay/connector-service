@@ -7,6 +7,7 @@ edition = "2021"
 unsafe_code = "forbid"
 rust_2018_idioms = { level = "warn", priority = -1 } # Remove priority once https://github.com/rust-lang/rust-clippy/pull/12827 is available in stable clippy
 unused_qualifications = "warn"
+unused_imports = "warn"
 # missing_debug_implementations = "warn"
 # missing_docs = "warn"
 
@@ -72,7 +73,7 @@ hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag
 hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
 hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
 hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
+api_models = { version = "0.1.0", path = "../api_models" }
 
 [build-dependencies]
 cargo_metadata = "0.15.4"

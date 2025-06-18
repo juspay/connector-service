@@ -12,7 +12,7 @@ use domain_types::{
     },
 };
 use error_stack::{Report, ResultExt};
-use hyperswitch_api_models::enums::{self, AttemptStatus, RefundStatus};
+use hyperswitch_common_enums::{enums, AttemptStatus, RefundStatus};
 use hyperswitch_common_utils::{
     errors::CustomResult,
     ext_traits::{ByteSliceExt, OptionExt},
@@ -1023,7 +1023,7 @@ pub trait ForeignTryFrom<F>: Sized {
 fn get_adyen_payment_status(
     is_manual_capture: bool,
     adyen_status: AdyenStatus,
-    _pmt: Option<hyperswitch_api_models::enums::PaymentMethodType>,
+    _pmt: Option<hyperswitch_common_enums::PaymentMethodType>,
 ) -> AttemptStatus {
     match adyen_status {
         AdyenStatus::AuthenticationFinished => AttemptStatus::AuthenticationSuccessful,
@@ -1607,7 +1607,7 @@ fn is_mandate_payment(
 }
 
 pub fn get_address_info(
-    address: Option<&hyperswitch_api_models::payments::Address>,
+    address: Option<&api_models::payments::Address>,
 ) -> Option<Result<Address, error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>>> {
     address.and_then(|add| {
         add.address.as_ref().map(
@@ -2679,9 +2679,9 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
         match response {
             AdyenDefendDisputeResponse::DefendDisputeSuccessResponse(result) => {
                 let dispute_status = if result.dispute_service_result.success {
-                    hyperswitch_api_models::enums::DisputeStatus::DisputeWon
+                    enums::DisputeStatus::DisputeWon
                 } else {
-                    hyperswitch_api_models::enums::DisputeStatus::DisputeLost
+                    enums::DisputeStatus::DisputeLost
                 };
 
                 Ok(Self {
