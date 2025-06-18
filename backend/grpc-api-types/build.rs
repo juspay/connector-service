@@ -68,13 +68,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = std::fs::remove_file(out_dir.join("ucs.payments.rs"));
     let _ = std::fs::remove_file(out_dir.join("grpc.health.v1.rs"));
 
-    // Use g2h with automatic string enum support - simplified API handles everything
+    // Use g2h with automatic string enum support and generate descriptor set
     g2h::BridgeGenerator::with_tonic_build()
         .with_string_enums()
-        .compile_protos_with_string_enums_and_descriptor(
+        .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
+        .compile_protos(
             &["proto/payment.proto", "proto/health_check.proto"],
             &["proto"],
-            Some(out_dir.join("connector_service_descriptor.bin")),
         )?;
 
     Ok(())
