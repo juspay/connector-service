@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 grpc-api-types = { version = "0.1.0", path = "../grpc-api-types" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
+api_models = { version = "0.1.0", path = "../api_models" }
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
 
 #third party dependencies
@@ -18,5 +19,4 @@ error-stack = "0.4.1"
 hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
 hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "cards"}
 hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
-hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
 hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" }

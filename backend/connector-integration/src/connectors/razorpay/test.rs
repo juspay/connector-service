@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
 
-    use domain_types::connector_types::{
-        BoxedConnector, ConnectorServiceTrait, PaymentFlowData, PaymentsAuthorizeData,
+    use domain_types::{
+        connector_types::{
+            BoxedConnector, ConnectorServiceTrait, PaymentFlowData, PaymentsAuthorizeData,
+        },
+        payment_address::PaymentAddress,
     };
     use hyperswitch_cards::CardNumber;
     use hyperswitch_common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
@@ -20,13 +23,14 @@ mod tests {
     mod authorize {
         use std::str::FromStr;
 
+        use api_models::payments::{Address, PhoneDetails};
         use domain_types::{
             connector_types::{
                 BoxedConnector, ConnectorServiceTrait, PaymentFlowData, PaymentsAuthorizeData,
             },
+            payment_address::PaymentAddress,
             types::{ConnectorParams, Connectors},
         };
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
         use hyperswitch_cards::CardNumber;
         use hyperswitch_common_enums::{
             AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
@@ -35,7 +39,6 @@ mod tests {
             id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,
         };
         use hyperswitch_domain_models::{
-            payment_address::PaymentAddress,
             payment_method_data::{Card, PaymentMethodData},
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
@@ -471,14 +474,13 @@ mod tests {
 
         #[test]
         fn test_handle_response_v2_valid_authorize_response() {
+            use api_models::payments::{Address, PhoneDetails};
             use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
             use domain_types::types::{ConnectorParams, Connectors};
-            use hyperswitch_api_models::payments::{Address, PhoneDetails};
             use hyperswitch_common_enums::Currency;
             use hyperswitch_common_utils::pii::Email;
             use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
             use hyperswitch_domain_models::{
-                payment_address::PaymentAddress,
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
@@ -772,14 +774,13 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_missing_fields_authorize_response() {
+        use api_models::payments::{Address, PhoneDetails};
         use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
         use hyperswitch_common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
-            payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -947,14 +948,13 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_invalid_json_authorize_response() {
+        use api_models::payments::{Address, PhoneDetails};
         use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
         use hyperswitch_common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
-            payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1112,8 +1112,11 @@ mod tests {
     }
 
     mod order {
-        use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
+        use api_models::payments::{Address, PhoneDetails};
+        use domain_types::{
+            payment_address::PaymentAddress,
+            types::{ConnectorParams, Connectors},
+        };
         use hyperswitch_common_utils::{pii::Email, request::RequestContent};
         use hyperswitch_domain_models::router_data::ConnectorAuthType;
         use serde_json::{to_value, Value};
@@ -1127,7 +1130,6 @@ mod tests {
                 id_type::MerchantId, request::RequestContent, types::MinorUnit,
             };
             use hyperswitch_domain_models::{
-                payment_address::PaymentAddress,
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
@@ -1242,7 +1244,6 @@ mod tests {
             use hyperswitch_common_enums::Currency;
             use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
             use hyperswitch_domain_models::{
-                payment_address::PaymentAddress,
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
@@ -1351,7 +1352,6 @@ mod tests {
             };
             use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
             use hyperswitch_domain_models::{
-                payment_address::PaymentAddress,
                 payment_method_data::{Card, PaymentMethodData},
                 router_data::ErrorResponse,
                 router_data_v2::RouterDataV2,
@@ -1478,16 +1478,15 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_valid_order_response() {
+        use api_models::payments::{Address, PhoneDetails};
         use domain_types::connector_types::{
             BoxedConnector, PaymentCreateOrderData, PaymentFlowData,
         };
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
         use hyperswitch_common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
-            payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1604,14 +1603,13 @@ mod tests {
 
     #[test]
     fn test_handle_response_missing() {
+        use api_models::payments::{Address, PhoneDetails};
         use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
         use hyperswitch_common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
-            payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1718,14 +1716,13 @@ mod tests {
 
     #[test]
     fn test_handle_response_invalid() {
+        use api_models::payments::{Address, PhoneDetails};
         use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_api_models::payments::{Address, PhoneDetails};
         use hyperswitch_common_enums::Currency;
         use hyperswitch_common_utils::pii::Email;
         use hyperswitch_common_utils::{id_type::MerchantId, types::MinorUnit};
         use hyperswitch_domain_models::{
-            payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };

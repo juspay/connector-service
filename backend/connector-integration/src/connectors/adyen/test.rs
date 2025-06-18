@@ -8,6 +8,7 @@ mod tests {
             BoxedConnector, ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData,
             PaymentsResponseData,
         };
+        use domain_types::payment_address::PaymentAddress;
         use domain_types::types::ConnectorParams;
         use domain_types::types::Connectors;
         use hyperswitch_common_utils::pii::Email;
@@ -45,7 +46,7 @@ mod tests {
                     payment_method: hyperswitch_common_enums::PaymentMethod::Card,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
-                    address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
+                    address: PaymentAddress::new(
                         None, None, None, None,
                     ),
                     auth_type: hyperswitch_common_enums::AuthenticationType::ThreeDs,
@@ -217,7 +218,7 @@ mod tests {
                     payment_method: hyperswitch_common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
-                    address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
+                    address: PaymentAddress::new(
                         None, None, None, None,
                     ),
                     auth_type: hyperswitch_common_enums::AuthenticationType::ThreeDs,
@@ -333,7 +334,7 @@ mod tests {
         //             payment_method: hyperswitch_common_enums::PaymentMethod::Card,
         //             description: Some("Invalid test".to_string()),
         //             return_url: None,
-        //             address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
+        //             address: PaymentAddress::new(
         //                 None,
         //                 None,
         //                 None,
