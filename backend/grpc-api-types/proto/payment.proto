@@ -978,10 +978,10 @@ message WebhookResponseContent {
     PaymentServiceGetResponse payments_response = 1;
     
     // Content if the webhook is for a refund synchronization.
-    RefundServiceGetResponse refunds_response = 2;
+    RefundResponse refunds_response = 2;
     
     // Content if the webhook is for a dispute synchronization.
-    DisputesSyncResponse disputes_response = 3;
+    DisputeResponse disputes_response = 3;
   }
 }
 
@@ -1230,18 +1230,39 @@ message PaymentServiceRefundRequest {
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
 }
 
-// Response message for a refund operation.
-message PaymentServiceRefundResponse {
+// Response message for a refund operation (unified for both Create and Get).
+message RefundResponse {
   // Identification
-  optional string refund_id = 1; // Connector's ID for the refund
+  Identifier transaction_id = 1; // Identifier for the synchronized resource
+  string refund_id = 2; // Connector's ID for the refund
   
   // Status Information
-  RefundStatus refund_status = 2; // Status of the refund
-  optional string error_code = 3; // Error code if the refund failed
-  optional string error_message = 4; // Error message if the refund failed
+  RefundStatus status = 3; // Current status of the refund
+  optional string error_code = 4; // Error code if synchronization encountered an issue
+  optional string error_message = 5; // Error message if synchronization encountered an issue
   
   // Reference
-  optional Identifier response_ref_id = 5; // Response reference ID for tracking
+  optional Identifier response_ref_id = 6; // Response reference ID for tracking
+  
+  // Refund Details
+  optional int64 refund_amount = 7; // Refunded amount in major currency units
+  optional int64 minor_refund_amount = 8; // Refunded amount in minor currency units
+  optional Currency refund_currency = 9; // Currency of the refund
+  optional int64 payment_amount = 10; // Original payment amount in major currency units
+  optional int64 minor_payment_amount = 11; // Original payment amount in minor currency units
+  optional string refund_reason = 12; // Reason for the refund
+  
+  // Timestamps
+  optional google.protobuf.Timestamp created_at = 13; // When the refund was created
+  optional google.protobuf.Timestamp updated_at = 14; // When the refund was last updated
+  optional google.protobuf.Timestamp processed_at = 15; // When the refund was processed
+  
+  // Additional Context
+  optional string customer_name = 16; // Name of the customer
+  optional string email = 17; // Email address of the customer
+  optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
+  map<string, string> metadata = 19; // Additional metadata from the connector
+  map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
 }
 
 // Request message for creating a dispute.
@@ -1252,20 +1273,36 @@ message PaymentServiceDisputeRequest {
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
 
-// Response message for a dispute creation operation.
-message PaymentServiceDisputeResponse {
+// Response message for dispute operations (unified for both Create and Get).
+message DisputeResponse {
   // Identification
-  string transaction_id = 1 [(validate.rules).string = {min_len: 1}]; // Transaction ID the dispute was raised for
-  string dispute_id = 2; // Connector's unique identifier for the dispute
+  optional string dispute_id = 1; // Connector's unique identifier for the dispute
+  optional Identifier transaction_id = 2; // Transaction ID associated with the dispute
   
   // Status Information
-  DisputeStatus dispute_status = 3; // Status of the dispute after creation
-  optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
-  optional string error_code = 5; // Error code if creating the dispute failed
-  optional string error_message = 6; // Error message if creating the dispute failed
+  DisputeStatus dispute_status = 3; // Status of the dispute
+  DisputeStage dispute_stage = 4; // Current stage of the dispute
+  optional string connector_status_code = 5; // Connector status code
+  optional string error_code = 6; // Error code if retrieval failed
+  optional string error_message = 7; // Error message if retrieval failed
+  
+  // Dispute Details
+  optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
+  optional Currency dispute_currency = 9; // Currency of the disputed amount
+  optional google.protobuf.Timestamp dispute_date = 10; // Date when dispute was created
+  optional google.protobuf.Timestamp service_date = 11; // Date of service, if applicable
+  optional google.protobuf.Timestamp shipping_date = 12; // Date of shipping, if applicable
+  optional google.protobuf.Timestamp due_date = 13; // Due date for response to dispute
+  
+  // Evidence
+  repeated EvidenceDocument evidence_documents = 14; // Collection of evidence documents submitted
+  
+  // Additional Context
+  optional string dispute_reason = 15; // Reason for the dispute
+  optional string dispute_message = 16; // Message from the disputor
   
   // Reference
-  optional Identifier response_ref_id = 7; // Response reference ID for tracking
+  optional Identifier response_ref_id = 17; // Response reference ID for tracking
 }
 
 // Request message for setting up a mandate.
@@ -1385,7 +1422,42 @@ message RefundServiceGetRequest {
   optional string refund_reason = 4; // Reason for the refund, if provided during sync
 }
 
-// Response message for a refund status synchronization.
+// Legacy alias for backward compatibility - use RefundResponse instead
+message PaymentServiceRefundResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the synchronized resource
+  string refund_id = 2; // Connector's ID for the refund
+  
+  // Status Information
+  RefundStatus status = 3; // Current status of the refund
+  optional string error_code = 4; // Error code if synchronization encountered an issue
+  optional string error_message = 5; // Error message if synchronization encountered an issue
+  
+  // Reference
+  optional Identifier response_ref_id = 6; // Response reference ID for tracking
+  
+  // Refund Details
+  optional int64 refund_amount = 7; // Refunded amount in major currency units
+  optional int64 minor_refund_amount = 8; // Refunded amount in minor currency units
+  optional Currency refund_currency = 9; // Currency of the refund
+  optional int64 payment_amount = 10; // Original payment amount in major currency units
+  optional int64 minor_payment_amount = 11; // Original payment amount in minor currency units
+  optional string refund_reason = 12; // Reason for the refund
+  
+  // Timestamps
+  optional google.protobuf.Timestamp created_at = 13; // When the refund was created
+  optional google.protobuf.Timestamp updated_at = 14; // When the refund was last updated
+  optional google.protobuf.Timestamp processed_at = 15; // When the refund was processed
+  
+  // Additional Context
+  optional string customer_name = 16; // Name of the customer
+  optional string email = 17; // Email address of the customer
+  optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
+  map<string, string> metadata = 19; // Additional metadata from the connector
+  map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+}
+
+// Legacy alias for backward compatibility - use RefundResponse instead
 message RefundServiceGetResponse {
   // Identification
   Identifier transaction_id = 1; // Identifier for the synchronized resource
@@ -1490,7 +1562,39 @@ message DisputeServiceGetRequest {
   string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
 
-// Response message for a retrieve dispute information operation.
+// Legacy alias for backward compatibility - use DisputeResponse instead
+message PaymentServiceDisputeResponse {
+  // Identification
+  optional string dispute_id = 1; // Connector's unique identifier for the dispute
+  optional Identifier transaction_id = 2; // Transaction ID associated with the dispute
+  
+  // Status Information
+  DisputeStatus dispute_status = 3; // Status of the dispute
+  DisputeStage dispute_stage = 4; // Current stage of the dispute
+  optional string connector_status_code = 5; // Connector status code
+  optional string error_code = 6; // Error code if retrieval failed
+  optional string error_message = 7; // Error message if retrieval failed
+  
+  // Dispute Details
+  optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
+  optional Currency dispute_currency = 9; // Currency of the disputed amount
+  optional google.protobuf.Timestamp dispute_date = 10; // Date when dispute was created
+  optional google.protobuf.Timestamp service_date = 11; // Date of service, if applicable
+  optional google.protobuf.Timestamp shipping_date = 12; // Date of shipping, if applicable
+  optional google.protobuf.Timestamp due_date = 13; // Due date for response to dispute
+  
+  // Evidence
+  repeated EvidenceDocument evidence_documents = 14; // Collection of evidence documents submitted
+  
+  // Additional Context
+  optional string dispute_reason = 15; // Reason for the dispute
+  optional string dispute_message = 16; // Message from the disputor
+  
+  // Reference
+  optional Identifier response_ref_id = 17; // Response reference ID for tracking
+}
+
+// Legacy alias for backward compatibility - use DisputeResponse instead
 message DisputeServiceGetResponse {
   // Identification
   optional string dispute_id = 1; // Connector's unique identifier for the dispute

@@ -46,7 +46,7 @@ service PaymentService {
   }
 
   // Processes a refund request.
-  rpc Refund(PaymentServiceRefundRequest) returns (PaymentServiceRefundResponse) {
+  rpc Refund(PaymentServiceRefundRequest) returns (RefundResponse) {
     option (google.api.http) = {
       post: "/v1/payment/refund"
       body: "*"
@@ -62,7 +62,7 @@ service PaymentService {
   }
 
   // Creates a new dispute.
-  rpc Dispute(PaymentServiceDisputeRequest) returns (PaymentServiceDisputeResponse) {
+  rpc Dispute(PaymentServiceDisputeRequest) returns (DisputeResponse) {
     option (google.api.http) = {
       post: "/v1/payment/dispute"
       body: "*"
@@ -82,7 +82,7 @@ service PaymentService {
 // Service for refund-specific operations.
 service RefundService {
   // Synchronizes the status of a refund.
-  rpc Get(RefundServiceGetRequest) returns (RefundServiceGetResponse) {
+  rpc Get(RefundServiceGetRequest) returns (RefundResponse) {
     option (google.api.http) = {
       post: "/v1/refund/get"
       body: "*"
@@ -109,7 +109,7 @@ service DisputeService {
   }
 
   // Retrieves dispute information or evidence submission status.
-  rpc Get(DisputeServiceGetRequest) returns (DisputeServiceGetResponse) {
+  rpc Get(DisputeServiceGetRequest) returns (DisputeResponse) {
     option (google.api.http) = {
       post: "/v1/dispute/get"
       body: "*"
