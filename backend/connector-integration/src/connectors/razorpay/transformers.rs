@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use error_stack::ResultExt;
 use hyperswitch_common_enums::{enums, AttemptStatus, CardNetwork};
 
-use hyperswitch_cards::CardNumber;
+use cards::CardNumber;
 use hyperswitch_common_enums::RefundStatus;
 use hyperswitch_common_utils::{
     ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,

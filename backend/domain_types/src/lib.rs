@@ -4,3 +4,4 @@ pub mod errors;
 pub mod payment_address;
 pub mod types;
 pub mod utils;
+pub mod payment_method_data;

@@ -90,7 +90,7 @@ mod tests {
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(
                         hyperswitch_domain_models::payment_method_data::Card {
-                            card_number: hyperswitch_cards::CardNumber::from_str(
+                            card_number: cards::CardNumber::from_str(
                                 "5123456789012346",
                             )
                             .unwrap(),
@@ -370,7 +370,7 @@ mod tests {
         //         request: PaymentsAuthorizeData {
         //             payment_method_data: PaymentMethodData::Card(
         //                 (hyperswitch_domain_models::payment_method_data::Card {
-        //                     card_number: hyperswitch_cards::CardNumber
+        //                     card_number: cards::CardNumber
         //                         ::from_str("1234567890123456")
         //                         .unwrap(),
         //                     card_cvc: Secret::new("12".into()),

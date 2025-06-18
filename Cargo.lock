@@ -342,7 +342,7 @@ version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
  "actix-web",
- "cards",
+ "cards 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "common_enums",
  "common_utils",
  "error-stack 0.4.1",
@@ -778,6 +778,20 @@ dependencies = [
 [[package]]
 name = "cards"
 version = "0.1.0"
+dependencies = [
+ "common_utils",
+ "error-stack 0.4.1",
+ "masking",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "time",
+]
+
+[[package]]
+name = "cards"
+version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
 dependencies = [
  "common_utils",
@@ -1004,7 +1018,7 @@ dependencies = [
  "api_models 0.1.0",
  "base64 0.21.7",
  "bytes",
- "cards",
+ "cards 0.1.0",
  "common_enums",
  "common_utils",
  "domain_types",
@@ -1312,7 +1326,7 @@ name = "domain_types"
 version = "0.1.0"
 dependencies = [
  "api_models 0.1.0",
- "cards",
+ "cards 0.1.0",
  "common_enums",
  "common_utils",
  "error-stack 0.4.1",
@@ -1777,7 +1791,7 @@ dependencies = [
  "api_models 0.1.0",
  "axum 0.8.3",
  "base64 0.21.7",
- "cards",
+ "cards 0.1.0",
  "cargo_metadata 0.15.4",
  "common_enums",
  "common_utils",
@@ -2111,7 +2125,7 @@ dependencies = [
  "actix-web",
  "api_models 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "async-trait",
- "cards",
+ "cards 0.1.0 (git+https://github.com/juspay/hyperswitch?tag=v1.111.4)",
  "common_enums",
  "common_utils",
  "diesel_models",

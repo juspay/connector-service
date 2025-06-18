@@ -11,6 +11,7 @@ use crate::connector_types::{
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::payment_address::PaymentAddress;
+use crate::payment_method_data::Card;
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
@@ -116,8 +117,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
         match value.data {
             Some(data) => match data {
                 grpc_api_types::payments::payment_method_data::Data::Card(card) => Ok(
-                    PaymentMethodData::Card(hyperswitch_domain_models::payment_method_data::Card {
-                        card_number: hyperswitch_cards::CardNumber::from_str(&card.card_number)
+                    PaymentMethodData::Card(Card {
+                        card_number: cards::CardNumber::from_str(&card.card_number)
                             .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "INVALID_CARD_NUMBER".to_owned(),
                                 error_identifier: 400,
@@ -146,6 +147,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
                         card_issuing_country: card.card_issuing_country,
                         bank_code: card.bank_code,
                         nick_name: card.nick_name.map(|name| name.into()),
+                        card_holder_name: card.card_holder_name,
+                        co_badged_card_data: None // TODO: Handle co-badged card data
                     }),
                 ),
                 grpc_api_types::payments::payment_method_data::Data::Wallet(wallet) => match wallet

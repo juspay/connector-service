@@ -8,7 +8,7 @@ use domain_types::{
     payment_address::PaymentAddress,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_cards::CardNumber;
+use cards::CardNumber;
 use hyperswitch_common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
     FutureUsage,

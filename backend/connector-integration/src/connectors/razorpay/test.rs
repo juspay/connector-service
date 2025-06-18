@@ -7,7 +7,7 @@ mod tests {
         },
         payment_address::PaymentAddress,
     };
-    use hyperswitch_cards::CardNumber;
+    use cards::CardNumber;
     use hyperswitch_common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
     use hyperswitch_domain_models::{
         payment_method_data::{Card, PaymentMethodData},
