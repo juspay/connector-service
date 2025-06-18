@@ -1,5 +1,5 @@
 use crate::connector_flow::{
-    self, Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate,
+    Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
     SubmitEvidence, Void,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
@@ -94,7 +94,7 @@ pub trait ValidationTrait {
 
 pub trait PaymentOrderCreate:
     ConnectorIntegrationV2<
-    connector_flow::CreateOrder,
+    CreateOrder,
     PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse,
