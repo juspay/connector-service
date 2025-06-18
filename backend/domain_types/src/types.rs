@@ -19,6 +19,7 @@ use grpc_api_types::payments::{
     RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse,
 };
 use hyperswitch_common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
+use hyperswitch_common_utils::ext_traits::ValueExt;
 use hyperswitch_common_utils::id_type::CustomerId;
 use hyperswitch_common_utils::pii::Email;
 use hyperswitch_masking::Secret;
@@ -30,7 +31,6 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::consts::NO_ERROR_CODE;
-use hyperswitch_masking::Secret;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
@@ -1035,6 +1035,21 @@ impl ForeignTryFrom<ResponseId> for grpc_api_types::payments::ResponseId {
     }
 }
 
+pub fn wait_screen_next_steps_check(
+    connector_metadata: Option<serde_json::Value>,
+) -> Result<
+    Option<grpc_api_types::payments::WaitScreenInformation>,
+    error_stack::Report<ApplicationErrorResponse>,
+> {
+    let display_info_with_timer_steps: Option<
+        Result<grpc_api_types::payments::WaitScreenInformation, _>,
+    > = connector_metadata.map(|metadata| metadata.parse_value("WaitScreenInstructions"));
+
+    let display_info_with_timer_instructions =
+        display_info_with_timer_steps.transpose().ok().flatten();
+    Ok(display_info_with_timer_instructions)
+}
+
 pub fn generate_payment_authorize_response(
     router_data_v2: RouterDataV2<
         Authorize,
@@ -1047,69 +1062,72 @@ pub fn generate_payment_authorize_response(
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::AttemptStatus::foreign_from(status);
     let response = match transaction_response {
-        Ok(response) => match response {
-            PaymentsResponseData::TransactionResponse {
-                resource_id,
-                redirection_data,
-                connector_metadata: _,
-                network_txn_id,
-                connector_response_reference_id,
-                incremental_authorization_allowed,
-                mandate_reference: _,
-                raw_connector_response: _,
-            } => {
-                PaymentsAuthorizeResponse {
-                    resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match form {
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                                            grpc_api_types::payments::FormData {
-                                                endpoint,
-                                                method: 0,
-                                                form_fields: HashMap::default(), //TODO
-                                            }
-                                        ))
-                                    })
-                                },
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
-                                        ))
-                                    })
-                                },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                            }
-                        }
-                    ).transpose()?,
+        Ok(response) => {
+            match response {
+                PaymentsResponseData::TransactionResponse {
+                    resource_id,
+                    redirection_data,
+                    connector_metadata,
                     network_txn_id,
                     connector_response_reference_id,
                     incremental_authorization_allowed,
-                    status: grpc_status as i32,
-                    mandate_reference: None, //TODO
-                    error_message: None,
-                    error_code: None,
-                    raw_connector_response: router_data_v2.resource_common_data.raw_connector_response.clone(),
+                    mandate_reference: _,
+                    raw_connector_response: _,
+                } => {
+                    let next_action_containing_wait_screen =
+                        wait_screen_next_steps_check(connector_metadata.clone())?;
+                    let next_action = redirection_data.map(
+                    |form| {
+                        match form {
+                            hyperswitch_domain_models::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                Ok::<grpc_api_types::payments::NextAction, ApplicationErrorResponse>(grpc_api_types::payments::NextAction {
+                                    data: Some(grpc_api_types::payments::next_action::Data::RedirectToUrl(
+                                        endpoint
+                                    ))
+                                })
+                            }
+                            _ => Err(
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_RESPONSE".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Invalid response from connector".to_owned(),
+                                    error_object: None,
+                                }))?,
+                        }
+                    }
+                ).transpose()?.or(next_action_containing_wait_screen.map(|wait_screen_data| {
+                    grpc_api_types::payments::NextAction {
+                        data: Some(grpc_api_types::payments::next_action::Data::WaitScreenInfo(
+                            wait_screen_data
+                        ))
+                    }
+                }));
+                    PaymentsAuthorizeResponse {
+                        resource_id: Some(grpc_api_types::payments::ResponseId::foreign_try_from(
+                            resource_id,
+                        )?),
+                        next_action,
+                        network_txn_id,
+                        connector_response_reference_id,
+                        incremental_authorization_allowed,
+                        status: grpc_status as i32,
+                        mandate_reference: None, //TODO
+                        error_message: None,
+                        error_code: None,
+                        raw_connector_response: router_data_v2
+                            .resource_common_data
+                            .raw_connector_response
+                            .clone(),
+                    }
                 }
+                _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_RESPONSE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid response from connector".to_owned(),
+                    error_object: None,
+                }))?,
             }
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
-        },
+        }
         Err(err) => {
             let status = err
                 .attempt_status
@@ -1121,7 +1139,7 @@ pub fn generate_payment_authorize_response(
                         false,
                     )),
                 }),
-                redirection_data: None,
+                next_action: None,
                 mandate_reference: None,
                 network_txn_id: None,
                 connector_response_reference_id: err.connector_transaction_id,
@@ -1150,6 +1168,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
         match item {
             grpc_api_types::payments::PaymentMethod::Card => Ok(Self::Card),
             grpc_api_types::payments::PaymentMethod::Wallet => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod::Upi => Ok(Self::Upi),
         }
     }
 }

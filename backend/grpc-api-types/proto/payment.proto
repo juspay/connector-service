@@ -79,7 +79,7 @@ AuthenticationType auth_type = 4;
 
 message PaymentsAuthorizeResponse {
   ResponseId resource_id = 1;
-  optional RedirectForm redirection_data = 2;
+  optional NextAction next_action = 2;
   optional MandateReference mandate_reference = 4;
   optional string network_txn_id = 5;
   optional string connector_response_reference_id = 6;
@@ -370,6 +370,24 @@ message RedirectForm {
     FormData form = 1;
     HtmlData html = 2;
   }
+}
+
+message NextAction {
+  oneof data {
+    string redirect_to_url = 1;
+    WaitScreenInformation wait_screen_info = 2;
+  }
+}
+
+message WaitScreenInformation {
+  int64 display_from_timestamp = 1;
+  optional int64 display_to_timestamp = 2;
+  optional PollConfig poll_config = 3;
+}
+
+message PollConfig {
+  uint32 delay_in_secs = 1;
+  uint32 frequency = 2;
 }
 
 message FormData {
