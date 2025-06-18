@@ -1092,7 +1092,7 @@ message PaymentServiceAuthorizeResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
   optional string network_txn_id = 6; // Transaction ID from the payment network
-  optional string response_ref_id = 7; // Renamed from connector_response_reference_id
+  optional Identifier response_ref_id = 7; // Renamed from connector_response_reference_id
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
@@ -1104,7 +1104,7 @@ message PaymentServiceGetRequest {
   Identifier transaction_id = 1; // The resource ID to synchronize
   
   // Reference
-  optional string request_ref_id = 2; // Renamed from connector_request_reference_id
+  optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
 }
 
 // Response message for a payment status synchronization.
@@ -1120,7 +1120,7 @@ message PaymentServiceGetResponse {
   // Transaction Details
   optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
   optional string network_txn_id = 6; // Transaction ID from the payment network
-  optional string response_ref_id = 7; // Renamed from connector_response_reference_id
+  optional Identifier response_ref_id = 7; // Renamed from connector_response_reference_id
 }
 
 // Request message for voiding a payment.
@@ -1145,13 +1145,13 @@ message PaymentServiceVoidResponse {
   optional string error_message = 4; // Error message if the void operation failed
   
   // Reference
-  optional string response_ref_id = 5; // Renamed from connector_response_reference_id
+  optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
 }
 
 // Request message for capturing a payment.
 message PaymentServiceCaptureRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
   
   // Capture Details
@@ -1176,13 +1176,13 @@ message PaymentServiceCaptureResponse {
   optional string error_message = 4; // Error message if the capture failed
   
   // Reference
-  optional string response_ref_id = 5; // Renamed from response_reference_id
+  optional Identifier response_ref_id = 5; // Renamed from response_reference_id
 }
 
 // Request message for processing a refund.
 message PaymentServiceRefundRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund
   string transaction_id = 3 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_transaction_id
   
@@ -1218,13 +1218,13 @@ message PaymentServiceRefundResponse {
   optional string error_message = 4; // Error message if the refund failed
   
   // Reference
-  optional string response_ref_id = 5; // Response reference ID for tracking
+  optional Identifier response_ref_id = 5; // Response reference ID for tracking
 }
 
 // Request message for creating a dispute.
 message PaymentServiceDisputeRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to raise the dispute for
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
@@ -1242,13 +1242,13 @@ message PaymentServiceDisputeResponse {
   optional string error_message = 6; // Error message if creating the dispute failed
   
   // Reference
-  optional string response_ref_id = 7; // Response reference ID for tracking
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
 }
 
 // Request message for setting up a mandate.
 message PaymentServiceRegisterRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Renamed from connector_request_reference_id
+  Identifier request_ref_id = 1; // Renamed from connector_request_reference_id
   
   // Mandate Details
   Currency currency = 2; // The currency for the mandate
@@ -1314,7 +1314,7 @@ message PaymentServiceRegisterResponse {
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 6; // Data for redirecting the customer's browser
   optional string network_txn_id = 7; // Renamed from network_transaction_id
-  optional string response_ref_id = 8; // Renamed from connector_response_reference_id
+  optional Identifier response_ref_id = 8; // Renamed from connector_response_reference_id
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
@@ -1323,7 +1323,7 @@ message PaymentServiceRegisterResponse {
 // Request message for PaymentService.Transform RPC
 message PaymentServiceTransformRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   
   // Request Details
   RequestDetails request_details = 2; // Details of the incoming HTTP request
@@ -1344,7 +1344,7 @@ message PaymentServiceTransformResponse {
   bool source_verified = 3; // Indicates if the source was successfully verified
   
   // Reference
-  optional string response_ref_id = 4; // Response reference ID for tracking
+  optional Identifier response_ref_id = 4; // Response reference ID for tracking
 }
 
 // -------------------------
@@ -1354,7 +1354,7 @@ message PaymentServiceTransformResponse {
 // Request message for synchronizing refund status.
 message RefundServiceGetRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Renamed from connector_transaction_id
   string refund_id = 3 [(validate.rules).string = {min_len: 1}]; // Refund identifier
   
@@ -1374,13 +1374,13 @@ message RefundServiceGetResponse {
   optional string error_message = 5; // Error message if synchronization encountered an issue
   
   // Reference
-  optional string response_ref_id = 6; // Renamed from connector_response_reference_id
+  optional Identifier response_ref_id = 6; // Renamed from connector_response_reference_id
 }
 
 // Request message for RefundService.Transform RPC
 message RefundServiceTransformRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   
   // Request Details
   RequestDetails request_details = 2; // Details of the incoming HTTP request
@@ -1401,7 +1401,7 @@ message RefundServiceTransformResponse {
   bool source_verified = 3; // Indicates if the source was successfully verified
   
   // Reference
-  optional string response_ref_id = 4; // Response reference ID for tracking
+  optional Identifier response_ref_id = 4; // Response reference ID for tracking
 }
 
 // -------------------------
@@ -1411,7 +1411,7 @@ message RefundServiceTransformResponse {
 // Request message for submitting evidence for a dispute.
 message DisputeServiceSubmitEvidenceRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   optional Identifier transaction_id = 2; // Merchant's unique identifier for the dispute
   string dispute_id = 3; // Merchant's unique identifier for the dispute
   
@@ -1436,13 +1436,13 @@ message DisputeServiceSubmitEvidenceResponse {
   optional string error_message = 6; // Error message if submitting evidence failed
   
   // Reference
-  optional string response_ref_id = 7; // Response reference ID for tracking
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
 }
 
 // Request message for retrieving dispute information.
 message DisputeServiceGetRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   optional string dispute_id = 2; // Merchant's unique identifier for the dispute
   string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
@@ -1476,13 +1476,13 @@ message DisputeServiceGetResponse {
   optional string dispute_message = 16; // Message from the disputor
   
   // Reference
-  optional string response_ref_id = 17; // Response reference ID for tracking
+  optional Identifier response_ref_id = 17; // Response reference ID for tracking
 }
 
 // Request message for DisputeService.Transform RPC
 message DisputeServiceTransformRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   
   // Request Details
   RequestDetails request_details = 2; // Details of the incoming HTTP request
@@ -1503,7 +1503,7 @@ message DisputeServiceTransformResponse {
   bool source_verified = 3; // Indicates if the source was successfully verified
   
   // Reference
-  optional string response_ref_id = 4; // Response reference ID for tracking
+  optional Identifier response_ref_id = 4; // Response reference ID for tracking
 }
 
 // -------------------------
@@ -1513,7 +1513,7 @@ message DisputeServiceTransformResponse {
 // Request message for defending a dispute.
 message DisputeDefendRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to defend dispute for
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
   
@@ -1533,13 +1533,13 @@ message DisputeDefendResponse {
   optional string error_message = 5; // Error message if defending failed
   
   // Reference
-  optional string response_ref_id = 6; // Response reference ID for tracking
+  optional Identifier response_ref_id = 6; // Response reference ID for tracking
 }
 
 // Request message for accepting a dispute.
 message AcceptDisputeRequest {
   // Identification
-  string request_ref_id = 1 [(validate.rules).string = {min_len: 1}]; // Reference ID for tracking
+  Identifier request_ref_id = 1; // Reference ID for tracking
   string transaction_id = 2 [(validate.rules).string = {min_len: 1}]; // Transaction ID to accept dispute for
   string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
 }
@@ -1556,7 +1556,7 @@ message AcceptDisputeResponse {
   optional string error_message = 5; // Error message if accepting failed
   
   // Reference
-  optional string response_ref_id = 6; // Response reference ID for tracking
+  optional Identifier response_ref_id = 6; // Response reference ID for tracking
 }
 
 // ============================================================================
