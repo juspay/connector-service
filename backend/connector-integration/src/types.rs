@@ -1,6 +1,6 @@
 use domain_types::connector_types::{BoxedConnector, ConnectorEnum};
 
-use crate::connectors::{Adyen, Elavon, Fiserv, Razorpay};
+use crate::connectors::{Adyen, Elavon, Fiserv, Razorpay, Xendit};
 
 #[derive(Clone)]
 pub struct ConnectorData {
@@ -23,6 +23,7 @@ impl ConnectorData {
             ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
             ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
             ConnectorEnum::Elavon => Box::new(Elavon::new()),
+            ConnectorEnum::Xendit => Box::new(Xendit::new()),
         }
     }
 }

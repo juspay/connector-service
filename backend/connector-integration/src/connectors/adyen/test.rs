@@ -78,6 +78,10 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
+                            dispute_base_url: None,
+                        },
                     },
                     external_latency: None,
                     raw_connector_response: None,
@@ -248,6 +252,10 @@ mod tests {
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
+                            dispute_base_url: None,
+                        },
+                        xendit: ConnectorParams {
+                            base_url: "https://api.xendit.co/".to_string(),
                             dispute_base_url: None,
                         },
                     },

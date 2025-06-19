@@ -39,6 +39,7 @@ pub enum ConnectorEnum {
     Razorpay,
     Fiserv,
     Elavon,
+    Xendit,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -50,6 +51,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             68 => Ok(Self::Razorpay),
             28 => Ok(Self::Fiserv),
             778 => Ok(Self::Elavon),
+            87 => Ok(Self::Xendit),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,
