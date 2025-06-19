@@ -41,7 +41,6 @@ pub struct Connectors {
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
-    pub checkout: ConnectorParams,
     pub xendit: ConnectorParams,
 }
 
