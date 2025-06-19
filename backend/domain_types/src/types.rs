@@ -40,6 +40,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
+    pub checkout: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
