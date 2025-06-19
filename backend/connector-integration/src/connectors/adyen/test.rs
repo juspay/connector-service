@@ -70,13 +70,17 @@ mod tests {
                             base_url: "https://sandbox.juspay.in/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
                         },
                     },
                     external_latency: None,
@@ -242,13 +246,17 @@ mod tests {
                             base_url: "https://sandbox.juspay.in/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
+                        fiserv: ConnectorParams {
                             base_url: "https://cert.api.fiserv.com/".to_string(),
                             dispute_base_url: None,
                         },
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
                         },
                     },
                     external_latency: None,
