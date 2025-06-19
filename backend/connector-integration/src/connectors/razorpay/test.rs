@@ -108,6 +108,10 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -273,6 +277,12 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some(
+                                "https://api.sandbox.checkout.com/disputes".to_string(),
+                            ),
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -396,6 +406,12 @@ mod tests {
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some(
+                                "https://api.sandbox.checkout.com/disputes".to_string(),
+                            ),
                         },
                     },
                     raw_connector_response: None,
@@ -541,6 +557,10 @@ mod tests {
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
                         },
                     },
                     raw_connector_response: None,
@@ -844,6 +864,10 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1019,6 +1043,10 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1193,6 +1221,10 @@ mod tests {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
                         },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
+                        },
                     },
                     raw_connector_response: None,
                 },
@@ -1293,6 +1325,10 @@ mod tests {
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
                         },
                     },
                     raw_connector_response: None,
@@ -1402,6 +1438,12 @@ mod tests {
                         elavon: ConnectorParams {
                             base_url: "https://api.elavon.com/".to_string(),
                             dispute_base_url: None,
+                        },
+                        checkout: ConnectorParams {
+                            base_url: "https://api.sandbox.checkout.com/".to_string(),
+                            dispute_base_url: Some(
+                                "https://api.sandbox.checkout.com/disputes".to_string(),
+                            ),
                         },
                     },
                     raw_connector_response: None,
@@ -1550,6 +1592,10 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1675,6 +1721,10 @@ mod tests {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
                     },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
+                    },
                 },
                 raw_connector_response: None,
             },
@@ -1788,6 +1838,10 @@ mod tests {
                     elavon: ConnectorParams {
                         base_url: "https://api.elavon.com/".to_string(),
                         dispute_base_url: None,
+                    },
+                    checkout: ConnectorParams {
+                        base_url: "https://api.sandbox.checkout.com/".to_string(),
+                        dispute_base_url: Some("https://api.sandbox.checkout.com/disputes".to_string()),
                     },
                 },
                 raw_connector_response: None,
