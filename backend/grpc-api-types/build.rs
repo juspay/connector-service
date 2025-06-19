@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .compile_protos(
-            &["proto/payment.proto", "proto/health_check.proto"],
+            &["proto/services.proto", "proto/health_check.proto", "proto/payment.proto", "proto/payment_methods.proto"],
             &["proto"],
         )?;
 

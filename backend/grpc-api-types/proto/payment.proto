@@ -2,10 +2,7 @@ syntax = "proto3";
 
 package ucs.v2;
 
-import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "google/protobuf/timestamp.proto";
-import "validate/validate.proto";
 import "payment_methods.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
@@ -794,31 +791,31 @@ enum CountryAlpha2 {
 // Represents a physical address with contact information.
 message Address {
   // Personal Information
-  optional string first_name = 1 [(validate.rules).string = {min_len: 1}];
-  optional string last_name = 2 [(validate.rules).string = {min_len: 1}];
+  optional string first_name = 1;
+  optional string last_name = 2;
   
   // Address Details
-  optional string line1 = 3 [(validate.rules).string = {min_len: 1}];
+  optional string line1 = 3;
   optional string line2 = 4;
   optional string line3 = 5;
-  optional string city = 6 [(validate.rules).string = {min_len: 1}];
+  optional string city = 6;
   optional string state = 7;
-  optional string zip_code = 8 [(validate.rules).string = {min_len: 1}];
+  optional string zip_code = 8;
   optional CountryAlpha2 country_alpha2_code = 9;
 
   // Contact Information
-  optional string email = 10 [(validate.rules).string.email = true];
-  optional string phone_number = 11 [(validate.rules).string = {min_len: 5}];
-  optional string phone_country_code = 12 [(validate.rules).string = {min_len: 1, max_len: 4}];
+  optional string email = 10;
+  optional string phone_number = 11;
+  optional string phone_country_code = 12;
 }
 
 // Access token details.
 message AccessToken {
   // The token string.
-  string token = 1 [(validate.rules).string = {min_len: 1}];
+  string token = 1;
   
   // Expiration timestamp of the token (seconds since epoch).
-  int64 expires_in_seconds = 2 [(validate.rules).int64.gt = 0];
+  int64 expires_in_seconds = 2;
 }
 
 // Additional authentication data, typically from 3DS.
@@ -827,7 +824,7 @@ message AuthenticationData {
   optional string eci = 1;
   
   // Cardholder Authentication Verification Value (CAVV).
-  string cavv = 2 [(validate.rules).string = {min_len: 1}];
+  string cavv = 2;
   
   // 3DS Server Transaction ID.
   optional Identifier threeds_server_transaction_id = 3;
@@ -844,8 +841,8 @@ message CustomerAcceptance {
   // Type of acceptance (e.g., online, offline).
   AcceptanceType acceptance_type = 1;
   
-  // Timestamp of when the acceptance was given.
-  google.protobuf.Timestamp accepted_at = 2;
+  // Unix timestamp (seconds since epoch) of when the acceptance was given.
+  int64 accepted_at = 2;
   
   // Details if the acceptance was an online mandate.
   optional OnlineMandate online_mandate_details = 3;
@@ -854,18 +851,18 @@ message CustomerAcceptance {
 // Details for an online mandate acceptance.
 message OnlineMandate {
   // IP address from which the mandate was accepted.
-  optional string ip_address = 1 [(validate.rules).string.ip = true];
+  optional string ip_address = 1;
   
   // User agent string of the browser used for mandate acceptance.
-  string user_agent = 2 [(validate.rules).string = {min_len: 1}];
+  string user_agent = 2;
 }
 
 // Information about the customer's browser.
 message BrowserInformation {
   // Display Information
   optional uint32 color_depth = 1;
-  optional uint32 screen_height = 5 [(validate.rules).uint32 = {gt: 0, lte: 10000}];
-  optional uint32 screen_width = 6 [(validate.rules).uint32 = {gt: 0, lte: 10000}];
+  optional uint32 screen_height = 5;
+  optional uint32 screen_width = 6;
   
   // Browser Settings
   optional bool java_enabled = 2;
@@ -879,7 +876,7 @@ message BrowserInformation {
   optional string accept_language = 14;
   
   // Device Information
-  optional string ip_address = 8 [(validate.rules).string.ip = true];
+  optional string ip_address = 8;
   optional string os_type = 11;
   optional string os_version = 12;
   optional string device_model = 13;
@@ -889,7 +886,7 @@ message BrowserInformation {
 message Identifier {
   oneof id_type {
     // Connector's transaction ID.
-    string id = 1 [(validate.rules).string = {min_len: 1}];
+    string id = 1;
     
     // Encoded data representing the ID or related information.
     string encoded_data = 2;
@@ -903,7 +900,7 @@ message Identifier {
 // Reference to a payment mandate.
 message MandateReference {
   // Connector's unique identifier for the mandate.
-  optional string mandate_id = 1 [(validate.rules).string = {min_len: 1}];
+  optional string mandate_id = 1;
 }
 
 // Container for various address types related to a payment.
@@ -929,7 +926,7 @@ message RedirectForm {
 // Represents data for an HTML form to be submitted.
 message FormData {
   // The endpoint URL where the form should be submitted.
-  string endpoint = 1 [(validate.rules).string.uri = true];
+  string endpoint = 1;
   
   // HTTP method to be used for form submission (e.g., POST).
   HttpMethod method = 2;
@@ -941,7 +938,7 @@ message FormData {
 // Represents raw HTML data.
 message HtmlData {
   // The HTML content as a string.
-  string html_data = 1 [(validate.rules).string = {min_len: 1}];
+  string html_data = 1;
 }
 
 // Details of an HTTP request, typically for incoming webhooks.
@@ -965,7 +962,7 @@ message RequestDetails {
 // Secrets used for verifying connector webhooks.
 message WebhookSecrets {
   // Primary secret for webhook verification.
-  string secret = 1 [(validate.rules).string = {min_len: 1}];
+  string secret = 1;
   
   // Additional secret, if required by the connector.
   optional string additional_secret = 2;
@@ -988,16 +985,16 @@ message WebhookResponseContent {
 // Data for a multiple capture request.
 message MultipleCaptureRequestData {
   // Sequence number for this capture in a series of multiple captures.
-  int64 capture_sequence = 1 [(validate.rules).int64.gt = 0];
+  int64 capture_sequence = 1;
   
   // Reference for this specific capture.
-  string capture_reference = 2 [(validate.rules).string = {min_len: 1}];
+  string capture_reference = 2;
 }
 
 // Represents a single piece of evidence for a dispute.
 message EvidenceDocument {
   // Type of the evidence (e.g., "cancellation_policy", "receipt", "customer_communication").
-  string evidence_type = 1 [(validate.rules).string = {min_len: 1}];
+  string evidence_type = 1;
 
   // Content Options
   // Content of the document, if it's a file.
@@ -1028,9 +1025,9 @@ message PaymentServiceAuthorizeRequest {
   Identifier request_ref_id = 1; // Renamed from connector_request_reference_id
   
   // Amount Information
-  int64 amount = 2 [(validate.rules).int64.gt = 0]; // The amount for the payment in major currency units
+  int64 amount = 2; // The amount for the payment in major currency units
   Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
-  int64 minor_amount = 4 [(validate.rules).int64.gt = 0]; // The minor amount for the payment (e.g., cents)
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
   optional int64 order_tax_amount = 5; // Tax amount for the order
   optional int64 shipping_cost = 6; // Cost of shipping for the order
   
@@ -1039,8 +1036,8 @@ message PaymentServiceAuthorizeRequest {
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
   
   // Customer Information
-  optional string email = 9 [(validate.rules).string.email = true]; // Email address of the customer
-  optional string customer_name = 10 [(validate.rules).string = {min_len: 1}]; // Name of the customer
+  optional string email = 9; // Email address of the customer
+  optional string customer_name = 10; // Name of the customer
   optional string connector_customer_id = 11; // Customer ID as recognized by the connector
   
   // Address Information
@@ -1055,9 +1052,9 @@ message PaymentServiceAuthorizeRequest {
   map<string, string> metadata = 16; // Additional metadata for the connector
   
   // URLs for Redirection and Webhooks
-  optional string return_url = 17 [(validate.rules).string.uri = true]; // URL to redirect after payment
-  optional string webhook_url = 18 [(validate.rules).string.uri = true]; // URL for webhook notifications
-  optional string complete_authorize_url = 19 [(validate.rules).string.uri = true]; // URL to complete authorization
+  optional string return_url = 17; // URL to redirect after payment
+  optional string webhook_url = 18; // URL for webhook notifications
+  optional string complete_authorize_url = 19; // URL to complete authorization
   
   // Session and Token Information
   optional AccessToken access_token = 20; // Access token for secure communication
@@ -1133,10 +1130,10 @@ message PaymentServiceGetResponse {
   optional AuthenticationType auth_type = 15; // Type of authentication used
   
   // Timestamps
-  optional google.protobuf.Timestamp created_at = 16; // When the payment was created
-  optional google.protobuf.Timestamp updated_at = 17; // When the payment was last updated
-  optional google.protobuf.Timestamp authorized_at = 18; // When the payment was authorized
-  optional google.protobuf.Timestamp captured_at = 19; // When the payment was captured
+  optional int64 created_at = 16; // Unix timestamp when the payment was created
+  optional int64 updated_at = 17; // Unix timestamp when the payment was last updated
+  optional int64 authorized_at = 18; // Unix timestamp when the payment was authorized
+  optional int64 captured_at = 19; // Unix timestamp when the payment was captured
   
   // Additional Context
   optional string customer_name = 20; // Name of the customer
@@ -1178,7 +1175,7 @@ message PaymentServiceCaptureRequest {
   Identifier transaction_id = 2; // Renamed from connector_transaction_id
   
   // Capture Details
-  int64 amount_to_capture = 3 [(validate.rules).int64.gt = 0]; // Amount to capture, in minor currency units
+  int64 amount_to_capture = 3; // Amount to capture, in minor currency units
   Currency currency = 4; // Currency of the amount to capture
   
   // Metadata
@@ -1206,19 +1203,19 @@ message PaymentServiceCaptureResponse {
 message PaymentServiceRefundRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
-  string refund_id = 2 [(validate.rules).string = {min_len: 1}]; // Unique identifier for the refund
+  string refund_id = 2; // Unique identifier for the refund
   Identifier transaction_id = 3; // Renamed from connector_transaction_id
   
   // Amount Information
-  int64 payment_amount = 4 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in major currency units
+  int64 payment_amount = 4; // Amount to be refunded, in major currency units
   Currency currency = 5; // Currency of the refund, ISO 4217 code
-  int64 minor_payment_amount = 6 [(validate.rules).int64.gt = 0]; // Amount to be refunded, in minor currency units
-  int64 refund_amount = 7 [(validate.rules).int64.gt = 0]; // Actual amount to refund, in major units
-  int64 minor_refund_amount = 8 [(validate.rules).int64.gt = 0]; // Actual amount to refund in minor units
+  int64 minor_payment_amount = 6; // Amount to be refunded, in minor currency units
+  int64 refund_amount = 7; // Actual amount to refund, in major units
+  int64 minor_refund_amount = 8; // Actual amount to refund in minor units
   
   // Refund Context
   optional string reason = 9; // Reason for the refund
-  optional string webhook_url = 10 [(validate.rules).string.uri = true]; // URL for webhook notifications
+  optional string webhook_url = 10; // URL for webhook notifications
   optional string merchant_account_id = 11; // Merchant account ID for the refund
   optional CaptureMethod capture_method = 12; // Capture method related to the original payment
   
@@ -1253,9 +1250,9 @@ message RefundResponse {
   optional string refund_reason = 12; // Reason for the refund
   
   // Timestamps
-  optional google.protobuf.Timestamp created_at = 13; // When the refund was created
-  optional google.protobuf.Timestamp updated_at = 14; // When the refund was last updated
-  optional google.protobuf.Timestamp processed_at = 15; // When the refund was processed
+  optional int64 created_at = 13; // Unix timestamp when the refund was created
+  optional int64 updated_at = 14; // Unix timestamp when the refund was last updated
+  optional int64 processed_at = 15; // Unix timestamp when the refund was processed
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
@@ -1270,7 +1267,7 @@ message PaymentServiceDisputeRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to raise the dispute for
-  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
+  string dispute_id = 3; // Connector's unique identifier
 }
 
 // Response message for dispute operations (unified for both Create and Get).
@@ -1289,10 +1286,10 @@ message DisputeResponse {
   // Dispute Details
   optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
   optional Currency dispute_currency = 9; // Currency of the disputed amount
-  optional google.protobuf.Timestamp dispute_date = 10; // Date when dispute was created
-  optional google.protobuf.Timestamp service_date = 11; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 12; // Date of shipping, if applicable
-  optional google.protobuf.Timestamp due_date = 13; // Due date for response to dispute
+  optional int64 dispute_date = 10; // Unix timestamp when dispute was created
+  optional int64 service_date = 11; // Unix timestamp of service date, if applicable
+  optional int64 shipping_date = 12; // Unix timestamp of shipping date, if applicable
+  optional int64 due_date = 13; // Unix timestamp of due date for response to dispute
   
   // Evidence
   repeated EvidenceDocument evidence_documents = 14; // Collection of evidence documents submitted
@@ -1316,7 +1313,7 @@ message PaymentServiceRegisterRequest {
   optional int64 minor_amount = 4; // Optional: Amount to authorize during mandate setup
   
   // Customer Information
-  optional string email = 5 [(validate.rules).string.email = true]; // Email address of the customer
+  optional string email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
   
@@ -1332,9 +1329,9 @@ message PaymentServiceRegisterRequest {
   map<string, string> metadata = 12; // Additional metadata for the connector
   
   // URLs for Redirection and Webhooks
-  optional string return_url = 13 [(validate.rules).string.uri = true]; // URL to redirect after setup
-  optional string webhook_url = 14 [(validate.rules).string.uri = true]; // URL for webhook notifications
-  optional string complete_authorize_url = 15 [(validate.rules).string.uri = true]; // URL to complete authorization
+  optional string return_url = 13; // URL to redirect after setup
+  optional string webhook_url = 14; // URL for webhook notifications
+  optional string complete_authorize_url = 15; // URL to complete authorization
   
   // Session and Token Information
   optional AccessToken access_token = 16; // Access token for secure communication
@@ -1416,7 +1413,7 @@ message RefundServiceGetRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Renamed from connector_transaction_id
-  string refund_id = 3 [(validate.rules).string = {min_len: 1}]; // Refund identifier
+  string refund_id = 3; // Refund identifier
   
   // Refund Details
   optional string refund_reason = 4; // Reason for the refund, if provided during sync
@@ -1445,9 +1442,9 @@ message PaymentServiceRefundResponse {
   optional string refund_reason = 12; // Reason for the refund
   
   // Timestamps
-  optional google.protobuf.Timestamp created_at = 13; // When the refund was created
-  optional google.protobuf.Timestamp updated_at = 14; // When the refund was last updated
-  optional google.protobuf.Timestamp processed_at = 15; // When the refund was processed
+  optional int64 created_at = 13; // Unix timestamp when the refund was created
+  optional int64 updated_at = 14; // Unix timestamp when the refund was last updated
+  optional int64 processed_at = 15; // Unix timestamp when the refund was processed
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
@@ -1480,9 +1477,9 @@ message RefundServiceGetResponse {
   optional string refund_reason = 12; // Reason for the refund
   
   // Timestamps
-  optional google.protobuf.Timestamp created_at = 13; // When the refund was created
-  optional google.protobuf.Timestamp updated_at = 14; // When the refund was last updated
-  optional google.protobuf.Timestamp processed_at = 15; // When the refund was processed
+  optional int64 created_at = 13; // Unix timestamp when the refund was created
+  optional int64 updated_at = 14; // Unix timestamp when the refund was last updated
+  optional int64 processed_at = 15; // Unix timestamp when the refund was processed
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
@@ -1531,8 +1528,8 @@ message DisputeServiceSubmitEvidenceRequest {
   string dispute_id = 3; // Merchant's unique identifier for the dispute
   
   // Dates
-  optional google.protobuf.Timestamp service_date = 4; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 5; // Date of shipping, if applicable
+  optional int64 service_date = 4; // Unix timestamp of service date, if applicable
+  optional int64 shipping_date = 5; // Unix timestamp of shipping date, if applicable
   
   // Evidence
   repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents
@@ -1559,7 +1556,7 @@ message DisputeServiceGetRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   optional string dispute_id = 2; // Merchant's unique identifier for the dispute
-  string connector_dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
+  string connector_dispute_id = 3; // Connector's unique identifier
 }
 
 // Legacy alias for backward compatibility - use DisputeResponse instead
@@ -1578,10 +1575,10 @@ message PaymentServiceDisputeResponse {
   // Dispute Details
   optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
   optional Currency dispute_currency = 9; // Currency of the disputed amount
-  optional google.protobuf.Timestamp dispute_date = 10; // Date when dispute was created
-  optional google.protobuf.Timestamp service_date = 11; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 12; // Date of shipping, if applicable
-  optional google.protobuf.Timestamp due_date = 13; // Due date for response to dispute
+  optional int64 dispute_date = 10; // Unix timestamp when dispute was created
+  optional int64 service_date = 11; // Unix timestamp of service date, if applicable
+  optional int64 shipping_date = 12; // Unix timestamp of shipping date, if applicable
+  optional int64 due_date = 13; // Unix timestamp of due date for response to dispute
   
   // Evidence
   repeated EvidenceDocument evidence_documents = 14; // Collection of evidence documents submitted
@@ -1610,10 +1607,10 @@ message DisputeServiceGetResponse {
   // Dispute Details
   optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
   optional Currency dispute_currency = 9; // Currency of the disputed amount
-  optional google.protobuf.Timestamp dispute_date = 10; // Date when dispute was created
-  optional google.protobuf.Timestamp service_date = 11; // Date of service, if applicable
-  optional google.protobuf.Timestamp shipping_date = 12; // Date of shipping, if applicable
-  optional google.protobuf.Timestamp due_date = 13; // Due date for response to dispute
+  optional int64 dispute_date = 10; // Unix timestamp when dispute was created
+  optional int64 service_date = 11; // Unix timestamp of service date, if applicable
+  optional int64 shipping_date = 12; // Unix timestamp of shipping date, if applicable
+  optional int64 due_date = 13; // Unix timestamp of due date for response to dispute
   
   // Evidence
   repeated EvidenceDocument evidence_documents = 14; // Collection of evidence documents submitted
@@ -1662,7 +1659,7 @@ message DisputeDefendRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to defend dispute for
-  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
+  string dispute_id = 3; // Connector's unique identifier
   
   // Defend Details
   optional string reason_code = 4; // Reason code for defending the dispute
@@ -1688,7 +1685,7 @@ message AcceptDisputeRequest {
   // Identification
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to accept dispute for
-  string dispute_id = 3 [(validate.rules).string = {min_len: 1}]; // Connector's unique identifier
+  string dispute_id = 3; // Connector's unique identifier
 }
 
 // Response message for accepting a dispute.

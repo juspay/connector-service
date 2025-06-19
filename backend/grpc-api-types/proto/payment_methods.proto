@@ -2,10 +2,7 @@ syntax = "proto3";
 
 package ucs.v2;
 
-import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
-import "google/protobuf/timestamp.proto";
-import "validate/validate.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
@@ -254,16 +251,16 @@ message OtherPaymentMethodType {
 // Payment method token details.
 message TokenPaymentMethodType {
   // The token string representing a payment method.
-  string token = 1 [(validate.rules).string = {min_len: 1}];
+  string token = 1;
 }
 
 // Details of a payment card.
 message CardDetails {
   // Card Identification
-  string card_number = 1 [(validate.rules).string = {min_len: 13, max_len: 19, pattern: "^[0-9]{13,19}$"}];
-  string card_exp_month = 2 [(validate.rules).string = {min_len: 2, max_len: 2, pattern: "^[0-9]{2}$"}];
-  string card_exp_year = 3 [(validate.rules).string = {min_len: 4, max_len: 4, pattern: "^[0-9]{4}$"}];
-  string card_cvc = 4 [(validate.rules).string = {min_len: 3, max_len: 4}];
+  string card_number = 1;
+  string card_exp_month = 2;
+  string card_exp_year = 3;
+  string card_cvc = 4;
   
   // Cardholder Information
   optional string card_holder_name = 5;
