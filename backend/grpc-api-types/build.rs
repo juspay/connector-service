@@ -73,7 +73,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .type_attribute(".", "#[derive(serde::Serialize, serde::Deserialize)]")
         .type_attribute(".", "#[allow(clippy::large_enum_variant)]")
         .compile_protos(
-            &["proto/services.proto", "proto/health_check.proto", "proto/payment.proto", "proto/payment_methods.proto"],
+            &[
+                "proto/services.proto",
+                "proto/health_check.proto",
+                "proto/payment.proto",
+                "proto/payment_methods.proto",
+            ],
             &["proto"],
         )?;
 

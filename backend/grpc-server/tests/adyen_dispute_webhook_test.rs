@@ -66,7 +66,9 @@ async fn process_webhook_and_get_response(
 
     let mut request = Request::new(PaymentServiceTransformRequest {
         request_ref_id: Some(grpc_api_types::payments::Identifier {
-            id_type: Some(grpc_api_types::payments::identifier::IdType::Id("webhook_test".to_string())),
+            id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                "webhook_test".to_string(),
+            )),
         }),
         request_details: Some(RequestDetails {
             method: grpc_api_types::payments::HttpMethod::Post.into(),
@@ -117,7 +119,7 @@ async fn process_webhook_and_get_response(
                 status: dispute_response.dispute_status,
                 dispute_message: dispute_response.dispute_message,
                 dispute_id: dispute_response.dispute_id.unwrap_or("".to_string()), // TODO need a fix
-                connector_response_reference_id: None // TODO need a fix
+                connector_response_reference_id: None, // TODO need a fix
             }
         }
         _ => {

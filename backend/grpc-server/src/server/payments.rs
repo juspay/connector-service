@@ -6,32 +6,30 @@ use crate::{
 };
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{
-        Authorize, CreateOrder, PSync, Refund, SetupMandate,
-        Void, Capture
-    },
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, Refund, SetupMandate, Void},
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData, PaymentsCaptureData
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
 };
 use domain_types::{
     types::{
-        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
-        generate_setup_mandate_response, generate_payment_capture_response
+        generate_payment_capture_response, generate_payment_sync_response,
+        generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-    PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServiceVoidRequest, PaymentServiceVoidResponse, PaymentServiceRefundRequest, RefundResponse, PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse, PaymentServiceTransformRequest, PaymentServiceTransformResponse,
-    DisputeResponse, PaymentServiceDisputeRequest,
+    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::{
@@ -191,7 +189,6 @@ impl Payments {
 }
 
 impl PaymentOperationsInternal for Payments {
-
     implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
@@ -206,7 +203,6 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_sync_response,
         all_keys_required: None
     );
-
 
     implement_connector_operation!(
         fn_name: internal_void_payment,
@@ -339,7 +335,6 @@ impl PaymentService for Payments {
         self.internal_payment_sync(request).await
     }
 
-
     async fn void(
         &self,
         request: tonic::Request<PaymentServiceVoidRequest>,
@@ -425,8 +420,9 @@ impl PaymentService for Payments {
             .map_err(|e| e.into_grpc_status())?,
         };
 
-        let api_event_type = grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
-            .map_err(|e| e.into_grpc_status())?;
+        let api_event_type =
+            grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+                .map_err(|e| e.into_grpc_status())?;
 
         let response = PaymentServiceTransformResponse {
             event_type: api_event_type.into(),
@@ -538,7 +534,6 @@ impl PaymentService for Payments {
 
         Ok(tonic::Response::new(setup_mandate_response))
     }
-
 }
 
 async fn get_payments_webhook_content(
@@ -608,7 +603,7 @@ async fn get_disputes_webhook_content(
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
         .switch()?;
 
-    // Generate response - DisputeService should handle this, for now return basic response  
+    // Generate response - DisputeService should handle this, for now return basic response
     let response = DisputeResponse::foreign_try_from(webhook_details).change_context(
         ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),

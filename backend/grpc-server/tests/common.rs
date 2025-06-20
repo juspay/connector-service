@@ -2,7 +2,9 @@ use std::{future::Future, sync::Arc};
 
 use grpc_api_types::{
     health_check::health_client::HealthClient,
-    payments::{payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient},
+    payments::{
+        payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
+    },
 };
 use http::Uri;
 use hyper_util::rt::TokioIo; // Add this import
