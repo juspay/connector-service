@@ -8,10 +8,10 @@ mod common;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus
+        card_payment_method_type, identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus
     },
 };
-use std::{collections::HashMap, env, hash::Hash};
+use std::{collections::HashMap, env};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
 
@@ -76,7 +76,7 @@ fn add_elavon_metadata<T>(request: &mut Request<T>) {
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
     match &response.transaction_id {
         Some(id) => match id.id_type.as_ref().unwrap() {
-            grpc_api_types::payments::identifier::IdType::Id(id) => id.clone(),
+            IdType::Id(id) => id.clone(),
             _ => panic!("Expected connector transaction ID"),
         },
         None => panic!("Resource ID is None"),
@@ -245,7 +245,7 @@ async fn test_payment_sync() {
 // Helper function to create a payment capture request
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier{id_type : Some(IdType::Id((transaction_id.to_string())))}),
+        transaction_id: Some(Identifier{id_type : Some(IdType::Id(transaction_id.to_string()))}),
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
@@ -339,7 +339,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
     RefundServiceGetRequest {
-        transaction_id: Some(Identifier{id_type : Some(IdType::Id((transaction_id.to_string())))}),
+        transaction_id: Some(Identifier{id_type : Some(IdType::Id(transaction_id.to_string()))}),
         refund_id: refund_id.to_string(),
         refund_reason: None,
         request_ref_id: None
