@@ -1,8 +1,8 @@
 use error_stack::ResultExt;
 use lazy_static::lazy_static;
 use prometheus::{
-    self, Encoder, HistogramVec, IntCounterVec, TextEncoder, register_histogram_vec,
-    register_int_counter_vec,
+    self, register_histogram_vec, register_int_counter_vec, Encoder, HistogramVec, IntCounterVec,
+    TextEncoder,
 };
 use std::future::Future;
 use std::time::Instant;

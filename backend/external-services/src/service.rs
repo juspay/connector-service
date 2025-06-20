@@ -1,5 +1,6 @@
 use domain_types::{errors::ApiClientError, types::Proxy};
 // use base64::engine::Engine;
+use crate::shared_metrics as metrics;
 use error_stack::{report, ResultExt};
 use hyperswitch_common_utils::{
     // consts::BASE64_ENGINE,
@@ -13,7 +14,6 @@ use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
-use crate::shared_metrics as metrics;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
