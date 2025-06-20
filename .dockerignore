@@ -23,7 +23,7 @@ Dockerfile*
 .dockerignore
 
 # Miscellaneous
-#Cargo.lock
+Cargo.lock
 
 # Example
 examples/
