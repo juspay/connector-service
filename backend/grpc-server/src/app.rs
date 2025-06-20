@@ -5,7 +5,7 @@ use grpc_api_types::{
     health_check::health_server,
     payments::{payment_service_handler, payment_service_server},
 };
-use shared_metrics::metrics;
+use external_services::shared_metrics as metrics;
 use std::{future::Future, net};
 use tokio::{
     signal::unix::{signal, SignalKind},

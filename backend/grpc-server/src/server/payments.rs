@@ -29,7 +29,7 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
-use external_services;
+use external_services::shared_metrics as metrics;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
     DisputeDefendRequest, DisputeDefendResponse, DisputesSyncResponse, IncomingWebhookRequest,
@@ -45,7 +45,6 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use shared_metrics::metrics;
 use tracing::info;
 
 // Helper trait for payment operations

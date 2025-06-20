@@ -40,7 +40,6 @@ grpc-api-types = { version = "0.1.0", path = "../grpc-api-types" }
 connector-integration = { version = "0.1.0", path = "../connector-integration" }
 external-services = { version = "0.1.0", path = "../external-services" }
 domain_types = { version = "0.1.0", path = "../domain_types" }
-shared-metrics = {version = "0.1.0", path = "../shared-metrics"}
 
 # Third-party dependencies
 config = "0.14.0"

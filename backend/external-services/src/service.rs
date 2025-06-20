@@ -13,7 +13,7 @@ use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
-use shared_metrics::metrics;
+use crate::shared_metrics as metrics;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
