@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - temp-jenkin-deployment
   workflow_dispatch:
     inputs:
       ref:
