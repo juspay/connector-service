@@ -30,3 +30,22 @@ pub struct SubmitEvidence;
 
 #[derive(Debug, Clone)]
 pub struct DefendDispute;
+
+use strum_macros::Display;
+
+#[derive(Display)]
+#[strum(serialize_all = "snake_case")]
+pub enum FlowName {
+    Authorize,
+    Refund,
+    Rsync,
+    Psync,
+    Void,
+    SetupMandate,
+    Capture,
+    AcceptDispute,
+    SubmitEvidence,
+    DefendDispute,
+    CreateOrder,
+    IncomingWebhook,
+}
