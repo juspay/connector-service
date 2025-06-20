@@ -2,12 +2,10 @@ name: Docker Build and Push Check
 
 on:
   push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch or commit ID'
+        description: 'Branch, tag or commit ID'
         required: false
         type: string
 
@@ -31,6 +29,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.ref }}
+
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -72,7 +71,7 @@ jobs:
           cache-to: type=gha,mode=max
           push: true
         env:
-          CARGO_INCREMENTAL: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+          CARGO_INCREMENTAL: "0"
           RUSTFLAGS: "-A warnings"
           SCCACHE_ENABLE: "true"
 
