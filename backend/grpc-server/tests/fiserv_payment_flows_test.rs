@@ -9,10 +9,9 @@ use base64::{engine::general_purpose, Engine};
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        card_payment_method_type, identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus
+        card_payment_method_type, identifier::IdType, payment_method, payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient, AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus
     },
 };
-use hyperswitch_api_models::blocklist::Card;
 use std::{collections::HashMap, env};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
@@ -108,7 +107,7 @@ fn add_fiserv_metadata<T>(request: &mut Request<T>) {
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
     match &response.transaction_id {
         Some(id) => match id.id_type.as_ref().unwrap() {
-            grpc_api_types::payments::identifier::IdType::Id(id) => id.clone(),
+            IdType::Id(id) => id.clone(),
             _ => panic!("Expected connector transaction ID"),
         },
         None => panic!("Resource ID is None"),
@@ -120,12 +119,12 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentSer
     // Get terminal_id for metadata
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
         .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-    let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+    // let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     let mut metadata = HashMap::new();
     metadata.insert("terminal_id".to_string(), terminal_id);
 
-    let cardDetails = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
         card_number: TEST_CARD_NUMBER.to_string(),
                     card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
                     card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
@@ -144,7 +143,7 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentSer
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
-        payment_method: Some(PaymentMethod{payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType{card_type: Some(cardDetails)}))}),//i32::from(payment_method::PaymentMethod::Card),
+        payment_method: Some(PaymentMethod{payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType{card_type: Some(card_details)}))}),//i32::from(payment_method::PaymentMethod::Card),
         email: Some(TEST_EMAIL.to_string()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
@@ -153,7 +152,7 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentSer
         request_incremental_authorization: false,
         capture_method: Some(i32::from(capture_method)),
         // payment_method_type: Some(i32::from(PaymentMethodType::Credit)),
-        metadata:metadata,
+        metadata,
         ..Default::default()
     }
 }
@@ -161,8 +160,8 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentSer
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
-        transaction_id: Some(Identifier{id_type : Some(IdType::Id((transaction_id.to_string())))}),
-        request_ref_id: Some(Identifier{id_type : Some(IdType::Id((format!("fiserv_sync_{}", get_timestamp()))))}),
+        transaction_id: Some(Identifier{id_type : Some(IdType::Id(transaction_id.to_string()))}),
+        request_ref_id: Some(Identifier{id_type : Some(IdType::Id(format!("fiserv_sync_{}", get_timestamp())))}),
         // all_keys_required: None,
     }
 }
@@ -171,17 +170,17 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
         .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-    let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+    // let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
 
     let mut metadata = HashMap::new();
     metadata.insert("terminal_id".to_string(), terminal_id);
 
     PaymentServiceCaptureRequest {
-        transaction_id: Some(Identifier{id_type : Some(IdType::Id((transaction_id.to_string())))}),
+        transaction_id: Some(Identifier{id_type : Some(IdType::Id(transaction_id.to_string()))}),
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
-        metadata: metadata,
+        metadata,
         request_ref_id: None
         // all_keys_required: None,
     }
@@ -191,13 +190,13 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
         .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-    let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+    // let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
     let mut metadata = HashMap::new();
     metadata.insert("terminal_id".to_string(), terminal_id);
 
     PaymentServiceRefundRequest {
         refund_id: format!("refund_{}", get_timestamp()),
-        transaction_id: Some(Identifier{id_type : Some(IdType::Id((transaction_id.to_string())))}),
+        transaction_id: Some(Identifier{id_type : Some(IdType::Id(transaction_id.to_string()))}),
         currency: i32::from(Currency::Usd),
         payment_amount: TEST_AMOUNT,
         refund_amount: TEST_AMOUNT,
@@ -219,7 +218,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
     RefundServiceGetRequest {
-        transaction_id: Some(Identifier{id_type : Some(IdType::Id((transaction_id.to_string())))}),
+        transaction_id: Some(Identifier{id_type : Some(IdType::Id(transaction_id.to_string()))}),
         refund_id: refund_id.to_string(),
         refund_reason: None,
         request_ref_id: None

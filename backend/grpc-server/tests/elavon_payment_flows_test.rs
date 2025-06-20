@@ -86,8 +86,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 // Helper function to create a payment authorization request
 fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     // Initialize with all required fields to avoid field_reassign_with_default warning
-
-    let cardDetails = card_payment_method_type::CardType::Credit(CardDetails {
+    let card_details = card_payment_method_type::CardType::Credit(CardDetails {
         card_number: TEST_CARD_NUMBER.to_string(),
                     card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
                     card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
@@ -105,7 +104,7 @@ fn create_payment_authorize_request(capture_method: CaptureMethod) -> PaymentSer
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
-        payment_method: Some(PaymentMethod{payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType{card_type: Some(cardDetails)}))}),
+        payment_method: Some(PaymentMethod{payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType{card_type: Some(card_details)}))}),
         // payment_method_data: Some(grpc_api_types::payments::PaymentMethodData {
         //     data: Some(grpc_api_types::payments::payment_method_data::Data::Card(
         //         grpc_api_types::payments::Card {
