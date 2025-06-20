@@ -531,7 +531,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address>
             address: Some(hyperswitch_api_models::payments::AddressDetails::foreign_try_from(value.clone())?),
             phone: value.phone_number.map(|phone_number| hyperswitch_api_models::payments::PhoneDetails {
                 number: Some(phone_number.into()),
-                country_code: value.phone_country_code.map(|code| code.into()),
+                country_code: value.phone_country_code,
             }),
             email,
         })
