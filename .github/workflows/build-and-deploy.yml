@@ -11,8 +11,7 @@ on:
         required: false
         type: string
 
-
-
+jobs:
   build-and-push-dockerfile:
     permissions:
       contents: read
@@ -56,7 +55,7 @@ on:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/connector-service/grpc-server
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=ref,event=branch,separator=_
             type=raw,value=${{ env.SHORT_SHA }}
@@ -67,7 +66,7 @@ on:
           context: .
           file: Dockerfile
           platforms: ${{ matrix.platform }}
-          tags: ghcr.io/connector-service/grpc-server:${{ env.SHORT_SHA }}-${{ matrix.tag }}
+          tags: ghcr.io/${{ github.repository }}:${{ env.SHORT_SHA }}-${{ matrix.tag }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -76,8 +75,6 @@ on:
           CARGO_INCREMENTAL: ${{ github.event_name == 'pull_request' && '1' || '0' }}
           RUSTFLAGS: "-A warnings"
           SCCACHE_ENABLE: "true"
-
-
 
   create-manifest:
     needs: [build-and-push-dockerfile]
@@ -109,6 +106,7 @@ on:
 
       - name: Create manifest
         run: |
-          docker buildx imagetools create --tag ghcr.io/connector-service/grpc-server:${{ env.SHORT_SHA }} \
-            ghcr.io/connector-service/grpc-server:${{ env.SHORT_SHA }}-linux-amd64 \
-            ghcr.io/connector-service/grpc-server:${{ env.SHORT_SHA }}-linux-arm64
+          docker buildx imagetools create --tag ghcr.io/${{ github.repository }}:${{ env.SHORT_SHA }} \
+            ghcr.io/${{ github.repository }}:${{ env.SHORT_SHA }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}:${{ env.SHORT_SHA }}-linux-arm64
+
