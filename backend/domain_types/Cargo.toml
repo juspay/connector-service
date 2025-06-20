@@ -20,3 +20,4 @@ hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.1
 hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
 hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
 hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" }
+strum_macros = "0.27.1"
