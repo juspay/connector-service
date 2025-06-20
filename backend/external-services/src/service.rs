@@ -24,6 +24,21 @@ use serde_json::Value;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+#[tracing::instrument(
+    name = "execute_connector_processing_step",
+    skip_all,
+    fields(
+        request.headers = Empty,
+        request.body = Empty,
+        request.url = Empty,
+        request.method = Empty,
+        response.body = Empty,
+        response.headers = Empty,
+        response.error_message = Empty,
+        message_ = "Golden Log Line (outgoing)",
+        latency = Empty,
+    )
+)]
 pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
@@ -36,17 +51,6 @@ where
     Resp: Clone + 'static + std::fmt::Debug,
     ResourceCommonData: Clone + 'static + RawConnectorResponse,
 {
-    let span = tracing::info_span!(
-        "ucs_outgoing_app_data",
-        request_headers = Empty,
-        request_body = Empty,
-        response_headers = Empty,
-        response_body = Empty,
-        status_code = Empty,
-        latency = Empty,
-        url = Empty,
-    );
-    let _enter = span.enter();
     let start = tokio::time::Instant::now();
     let connector_request = connector.build_request_v2(&router_data)?;
 
@@ -68,6 +72,7 @@ where
             acc
         });
     let headers = serde_json::Value::Object(masked_headers);
+    tracing::Span::current().record("request.headers", tracing::field::display(headers.clone()));
     let mut router_data = router_data.clone();
 
     let req = connector_request.as_ref().map(|connector_request| {
@@ -83,13 +88,19 @@ where
             },
             None => serde_json::Value::Null,
         };
-        tracing::info!(request=?masked_request, "request of connector");
+        // tracing::info!(request=?masked_request, "request of connector");
+        tracing::Span::current().record(
+            "request.body",
+            tracing::field::display(masked_request.clone()),
+        );
         masked_request
     });
     let result = match connector_request {
         Some(request) => {
             let url = request.url.clone();
             let method = request.method;
+            tracing::Span::current().record("request.url", tracing::field::display(url.clone()));
+            tracing::Span::current().record("request.method", tracing::field::display(method));
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
                 .await
                 .change_context(ConnectorError::RequestEncodingFailed)
@@ -106,11 +117,11 @@ where
 
             match response {
                 Ok(body) => {
-                    tracing::Span::current().record("url", tracing::field::display(url));
-                    tracing::Span::current().record("method", tracing::field::display(method));
                     let response = match body {
                         Ok(body) => {
                             let status_code = body.status_code;
+                            tracing::Span::current()
+                                .record("status_code", tracing::field::display(status_code));
                             if let Ok(response) =
                                 serde_json::from_slice::<serde_json::Value>(&body.response)
                             {
@@ -132,13 +143,12 @@ where
                                     },
                                 );
                                 let header_map = serde_json::Value::Object(map);
-                                tracing::Span::current()
-                                    .record("response_header", tracing::field::display(header_map));
-                                tracing::Span::current().record("response_body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
+                                tracing::Span::current().record(
+                                    "response.headers",
+                                    tracing::field::display(header_map),
+                                );
+                                tracing::Span::current().record("response.body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
                             }
-                            tracing::Span::current()
-                                .record("status_code", tracing::field::display(status_code));
-
                             let handle_response_result =
                                 connector.handle_response_v2(&router_data, None, body.clone());
 
@@ -176,10 +186,10 @@ where
     };
     let elapsed = start.elapsed().as_millis();
     if let Some(req) = req {
-        tracing::Span::current().record("request_body", tracing::field::display(req));
+        tracing::Span::current().record("request.body", tracing::field::display(req));
     }
     tracing::Span::current().record("latency", elapsed);
-    tracing::Span::current().record("request_header", tracing::field::display(headers));
+    // tracing::Span::current().record("request_header", tracing::field::display(headers));
     tracing::info!(tag = ?Tag::OutgoingApi, log_type = "api", "Outgoing Request completed");
     result
 }

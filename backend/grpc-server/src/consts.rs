@@ -35,6 +35,8 @@ impl std::fmt::Display for Env {
 /// Header key for request ID
 pub const X_REQUEST_ID: &str = "x-request-id";
 pub const X_CONNECTOR: &str = "x-connector";
+pub const X_MERCHANT_ID: &str = "x-merchant-id";
+pub const NAME: &str = "UCS";
 
 // pub(crate) const BASE64_ENGINE: base64::engine::GeneralPurpose =
 //     base64::engine::general_purpose::STANDARD;

@@ -1,7 +1,7 @@
 [log.console]
 enabled = true
 level = "DEBUG"
-log_format = "default"
+log_format = "json"
 
 [server]
 host = "127.0.0.1"

@@ -7,6 +7,7 @@ use error_stack::Report;
 use http::request::Request;
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
+use serde_json::Value;
 use tonic::metadata;
 
 /// Record the header's fields in request's trace
@@ -35,6 +36,17 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
     span
 }
 
+pub fn connector_merchant_id_tenant_id_request_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<(connector_types::ConnectorEnum, String, String, String), ApplicationErrorResponse>
+{
+    let connector = connector_from_metadata(metadata)?;
+    let merchant_id = merchant_id_from_metadata(metadata)?;
+    let tenant_id = tenant_id_from_metadata(metadata)?;
+    let request_id = request_id_from_metadata(metadata)?;
+    Ok((connector, merchant_id, tenant_id, request_id))
+}
+
 pub fn connector_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
@@ -48,6 +60,51 @@ pub fn connector_from_metadata(
             }))
         })
     })
+}
+
+pub fn merchant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_TENANT_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing merchant ID in request metadata: {}", e),
+                error_object: None,
+            }))
+        })
+}
+
+pub fn request_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_REQUEST_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_REQUEST_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing request ID in request metadata: {}", e),
+                error_object: None,
+            }))
+        })
+}
+
+pub fn tenant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_TENANT_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_TENANT_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing tenant ID in request metadata: {}", e),
+                error_object: None,
+            }))
+        })
 }
 
 pub fn auth_from_metadata(
@@ -118,6 +175,49 @@ fn parse_metadata<'a>(
                 }))
             })
         })
+}
+
+pub fn mask_sensitive_fields(body: String) -> String {
+    let sensitive_keys = [
+        "card_number",
+        "card_exp_month",
+        "card_exp_year",
+        "card_cvc",
+        "card_holder_name",
+        "eci",
+        "cavv",
+        "ds_transaction_id",
+    ];
+
+    let parsed: Result<Value, _> = serde_json::from_str(&body);
+
+    match parsed {
+        Ok(mut json_value) => {
+            fn mask(value: &mut Value, keys: &[&str]) {
+                match value {
+                    Value::Object(map) => {
+                        for (k, v) in map.iter_mut() {
+                            if keys.contains(&k.as_str()) {
+                                *v = Value::String("****".to_string());
+                            } else {
+                                mask(v, keys);
+                            }
+                        }
+                    }
+                    Value::Array(arr) => {
+                        for item in arr.iter_mut() {
+                            mask(item, keys);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            mask(&mut json_value, &sensitive_keys);
+            json_value.to_string()
+        }
+        Err(_) => "{\"error\": \"Invalid JSON\"}".to_string(),
+    }
 }
 
 #[macro_export]

@@ -73,9 +73,12 @@ hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.1
 hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
 hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
 hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
+log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "3beabe77829bc7b5774b7bbc90eb097c12510ed1", package = "log_utils", features = ["tracing"] }
+build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "f26cfb84b9985fd7e4b86d74f99bf9b037af46d7", package = "build_info", features = ["cargo_workspace", "framework_libs_members_env"] }
+chrono = "0.4.41"
 
 [build-dependencies]
-cargo_metadata = "0.15.4"
+build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "f26cfb84b9985fd7e4b86d74f99bf9b037af46d7", package = "build_info", features = ["cargo_workspace", "vergen-gix", "framework_libs_members_env"] }
 
 [dev-dependencies]
 tokio-stream = { version = "0.1.17", features = ["net"] }
