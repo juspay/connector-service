@@ -8,19 +8,19 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         Authorize, CreateOrder, PSync, Refund, SetupMandate,
-        Void,
+        Void, Capture
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData, PaymentsCaptureData
     },
     errors::{ApiError, ApplicationErrorResponse},
 };
 use domain_types::{
     types::{
         generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
-        generate_setup_mandate_response,
+        generate_setup_mandate_response, generate_payment_capture_response
     },
     utils::ForeignTryFrom,
 };
