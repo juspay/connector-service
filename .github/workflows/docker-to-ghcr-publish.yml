@@ -1,11 +1,6 @@
 name: Docker Build and Push to GHCR
 
 on:
-  push:
-    branches:
-      - temp-jenkin-deployment
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       ref:
