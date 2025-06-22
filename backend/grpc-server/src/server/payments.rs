@@ -302,7 +302,7 @@ impl PaymentService for Payments {
         fields(
             name = crate::consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = tracing::field::Empty,
+            service_method = FlowName::Authorize.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -314,7 +314,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = tracing::field::Empty,
+            flow = FlowName::Authorize.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)

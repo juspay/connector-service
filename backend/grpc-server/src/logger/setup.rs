@@ -18,7 +18,7 @@ pub fn setup(
     config: &config::Log,
     service_name: &str,
     crates_to_filter: impl AsRef<[&'static str]>,
-) -> TelemetryGuard {
+) -> Result<TelemetryGuard, SetupError> {
     let static_top_level_fields = HashMap::from_iter([
         ("service".to_string(), serde_json::json!(service_name)),
         (
@@ -70,10 +70,12 @@ pub fn setup(
         console_config,
         global_filtering_directive: None,
     };
-    #[allow(clippy::unwrap_used)]
-    let logging_components = log_utils::build_logging_components(logger_config)
-        .map_err(|_| SetupError::BuildError)
-        .unwrap();
+
+    let logging_components = match log_utils::build_logging_components(logger_config) {
+        Ok(components) => components,
+        Err(_) => return Err(SetupError::BuildError),
+    };
+
     let mut subscriber_layers = Vec::new();
 
     subscriber_layers.push(logging_components.storage_layer.boxed());
@@ -87,9 +89,9 @@ pub fn setup(
 
     // Returning the TelemetryGuard for logs to be printed and metrics to be collected until it is
     // dropped
-    TelemetryGuard {
+    Ok(TelemetryGuard {
         _log_guards: logging_components.guards,
-    }
+    })
 }
 
 fn get_envfilter_directive(
