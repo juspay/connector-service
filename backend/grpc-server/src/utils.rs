@@ -65,7 +65,7 @@ pub fn connector_from_metadata(
 pub fn merchant_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<String, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_TENANT_ID)
+    parse_metadata(metadata, consts::X_MERCHANT_ID)
         .map(|inner| inner.to_string())
         .map_err(|e| {
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
