@@ -407,41 +407,45 @@ pub enum EventType {
     Dispute,
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::EventType> for EventType {
+impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::EventType,
+        value: grpc_api_types::payments::WebhookEventType,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::EventType::Payment => Ok(Self::Payment),
-            grpc_api_types::payments::EventType::Refund => Ok(Self::Refund),
-            grpc_api_types::payments::EventType::Dispute => Ok(Self::Dispute),
+            grpc_api_types::payments::WebhookEventType::WebhookPayment => Ok(Self::Payment),
+            grpc_api_types::payments::WebhookEventType::WebhookRefund => Ok(Self::Refund),
+            grpc_api_types::payments::WebhookEventType::WebhookDispute => Ok(Self::Dispute),
+            grpc_api_types::payments::WebhookEventType::Unspecified => Ok(Self::Payment), // Default to Payment
         }
     }
 }
 
-impl ForeignTryFrom<EventType> for grpc_api_types::payments::EventType {
+impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(value: EventType) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            EventType::Payment => Ok(Self::Payment),
-            EventType::Refund => Ok(Self::Refund),
-            EventType::Dispute => Ok(Self::Dispute),
+            EventType::Payment => Ok(Self::WebhookPayment),
+            EventType::Refund => Ok(Self::WebhookRefund),
+            EventType::Dispute => Ok(Self::WebhookDispute),
         }
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Method> for HttpMethod {
+impl ForeignTryFrom<grpc_api_types::payments::HttpMethod> for HttpMethod {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::Method,
+        value: grpc_api_types::payments::HttpMethod,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::Method::Get => Ok(Self::Get),
-            grpc_api_types::payments::Method::Post => Ok(Self::Post),
+            grpc_api_types::payments::HttpMethod::Unspecified => Ok(Self::Get), // Default
+            grpc_api_types::payments::HttpMethod::Get => Ok(Self::Get),
+            grpc_api_types::payments::HttpMethod::Post => Ok(Self::Post),
+            grpc_api_types::payments::HttpMethod::Put => Ok(Self::Put),
+            grpc_api_types::payments::HttpMethod::Delete => Ok(Self::Delete),
         }
     }
 }
@@ -464,11 +468,11 @@ impl ForeignTryFrom<grpc_api_types::payments::RequestDetails> for RequestDetails
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::ConnectorWebhookSecrets> for ConnectorWebhookSecrets {
+impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebhookSecrets {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        value: grpc_api_types::payments::ConnectorWebhookSecrets,
+        value: grpc_api_types::payments::WebhookSecrets,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             secret: value.secret,
