@@ -24,7 +24,7 @@ impl AlphaNumericId {
 #[derive(Debug, Deserialize, Hash, Serialize, Error, Eq, PartialEq)]
 #[error("value `{0}` contains invalid character `{1}`")]
 /// The error type for alphanumeric id
-pub(crate) struct AlphaNumericIdError(String, char);
+pub struct AlphaNumericIdError(String, char);
 
 impl<'de> Deserialize<'de> for AlphaNumericId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -53,10 +53,13 @@ impl AlphaNumericId {
 #[derive(Debug, Clone, Serialize, Hash, PartialEq, Eq)]
 pub struct CustomerId(String);
 
-impl CustomerId {
-    pub fn default() -> Self {
+impl Default for CustomerId {
+    fn default() -> Self {
         Self("cus_default".to_string())
     }
+}
+
+impl CustomerId {
     pub fn get_string_repr(&self) -> &str {
         &self.0
     }
@@ -92,10 +95,13 @@ impl TryFrom<std::borrow::Cow<'_, str>> for CustomerId {
 
 pub struct MerchantId(String);
 
-impl MerchantId {
-    pub fn default() -> Self {
+impl Default for MerchantId {
+    fn default() -> Self {
         Self("mer_default".to_string())
     }
+}
+
+impl MerchantId {
     pub fn get_string_repr(&self) -> &str {
         &self.0
     }
@@ -237,7 +243,7 @@ impl<const MAX_LENGTH: u8, const MIN_LENGTH: u8> LengthId<MAX_LENGTH, MIN_LENGTH
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub(crate) enum LengthIdError {
+pub enum LengthIdError {
     #[error("the maximum allowed length for this field is {0}")]
     /// Maximum length of string violated
     MaxLengthViolated(u8),

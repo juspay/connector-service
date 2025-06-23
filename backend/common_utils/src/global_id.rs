@@ -23,6 +23,7 @@ pub(crate) struct GlobalId(LengthId<MAX_GLOBAL_ID_LENGTH, MIN_GLOBAL_ID_LENGTH>)
 pub(crate) enum GlobalEntity {
     Customer,
     Payment,
+    #[allow(dead_code)]
     Attempt,
     PaymentMethod,
     Refund,

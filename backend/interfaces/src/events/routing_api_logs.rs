@@ -170,10 +170,9 @@ impl RoutingEvent {
     }
 
     /// Returns the merchant ID of the event.
-    // pub fn get_merchant_id(&self) -> &str {
-    //     self.merchant_id.get_string_repr()
-    // }
-
+    pub fn get_merchant_id(&self) -> &str {
+        self.merchant_id.get_string_repr()
+    }
     /// Returns the payment ID of the event.
     pub fn get_payment_id(&self) -> &str {
         &self.payment_id
