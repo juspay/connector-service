@@ -50,9 +50,9 @@ jobs:
           if [ -n "$REF_INPUT" ]; then
             # Clean the ref input to make it suitable for Docker tag (replace / with -)
             REF_CLEAN=$(echo "$REF_INPUT" | sed 's/\//-/g')
-            VERSION="0.1.0-nightly.$(date +'%Y%m%d')-${REF_CLEAN}"
+            VERSION="0.1.0-nightly.$(date +'%Y%m%d%H%M')-${REF_CLEAN}"
           else
-            VERSION="0.1.0-nightly.$(date +'%Y%m%d')-${SHORT_SHA}"
+            VERSION="0.1.0-nightly.$(date +'%Y%m%d%H%M')-${SHORT_SHA}"
           fi
           
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -111,9 +111,9 @@ jobs:
           if [ -n "$REF_INPUT" ]; then
             # Clean the ref input to make it suitable for Docker tag (replace / with -)
             REF_CLEAN=$(echo "$REF_INPUT" | sed 's/\//-/g')
-            VERSION="0.1.0-nightly.$(date +'%Y%m%d')-${REF_CLEAN}"
+            VERSION="0.1.0-nightly.$(date +'%Y%m%d%H%M')-${REF_CLEAN}"
           else
-            VERSION="0.1.0-nightly.$(date +'%Y%m%d')-${SHORT_SHA}"
+            VERSION="0.1.0-nightly.$(date +'%Y%m%d%H%M')-${SHORT_SHA}"
           fi
           
           echo "VERSION=$VERSION" >> $GITHUB_ENV
