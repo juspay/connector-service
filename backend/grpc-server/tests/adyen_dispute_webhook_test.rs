@@ -5,7 +5,7 @@ mod common;
 use grpc_api_types::payments::{
     payment_service_client::PaymentServiceClient,
     webhook_response_content::Content as GrpcWebhookContent, DisputeStage as GrpcDisputeStage,
-    DisputeStatus as GrpcDisputeStatus, DisputesSyncResponse, IncomingWebhookRequest,
+    DisputeStatus as GrpcDisputeStatus, DisputesSyncResponse, PaymentServiceTransformRequest,
     RequestDetails,
 };
 use serde_json::json;
@@ -64,9 +64,14 @@ async fn process_webhook_and_get_response(
     let request_body_bytes =
         serde_json::to_vec(&json_body).expect("Failed to serialize json_body to Vec<u8>");
 
-    let mut request = Request::new(IncomingWebhookRequest {
+    let mut request = Request::new(PaymentServiceTransformRequest {
+        request_ref_id: Some(grpc_api_types::payments::Identifier {
+            id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                "webhook_test".to_string(),
+            )),
+        }),
         request_details: Some(RequestDetails {
-            method: grpc_api_types::payments::Method::Post.into(),
+            method: grpc_api_types::payments::HttpMethod::Post.into(),
             headers: std::collections::HashMap::new(),
             uri: Some("/webhooks/adyen".to_string()),
             query_params: None,
@@ -102,13 +107,21 @@ async fn process_webhook_and_get_response(
     );
 
     let response = client
-        .incoming_webhook(request)
+        .transform(request)
         .await
-        .expect("gRPC incoming_webhook call failed")
+        .expect("gRPC transform call failed")
         .into_inner();
 
     match response.content.and_then(|c| c.content) {
-        Some(GrpcWebhookContent::DisputesResponse(dispute_response)) => dispute_response,
+        Some(GrpcWebhookContent::DisputesResponse(dispute_response)) => {
+            DisputesSyncResponse {
+                stage: dispute_response.dispute_stage,
+                status: dispute_response.dispute_status,
+                dispute_message: dispute_response.dispute_message,
+                dispute_id: dispute_response.dispute_id.unwrap_or("".to_string()), // TODO need a fix
+                connector_response_reference_id: None, // TODO need a fix
+            }
+        }
         _ => {
             //if the content is not a DisputesResponse, return a dummy DisputesSyncResponse
             DisputesSyncResponse {

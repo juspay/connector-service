@@ -133,7 +133,8 @@ macro_rules! implement_connector_operation {
         response_data_type: $response_data_type:ty,
         request_data_constructor: $request_data_constructor:path,
         common_flow_data_constructor: $common_flow_data_constructor:path,
-        generate_response_fn: $generate_response_fn:path
+        generate_response_fn: $generate_response_fn:path,
+        all_keys_required: $all_keys_required:expr
     ) => {
         async fn $fn_name(
             &self,
@@ -186,8 +187,7 @@ macro_rules! implement_connector_operation {
                 &self.config.proxy,
                 connector_integration,
                 router_data,
-                payload.all_keys_required,
-                &connector.to_string(),
+                $all_keys_required,
             )
             .await
             .switch()
