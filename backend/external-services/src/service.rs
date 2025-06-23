@@ -35,6 +35,7 @@ pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
         response.body = Empty,
         response.headers = Empty,
         response.error_message = Empty,
+        response.status_code = Empty,
         message_ = "Golden Log Line (outgoing)",
         latency = Empty,
     )
@@ -170,6 +171,14 @@ where
                                 500..=511 => connector.get_5xx_error_response(body, None)?,
                                 _ => connector.get_error_response_v2(body, None)?,
                             };
+                            tracing::Span::current().record(
+                                "response.error_message",
+                                tracing::field::display(&error.message),
+                            );
+                            tracing::Span::current().record(
+                                "response.status_code",
+                                tracing::field::display(error.status_code),
+                            );
                             router_data.response = Err(error);
                             router_data
                         }

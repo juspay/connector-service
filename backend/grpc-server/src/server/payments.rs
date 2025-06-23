@@ -491,7 +491,6 @@ impl PaymentService for Payments {
                 current_span.record("status_code", status.code().to_string());
             }
         }
-        tracing::info!("Golden Log Line (incoming)");
         result
     }
 
