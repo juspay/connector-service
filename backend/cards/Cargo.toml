@@ -1,0 +1,20 @@
+[package]
+name = "cards"
+description = "Types to handle card masking and validation"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+error-stack = "0.4.1"
+serde = { version = "1.0.189", features = ["derive"] }
+thiserror = "1.0.69"
+time = "0.3.41"
+regex = "1.11.1"
+
+# First party crates
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
+common_utils = { version = "0.1.0", path = "../common_utils" }
+
+
+[dev-dependencies]
+serde_json = "1.0.140"

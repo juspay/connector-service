@@ -1,40 +1,38 @@
+use common_utils::{
+    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::FloatMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorSpecifications,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, IncomingWebhook,
-        PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
-        ValidationTrait,
+        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
+    types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::FloatMajorUnit,
-};
 
-use hyperswitch_domain_models::{
+use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
-use hyperswitch_interfaces::{
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use interfaces::{
     api::ConnectorCommon,
-    configs::Connectors as InterfaceConnectors,
     connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use ring::hmac;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -61,20 +59,20 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
-impl ConnectorServiceTrait for Fiserv {}
-impl PaymentAuthorizeV2 for Fiserv {}
-impl PaymentSyncV2 for Fiserv {}
-impl PaymentVoidV2 for Fiserv {}
-impl RefundSyncV2 for Fiserv {}
-impl RefundV2 for Fiserv {}
-impl PaymentCapture for Fiserv {}
-impl ValidationTrait for Fiserv {}
-impl PaymentOrderCreate for Fiserv {}
-impl SetupMandateV2 for Fiserv {}
-impl AcceptDispute for Fiserv {}
-impl SubmitEvidenceV2 for Fiserv {}
-impl DisputeDefend for Fiserv {}
-impl IncomingWebhook for Fiserv {}
+impl connector_types::ConnectorServiceTrait for Fiserv {}
+impl connector_types::PaymentAuthorizeV2 for Fiserv {}
+impl connector_types::PaymentSyncV2 for Fiserv {}
+impl connector_types::PaymentVoidV2 for Fiserv {}
+impl connector_types::RefundSyncV2 for Fiserv {}
+impl connector_types::RefundV2 for Fiserv {}
+impl connector_types::PaymentCapture for Fiserv {}
+impl connector_types::ValidationTrait for Fiserv {}
+impl connector_types::PaymentOrderCreate for Fiserv {}
+impl connector_types::SetupMandateV2 for Fiserv {}
+impl connector_types::AcceptDispute for Fiserv {}
+impl connector_types::SubmitEvidenceV2 for Fiserv {}
+impl connector_types::DisputeDefend for Fiserv {}
+impl connector_types::IncomingWebhook for Fiserv {}
 
 // Implement RSync to fix the RefundSyncV2 trait requirement
 macros::macro_connector_implementation!(
@@ -244,7 +242,7 @@ impl ConnectorCommon for Fiserv {
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a InterfaceConnectors) -> &'a str {
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.fiserv.base_url.as_ref()
     }
 
@@ -288,6 +286,9 @@ impl ConnectorCommon for Fiserv {
             reason: first_error_detail.and_then(|e| e.field.clone()),
             attempt_status: None,
             connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 }

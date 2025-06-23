@@ -5,7 +5,11 @@ members = [
   "backend/connector-integration",
   "backend/external-services",
   "backend/grpc-server", 
-  "sdk/rust-grpc-client"
+  "sdk/rust-grpc-client",
+  "backend/common_enums",
+  "backend/common_utils",
+  "backend/api_models",
+  "backend/interfaces",
 ]
 exclude = [
   "examples/example-rs",

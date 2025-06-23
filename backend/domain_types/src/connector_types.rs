@@ -1,33 +1,21 @@
-use crate::connector_flow::{
-    self, Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate,
-    SubmitEvidence, Void,
-};
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::types::{
     ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
     PaymentMethodTypeMetadata, SupportedPaymentMethods,
 };
 use crate::utils::ForeignTryFrom;
+use common_enums::Currency;
 use error_stack::ResultExt;
-use hyperswitch_api_models::enums::Currency;
-use std::collections::HashSet;
 
-use hyperswitch_common_enums::{
-    AttemptStatus, AuthenticationType, CaptureMethod, DisputeStatus, EventClass, PaymentMethod,
-    PaymentMethodType,
-};
-use hyperswitch_common_utils::{
-    errors, errors::CustomResult, pii::SecretSerdeValue, types::MinorUnit,
-};
-use hyperswitch_domain_models::{
-    payment_method_data, payment_method_data::PaymentMethodData, router_data::ConnectorAuthType,
+use crate::{
+    payment_method_data, payment_method_data::PaymentMethodData,
     router_request_types::SyncRequestType,
 };
-
-use hyperswitch_interfaces::errors::ConnectorError;
-use hyperswitch_interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
+use common_enums::{
+    AttemptStatus, AuthenticationType, DisputeStatus, EventClass, PaymentMethod, PaymentMethodType,
 };
+use common_utils::{errors, types::MinorUnit};
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -61,95 +49,29 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
     }
 }
 
-pub trait ConnectorServiceTrait:
-    ConnectorCommon
-    + ValidationTrait
-    + PaymentAuthorizeV2
-    + PaymentSyncV2
-    + PaymentOrderCreate
-    + PaymentVoidV2
-    + IncomingWebhook
-    + RefundV2
-    + PaymentCapture
-    + SetupMandateV2
-    + AcceptDispute
-    + RefundSyncV2
-    + DisputeDefend
-    + SubmitEvidenceV2
-{
-}
-
-pub trait PaymentVoidV2:
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-{
-}
-
-pub type BoxedConnector = Box<&'static (dyn ConnectorServiceTrait + Sync)>;
-
-pub trait ValidationTrait {
-    fn should_do_order_create(&self) -> bool {
-        false
-    }
-}
-
-pub trait PaymentOrderCreate:
-    ConnectorIntegrationV2<
-    connector_flow::CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse,
->
-{
-}
-
-pub trait PaymentAuthorizeV2:
-    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-{
-}
-
-pub trait PaymentSyncV2:
-    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-}
-
-pub trait RefundV2:
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-{
-}
-
-pub trait RefundSyncV2:
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-{
-}
-
-pub trait PaymentCapture:
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-{
-}
-
-pub trait SetupMandateV2:
-    ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
-{
-}
-
-pub trait AcceptDispute:
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-{
-}
-
-pub trait SubmitEvidenceV2:
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-{
-}
-
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
 }
 
+#[derive(Debug, Default, Clone)]
+pub struct PaymentsSyncData {
+    pub connector_transaction_id: ResponseId,
+    pub encoded_data: Option<String>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub connector_meta: Option<serde_json::Value>,
+    pub sync_type: SyncRequestType,
+    pub mandate_id: Option<api_models::payments::MandateIds>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub currency: common_enums::Currency,
+    pub payment_experience: Option<common_enums::PaymentExperience>,
+    pub amount: MinorUnit,
+    pub all_keys_required: Option<bool>,
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
-    pub merchant_id: hyperswitch_common_utils::id_type::MerchantId,
-    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+    pub merchant_id: common_utils::id_type::MerchantId,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub connector_customer: Option<String>,
     pub payment_id: String,
     pub attempt_id: String,
@@ -157,9 +79,9 @@ pub struct PaymentFlowData {
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
-    pub address: hyperswitch_domain_models::payment_address::PaymentAddress,
+    pub address: crate::payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
-    pub connector_meta_data: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
+    pub connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
@@ -194,7 +116,7 @@ pub struct PaymentVoidData {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData {
-    pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
+    pub payment_method_data: crate::payment_method_data::PaymentMethodData,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
     /// ```text
@@ -205,28 +127,28 @@ pub struct PaymentsAuthorizeData {
     /// ```
     pub amount: i64,
     pub order_tax_amount: Option<MinorUnit>,
-    pub email: Option<hyperswitch_common_utils::pii::Email>,
+    pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
     pub complete_authorize_url: Option<String>,
     // Mandates
-    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
-    pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
+    pub mandate_id: Option<api_models::payments::MandateIds>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
-    pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
+    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
     pub enrolled_for_3ds: bool,
     pub related_transaction_id: Option<String>,
-    pub payment_experience: Option<hyperswitch_common_enums::PaymentExperience>,
-    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
-    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+    pub payment_experience: Option<common_enums::PaymentExperience>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
     // New amount for amount frame work
@@ -237,22 +159,7 @@ pub struct PaymentsAuthorizeData {
     pub merchant_order_reference_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
-    pub merchant_config_currency: Option<hyperswitch_common_enums::Currency>,
-    pub all_keys_required: Option<bool>,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct PaymentsSyncData {
-    pub connector_transaction_id: ResponseId,
-    pub encoded_data: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
-    pub connector_meta: Option<serde_json::Value>,
-    pub sync_type: SyncRequestType,
-    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
-    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
-    pub currency: hyperswitch_common_enums::Currency,
-    pub payment_experience: Option<hyperswitch_common_enums::PaymentExperience>,
-    pub amount: MinorUnit,
+    pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
 }
 
@@ -281,8 +188,7 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data:
-            Box<Option<hyperswitch_domain_models::router_response_types::RedirectForm>>,
+        redirection_data: Box<Option<crate::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
         mandate_reference: Box<Option<MandateReference>>,
         network_txn_id: Option<String>,
@@ -317,21 +223,21 @@ pub struct RefundSyncData {
     pub connector_transaction_id: String,
     pub connector_refund_id: String,
     pub reason: Option<String>,
-    pub refund_connector_metadata: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
-    pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub refund_connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
+    pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefundsResponseData {
     pub connector_refund_id: String,
-    pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct RefundFlowData {
-    pub status: hyperswitch_common_enums::RefundStatus,
+    pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
@@ -346,7 +252,7 @@ impl RawConnectorResponse for RefundFlowData {
 #[derive(Debug, Clone)]
 pub struct WebhookDetailsResponse {
     pub resource_id: Option<ResponseId>,
-    pub status: hyperswitch_common_enums::AttemptStatus,
+    pub status: common_enums::AttemptStatus,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -355,7 +261,7 @@ pub struct WebhookDetailsResponse {
 #[derive(Debug, Clone)]
 pub struct RefundWebhookDetailsResponse {
     pub connector_refund_id: Option<String>,
-    pub status: hyperswitch_common_enums::RefundStatus,
+    pub status: common_enums::RefundStatus,
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
@@ -364,8 +270,8 @@ pub struct RefundWebhookDetailsResponse {
 #[derive(Debug, Clone)]
 pub struct DisputeWebhookDetailsResponse {
     pub dispute_id: String,
-    pub status: hyperswitch_common_enums::DisputeStatus,
-    pub stage: hyperswitch_common_enums::DisputeStage,
+    pub status: common_enums::DisputeStatus,
+    pub stage: common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
 }
@@ -479,68 +385,23 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
     }
 }
 
-pub trait IncomingWebhook {
-    fn verify_webhook_source(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<ConnectorError>> {
-        Ok(false)
-    }
-
-    fn get_event_type(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<EventType, error_stack::Report<ConnectorError>> {
-        Err(ConnectorError::NotImplemented("get_event_type".to_string()).into())
-    }
-
-    fn process_payment_webhook(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
-        Err(ConnectorError::NotImplemented("process_payment_webhook".to_string()).into())
-    }
-
-    fn process_refund_webhook(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
-        Err(ConnectorError::NotImplemented("process_refund_webhook".to_string()).into())
-    }
-    fn process_dispute_webhook(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<DisputeWebhookDetailsResponse, error_stack::Report<ConnectorError>> {
-        Err(ConnectorError::NotImplemented("process_dispute_webhook".to_string()).into())
-    }
-}
 #[derive(Debug, Default, Clone)]
 pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
     pub refund_amount: i64,
     pub connector_metadata: Option<serde_json::Value>,
-    pub refund_connector_metadata: Option<hyperswitch_common_utils::pii::SecretSerdeValue>,
+    pub refund_connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub minor_payment_amount: MinorUnit,
     pub minor_refund_amount: MinorUnit,
-    pub refund_status: hyperswitch_common_enums::RefundStatus,
+    pub refund_status: common_enums::RefundStatus,
     pub merchant_account_id: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -553,7 +414,7 @@ pub struct MultipleCaptureRequestData {
 pub struct PaymentsCaptureData {
     pub amount_to_capture: i64,
     pub minor_amount_to_capture: MinorUnit,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
@@ -561,32 +422,32 @@ pub struct PaymentsCaptureData {
 
 #[derive(Debug, Clone)]
 pub struct SetupMandateRequestData {
-    pub currency: hyperswitch_common_enums::Currency,
-    pub payment_method_data: hyperswitch_domain_models::payment_method_data::PaymentMethodData,
+    pub currency: common_enums::Currency,
+    pub payment_method_data: crate::payment_method_data::PaymentMethodData,
     pub amount: Option<i64>,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
-    pub customer_acceptance: Option<hyperswitch_domain_models::mandates::CustomerAcceptance>,
-    pub mandate_id: Option<hyperswitch_api_models::payments::MandateIds>,
-    pub setup_future_usage: Option<hyperswitch_common_enums::FutureUsage>,
+    pub customer_acceptance: Option<crate::mandates::CustomerAcceptance>,
+    pub mandate_id: Option<api_models::payments::MandateIds>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
-    pub setup_mandate_details: Option<hyperswitch_domain_models::mandates::MandateData>,
+    pub setup_mandate_details: Option<crate::mandates::MandateData>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
-    pub browser_info: Option<hyperswitch_domain_models::router_request_types::BrowserInformation>,
-    pub email: Option<hyperswitch_common_utils::pii::Email>,
+    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
     pub return_url: Option<String>,
-    pub payment_method_type: Option<hyperswitch_common_enums::PaymentMethodType>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
     pub complete_authorize_url: Option<String>,
-    pub capture_method: Option<hyperswitch_common_enums::CaptureMethod>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
     pub merchant_order_reference_id: Option<String>,
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
-    pub customer_id: Option<hyperswitch_common_utils::id_type::CustomerId>,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -696,116 +557,6 @@ pub trait ConnectorSpecifications {
     }
 }
 
-/// trait ConnectorValidation
-pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
-    /// Validate, the payment request against the connector supported features
-    fn validate_connector_against_payment_request(
-        &self,
-        capture_method: Option<CaptureMethod>,
-        payment_method: PaymentMethod,
-        pmt: Option<hyperswitch_common_enums::PaymentMethodType>,
-    ) -> CustomResult<(), ConnectorError> {
-        let capture_method = capture_method.unwrap_or_default();
-        let is_default_capture_method = [CaptureMethod::Automatic].contains(&capture_method);
-        let is_feature_supported = match self.get_supported_payment_methods() {
-            Some(supported_payment_methods) => {
-                let connector_payment_method_type_info = get_connector_payment_method_type_info(
-                    supported_payment_methods,
-                    payment_method,
-                    pmt,
-                    self.id(),
-                )?;
-
-                connector_payment_method_type_info
-                    .map(|payment_method_type_info| {
-                        payment_method_type_info
-                            .supported_capture_methods
-                            .contains(&capture_method)
-                    })
-                    .unwrap_or(true)
-            }
-            None => is_default_capture_method,
-        };
-
-        if is_feature_supported {
-            Ok(())
-        } else {
-            Err(ConnectorError::NotSupported {
-                message: capture_method.to_string(),
-                connector: self.id(),
-            }
-            .into())
-        }
-    }
-
-    /// fn validate_mandate_payment
-    fn validate_mandate_payment(
-        &self,
-        pm_type: Option<PaymentMethodType>,
-        _pm_data: PaymentMethodData,
-    ) -> CustomResult<(), ConnectorError> {
-        let connector = self.id();
-        match pm_type {
-            Some(pm_type) => Err(ConnectorError::NotSupported {
-                message: format!("{} mandate payment", pm_type),
-                connector,
-            }
-            .into()),
-            None => Err(ConnectorError::NotSupported {
-                message: " mandate payment".to_string(),
-                connector,
-            }
-            .into()),
-        }
-    }
-
-    /// fn validate_psync_reference_id
-    fn validate_psync_reference_id(
-        &self,
-        data: &hyperswitch_domain_models::router_request_types::PaymentsSyncData,
-        _is_three_ds: bool,
-        _status: AttemptStatus,
-        _connector_meta_data: Option<SecretSerdeValue>,
-    ) -> CustomResult<(), ConnectorError> {
-        data.connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(ConnectorError::MissingConnectorTransactionID)
-            .map(|_| ())
-    }
-
-    /// fn is_webhook_source_verification_mandatory
-    fn is_webhook_source_verification_mandatory(&self) -> bool {
-        false
-    }
-}
-
-fn get_connector_payment_method_type_info(
-    supported_payment_method: &SupportedPaymentMethods,
-    payment_method: PaymentMethod,
-    payment_method_type: Option<PaymentMethodType>,
-    connector: &'static str,
-) -> CustomResult<Option<PaymentMethodDetails>, ConnectorError> {
-    let payment_method_details =
-        supported_payment_method
-            .get(&payment_method)
-            .ok_or_else(|| ConnectorError::NotSupported {
-                message: payment_method.to_string(),
-                connector,
-            })?;
-
-    payment_method_type
-        .map(|pmt| {
-            payment_method_details.get(&pmt).cloned().ok_or_else(|| {
-                ConnectorError::NotSupported {
-                    message: format!("{} {}", payment_method, pmt),
-                    connector,
-                }
-                .into()
-            })
-        })
-        .transpose()
-}
-
 #[macro_export]
 macro_rules! capture_method_not_supported {
     ($connector:expr, $capture_method:expr) => {
@@ -836,30 +587,6 @@ macro_rules! payment_method_not_supported {
         }
         .into())
     };
-}
-
-pub fn is_mandate_supported(
-    selected_pmd: PaymentMethodData,
-    payment_method_type: Option<PaymentMethodType>,
-    mandate_implemented_pmds: HashSet<PaymentMethodDataType>,
-    connector: &'static str,
-) -> Result<(), error_stack::Report<ConnectorError>> {
-    if mandate_implemented_pmds.contains(&PaymentMethodDataType::from(selected_pmd.clone())) {
-        Ok(())
-    } else {
-        match payment_method_type {
-            Some(pm_type) => Err(ConnectorError::NotSupported {
-                message: format!("{} mandate payment", pm_type),
-                connector,
-            }
-            .into()),
-            None => Err(ConnectorError::NotSupported {
-                message: "mandate payment".to_string(),
-                connector,
-            }
-            .into()),
-        }
-    }
 }
 
 impl From<PaymentMethodData> for PaymentMethodDataType {
@@ -904,6 +631,9 @@ impl From<PaymentMethodData> for PaymentMethodDataType {
                 payment_method_data::WalletData::CashappQr(_) => Self::CashappQr,
                 payment_method_data::WalletData::SwishQr(_) => Self::SwishQr,
                 payment_method_data::WalletData::Mifinity(_) => Self::Mifinity,
+                payment_method_data::WalletData::AmazonPayRedirect(_) => Self::AmazonPayRedirect,
+                payment_method_data::WalletData::Paze(_) => Self::Paze,
+                payment_method_data::WalletData::RevolutPay(_) => Self::RevolutPay,
             },
             PaymentMethodData::PayLater(pay_later_data) => match pay_later_data {
                 payment_method_data::PayLaterData::KlarnaRedirect { .. } => Self::KlarnaRedirect,
@@ -952,6 +682,7 @@ impl From<PaymentMethodData> for PaymentMethodDataType {
                 payment_method_data::BankRedirectData::LocalBankRedirect {} => {
                     Self::LocalBankRedirect
                 }
+                payment_method_data::BankRedirectData::Eft { .. } => Self::Eft,
             },
             PaymentMethodData::BankDebit(bank_debit_data) => match bank_debit_data {
                 payment_method_data::BankDebitData::AchBankDebit { .. } => Self::AchBankDebit,
@@ -998,6 +729,15 @@ impl From<PaymentMethodData> for PaymentMethodDataType {
                 payment_method_data::BankTransferData::LocalBankTransfer { .. } => {
                     Self::LocalBankTransfer
                 }
+                payment_method_data::BankTransferData::InstantBankTransfer { .. } => {
+                    Self::InstantBankTransfer
+                }
+                payment_method_data::BankTransferData::InstantBankTransferFinland { .. } => {
+                    Self::InstantBankTransferFinland
+                }
+                payment_method_data::BankTransferData::InstantBankTransferPoland { .. } => {
+                    Self::InstantBankTransferPoland
+                }
             },
             PaymentMethodData::Crypto(_) => Self::Crypto,
             PaymentMethodData::MandatePayment => Self::MandatePayment,
@@ -1035,13 +775,17 @@ impl From<PaymentMethodData> for PaymentMethodDataType {
             PaymentMethodData::OpenBanking(data) => match data {
                 payment_method_data::OpenBankingData::OpenBankingPIS {} => Self::OpenBanking,
             },
+            PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                Self::CardDetailsForNetworkTransactionId
+            }
+            PaymentMethodData::NetworkToken(_) => Self::NetworkToken,
+            PaymentMethodData::MobilePayment(mobile_payment_data) => match mobile_payment_data {
+                payment_method_data::MobilePaymentData::DirectCarrierBilling { .. } => {
+                    Self::DirectCarrierBilling
+                }
+            },
         }
     }
-}
-
-pub trait DisputeDefend:
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-{
 }
 
 #[derive(Default, Debug, Clone)]
