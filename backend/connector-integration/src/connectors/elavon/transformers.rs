@@ -439,11 +439,11 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
         #[derive(Deserialize, Debug)]
         #[serde(rename = "txn")]
         struct XmlIshResponse {
-            #[serde(default)]
+            #[serde(default, rename = "errorCode")]
             error_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, rename = "errorMessage")]
             error_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, rename = "errorName")]
             error_name: Option<String>,
             #[serde(default)]
             ssl_result: Option<String>,
@@ -490,6 +490,7 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
                     ssl_token_response: flat_res.ssl_token_response,
                 })
             } else if flat_res.error_message.is_some() {
+                tracing::debug!("error_response 1: {:?}", flat_res);
                 ElavonResult::Error(ElavonErrorResponse {
                     error_code: flat_res.error_code.or(flat_res.ssl_result.clone()),
                     error_message: flat_res.error_message.expect("error_message checked"),
@@ -497,6 +498,7 @@ impl<'de> Deserialize<'de> for ElavonPaymentsResponse {
                     ssl_txn_id: flat_res.ssl_txn_id,
                 })
             } else if flat_res.ssl_result.is_some() {
+                tracing::debug!("error_response: {:?}", flat_res);
                 ElavonResult::Error(ElavonErrorResponse {
                     error_code: flat_res.ssl_result.clone(),
                     error_message: flat_res
@@ -523,11 +525,11 @@ impl<'de> Deserialize<'de> for ElavonCaptureResponse {
         #[derive(Deserialize, Debug)]
         #[serde(rename = "txn")]
         struct XmlIshResponse {
-            #[serde(default)]
+            #[serde(default, rename="errorCode")]
             error_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, rename="errorMessage")]
             error_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, rename="errorName")]
             error_name: Option<String>,
             #[serde(default)]
             ssl_result: Option<String>,
@@ -607,11 +609,11 @@ impl<'de> Deserialize<'de> for ElavonRefundResponse {
         #[derive(Deserialize, Debug)]
         #[serde(rename = "txn")]
         struct XmlIshResponse {
-            #[serde(default)]
+             #[serde(default, rename = "errorCode")]
             error_code: Option<String>,
-            #[serde(default)]
+            #[serde(default, rename = "errorMessage")]
             error_message: Option<String>,
-            #[serde(default)]
+            #[serde(default, rename = "errorName")]
             error_name: Option<String>,
             #[serde(default)]
             ssl_result: Option<String>,
