@@ -1,0 +1,47 @@
+[package]
+name = "common_utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common_enums = { version = "*", path = "../common_enums" }
+
+
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
+
+error-stack = "0.4.1"
+serde = { version = "1.0.189", features = ["derive"] }
+serde_json = "1.0.107"
+serde_urlencoded = "0.7.1"
+thiserror = "1.0.49"
+strum = { version = "0.26", features = ["derive"] }
+utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
+quick-xml = { version = "0.31.0", features = ["serialize"] }
+rust_decimal = { version = "1.0" }
+time = { version = "0.3.36", features = ["parsing"] }
+url = "2.5.0"
+uuid = { version = "1", features = ["v4", "v7"] }
+http = "1.2.0"
+reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
+bytes = "1.6.0"
+md5 = "0.7.0"
+ring = { version = "0.17.14", features = ["std", "wasm32_unknown_unknown_js"] }
+blake3 = { version = "1.8.2", features = ["serde"] }
+hex = "0.4.3"
+rand = "0.8.5"
+nanoid = "0.4.0"
+regex = "1.11.1"
+semver = { version = "1.0.26", features = ["serde"] }
+
+# Optional features
+[features]
+default = []
+async_ext = ["dep:async-trait", "dep:futures"]
+
+[dependencies.async-trait]
+version = "0.1.74"
+optional = true
+
+[dependencies.futures]
+version = "0.3.28"
+optional = true

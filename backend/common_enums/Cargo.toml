@@ -1,0 +1,10 @@
+[package]
+name = "common_enums"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
+strum = { version = "0.26", features = ["derive"] }
+thiserror = "1.0.49"
