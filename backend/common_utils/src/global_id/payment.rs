@@ -54,17 +54,20 @@ crate::global_id_type!(
 
 impl GlobalAttemptId {
     /// Generate a new GlobalAttemptId from a cell id
+    #[allow(dead_code)]
     pub fn generate(cell_id: &super::CellId) -> Self {
         let global_id = super::GlobalId::generate(cell_id, super::GlobalEntity::Attempt);
         Self(global_id)
     }
 
     /// Get string representation of the id
+    #[allow(dead_code)]
     pub fn get_string_repr(&self) -> &str {
         self.0.get_string_repr()
     }
 
     /// Generate the id for Revenue Recovery Psync PT workflow
+    #[allow(dead_code)]
     pub fn get_psync_revenue_recovery_id(
         &self,
         task: &str,

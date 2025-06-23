@@ -181,7 +181,6 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     // ) -> CustomResult<api::CaptureSyncMethod, errors::ConnectorError> {
     //     Err(errors::ConnectorError::NotImplemented("multiple capture sync".into()).into())
     // }
-
     /// returns certificate string
     fn get_certificate(
         &self,
