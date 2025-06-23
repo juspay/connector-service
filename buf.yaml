@@ -1,0 +1,17 @@
+version: v2
+deps:
+  - buf.build/googleapis/googleapis
+modules:
+  - path: .
+    excludes:
+      - examples/example-hs-grpc/proto
+lint:
+  use:
+    - STANDARD
+  ignore_only:
+    ENUM_VALUE_PREFIX:
+      - backend/grpc-api-types/proto
+    ENUM_ZERO_VALUE_SUFFIX:
+      - backend/grpc-api-types/proto 
+    SERVICE_SUFFIX:
+      - backend/grpc-api-types/proto/health_check.proto
