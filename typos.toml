@@ -1,0 +1,29 @@
+# Typos configuration for connector-service
+# This file configures the typos spell checker to handle domain-specific terminology
+
+[default.extend-words]
+# Financial and payment industry terms
+Iin = "Iin"  # Issuer Identification Number - valid financial term
+IIN = "IIN"  # Issuer Identification Number - acronym
+
+# Code abbreviations and variable names
+AER = "AER"  # ApiErrorResponse - internal abbreviation
+Aci = "Aci"  # Payment processor name
+
+# Bank and institution names (European banks)
+Noe = "Noe"  # Part of bank name "HypoNoeLbFurNiederosterreichUWien"
+
+# Currency codes (ISO 4217)
+JOD = "JOD"  # Jordanian Dinar
+Jod = "Jod"  # Jordanian Dinar (capitalized)
+
+# Country codes (ISO 3166-1 alpha-2)
+BA = "BA"  # Bosnia and Herzegovina
+FO = "FO"  # Faroe Islands  
+PN = "PN"  # Pitcairn Islands
+
+# Financial transaction status codes
+FPR = "FPR"  # Financial processing response code
+
+# Company/executable names
+jus = "jus"  # Company executable name
