@@ -702,7 +702,7 @@ pub enum CaptureMethod {
 /// Specifies how the payment method can be used for future payments.
 /// - `off_session`: The payment method can be used for future payments when the customer is not present.
 /// - `on_session`: The payment method is intended for use only when the customer is present during checkout.
-/// If omitted, defaults to `on_session`.
+///   If omitted, defaults to `on_session`.
 #[derive(
     Clone,
     Copy,
@@ -883,10 +883,7 @@ pub enum PaymentMethodType {
 
 impl PaymentMethodType {
     pub fn should_check_for_customer_saved_payment_method_type(self) -> bool {
-        match self {
-            Self::Credit | Self::Debit => true,
-            _ => false,
-        }
+        matches!(self, Self::Credit | Self::Debit)
     }
 
     pub fn to_display_name(&self) -> String {
