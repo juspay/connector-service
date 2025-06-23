@@ -298,7 +298,7 @@ impl PaymentService for Payments {
         current_span.record("request_id", request_id);
 
         let start_time = tokio::time::Instant::now();
-        let result: Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> = async {
+        let result: Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> = async {
             let connector =
                 connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
             let connector_auth_details =
@@ -555,7 +555,7 @@ impl PaymentService for Payments {
         current_span.record("request_id", request_id);
 
         let start_time = tokio::time::Instant::now();
-        let result: Result<tonic::Response<IncomingWebhookResponse>, tonic::Status> = async {
+        let result: Result<tonic::Response<PaymentServiceTransformResponse>, tonic::Status> = async {
             let connector =
                 connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
             let connector_auth_details =
@@ -632,13 +632,14 @@ impl PaymentService for Payments {
                 .map_err(|e| e.into_grpc_status())?,
             };
 
-            let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
+            let api_event_type = grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
                 .map_err(|e| e.into_grpc_status())?;
 
-            let response = IncomingWebhookResponse {
+            let response = PaymentServiceTransformResponse {
                 event_type: api_event_type.into(),
                 content: Some(content),
                 source_verified,
+                response_ref_id: None,
             };
 
             Ok(tonic::Response::new(response))
@@ -731,10 +732,17 @@ impl PaymentService for Payments {
             request_id = tracing::field::Empty,
             time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
-      
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::DefendDispute.to_string(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
     async fn dispute(
         &self,
-        _request: tonic::Request<PaymentServiceDisputeRequest>,
+        request: tonic::Request<PaymentServiceDisputeRequest>,
     ) -> Result<tonic::Response<DisputeResponse>, tonic::Status> {
         let current_span = tracing::Span::current();
         let (gateway, merchant_id, tenant_id, request_id) =
@@ -753,8 +761,8 @@ impl PaymentService for Payments {
         let start_time = tokio::time::Instant::now();
         // For now, just return a basic dispute response
         // This will need proper implementation based on domain logic
-        let result = async{
-            let response = DisputeResponse {
+    let result: Result<tonic::Response<DisputeResponse>, tonic::Status> = async {
+        let response = DisputeResponse {
             ..Default::default()
         };
         Ok(tonic::Response::new(response))
@@ -880,7 +888,7 @@ impl PaymentService for Payments {
 
         let start_time = tokio::time::Instant::now();
 
-        let result: Result<tonic::Response<SetupMandateResponse>, tonic::Status> = async {
+        let result: Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> = async {
             let connector =
                 connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
             let connector_auth_details =
