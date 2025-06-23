@@ -188,6 +188,7 @@ macro_rules! implement_connector_operation {
                 connector_integration,
                 router_data,
                 $all_keys_required,
+                $log_prefix,
             )
             .await
             .switch()

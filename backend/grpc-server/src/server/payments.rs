@@ -7,7 +7,7 @@ use crate::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, PSync, Refund, SetupMandate, Void, FlowName,
+        Authorize, Capture, CreateOrder, FlowName, PSync, Refund, SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -323,17 +323,17 @@ impl PaymentService for Payments {
                         response: Err(ErrorResponse::default()),
                     };
 
-        // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            payload.all_keys_required,
-            &connector.to_string(),
-        )
-        .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
+                    // Execute connector processing
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        &connector.to_string(),
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
                     // Generate response
                     let authorize_response =
@@ -451,15 +451,16 @@ impl PaymentService for Payments {
                         }
                     };
 
-        let api_event_type = grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
-            .map_err(|e| e.into_grpc_status())?;
+                    let api_event_type =
+                        grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+                            .map_err(|e| e.into_grpc_status())?;
 
-        let response = PaymentServiceTransformResponse {
-            event_type: api_event_type.into(),
-            content: Some(content),
-            source_verified,
-            response_ref_id: None,
-        };
+                    let response = PaymentServiceTransformResponse {
+                        event_type: api_event_type.into(),
+                        content: Some(content),
+                        source_verified,
+                        response_ref_id: None,
+                    };
 
                     Ok(tonic::Response::new(response))
                 })
