@@ -1,5 +1,3 @@
-pub const X_TENANT_ID: &str = "x-tenant-id";
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Env {
     Development,
@@ -37,6 +35,7 @@ pub const X_REQUEST_ID: &str = "x-request-id";
 pub const X_CONNECTOR: &str = "x-connector";
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
 pub const NAME: &str = "UCS";
-
+pub const PAYMENT_SERVICE: &str = "payments";
+pub const X_TENANT_ID: &str = "x-tenant-id";
 // pub(crate) const BASE64_ENGINE: base64::engine::GeneralPurpose =
 //     base64::engine::general_purpose::STANDARD;

@@ -3,7 +3,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{
-        auth_from_metadata, connector_from_metadata,
+        attempt_status_to_str, auth_from_metadata, connector_from_metadata,
         connector_merchant_id_tenant_id_request_id_from_metadata, mask_sensitive_fields,
     },
 };
@@ -301,7 +301,7 @@ impl PaymentService for Payments {
         name = "payment_authorize",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::Authorize.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -333,7 +333,6 @@ impl PaymentService for Payments {
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         let masked_request_body = mask_sensitive_fields(req_body_json);
         current_span.record("request_body", masked_request_body);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -423,7 +422,8 @@ impl PaymentService for Payments {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
                 let status = response.get_ref().status.to_string();
-                current_span.record("flow_specific_fields.status", status);
+                let status_str = attempt_status_to_str(status);
+                current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -437,7 +437,7 @@ impl PaymentService for Payments {
         name = "payment_sync",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::Psync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -447,7 +447,7 @@ impl PaymentService for Payments {
             request_id = tracing::field::Empty,
             time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
-            message_ = "Golden Log Line (incoming)",
+            message = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
             flow = FlowName::Psync.to_string(),
@@ -467,7 +467,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -483,16 +482,16 @@ impl PaymentService for Payments {
         match &result {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
-
                 let status = response.get_ref().status.to_string();
-                current_span.record("flow_specific_fields.status", status);
+                let status_str = attempt_status_to_str(status);
+                current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
                 current_span.record("status_code", status.code().to_string());
             }
         }
-
+        tracing::info!("Golden Log Line (incoming)");
         result
     }
 
@@ -500,7 +499,7 @@ impl PaymentService for Payments {
         name = "refund_sync",
         fields(
             name = crate::consts::NAME,
-            service_name = crate::consts::NAME,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::Rsync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -530,7 +529,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -546,9 +544,9 @@ impl PaymentService for Payments {
         match &result {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
-
                 let status = response.get_ref().status.to_string();
-                current_span.record("flow_specific_fields.status", status);
+                let status_str = attempt_status_to_str(status);
+                current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -561,8 +559,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_void",
         fields(
-            name = tracing::field::Empty,
-            service_name = tracing::field::Empty,
+            name = crate::consts::NAME,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::Void.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -592,7 +590,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -610,7 +607,8 @@ impl PaymentService for Payments {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
                 let status = response.get_ref().status.to_string();
-                current_span.record("flow_specific_fields.status", status);
+                let status_str = attempt_status_to_str(status);
+                current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -624,8 +622,8 @@ impl PaymentService for Payments {
         name = "incoming_webhook",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
-            service_method = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
+            service_method = FlowName::IncomingWebhook.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -637,7 +635,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = tracing::field::Empty,
+            flow = FlowName::IncomingWebhook.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -654,7 +652,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -770,7 +767,7 @@ impl PaymentService for Payments {
         name = "refund",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::Refund.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -800,7 +797,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -829,7 +825,7 @@ impl PaymentService for Payments {
         name = "defend_dispute",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::DefendDispute.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -859,7 +855,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -888,7 +883,7 @@ impl PaymentService for Payments {
         name = "payment_capture",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
             service_method = FlowName::Capture.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -918,7 +913,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -936,7 +930,8 @@ impl PaymentService for Payments {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
                 let status = response.get_ref().status.to_string();
-                current_span.record("flow_specific_fields.status", status);
+                let status_str = attempt_status_to_str(status);
+                current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -950,8 +945,8 @@ impl PaymentService for Payments {
         name = "setup_mandate",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
-            service_method = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
+            service_method = FlowName::SetupMandate.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -963,7 +958,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = tracing::field::Empty,
+            flow = FlowName::SetupMandate.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -981,7 +976,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -1071,7 +1065,8 @@ impl PaymentService for Payments {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
                 let status = response.get_ref().status.to_string();
-                current_span.record("flow_specific_fields.status", status);
+                let status_str = attempt_status_to_str(status);
+                current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -1085,8 +1080,8 @@ impl PaymentService for Payments {
         name = "accept_dispute",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
-            service_method = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
+            service_method = FlowName::AcceptDispute.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1098,7 +1093,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = tracing::field::Empty,
+            flow = FlowName::AcceptDispute.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1116,7 +1111,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -1199,8 +1193,8 @@ impl PaymentService for Payments {
         name = "submit_evidence",
         fields(
             name = crate::consts::NAME,
-            service_name = tracing::field::Empty,
-            service_method = tracing::field::Empty,
+            service_name = crate::consts::PAYMENT_SERVICE,
+            service_method = FlowName::SubmitEvidence.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1212,7 +1206,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = tracing::field::Empty,
+            flow = FlowName::SubmitEvidence.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1230,7 +1224,6 @@ impl PaymentService for Payments {
         let req_body_json =
             serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
         current_span.record("request_body", req_body_json);
-        current_span.record("service_name", "payments");
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
