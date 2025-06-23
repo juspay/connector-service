@@ -1,5 +1,9 @@
 use common_utils::CustomResult;
-use domain_types::{api::{GenericLinks, PaymentLinkAction, RedirectionFormData}, router_data::{ConnectorAuthType, ErrorResponse}, types::Connectors};
+use domain_types::{
+    api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
+    router_data::{ConnectorAuthType, ErrorResponse},
+    types::Connectors,
+};
 use hyperswitch_masking::Maskable;
 
 use crate::{consts, errors, events::connector_api_logs::ConnectorEvent, types};

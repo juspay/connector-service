@@ -1,5 +1,6 @@
 //! Types that can be used in other crates
 
+use error_stack::ResultExt;
 use std::{
     fmt::Display,
     iter::Sum,
@@ -8,19 +9,16 @@ use std::{
 };
 
 use common_enums::enums;
-use diesel::{
-    backend::Backend,
-    deserialize,
-    deserialize::FromSql,
-    serialize::{Output, ToSql},
-    sql_types, AsExpression, Queryable,
-};
-use error_stack::ResultExt;
 use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal,
 };
+
+use hyperswitch_masking::Deserialize;
+
+use semver::Version;
 use serde::Serialize;
+use time::PrimitiveDateTime;
 use utoipa::ToSchema;
 
 use crate::errors::ParsingError;
@@ -161,7 +159,6 @@ impl AmountConvertor for MinorUnitForConnector {
     Default,
     Debug,
     serde::Deserialize,
-    AsExpression,
     serde::Serialize,
     Clone,
     Copy,
@@ -171,7 +168,7 @@ impl AmountConvertor for MinorUnitForConnector {
     ToSchema,
     PartialOrd,
 )]
-#[diesel(sql_type = sql_types::BigInt)]
+
 pub struct MinorUnit(pub i64);
 
 impl MinorUnit {
@@ -246,39 +243,6 @@ impl Display for MinorUnit {
     }
 }
 
-impl<DB> FromSql<sql_types::BigInt, DB> for MinorUnit
-where
-    DB: Backend,
-    i64: FromSql<sql_types::BigInt, DB>,
-{
-    fn from_sql(value: DB::RawValue<'_>) -> deserialize::Result<Self> {
-        let val = i64::from_sql(value)?;
-        Ok(Self(val))
-    }
-}
-
-impl<DB> ToSql<sql_types::BigInt, DB> for MinorUnit
-where
-    DB: Backend,
-    i64: ToSql<sql_types::BigInt, DB>,
-{
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
-        self.0.to_sql(out)
-    }
-}
-
-impl<DB> Queryable<sql_types::BigInt, DB> for MinorUnit
-where
-    DB: Backend,
-    Self: FromSql<sql_types::BigInt, DB>,
-{
-    type Row = Self;
-
-    fn build(row: Self::Row) -> deserialize::Result<Self> {
-        Ok(row)
-    }
-}
-
 impl Add for MinorUnit {
     type Output = Self;
     fn add(self, a2: Self) -> Self {
@@ -312,7 +276,6 @@ impl Sum for MinorUnit {
     Default,
     Debug,
     serde::Deserialize,
-    AsExpression,
     serde::Serialize,
     Clone,
     PartialEq,
@@ -321,7 +284,7 @@ impl Sum for MinorUnit {
     ToSchema,
     PartialOrd,
 )]
-#[diesel(sql_type = sql_types::Text)]
+
 pub struct StringMinorUnit(String);
 
 impl StringMinorUnit {
@@ -348,39 +311,6 @@ impl StringMinorUnit {
 impl Display for StringMinorUnit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
-    }
-}
-
-impl<DB> FromSql<sql_types::Text, DB> for StringMinorUnit
-where
-    DB: Backend,
-    String: FromSql<sql_types::Text, DB>,
-{
-    fn from_sql(value: DB::RawValue<'_>) -> deserialize::Result<Self> {
-        let val = String::from_sql(value)?;
-        Ok(Self(val))
-    }
-}
-
-impl<DB> ToSql<sql_types::Text, DB> for StringMinorUnit
-where
-    DB: Backend,
-    String: ToSql<sql_types::Text, DB>,
-{
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
-        self.0.to_sql(out)
-    }
-}
-
-impl<DB> Queryable<sql_types::Text, DB> for StringMinorUnit
-where
-    DB: Backend,
-    Self: FromSql<sql_types::Text, DB>,
-{
-    type Row = Self;
-
-    fn build(row: Self::Row) -> deserialize::Result<Self> {
-        Ok(row)
     }
 }
 
@@ -462,5 +392,56 @@ impl StringMajorUnit {
     /// Get string amount from struct to be removed in future
     pub fn get_amount_as_string(&self) -> String {
         self.0.clone()
+    }
+}
+
+/// A type representing a range of time for filtering, including a mandatory start time and an optional end time.
+#[derive(
+    Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash, ToSchema,
+)]
+pub struct TimeRange {
+    /// The start time to filter payments list or to get list of filters. To get list of filters start time is needed to be passed
+    #[serde(with = "crate::custom_serde::iso8601")]
+    #[serde(alias = "startTime")]
+    pub start_time: PrimitiveDateTime,
+    /// The end time to filter payments list or to get list of filters. If not passed the default time is now
+    #[serde(default, with = "crate::custom_serde::iso8601::option")]
+    #[serde(alias = "endTime")]
+    pub end_time: Option<PrimitiveDateTime>,
+}
+
+/// This struct lets us represent a semantic version type
+#[derive(Debug, Clone, PartialEq, Eq, Ord, PartialOrd, Serialize, serde::Deserialize)]
+pub struct SemanticVersion(#[serde(with = "Version")] Version);
+
+impl SemanticVersion {
+    /// returns major version number
+    pub fn get_major(&self) -> u64 {
+        self.0.major
+    }
+
+    /// returns minor version number
+    pub fn get_minor(&self) -> u64 {
+        self.0.minor
+    }
+    /// Constructs new SemanticVersion instance
+    pub fn new(major: u64, minor: u64, patch: u64) -> Self {
+        Self(Version::new(major, minor, patch))
+    }
+}
+
+impl Display for SemanticVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for SemanticVersion {
+    type Err = error_stack::Report<ParsingError>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(Version::from_str(s).change_context(
+            ParsingError::StructParseFailure("SemanticVersion"),
+        )?))
     }
 }

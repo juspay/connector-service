@@ -1,10 +1,10 @@
 //! Connector API logs interface
 
 use common_utils::request::Method;
-use tracing_actix_web::RequestId;
 use serde::Serialize;
 use serde_json::json;
 use time::OffsetDateTime;
+use tracing_actix_web::RequestId;
 
 /// struct ConnectorEvent
 #[derive(Debug, Serialize)]

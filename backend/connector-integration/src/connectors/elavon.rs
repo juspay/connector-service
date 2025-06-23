@@ -2,7 +2,7 @@ pub mod transformers;
 
 use super::macros;
 use crate::types::ResponseRouterData;
-use crate::utils::preprocess_xml_response_bytes;
+// use crate::preprocess_xml_response_bytes;
 use crate::with_error_response_body;
 use bytes::Bytes;
 use common_utils::{
@@ -14,30 +14,38 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
-        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2,
-        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+    },
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    types::{
+        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,
+        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+        SupportedPaymentMethods,
     },
 };
 use error_stack::ResultExt;
-use hyperswitch_domain_models::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::errors::ConnectorError;
-use hyperswitch_interfaces::{
-    api::ConnectorCommon,
-    configs::Connectors,
-    connector_integration_v2::{self, ConnectorIntegrationV2},
+
+use hyperswitch_masking::Maskable;
+use interface::{
+    api::{self, ConnectorCommon},
+    connector_integration_v2::ConnectorIntegrationV2,
     errors,
+};
+use interface::{
+    connector_integration_v2,
+    connector_types::{self as interfaces, is_mandate_supported},
+    errors::ConnectorError,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
+    webhooks,
 };
-use hyperswitch_masking::Maskable;
 use transformers::{
     self as elavon, ElavonCaptureResponse, ElavonPSyncResponse, ElavonPaymentsResponse,
     ElavonRSyncResponse, ElavonRefundResponse, XMLCaptureRequest, XMLElavonRequest,
@@ -48,21 +56,21 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
 
-impl ConnectorServiceTrait for Elavon {}
-impl PaymentAuthorizeV2 for Elavon {}
-impl PaymentSyncV2 for Elavon {}
-impl PaymentVoidV2 for Elavon {}
-impl RefundSyncV2 for Elavon {}
-impl RefundV2 for Elavon {}
+impl interfaces::ConnectorServiceTrait for Elavon {}
+impl interfaces::PaymentAuthorizeV2 for Elavon {}
+impl interfaces::PaymentSyncV2 for Elavon {}
+impl interfaces::PaymentVoidV2 for Elavon {}
+impl interfaces::RefundSyncV2 for Elavon {}
+impl interfaces::RefundV2 for Elavon {}
 
-impl ValidationTrait for Elavon {}
-impl PaymentCapture for Elavon {}
-impl SetupMandateV2 for Elavon {}
-impl AcceptDispute for Elavon {}
-impl SubmitEvidenceV2 for Elavon {}
-impl DisputeDefend for Elavon {}
-impl IncomingWebhook for Elavon {}
-impl PaymentOrderCreate for Elavon {}
+impl interfaces::ValidationTrait for Elavon {}
+impl interfaces::PaymentCapture for Elavon {}
+impl interfaces::SetupMandateV2 for Elavon {}
+impl interfaces::AcceptDispute for Elavon {}
+impl interfaces::SubmitEvidenceV2 for Elavon {}
+impl interfaces::DisputeDefend for Elavon {}
+impl interfaces::IncomingWebhook for Elavon {}
+impl interfaces::PaymentOrderCreate for Elavon {}
 
 impl ConnectorCommon for Elavon {
     fn id(&self) -> &'static str {
@@ -104,6 +112,9 @@ impl ConnectorCommon for Elavon {
                         reason: error_payload.error_name,
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: error_payload.ssl_txn_id,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
                     }),
                     elavon::ElavonResult::Success(success_payload) => Ok(ErrorResponse {
                         status_code: res.status_code,
@@ -115,6 +126,9 @@ impl ConnectorCommon for Elavon {
                         )),
                         attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: Some(success_payload.ssl_txn_id),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
                     }),
                 }
             }
@@ -136,6 +150,9 @@ impl ConnectorCommon for Elavon {
                     reason,
                     attempt_status: Some(common_enums::AttemptStatus::Failure),
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 })
             }
         }
@@ -180,13 +197,13 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        pub fn preprocess_response_bytes(
-            &self,
-            response_bytes: Bytes,
-        ) -> Result<Bytes, errors::ConnectorError> {
-            // Use the utility function to preprocess XML response bytes
-            preprocess_xml_response_bytes(response_bytes)
-        }
+        // pub fn preprocess_response_bytes(
+        //     &self,
+        //     response_bytes: Bytes,
+        // ) -> Result<Bytes, errors::ConnectorError> {
+        //     // Use the utility function to preprocess XML response bytes
+        //     preprocess_xml_response_bytes(response_bytes)
+        // }
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
@@ -209,7 +226,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true,
+    // preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,
@@ -240,7 +257,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true,
+    // preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,
@@ -281,7 +298,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true,
+    // preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,
@@ -312,7 +329,7 @@ macros::macro_connector_implementation!(
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
-    preprocess_response: true,
+    // preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,
@@ -343,7 +360,7 @@ macros::macro_connector_implementation!(
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
     http_method: Post,
-    preprocess_response: true,
+    // preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,

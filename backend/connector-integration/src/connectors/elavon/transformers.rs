@@ -12,18 +12,17 @@ use domain_types::{
         ResponseId as DomainResponseId,
     },
     payment_address::PaymentAddress,
+    router_data::PaymentMethodToken,
 };
-use error_stack::{report, ResultExt};
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_method_data::PaymentMethodData,
-    router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::{
-    consts as hs_interface_consts,
-    errors::{self},
-};
+use error_stack::{report, ResultExt};
+
 use hyperswitch_masking::WithoutType;
+use interface::errors;
 use std::collections::HashMap;
 
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -708,11 +707,14 @@ pub fn get_elavon_attempt_status(
                 code: error_resp
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| interface::consts::NO_ERROR_CODE.to_string()),
                 message: error_resp.error_message.clone(),
                 reason: error_resp.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
                 connector_transaction_id: error_resp.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         ),
     }
@@ -772,11 +774,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| interface::consts::NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
                 connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         };
 
@@ -1004,11 +1009,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| interface::consts::NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
                 connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         };
 
@@ -1148,11 +1156,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| interface::consts::NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(attempt_status),
                 connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         };
 

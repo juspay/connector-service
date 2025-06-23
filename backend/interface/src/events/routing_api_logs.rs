@@ -2,13 +2,12 @@
 
 use std::fmt;
 
-
 use api_models::routing::RoutableConnectorChoice;
 use common_utils::request::Method;
-use tracing_actix_web::RequestId;
 use serde::Serialize;
 use serde_json::json;
 use time::OffsetDateTime;
+use tracing_actix_web::RequestId;
 
 /// RoutingEngine enum
 #[derive(Debug, Clone, Copy, Serialize)]

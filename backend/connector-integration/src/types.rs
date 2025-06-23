@@ -1,4 +1,5 @@
-use domain_types::connector_types::{BoxedConnector, ConnectorEnum};
+use domain_types::connector_types::ConnectorEnum;
+use interface::connector_types::BoxedConnector;
 
 use crate::connectors::{Adyen, Elavon, Fiserv, Razorpay};
 

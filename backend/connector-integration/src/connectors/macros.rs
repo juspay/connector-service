@@ -3,9 +3,9 @@ use std::marker::PhantomData;
 use crate::types;
 use common_utils::errors::CustomResult;
 use common_utils::ext_traits::BytesExt;
+use domain_types::router_data_v2::RouterDataV2;
 use error_stack::ResultExt;
-use hyperswitch_domain_models::router_data_v2::RouterDataV2;
-use hyperswitch_interfaces::errors;
+use interface::errors;
 
 pub trait FlowTypes {
     type Flow;
@@ -218,7 +218,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ConnectorError,
+            macro_types::ConnectorError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
@@ -275,7 +275,7 @@ macro_rules! expand_default_functions {
             &self,
             res: Response,
             event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+        ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
             self.build_error_response(res, event_builder)
         }
     };
@@ -283,63 +283,6 @@ macro_rules! expand_default_functions {
 pub(crate) use expand_default_functions;
 
 macro_rules! macro_connector_implementation {
-    // Version with preprocess_response parameter explicitly set
-    (
-        connector_default_implementations: [$($function_name: ident), *],
-        connector: $connector: ty,
-        $(curl_request: $content_type:ident($curl_req: ty),)?
-        curl_response:$curl_res: ty,
-        flow_name:$flow: ident,
-        resource_common_data:$resource_common_data: ty,
-        flow_request:$request: ty,
-        flow_response:$response: ty,
-        http_method: $http_method_type:ident,
-        preprocess_response: $preprocess_response: expr,
-        other_functions: {
-            $($function_def: tt)*
-        }
-    ) => {
-        impl
-            ConnectorIntegrationV2<
-                $flow,
-                $resource_common_data,
-                $request,
-                $response,
-            > for $connector
-        {
-            fn get_http_method(&self) -> common_utils::request::Method {
-                common_utils::request::Method::$http_method_type
-            }
-            $($function_def)*
-            $(
-                macros::expand_default_functions!(
-                    function: $function_name,
-                    flow_name:$flow,
-                    resource_common_data:$resource_common_data,
-                    flow_request:$request,
-                    flow_response:$response,
-                );
-            )*
-            macros::expand_fn_get_request_body!(
-                $connector,
-                $($curl_req,)?
-                $($content_type,)?
-                $curl_res,
-                $flow,
-                $resource_common_data,
-                $request,
-                $response
-            );
-            macros::expand_fn_handle_response!(
-                $connector,
-                $flow,
-                $resource_common_data,
-                $request,
-                $response,
-                true
-            );
-        }
-    };
 
     // Version without preprocess_response parameter (defaults to false)
     (
@@ -556,12 +499,13 @@ macro_rules! expand_imports {
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
             pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
-            pub(super) use hyperswitch_domain_models::router_data::ErrorResponse;
-            pub(super) use hyperswitch_domain_models::router_data_v2::RouterDataV2;
-            pub(super) use hyperswitch_interfaces::{
-                errors::ConnectorError, events::connector_api_logs::ConnectorEvent, types::Response,
-            };
+            pub(super) use domain_types::router_data::ErrorResponse;
+            pub(super) use domain_types::router_data_v2::RouterDataV2;
             pub(super) use hyperswitch_masking::Maskable;
+            pub(super) use interface::errors::ConnectorError;
+            pub(super) use interface::{
+                events::connector_api_logs::ConnectorEvent, types::Response,
+            };
         }
     };
 }

@@ -1,7 +1,14 @@
+pub mod api;
 pub mod connector_flow;
 pub mod connector_types;
 pub mod errors;
+pub mod mandates;
 pub mod payment_address;
 pub mod payment_method_data;
+pub mod router_data;
+pub mod router_data_v2;
+pub mod router_flow_types;
+pub mod router_request_type;
+pub mod router_response_type;
 pub mod types;
 pub mod utils;

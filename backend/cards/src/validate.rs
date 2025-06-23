@@ -1,10 +1,13 @@
 use std::{collections::HashMap, fmt, ops::Deref, str::FromStr, sync::LazyLock};
 
+use common_utils::{date_time, ValidationError};
 use error_stack::report;
-use hyperswitch_common_utils::errors::ValidationError;
 use hyperswitch_masking::{PeekInterface, Strategy, StrongSecret, WithType};
 use regex::Regex;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{
+    de::{self, value::Error},
+    Deserialize, Deserializer, Serialize,
+};
 use thiserror::Error;
 
 /// Minimum limit of a card number will not be less than 8 by ISO standards
@@ -382,5 +385,69 @@ mod tests {
         let card_number = serde_json::from_str::<CardNumber>(r#""1234 5678""#);
         let error_msg = card_number.unwrap_err().to_string();
         assert_eq!(error_msg, "card number invalid".to_string());
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CardExpirationMonth(StrongSecret<u8>);
+
+impl CardExpirationMonth {
+    pub fn two_digits(&self) -> String {
+        format!("{:02}", self.0.peek())
+    }
+}
+
+impl TryFrom<u8> for CardExpirationMonth {
+    type Error = error_stack::Report<ValidationError>;
+    fn try_from(month: u8) -> Result<Self, Self::Error> {
+        if (1..=12).contains(&month) {
+            Ok(Self(StrongSecret::new(month)))
+        } else {
+            Err(report!(ValidationError::InvalidValue {
+                message: "invalid card expiration month".to_string()
+            }))
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for CardExpirationMonth {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let month = u8::deserialize(deserializer)?;
+        month.try_into().map_err(de::Error::custom)
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct CardExpirationYear(StrongSecret<u16>);
+
+impl TryFrom<u16> for CardExpirationYear {
+    type Error = error_stack::Report<ValidationError>;
+    fn try_from(year: u16) -> Result<Self, Self::Error> {
+        let curr_year = u16::try_from(date_time::now().year()).map_err(|_| {
+            report!(ValidationError::InvalidValue {
+                message: "invalid year".to_string()
+            })
+        })?;
+
+        if year >= curr_year {
+            Ok(Self(StrongSecret::<u16>::new(year)))
+        } else {
+            Err(report!(ValidationError::InvalidValue {
+                message: "invalid card expiration year".to_string()
+            }))
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for CardExpirationYear {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let year = u16::deserialize(deserializer)?;
+        year.try_into().map_err(de::Error::custom)
     }
 }

@@ -8,19 +8,21 @@ mod tests {
         use common_utils::types::MinorUnit;
         use domain_types::connector_flow::Authorize;
         use domain_types::connector_types::{
-            BoxedConnector, ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData,
-            PaymentsResponseData,
+            ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         };
         use domain_types::payment_address::PaymentAddress;
+        use domain_types::router_request_type::BrowserInformation;
         use domain_types::types::ConnectorParams;
         use domain_types::types::Connectors;
-        use hyperswitch_domain_models::{
+        use domain_types::{
             payment_method_data::PaymentMethodData,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
-        use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+
         use hyperswitch_masking::Secret;
+        use interface::connector_integration_v2::BoxedConnectorIntegrationV2;
+        use interface::connector_types::BoxedConnector;
         use serde_json::json;
         use std::borrow::Cow;
         use std::marker::PhantomData;
@@ -89,7 +91,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(
-                        hyperswitch_domain_models::payment_method_data::Card {
+                        domain_types::payment_method_data::Card {
                             card_number: cards::CardNumber::from_str(
                                 "5123456789012346",
                             )
@@ -119,7 +121,7 @@ mod tests {
                     setup_future_usage: None,
                     off_session: None,
                     browser_info: Some(
-                        hyperswitch_domain_models::router_request_types::BrowserInformation {
+                        BrowserInformation {
                             color_depth: None,
                             java_enabled: Some(false),
                             screen_height: Some(1080),
@@ -135,6 +137,10 @@ mod tests {
                             language: Some("en-US".to_string()),
                             time_zone: None,
                             ip_address: None,
+                            os_type: None,
+                            os_version: None,
+                            device_model: None,
+                            accept_language: None,
                         },
                     ),
                     order_category: None,

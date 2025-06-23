@@ -20,8 +20,8 @@ hex = "0.4.3"
 ring = { version = "0.17.8", features = ["std"] }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking"}
 hyperswitch_interfaces = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
-hyperswitch_domain_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4"}
-common_utils = { version = "0.1.0", path = "../common_utils" }
+interface = { version = "0.1.0", path = "../interface" }
+common_utils = { version = "0.1.0", path = "../common_utils", features = ["async_ext"] }
 api_models = { version = "0.1.0", path = "../api_models" }
 strum = { version = "0.26.2", features = ["derive"] }
 reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }

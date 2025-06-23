@@ -10,8 +10,12 @@ use crate::connector_types::{
     ResponseId, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
+use crate::mandates::{AcceptanceType, CustomerAcceptance, MandateData};
 use crate::payment_address::PaymentAddress;
-use crate::payment_method_data::Card;
+use crate::payment_method_data::{self, Card, PaymentMethodData, WalletData};
+use crate::router_data_v2::RouterDataV2;
+use crate::router_request_type::{BrowserInformation, SyncRequestType};
+use crate::router_response_type::RedirectForm;
 use crate::utils::{ForeignFrom, ForeignTryFrom};
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::id_type::CustomerId;
@@ -23,14 +27,11 @@ use grpc_api_types::payments::{
     PaymentsSyncResponse, PaymentsVoidRequest, PaymentsVoidResponse, RefundsResponse,
     RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceResponse,
 };
+
+use hyperswitch_interfaces::consts::NO_ERROR_CODE;
 use hyperswitch_masking::Secret;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
-use hyperswitch_domain_models::mandates::MandateData;
-use hyperswitch_domain_models::{
-    payment_method_data::{self, PaymentMethodData},
-    router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::consts::NO_ERROR_CODE;
+
 use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
@@ -144,7 +145,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
                         card_issuing_country: card.card_issuing_country,
                         bank_code: card.bank_code,
                         nick_name: card.nick_name.map(|name| name.into()),
-                        card_holder_name: card.card_holder_name,
+                        card_holder_name: card.card_holder_name.map(Secret::new),
                         co_badged_card_data: None, // TODO: Handle co-badged card data
                     }))
                 }
@@ -183,16 +184,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodData> for PaymentMeth
                                 error_object: None,
                             }))?;
 
-                        Ok(PaymentMethodData::Wallet(
-                            payment_method_data::WalletData::GooglePay(
-                                payment_method_data::GooglePayWalletData {
-                                    pm_type: google_pay.r#type,
-                                    description: google_pay.description,
-                                    info: google_pay_payment_method_info,
-                                    tokenization_data,
-                                },
-                            ),
-                        ))
+                        Ok(PaymentMethodData::Wallet(WalletData::GooglePay(
+                            payment_method_data::GooglePayWalletData {
+                                pm_type: google_pay.r#type,
+                                description: google_pay.description,
+                                info: google_pay_payment_method_info,
+                                tokenization_data,
+                            },
+                        )))
                     }
                     Some(grpc_api_types::payments::wallet_data::Data::ApplePay(apple_pay)) => {
                         let apple_pay_payment_method = apple_pay
@@ -439,19 +438,21 @@ impl ForeignTryFrom<PaymentsAuthorizeRequest> for PaymentsAuthorizeData {
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             confirm: true,
             webhook_url: value.webhook_url,
-            browser_info: value.browser_info.map(|info| {
-                hyperswitch_domain_models::router_request_types::BrowserInformation {
-                    color_depth: None,
-                    java_enabled: info.java_enabled,
-                    java_script_enabled: info.java_script_enabled,
-                    language: info.language,
-                    screen_height: info.screen_height,
-                    screen_width: info.screen_width,
-                    time_zone: info.time_zone,
-                    ip_address: None,
-                    accept_header: info.accept_header,
-                    user_agent: info.user_agent,
-                }
+            browser_info: value.browser_info.map(|info| BrowserInformation {
+                color_depth: None,
+                java_enabled: info.java_enabled,
+                java_script_enabled: info.java_script_enabled,
+                language: info.language,
+                screen_height: info.screen_height,
+                screen_width: info.screen_width,
+                time_zone: info.time_zone,
+                ip_address: None,
+                accept_header: info.accept_header,
+                user_agent: info.user_agent,
+                os_type: info.os_type,
+                os_version: info.os_version,
+                device_model: info.device_model,
+                accept_language: info.accept_language,
             }),
             payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
@@ -831,9 +832,7 @@ impl ForeignTryFrom<grpc_api_types::payments::AddressDetails>
             city: value.city,
             country: value
                 .country
-                .map(|c| {
-                    common_enums::CountryAlpha2::foreign_try_from(c).map(|country| country.into())
-                })
+                .map(|c| common_enums::CountryAlpha2::foreign_try_from(c))
                 .transpose()?,
             line1: value.line1.map(|val| val.into()),
             line2: value.line2.map(|val| val.into()),
@@ -1010,7 +1009,7 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match form {
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
@@ -1021,7 +1020,7 @@ pub fn generate_payment_authorize_response(
                                         ))
                                     })
                                 },
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Html { html_data } => {
+                                RedirectForm::Html { html_data } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
                                             grpc_api_types::payments::HtmlData {
@@ -1136,8 +1135,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentsSyncRequest> for PaymentsS
             encoded_data: None,
             capture_method: None,
             connector_meta: None,
-            sync_type:
-                hyperswitch_domain_models::router_request_types::SyncRequestType::SinglePaymentSync,
+            sync_type: SyncRequestType::SinglePaymentSync,
             mandate_id: None,
             payment_method_type: None,
             currency,
@@ -2078,11 +2076,9 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
 
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
-            customer_acceptance: Some(
-                hyperswitch_domain_models::mandates::CustomerAcceptance::foreign_try_from(
-                    customer_acceptance.clone(),
-                )?,
-            ),
+            customer_acceptance: Some(CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
             mandate_type: None,
         };
 
@@ -2101,11 +2097,9 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
             amount: Some(0),
             confirm: true,
             statement_descriptor_suffix: None,
-            customer_acceptance: Some(
-                hyperswitch_domain_models::mandates::CustomerAcceptance::foreign_try_from(
-                    customer_acceptance.clone(),
-                )?,
-            ),
+            customer_acceptance: Some(CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
             mandate_id: None,
             setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
@@ -2114,19 +2108,21 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
             webhook_url: None,
-            browser_info: value.browser_info.map(|info| {
-                hyperswitch_domain_models::router_request_types::BrowserInformation {
-                    color_depth: None,
-                    java_enabled: info.java_enabled,
-                    java_script_enabled: info.java_script_enabled,
-                    language: info.language,
-                    screen_height: info.screen_height,
-                    screen_width: info.screen_width,
-                    time_zone: info.time_zone,
-                    ip_address: None,
-                    accept_header: info.accept_header,
-                    user_agent: info.user_agent,
-                }
+            browser_info: value.browser_info.map(|info| BrowserInformation {
+                color_depth: None,
+                java_enabled: info.java_enabled,
+                java_script_enabled: info.java_script_enabled,
+                language: info.language,
+                screen_height: info.screen_height,
+                screen_width: info.screen_width,
+                time_zone: info.time_zone,
+                ip_address: None,
+                accept_header: info.accept_header,
+                user_agent: info.user_agent,
+                os_type: info.os_type,
+                os_version: info.os_version,
+                device_model: info.device_model,
+                accept_language: info.accept_language,
             }),
             email,
             customer_name: None,
@@ -2155,15 +2151,13 @@ impl ForeignTryFrom<SetupMandateRequest> for SetupMandateRequestData {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
-    for hyperswitch_domain_models::mandates::CustomerAcceptance
-{
+impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for CustomerAcceptance {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         _value: grpc_api_types::payments::CustomerAcceptance,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(hyperswitch_domain_models::mandates::CustomerAcceptance {
-            acceptance_type: hyperswitch_domain_models::mandates::AcceptanceType::Offline,
+        Ok(CustomerAcceptance {
+            acceptance_type: AcceptanceType::Offline,
             accepted_at: None,
             online: None,
         })
@@ -2215,7 +2209,7 @@ pub fn generate_setup_mandate_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match form {
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
@@ -2226,7 +2220,7 @@ pub fn generate_setup_mandate_response(
                                         ))
                                     })
                                 },
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Html { html_data } => {
+                                RedirectForm::Html { html_data } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
                                             grpc_api_types::payments::HtmlData {
@@ -2436,6 +2430,7 @@ pub enum PaymentMethodDataType {
     Card,
     Knet,
     Benefit,
+    CardDetailsForNetworkTransactionId,
     MomoAtm,
     CardRedirect,
     AliPayQr,
@@ -2501,6 +2496,8 @@ pub enum PaymentMethodDataType {
     AchBankTransfer,
     SepaBankTransfer,
     BacsBankTransfer,
+    InstantBankTransferFinland,
+    InstantBankTransferPoland,
     MultibancoBankTransfer,
     PermataBankTransfer,
     BcaBankTransfer,
@@ -2542,4 +2539,5 @@ pub enum PaymentMethodDataType {
     NetworkTransactionIdAndCardDetails,
     DirectCarrierBilling,
     InstantBankTransfer,
+    RevolutPay,
 }

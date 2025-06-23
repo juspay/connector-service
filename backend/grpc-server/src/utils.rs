@@ -4,9 +4,9 @@ use crate::consts;
 use common_utils::errors::CustomResult;
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
+use domain_types::router_data::ConnectorAuthType;
 use error_stack::Report;
 use http::request::Request;
-use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use tonic::metadata;
 
 /// Record the header's fields in request's trace
@@ -149,7 +149,7 @@ macro_rules! implement_connector_operation {
             let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
             // Get connector integration
-            let connector_integration: hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+            let connector_integration: interface::connector_integration_v2::BoxedConnectorIntegrationV2<
                 '_,
                 $flow_marker,
                 $resource_common_data_type,
@@ -166,7 +166,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create router data
-            let router_data = hyperswitch_domain_models::router_data_v2::RouterDataV2::<
+            let router_data = domain_types::router_data_v2::RouterDataV2::<
                 $flow_marker,
                 $resource_common_data_type,
                 $request_data_type,
@@ -176,7 +176,7 @@ macro_rules! implement_connector_operation {
                 resource_common_data: common_flow_data,
                 connector_auth_type: connector_auth_details,
                 request: specific_request_data,
-                response: Err(hyperswitch_domain_models::router_data::ErrorResponse::default()),
+                response: Err(domain_types::router_data::ErrorResponse::default()),
             };
 
             // Execute connector processing

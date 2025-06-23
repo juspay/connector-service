@@ -1,9 +1,12 @@
 use common_utils::{crypto, ext_traits::ValueExt, CustomResult};
-use hyperswitch_masking::Secret;
 use error_stack::ResultExt;
 use hyperswitch_masking::ExposeInterface;
+use hyperswitch_masking::Secret;
 
-use crate::{api::{ApplicationResponse, ConnectorCommon}, errors};
+use crate::{
+    api::{ApplicationResponse, ConnectorCommon},
+    errors,
+};
 
 #[derive(Debug)]
 pub struct IncomingWebhookRequestDetails<'a> {
@@ -18,8 +21,6 @@ pub struct IncomingWebhookRequestDetails<'a> {
     /// query_params
     pub query_params: String,
 }
-
-
 
 #[derive(Debug)]
 pub enum IncomingWebhookFlowError {
@@ -36,7 +37,8 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
     fn get_webhook_body_decoding_algorithm(
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<Box<dyn common_utils::crypto::DecodeMessage + Send>, errors::ConnectorError> {
+    ) -> CustomResult<Box<dyn common_utils::crypto::DecodeMessage + Send>, errors::ConnectorError>
+    {
         Ok(Box::new(common_utils::crypto::NoAlgorithm))
     }
 

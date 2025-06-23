@@ -9,7 +9,8 @@ members = [
   "backend/api_models",
   "backend/domain_types",
   "backend/common_enums",
-  "sdk/rust-grpc-client"
+  "sdk/rust-grpc-client",
+  "backend/interface"
 ]
 exclude = [
   "examples/example-rs",

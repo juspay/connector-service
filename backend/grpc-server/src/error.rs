@@ -1,5 +1,5 @@
 use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse};
-use hyperswitch_interfaces::errors::ConnectorError;
+use interface::errors::ConnectorError;
 use tonic::Status;
 
 use crate::logger;
@@ -130,6 +130,8 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::MissingConnectorRedirectionPayload { .. }
             | Self::MissingPaymentMethodType
             | Self::CurrencyNotSupported { .. }
+            | Self::NoConnectorWalletDetails
+            | Self::MissingConnectorMandateMetadata
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),

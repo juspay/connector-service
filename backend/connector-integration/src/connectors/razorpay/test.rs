@@ -3,18 +3,16 @@ mod tests {
 
     use cards::CardNumber;
     use common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
+    use domain_types::payment_method_data::{Card, PaymentMethodData};
     use domain_types::{
-        connector_types::{
-            BoxedConnector, ConnectorServiceTrait, PaymentFlowData, PaymentsAuthorizeData,
-        },
+        connector_types::{PaymentFlowData, PaymentsAuthorizeData},
         payment_address::PaymentAddress,
+        router_request_type::BrowserInformation,
     };
-    use hyperswitch_domain_models::{
-        payment_method_data::{Card, PaymentMethodData},
-        router_request_types::BrowserInformation,
-    };
-    use hyperswitch_interfaces::{
-        connector_integration_v2::ConnectorIntegrationV2, types::Response,
+    use interface::{
+        connector_integration_v2::ConnectorIntegrationV2,
+        connector_types::{BoxedConnector, ConnectorServiceTrait},
+        types::Response,
     };
     use serde_json::{json, to_value};
 
@@ -24,6 +22,7 @@ mod tests {
         use std::str::FromStr;
 
         use api_models::payments::{Address, PhoneDetails};
+        use cards::CardNumber;
         use common_enums::{
             AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
         };
@@ -31,21 +30,19 @@ mod tests {
             id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,
         };
         use domain_types::{
-            connector_types::{
-                BoxedConnector, ConnectorServiceTrait, PaymentFlowData, PaymentsAuthorizeData,
-            },
+            connector_types::{PaymentFlowData, PaymentsAuthorizeData},
             payment_address::PaymentAddress,
-            types::{ConnectorParams, Connectors},
-        };
-        use hyperswitch_cards::CardNumber;
-        use hyperswitch_domain_models::{
             payment_method_data::{Card, PaymentMethodData},
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
-            router_request_types::BrowserInformation,
+            router_request_type::BrowserInformation,
+            types::{ConnectorParams, Connectors},
         };
-        use hyperswitch_interfaces::{
-            connector_integration_v2::ConnectorIntegrationV2, types::Response,
+
+        use interface::{
+            connector_integration_v2::ConnectorIntegrationV2,
+            connector_types::{BoxedConnector, ConnectorServiceTrait},
+            types::Response,
         };
         use serde_json::{json, to_value, Value};
 
@@ -130,6 +127,8 @@ mod tests {
                         card_issuing_country: None,
                         bank_code: None,
                         nick_name: None,
+                        card_holder_name: None,
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -162,6 +161,11 @@ mod tests {
                         user_agent: Some(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                         ),
+                        os_type: None,
+                        os_version: None,
+                        device_model: None,
+                        accept_language: None,
+
                     }),
                     order_category: None,
                     session_token: None,
@@ -186,6 +190,9 @@ mod tests {
                     status_code: 500,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None
                 }),
             };
 
@@ -295,6 +302,8 @@ mod tests {
                         card_issuing_country: None,
                         bank_code: None,
                         nick_name: None,
+                        card_holder_name: None,
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -335,6 +344,9 @@ mod tests {
                     status_code: 400,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 }),
             };
 
@@ -419,6 +431,8 @@ mod tests {
                         card_issuing_country: None,
                         bank_code: None,
                         nick_name: None,
+                        card_holder_name: None,
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -459,6 +473,9 @@ mod tests {
                     status_code: 422,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 }),
             };
 
@@ -478,9 +495,9 @@ mod tests {
             use common_enums::Currency;
             use common_utils::pii::Email;
             use common_utils::{id_type::MerchantId, types::MinorUnit};
-            use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
+            use domain_types::connector_types::PaymentFlowData;
             use domain_types::types::{ConnectorParams, Connectors};
-            use hyperswitch_domain_models::{
+            use domain_types::{
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
@@ -563,6 +580,8 @@ mod tests {
                         card_issuing_country: None,
                         bank_code: None,
                         nick_name: None,
+                        card_holder_name: None,
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -595,6 +614,10 @@ mod tests {
                         user_agent: Some(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                         ),
+                        os_type: None,
+                        os_version: None,
+                        device_model: None,
+                        accept_language: None,
                     }),
                     order_category: None,
                     session_token: None,
@@ -619,6 +642,9 @@ mod tests {
                     status_code: 500,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None
                 }),
             };
 
@@ -652,7 +678,7 @@ mod tests {
         fn test_handle_authorize_error_response() {
             use domain_types::connector_flow::Authorize;
             use domain_types::connector_types::{
-                BoxedConnector, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+                PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             };
 
             let http_response = Response {
@@ -700,7 +726,7 @@ mod tests {
         fn test_handle_authorize_missing_required_fields() {
             use domain_types::connector_flow::Authorize;
             use domain_types::connector_types::{
-                BoxedConnector, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+                PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             };
 
             let http_response = Response {
@@ -737,7 +763,7 @@ mod tests {
     fn test_handle_authorize_invalid_error_fields() {
         use domain_types::connector_flow::Authorize;
         use domain_types::connector_types::{
-            BoxedConnector, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         };
 
         let http_response = Response {
@@ -778,9 +804,9 @@ mod tests {
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
+        use domain_types::connector_types::PaymentFlowData;
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_domain_models::{
+        use domain_types::{
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -864,6 +890,8 @@ mod tests {
                     card_issuing_country: None,
                     bank_code: None,
                     nick_name: None,
+                    card_holder_name: None,
+                    co_badged_card_data: None
                 }),
                 amount: 1000,
                 order_tax_amount: None,
@@ -896,6 +924,10 @@ mod tests {
                     user_agent: Some(
                         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                     ),
+                    os_type: None,
+                    os_version: None,
+                    device_model: None,
+                    accept_language: None
                 }),
                 order_category: None,
                 session_token: None,
@@ -920,6 +952,9 @@ mod tests {
                 status_code: 500,
                 attempt_status: None,
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None
             }),
         };
 
@@ -952,9 +987,9 @@ mod tests {
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::{BoxedConnector, PaymentFlowData};
+        use domain_types::connector_types::PaymentFlowData;
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_domain_models::{
+        use domain_types::{
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1038,6 +1073,8 @@ mod tests {
                     card_issuing_country: None,
                     bank_code: None,
                     nick_name: None,
+                    card_holder_name: None,
+                    co_badged_card_data: None
                 }),
                 amount: 1000,
                 order_tax_amount: None,
@@ -1070,6 +1107,10 @@ mod tests {
                     user_agent: Some(
                         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                     ),
+                    os_type: None,
+                    os_version: None,
+                    device_model: None,
+                    accept_language: None
                 }),
                 order_category: None,
                 session_token: None,
@@ -1094,6 +1135,9 @@ mod tests {
                 status_code: 500,
                 attempt_status: None,
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None
             }),
         };
 
@@ -1114,11 +1158,12 @@ mod tests {
     mod order {
         use api_models::payments::{Address, PhoneDetails};
         use common_utils::{pii::Email, request::RequestContent};
+        use domain_types::router_data::ConnectorAuthType;
         use domain_types::{
             payment_address::PaymentAddress,
             types::{ConnectorParams, Connectors},
         };
-        use hyperswitch_domain_models::router_data::ConnectorAuthType;
+        use interface::connector_types::BoxedConnector;
         use serde_json::{to_value, Value};
 
         use crate::connectors::Razorpay;
@@ -1127,13 +1172,13 @@ mod tests {
         fn test_build_request_valid_order() {
             use common_enums::Currency;
             use common_utils::{id_type::MerchantId, request::RequestContent, types::MinorUnit};
-            use hyperswitch_domain_models::{
+            use domain_types::{
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
             use serde_json::{to_value, Value};
 
-            use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
+            use domain_types::connector_types::PaymentCreateOrderData;
 
             let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
@@ -1211,6 +1256,9 @@ mod tests {
                     status_code: 500,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None
                 }),
             };
 
@@ -1241,13 +1289,13 @@ mod tests {
         fn test_build_request_missing() {
             use common_enums::Currency;
             use common_utils::{id_type::MerchantId, types::MinorUnit};
-            use hyperswitch_domain_models::{
+            use domain_types::{
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
 
             use crate::connectors::Razorpay;
-            use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
+            use domain_types::connector_types::PaymentCreateOrderData;
 
             let test_router_data = RouterDataV2 {
                 flow: std::marker::PhantomData,
@@ -1311,6 +1359,9 @@ mod tests {
                     status_code: 400,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None
                 }),
             };
 
@@ -1345,11 +1396,9 @@ mod tests {
                 AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
             };
             use common_utils::{id_type::MerchantId, types::MinorUnit};
-            use domain_types::connector_types::{
-                BoxedConnector, PaymentFlowData, PaymentsAuthorizeData,
-            };
+            use domain_types::connector_types::{PaymentFlowData, PaymentsAuthorizeData};
             use domain_types::types::{ConnectorParams, Connectors};
-            use hyperswitch_domain_models::{
+            use domain_types::{
                 payment_method_data::{Card, PaymentMethodData},
                 router_data::ErrorResponse,
                 router_data_v2::RouterDataV2,
@@ -1420,6 +1469,8 @@ mod tests {
                         card_issuing_country: None,
                         bank_code: None,
                         nick_name: None,
+                        card_holder_name: None,
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -1460,6 +1511,9 @@ mod tests {
                     status_code: 422,
                     attempt_status: None,
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 }),
             };
 
@@ -1480,11 +1534,9 @@ mod tests {
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::{
-            BoxedConnector, PaymentCreateOrderData, PaymentFlowData,
-        };
+        use domain_types::connector_types::{PaymentCreateOrderData, PaymentFlowData};
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_domain_models::{
+        use domain_types::{
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1565,6 +1617,9 @@ mod tests {
                 status_code: 500,
                 attempt_status: None,
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None
             }),
         };
 
@@ -1605,9 +1660,9 @@ mod tests {
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
+        use domain_types::connector_types::PaymentCreateOrderData;
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_domain_models::{
+        use domain_types::{
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1689,6 +1744,9 @@ mod tests {
                 status_code: 500,
                 attempt_status: None,
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None
             }),
         };
 
@@ -1718,9 +1776,9 @@ mod tests {
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::{BoxedConnector, PaymentCreateOrderData};
+        use domain_types::connector_types::PaymentCreateOrderData;
         use domain_types::types::{ConnectorParams, Connectors};
-        use hyperswitch_domain_models::{
+        use domain_types::{
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
@@ -1802,6 +1860,9 @@ mod tests {
                 status_code: 500,
                 attempt_status: None,
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None
             }),
         };
 
@@ -1827,8 +1888,6 @@ mod tests {
 
     #[test]
     fn test_handle_error_response_valid() {
-        use domain_types::connector_types::BoxedConnector;
-
         let http_response = Response {
             headers: None,
             response: br#"{

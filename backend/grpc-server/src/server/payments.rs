@@ -22,6 +22,10 @@ use domain_types::{
     types::{generate_accept_dispute_response, generate_submit_evidence_response},
 };
 use domain_types::{
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+};
+use domain_types::{
     types::{
         generate_defend_dispute_response, generate_payment_capture_response,
         generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
@@ -40,11 +44,7 @@ use grpc_api_types::payments::{
     RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest,
     SubmitEvidenceResponse,
 };
-use hyperswitch_domain_models::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interface::connector_integration_v2::BoxedConnectorIntegrationV2;
 
 use tracing::info;
 

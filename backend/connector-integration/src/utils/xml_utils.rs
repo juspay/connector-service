@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use hyperswitch_interfaces::errors as hs_errors;
+
 use serde_json::{Map, Value};
 
 /// Processes XML response bytes by converting to properly structured JSON.

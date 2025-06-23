@@ -12,12 +12,8 @@ use crate::{
     api::{self},
     errors,
     events::connector_api_logs::ConnectorEvent,
-    types, webhooks,
+    types,
 };
-
-
-
-
 
 /// alias for Box of a type that implements trait ConnectorIntegrationV2
 pub type BoxedConnectorIntegrationV2<'a, Flow, ResourceCommonData, Req, Resp> =
@@ -74,7 +70,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     ) -> CustomResult<String, errors::ConnectorError> {
         // metrics::UNIMPLEMENTED_FLOW
         //     .add(1, router_env::metric_attributes!(("connector", self.id()))); // TODO: discuss env
-        Ok(String::new()) 
+        Ok(String::new())
     }
 
     /// returns request body
@@ -124,7 +120,9 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         Req: Clone,
         Resp: Clone,
     {
-        event_builder.map(|e| e.set_error(json!({"error": "Not Implemented"})));
+        if let Some(e) = event_builder {
+            e.set_error(json!({"error": "Not Implemented"}))
+        }
         Ok(data.clone())
     }
 
@@ -134,7 +132,9 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         res: types::Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        event_builder.map(|event| event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
+        if let Some(event) = event_builder {
+            event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+        }
         Ok(ErrorResponse::get_not_implemented())
     }
 
@@ -144,7 +144,9 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         res: types::Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        event_builder.map(|event| event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
+        if let Some(event) = event_builder {
+            event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+        }
         let error_message = match res.status_code {
             500 => "internal_server_error",
             501 => "not_implemented",

@@ -4,7 +4,6 @@ use common_enums::ApiClientError;
 use common_utils::errors::ErrorSwitch;
 use domain_types::errors::ApiErrorResponse;
 
-
 /// Connector Errors
 #[allow(missing_docs, missing_debug_implementations)]
 #[derive(Debug, thiserror::Error, PartialEq)]

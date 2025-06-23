@@ -2,16 +2,8 @@
 
 use std::{convert::AsRef, fmt, ops, str::FromStr};
 
-use diesel::{
-    backend::Backend,
-    deserialize,
-    deserialize::FromSql,
-    prelude::*,
-    serialize::{Output, ToSql},
-    sql_types, AsExpression,
-};
 use error_stack::ResultExt;
-use masking::{ExposeInterface, Secret, Strategy, WithType};
+use hyperswitch_masking::{ExposeInterface, Secret, Strategy, WithType};
 use serde::Deserialize;
 
 use crate::errors::{self, ValidationError};
@@ -40,10 +32,7 @@ where
 }
 
 /// Email address
-#[derive(
-    serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Default, AsExpression,
-)]
-#[diesel(sql_type = sql_types::Text)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(try_from = "String")]
 pub struct Email(Secret<String, EmailStrategy>);
 
@@ -72,39 +61,6 @@ impl ops::Deref for Email {
 impl ops::DerefMut for Email {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
-    }
-}
-
-impl<DB> Queryable<sql_types::Text, DB> for Email
-where
-    DB: Backend,
-    Self: FromSql<sql_types::Text, DB>,
-{
-    type Row = Self;
-
-    fn build(row: Self::Row) -> deserialize::Result<Self> {
-        Ok(row)
-    }
-}
-
-impl<DB> FromSql<sql_types::Text, DB> for Email
-where
-    DB: Backend,
-    String: FromSql<sql_types::Text, DB>,
-{
-    fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
-        let val = String::from_sql(bytes)?;
-        Ok(Self::from_str(val.as_str())?)
-    }
-}
-
-impl<DB> ToSql<sql_types::Text, DB> for Email
-where
-    DB: Backend,
-    String: ToSql<sql_types::Text, DB>,
-{
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> diesel::serialize::Result {
-        self.0.to_sql(out)
     }
 }
 
@@ -154,5 +110,40 @@ where
         } else {
             WithType::fmt(val, f)
         }
+    }
+}
+
+/// Strategy for masking UPI VPA's
+#[derive(Debug)]
+pub enum UpiVpaMaskingStrategy {}
+
+impl<T> Strategy<T> for UpiVpaMaskingStrategy
+where
+    T: AsRef<str> + fmt::Debug,
+{
+    fn fmt(val: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let vpa_str: &str = val.as_ref();
+        if let Some((user_identifier, bank_or_psp)) = vpa_str.split_once('@') {
+            let masked_user_identifier = "*".repeat(user_identifier.len());
+            write!(f, "{masked_user_identifier}@{bank_or_psp}")
+        } else {
+            WithType::fmt(val, f)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum EncryptionStrategy {}
+
+impl<T> Strategy<T> for EncryptionStrategy
+where
+    T: AsRef<[u8]>,
+{
+    fn fmt(value: &T, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            fmt,
+            "*** Encrypted data of length {} bytes ***",
+            value.as_ref().len()
+        )
     }
 }

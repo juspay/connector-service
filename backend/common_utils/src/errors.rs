@@ -136,3 +136,25 @@ where
         }
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum CryptoError {
+    /// The cryptographic algorithm was unable to encode the message
+    #[error("Failed to encode given message")]
+    EncodingFailed,
+    /// The cryptographic algorithm was unable to decode the message
+    #[error("Failed to decode given message")]
+    DecodingFailed,
+    /// The cryptographic algorithm was unable to sign the message
+    #[error("Failed to sign message")]
+    MessageSigningFailed,
+    /// The cryptographic algorithm was unable to verify the given signature
+    #[error("Failed to verify signature")]
+    SignatureVerificationFailed,
+    /// The provided key length is invalid for the cryptographic algorithm
+    #[error("Invalid key length")]
+    InvalidKeyLength,
+    /// The provided IV length is invalid for the cryptographic algorithm
+    #[error("Invalid IV length")]
+    InvalidIvLength,
+}

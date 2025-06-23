@@ -7,34 +7,38 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorSpecifications,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, IncomingWebhook,
-        PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundsData, RefundsResponseData,
-        SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
-        ValidationTrait,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt, WebhookDetailsResponse,
+    },
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    types::{
+        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,
+        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+        SupportedPaymentMethods,
     },
 };
 use error_stack::ResultExt;
 
-use hyperswitch_domain_models::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
-use hyperswitch_interfaces::{
-    api::ConnectorCommon,
-    configs::Connectors as InterfaceConnectors,
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use interface::{
+    api::{self, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
+    errors,
+};
+use interface::{
+    connector_types::{self as interfaces, is_mandate_supported},
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
+    webhooks,
 };
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use ring::hmac;
 use time::OffsetDateTime;
 use uuid::Uuid;
@@ -61,50 +65,20 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
-impl ConnectorServiceTrait for Fiserv {}
-impl PaymentAuthorizeV2 for Fiserv {}
-impl PaymentSyncV2 for Fiserv {}
-impl PaymentVoidV2 for Fiserv {}
-impl RefundSyncV2 for Fiserv {}
-impl RefundV2 for Fiserv {}
-impl PaymentCapture for Fiserv {}
-impl ValidationTrait for Fiserv {}
-impl PaymentOrderCreate for Fiserv {}
-impl SetupMandateV2 for Fiserv {}
-impl AcceptDispute for Fiserv {}
-impl SubmitEvidenceV2 for Fiserv {}
-impl DisputeDefend for Fiserv {}
-impl IncomingWebhook for Fiserv {}
-
-// Implement RSync to fix the RefundSyncV2 trait requirement
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Fiserv,
-    curl_request: Json(FiservRefundSyncRequest),
-    curl_response: FiservRefundSyncResponse,
-    flow_name: RSync,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundSyncData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}ch/payments/v1/transaction-inquiry",
-                self.connector_base_url_refunds(req)
-            ))
-        }
-    }
-);
+impl interfaces::ConnectorServiceTrait for Fiserv {}
+impl interfaces::PaymentAuthorizeV2 for Fiserv {}
+impl interfaces::PaymentSyncV2 for Fiserv {}
+impl interfaces::PaymentVoidV2 for Fiserv {}
+impl interfaces::RefundSyncV2 for Fiserv {}
+impl interfaces::RefundV2 for Fiserv {}
+impl interfaces::PaymentCapture for Fiserv {}
+impl interfaces::ValidationTrait for Fiserv {}
+impl interfaces::PaymentOrderCreate for Fiserv {}
+impl interfaces::SetupMandateV2 for Fiserv {}
+impl interfaces::AcceptDispute for Fiserv {}
+impl interfaces::SubmitEvidenceV2 for Fiserv {}
+impl interfaces::DisputeDefend for Fiserv {}
+impl interfaces::IncomingWebhook for Fiserv {}
 
 macros::create_all_prerequisites!(
     connector_name: Fiserv,
@@ -235,6 +209,36 @@ macros::create_all_prerequisites!(
     }
 );
 
+// Implement RSync to fix the RefundSyncV2 trait requirement
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Fiserv,
+    curl_request: Json(FiservRefundSyncRequest),
+    curl_response: FiservRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+                "{}ch/payments/v1/transaction-inquiry",
+                self.connector_base_url_refunds(req)
+            ))
+        }
+    }
+);
+
 impl ConnectorCommon for Fiserv {
     fn id(&self) -> &'static str {
         "fiserv"
@@ -244,7 +248,7 @@ impl ConnectorCommon for Fiserv {
         "application/json"
     }
 
-    fn base_url<'a>(&self, connectors: &'a InterfaceConnectors) -> &'a str {
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         connectors.fiserv.base_url.as_ref()
     }
 
@@ -288,6 +292,9 @@ impl ConnectorCommon for Fiserv {
             reason: first_error_detail.and_then(|e| e.field.clone()),
             attempt_status: None,
             connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 }

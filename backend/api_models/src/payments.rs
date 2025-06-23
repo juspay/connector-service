@@ -1,7 +1,8 @@
-use common_enums as api_enums;
-use common_utils::ext_traits::ConfigExt;
+use common_enums::{self as api_enums, ProductType};
 use common_utils::pii::Email;
-use masking::{PeekInterface, Secret};
+use common_utils::{ext_traits::ConfigExt, MinorUnit};
+use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
+
 use utoipa::ToSchema;
 
 #[derive(Default, Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -95,7 +96,7 @@ pub struct Address {
     pub email: Option<Email>,
 }
 
-impl masking::SerializableSecret for Address {}
+impl SerializableSecret for Address {}
 
 impl Address {
     /// Unify the address, giving priority to `self` when details are present in both
@@ -205,3 +206,44 @@ pub struct PhoneDetails {
     #[schema(example = "+1")]
     pub country_code: Option<String>,
 }
+
+#[derive(Debug, serde::Serialize, PartialEq, Eq, serde::Deserialize)]
+pub struct RedirectionResponse {
+    pub return_url_with_query_params: String,
+}
+
+#[derive(Debug, Default, PartialEq, serde::Deserialize, serde::Serialize, Clone, ToSchema)]
+pub struct OrderDetailsWithAmount {
+    /// Name of the product that is being purchased
+    #[schema(max_length = 255, example = "shirt")]
+    pub product_name: String,
+    /// The quantity of the product to be purchased
+    #[schema(example = 1)]
+    pub quantity: u16,
+    /// the amount per quantity of product
+    #[schema(value_type = i64)]
+    pub amount: MinorUnit,
+    /// tax rate applicable to the product
+    pub tax_rate: Option<f64>,
+    /// total tax amount applicable to the product
+    #[schema(value_type = Option<i64>)]
+    pub total_tax_amount: Option<MinorUnit>,
+    // Does the order includes shipping
+    pub requires_shipping: Option<bool>,
+    /// The image URL of the product
+    pub product_img_link: Option<String>,
+    /// ID of the product that is being purchased
+    pub product_id: Option<String>,
+    /// Category of the product that is being purchased
+    pub category: Option<String>,
+    /// Sub category of the product that is being purchased
+    pub sub_category: Option<String>,
+    /// Brand of the product that is being purchased
+    pub brand: Option<String>,
+    /// Type of the product that is being purchased
+    pub product_type: Option<ProductType>,
+    /// The tax code for the product
+    pub product_tax_code: Option<String>,
+}
+
+impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}

@@ -17,46 +17,43 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        is_mandate_supported, ConnectorSpecifications, ConnectorValidation,
-        SupportedPaymentMethodsExt,
-    },
-    connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        IncomingWebhook, PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSyncV2,
-        PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
-        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
-        ValidationTrait, WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     types::{
-        CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
+        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,
         PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
         SupportedPaymentMethods,
     },
+};
+use interface::{
+    api::{self, ConnectorCommon},
+    connector_integration_v2::ConnectorIntegrationV2,
+    errors,
+};
+use interface::{
+    connector_types::{self as interfaces, is_mandate_supported},
+    events::connector_api_logs::ConnectorEvent,
+    types::Response,
+    webhooks,
 };
 use std::sync::LazyLock;
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use error_stack::{report, ResultExt};
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_request_types::SyncRequestType,
+    router_request_type::SyncRequestType,
 };
-use hyperswitch_interfaces::{
-    api::{self, CaptureSyncMethod, ConnectorCommon},
-    configs::Connectors,
-    connector_integration_v2::ConnectorIntegrationV2,
-    errors,
-    errors::ConnectorError,
-    events::connector_api_logs::ConnectorEvent,
-    types::Response,
-};
+use error_stack::{report, ResultExt};
+
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 
 use transformers::{self as razorpay, ForeignTryFrom};
@@ -72,24 +69,24 @@ pub struct Razorpay {
     pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
 }
 
-impl ValidationTrait for Razorpay {
+impl interfaces::ValidationTrait for Razorpay {
     fn should_do_order_create(&self) -> bool {
         true
     }
 }
 
-impl ConnectorServiceTrait for Razorpay {}
-impl PaymentAuthorizeV2 for Razorpay {}
-impl PaymentSyncV2 for Razorpay {}
-impl PaymentOrderCreate for Razorpay {}
-impl PaymentVoidV2 for Razorpay {}
-impl RefundSyncV2 for Razorpay {}
-impl RefundV2 for Razorpay {}
-impl PaymentCapture for Razorpay {}
-impl SetupMandateV2 for Razorpay {}
-impl AcceptDispute for Razorpay {}
-impl SubmitEvidenceV2 for Razorpay {}
-impl DisputeDefend for Razorpay {}
+impl interfaces::ConnectorServiceTrait for Razorpay {}
+impl interfaces::PaymentAuthorizeV2 for Razorpay {}
+impl interfaces::PaymentSyncV2 for Razorpay {}
+impl interfaces::PaymentOrderCreate for Razorpay {}
+impl interfaces::PaymentVoidV2 for Razorpay {}
+impl interfaces::RefundSyncV2 for Razorpay {}
+impl interfaces::RefundV2 for Razorpay {}
+impl interfaces::PaymentCapture for Razorpay {}
+impl interfaces::SetupMandateV2 for Razorpay {}
+impl interfaces::AcceptDispute for Razorpay {}
+impl interfaces::SubmitEvidenceV2 for Razorpay {}
+impl interfaces::DisputeDefend for Razorpay {}
 
 impl Razorpay {
     pub const fn new() -> &'static Self {
@@ -142,6 +139,9 @@ impl ConnectorCommon for Razorpay {
             reason: Some(response.error.reason),
             attempt_status: None,
             connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 }
@@ -320,11 +320,11 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         self.build_error_response(res, event_builder)
     }
 
-    fn get_multiple_capture_sync_method(
-        &self,
-    ) -> CustomResult<CaptureSyncMethod, errors::ConnectorError> {
-        Ok(CaptureSyncMethod::Individual)
-    }
+    // fn get_multiple_capture_sync_method(
+    //     &self,
+    // ) -> CustomResult<CaptureSyncMethod, errors::ConnectorError> {
+    //     Ok(CaptureSyncMethod::Individual)
+    // }
     fn get_5xx_error_response(
         &self,
         res: Response,
@@ -508,7 +508,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
     }
 }
 
-impl IncomingWebhook for Razorpay {
+impl interfaces::IncomingWebhook for Razorpay {
     fn get_event_type(
         &self,
         request: RequestDetails,
@@ -779,19 +779,19 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 {
 }
 
-impl ConnectorValidation for Razorpay {
+impl interfaces::ConnectorValidation for Razorpay {
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), errors::ConnectorError> {
         let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
         is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
     }
 
     fn validate_psync_reference_id(
         &self,
-        data: &hyperswitch_domain_models::router_request_types::PaymentsSyncData,
+        data: &domain_types::connector_types::PaymentsSyncData,
         _is_three_ds: bool,
         _status: AttemptStatus,
         _connector_meta_data: Option<SecretSerdeValue>,
