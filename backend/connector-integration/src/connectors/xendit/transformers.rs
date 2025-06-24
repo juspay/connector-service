@@ -11,6 +11,7 @@ use crate::connectors::xendit::XenditRouterData;
 use crate::types::ResponseRouterData;
 use error_stack::ResultExt;
 use hyperswitch_common_utils::{
+    pii,
     request::Method,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
@@ -56,9 +57,9 @@ pub struct CardInformation {
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     pub cvv: Secret<String>,
-    // pub cardholder_name: Secret<String>,
-    // pub cardholder_email: pii::Email,
-    // pub cardholder_phone_number: Secret<String>,
+    pub cardholder_name: Option<Secret<String>>,
+    pub cardholder_email: Option<pii::Email>,
+    pub cardholder_phone_number: Option<Secret<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -324,11 +325,9 @@ impl
                     expiry_month: card_data.card_exp_month.clone(),
                     expiry_year: card_data.card_exp_year.clone(),
                     cvv: card_data.card_cvc.clone(),
-                    // cardholder_name_not_found
-                    // cardholder_name: Secret::new("Test User".to_string()),
-                    // cardholder_email: pii::Email::try_from("test@example.com".to_string())
-                    // .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?,
-                    // cardholder_phone_number: Secret::new("+1234567890".to_string()),
+                    cardholder_email: None,
+                    cardholder_name: None,
+                    cardholder_phone_number: None,
                 },
             },
             reusability: TransactionType::OneTimeUse,
@@ -381,9 +380,6 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 attempt_status: None,
                 connector_transaction_id: Some(response.id.clone()),
                 status_code: http_code,
-                // network_advice_code: None,
-                // network_decline_code: None,
-                // network_error_message: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -463,9 +459,6 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         attempt_status: None,
                         connector_transaction_id: Some(payment_response.id.clone()),
                         status_code: http_code,
-                        //network_advice_code: None,
-                        // network_decline_code: None,
-                        //network_error_message: None,
                     })
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -477,7 +470,6 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
-                        // charges: None,
                     })
                 };
                 Ok(Self {
@@ -575,9 +567,6 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 attempt_status: None,
                 connector_transaction_id: None,
                 status_code: http_code,
-                // network_advice_code: None,
-                // network_decline_code: None,
-                // network_error_message: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -589,7 +578,6 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                //charges: None,
             })
         };
         Ok(Self {
