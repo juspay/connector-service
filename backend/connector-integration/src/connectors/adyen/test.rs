@@ -3,23 +3,23 @@ mod tests {
     pub mod authorize {
         use crate::connectors::Adyen;
         use crate::types::ConnectorData;
+        use common_utils::pii::Email;
+        use common_utils::request::RequestContent;
+        use common_utils::types::MinorUnit;
         use domain_types::connector_flow::Authorize;
         use domain_types::connector_types::{
-            BoxedConnector, ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData,
-            PaymentsResponseData,
+            ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         };
         use domain_types::types::ConnectorParams;
         use domain_types::types::Connectors;
-        use hyperswitch_common_utils::pii::Email;
-        use hyperswitch_common_utils::request::RequestContent;
-        use hyperswitch_common_utils::types::MinorUnit;
-        use hyperswitch_domain_models::{
+        use domain_types::{
             payment_method_data::PaymentMethodData,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
         };
-        use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
         use hyperswitch_masking::Secret;
+        use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+        use interfaces::connector_types::BoxedConnector;
         use serde_json::json;
         use std::borrow::Cow;
         use std::marker::PhantomData;
@@ -36,19 +36,19 @@ mod tests {
             > = RouterDataV2 {
                 flow: PhantomData::<domain_types::connector_flow::Authorize>,
                 resource_common_data: PaymentFlowData {
-                    merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+                    merchant_id: common_utils::id_type::MerchantId::default(),
                     customer_id: None,
                     connector_customer: Some("conn_cust_987654".to_string()),
                     payment_id: "pay_abcdef123456".to_string(),
                     attempt_id: "attempt_123456abcdef".to_string(),
-                    status: hyperswitch_common_enums::AttemptStatus::Pending,
-                    payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                    status: common_enums::AttemptStatus::Pending,
+                    payment_method: common_enums::PaymentMethod::Card,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
-                    address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
+                    address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
-                    auth_type: hyperswitch_common_enums::AuthenticationType::ThreeDs,
+                    auth_type: common_enums::AuthenticationType::ThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
@@ -77,8 +77,8 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(
-                        hyperswitch_domain_models::payment_method_data::Card {
-                            card_number: hyperswitch_cards::CardNumber::from_str(
+                        domain_types::payment_method_data::Card {
+                            card_number: cards::CardNumber::from_str(
                                 "5123456789012346",
                             )
                             .unwrap(),
@@ -95,7 +95,7 @@ mod tests {
                             .expect("Failed to parse email"),
                     ),
                     customer_name: None,
-                    currency: hyperswitch_common_enums::Currency::USD,
+                    currency: common_enums::Currency::USD,
                     confirm: true,
                     statement_descriptor_suffix: None,
                     statement_descriptor: None,
@@ -107,7 +107,7 @@ mod tests {
                     setup_future_usage: None,
                     off_session: None,
                     browser_info: Some(
-                        hyperswitch_domain_models::router_request_types::BrowserInformation {
+                        domain_types::router_request_types::BrowserInformation {
                             color_depth: None,
                             java_enabled: Some(false),
                             screen_height: Some(1080),
@@ -123,6 +123,10 @@ mod tests {
                             language: Some("en-US".to_string()),
                             time_zone: None,
                             ip_address: None,
+                            os_type: None,
+                            os_version: None,
+                            device_model: None,
+                            accept_language: None,
                         },
                     ),
                     order_category: None,
@@ -130,9 +134,9 @@ mod tests {
                     enrolled_for_3ds: true,
                     related_transaction_id: None,
                     payment_experience: None,
-                    payment_method_type: Some(hyperswitch_common_enums::PaymentMethodType::Credit),
+                    payment_method_type: Some(common_enums::PaymentMethodType::Credit),
                     customer_id: Some(
-                        hyperswitch_common_utils::id_type::CustomerId::try_from(Cow::from(
+                        common_utils::id_type::CustomerId::try_from(Cow::from(
                             "cus_123456789".to_string(),
                         ))
                         .unwrap(),
@@ -197,19 +201,19 @@ mod tests {
             > = RouterDataV2 {
                 flow: PhantomData::<Authorize>,
                 resource_common_data: PaymentFlowData {
-                    merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+                    merchant_id: common_utils::id_type::MerchantId::default(),
                     customer_id: None,
                     connector_customer: None,
                     payment_id: "".to_string(),
                     attempt_id: "".to_string(),
-                    status: hyperswitch_common_enums::AttemptStatus::Pending,
-                    payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+                    status: common_enums::AttemptStatus::Pending,
+                    payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
-                    address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
+                    address: domain_types::payment_address::PaymentAddress::new(
                         None, None, None, None,
                     ),
-                    auth_type: hyperswitch_common_enums::AuthenticationType::ThreeDs,
+                    auth_type: common_enums::AuthenticationType::ThreeDs,
                     connector_meta_data: None,
                     amount_captured: None,
                     minor_amount_captured: None,
@@ -242,7 +246,7 @@ mod tests {
                     order_tax_amount: None,
                     email: None,
                     customer_name: None,
-                    currency: hyperswitch_common_enums::Currency::USD,
+                    currency: common_enums::Currency::USD,
                     confirm: true,
                     statement_descriptor_suffix: None,
                     statement_descriptor: None,
@@ -302,22 +306,22 @@ mod tests {
         //     > = RouterDataV2 {
         //         flow: PhantomData::<Authorize>,
         //         resource_common_data: PaymentFlowData {
-        //             merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+        //             merchant_id: common_utils::id_type::MerchantId::default(),
         //             customer_id: None,
         //             connector_customer: None,
         //             payment_id: "pay_invalid".to_string(),
         //             attempt_id: "attempt_invalid".to_string(),
-        //             status: hyperswitch_common_enums::AttemptStatus::Pending,
-        //             payment_method: hyperswitch_common_enums::PaymentMethod::Card,
+        //             status: common_enums::AttemptStatus::Pending,
+        //             payment_method: common_enums::PaymentMethod::Card,
         //             description: Some("Invalid test".to_string()),
         //             return_url: None,
-        //             address: hyperswitch_domain_models::payment_address::PaymentAddress::new(
+        //             address: domain_types::payment_address::PaymentAddress::new(
         //                 None,
         //                 None,
         //                 None,
         //                 None
         //             ),
-        //             auth_type: hyperswitch_common_enums::AuthenticationType::ThreeDs,
+        //             auth_type: common_enums::AuthenticationType::ThreeDs,
         //             connector_meta_data: None,
         //             amount_captured: None,
         //             minor_amount_captured: None,
@@ -346,8 +350,8 @@ mod tests {
         //         },
         //         request: PaymentsAuthorizeData {
         //             payment_method_data: PaymentMethodData::Card(
-        //                 (hyperswitch_domain_models::payment_method_data::Card {
-        //                     card_number: hyperswitch_cards::CardNumber
+        //                 (domain_types::payment_method_data::Card {
+        //                     card_number: cards::CardNumber
         //                         ::from_str("1234567890123456")
         //                         .unwrap(),
         //                     card_cvc: Secret::new("12".into()),
@@ -363,7 +367,7 @@ mod tests {
         //                 .transpose()
         //                 .unwrap_or(None),
         //             customer_name: None,
-        //             currency: hyperswitch_common_enums::Currency::USD,
+        //             currency: common_enums::Currency::USD,
         //             confirm: true,
         //             statement_descriptor_suffix: None,
         //             statement_descriptor: None,

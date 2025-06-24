@@ -1,6 +1,6 @@
-use crate::consts;
 use crate::{configs, error::ConfigurationError, logger, metrics, utils};
 use axum::http;
+use common_utils::consts;
 use grpc_api_types::{
     health_check::health_server,
     payments::{payment_service_handler, payment_service_server},

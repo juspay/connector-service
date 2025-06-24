@@ -1,19 +1,17 @@
-use error_stack::{report, ResultExt};
-use hyperswitch_common_enums::enums;
-use hyperswitch_common_utils::{
+use common_enums::enums;
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
+use common_utils::{
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors::ConnectorError,
-};
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
+use interfaces::errors::ConnectorError;
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::fiserv::FiservRouterData;
@@ -55,7 +53,7 @@ pub enum Source {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CardData {
-    pub card_data: hyperswitch_cards::CardNumber,
+    pub card_data: cards::CardNumber,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub security_code: Secret<String>,
@@ -791,6 +789,9 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                 status_code: http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -856,6 +857,9 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 status_code: http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -919,6 +923,9 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 status_code: http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -989,6 +996,9 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 status_code: http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1042,6 +1052,9 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 status_code: http_code,
                 attempt_status: None,
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1104,6 +1117,9 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 status_code: http_code,
                 attempt_status: None,
                 connector_transaction_id: gateway_resp.gateway_transaction_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1146,6 +1162,9 @@ impl<F, Req, Res> TryFrom<ResponseRouterData<FiservErrorResponse, Self>>
             status_code: http_code,
             attempt_status: None,
             connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         });
 
         Ok(router_data_out)
