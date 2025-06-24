@@ -1,5 +1,5 @@
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
@@ -40,11 +40,23 @@ pub struct CheckoutAuthType {
 #[derive(Debug, Serialize, Default)]
 pub struct CheckoutSyncRequest {}
 
+// Empty request structure for RSync
+#[derive(Debug, Serialize, Default)]
+pub struct CheckoutRefundSyncRequest {}
+
+// Define the source types enum
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CheckoutSourceTypes {
+    Card,
+    Token,
+}
+
 // Card source structure
 #[derive(Debug, Serialize)]
 pub struct CardSource {
     #[serde(rename = "type")]
-    pub source_type: String,
+    pub source_type: CheckoutSourceTypes,
     pub number: hyperswitch_cards::CardNumber,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
@@ -113,6 +125,23 @@ pub struct RefundResponse {
     reference: String,
 }
 
+// Wrapper struct to match HS implementation
+#[derive(Deserialize)]
+pub struct CheckoutRefundResponse {
+    pub(super) status: u16,
+    pub(super) response: RefundResponse,
+}
+
+impl From<&CheckoutRefundResponse> for enums::RefundStatus {
+    fn from(item: &CheckoutRefundResponse) -> Self {
+        if item.status == 202 {
+            Self::Success
+        } else {
+            Self::Failure
+        }
+    }
+}
+
 #[derive(Deserialize, Debug, Serialize)]
 pub struct ActionResponse {
     #[serde(rename = "id")]
@@ -120,6 +149,16 @@ pub struct ActionResponse {
     pub amount: MinorUnit,
     pub approved: Option<bool>,
     pub reference: Option<String>,
+}
+
+impl From<&ActionResponse> for enums::RefundStatus {
+    fn from(item: &ActionResponse) -> Self {
+        match item.approved {
+            Some(true) => Self::Success,
+            Some(false) => Self::Failure,
+            None => Self::Pending,
+        }
+    }
 }
 
 // Payment void request structure
@@ -131,8 +170,20 @@ pub struct PaymentVoidRequest {
 // Payment void response structure
 #[derive(Clone, Default, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct PaymentVoidResponse {
+    #[serde(skip)]
+    pub(super) status: u16,
     pub action_id: String,
     pub reference: String,
+}
+
+impl From<&PaymentVoidResponse> for enums::AttemptStatus {
+    fn from(item: &PaymentVoidResponse) -> Self {
+        if item.status == 202 {
+            Self::Voided
+        } else {
+            Self::VoidFailed
+        }
+    }
 }
 
 // Payment status enum
@@ -234,7 +285,7 @@ impl
 
         // Create card source
         let source = CardSource {
-            source_type: "card".to_string(),
+            source_type: CheckoutSourceTypes::Card,
             number: card_details.card_number.clone(),
             expiry_month: card_details.card_exp_month.clone(),
             expiry_year: card_details.card_exp_year.clone(),
@@ -530,19 +581,18 @@ impl<F>
         >,
     ) -> Result<Self, Self::Error> {
         let ResponseRouterData {
-            response,
+            mut response,
             router_data,
             http_code,
         } = item;
 
         let mut router_data = router_data;
 
-        // Set status based on HTTP response code
-        let status = if http_code == 202 {
-            enums::AttemptStatus::Voided
-        } else {
-            enums::AttemptStatus::VoidFailed
-        };
+        // Set the HTTP status code in the response object
+        response.status = http_code;
+
+        // Get the attempt status using the From implementation
+        let status = enums::AttemptStatus::from(&response);
 
         router_data.resource_common_data.status = status;
 
@@ -552,7 +602,7 @@ impl<F>
             mandate_reference: Box::new(None),
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(response.reference),
+            connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
         });
@@ -641,17 +691,18 @@ impl<F>
             http_code,
         } = item;
 
-        let mut router_data = router_data;
-
-        // Determine refund status based on HTTP status code
-        let refund_status = if http_code == 202 {
-            enums::RefundStatus::Success
-        } else {
-            enums::RefundStatus::Pending
+        // Create the wrapper structure with status code
+        let checkout_refund_response = CheckoutRefundResponse {
+            status: http_code,
+            response,
         };
 
+        // Get the refund status using the From implementation
+        let refund_status = enums::RefundStatus::from(&checkout_refund_response);
+
+        let mut router_data = router_data;
         router_data.response = Ok(RefundsResponseData {
-            connector_refund_id: response.action_id,
+            connector_refund_id: checkout_refund_response.response.action_id,
             refund_status,
             raw_connector_response: None,
         });
@@ -682,11 +733,8 @@ impl<F>
             http_code: _,
         } = item;
 
-        let refund_status = match response.approved {
-            Some(true) => enums::RefundStatus::Success,
-            Some(false) => enums::RefundStatus::Failure,
-            None => enums::RefundStatus::Pending,
-        };
+        // Get the refund status using the From implementation
+        let refund_status = enums::RefundStatus::from(&response);
 
         let mut router_data = router_data;
         router_data.response = Ok(RefundsResponseData {
@@ -719,15 +767,21 @@ impl
     }
 }
 
-// Direct implementation for router data too
-impl TryFrom<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for CheckoutSyncRequest
+// Implementation for CheckoutRefundSyncRequest with CheckoutRouterData
+impl
+    TryFrom<
+        super::CheckoutRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for CheckoutRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        _item: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _item: super::CheckoutRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        // For Checkout, PSync is a simple GET request with no body
+        // For Checkout, RSync is a simple GET request with no body
         // So we just return an empty struct
         Ok(Self {})
     }
@@ -755,11 +809,8 @@ impl<F>
             http_code: _,
         } = item;
 
-        let refund_status = match response.approved {
-            Some(true) => enums::RefundStatus::Success,
-            Some(false) => enums::RefundStatus::Failure,
-            None => enums::RefundStatus::Pending,
-        };
+        // Get the refund status using the From implementation
+        let refund_status = enums::RefundStatus::from(response);
 
         let mut router_data = router_data;
         router_data.response = Ok(RefundsResponseData {

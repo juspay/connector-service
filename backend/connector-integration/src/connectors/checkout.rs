@@ -1,13 +1,9 @@
 pub mod transformers;
 
 use crate::types::ResponseRouterData;
-use domain_types::connector_flow::PSync;
 use error_stack::ResultExt;
-use hyperswitch_common_enums::RefundStatus;
 use hyperswitch_common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    request::{Method, Request, RequestBuilder, RequestContent},
+    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
 };
 
 use hyperswitch_domain_models::{
@@ -26,7 +22,7 @@ use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use super::macros;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
@@ -40,9 +36,9 @@ use domain_types::{
     },
 };
 use transformers::{
-    CheckoutAuthorizeResponse, CheckoutErrorResponse, CheckoutPSyncResponse,
-    CheckoutPaymentsRequest, CheckoutSyncRequest, PaymentCaptureRequest, PaymentCaptureResponse,
-    PaymentVoidRequest, PaymentVoidResponse, RefundRequest, RefundResponse,
+    ActionResponse, CheckoutAuthorizeResponse, CheckoutErrorResponse, CheckoutPSyncResponse,
+    CheckoutPaymentsRequest, CheckoutRefundSyncRequest, CheckoutSyncRequest, PaymentCaptureRequest,
+    PaymentCaptureResponse, PaymentVoidRequest, PaymentVoidResponse, RefundRequest, RefundResponse,
 };
 
 pub(crate) mod headers {
@@ -99,6 +95,12 @@ macros::create_all_prerequisites!(
             request_body: RefundRequest,
             response_body: RefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+        ),
+        (
+            flow: RSync,
+            request_body: CheckoutRefundSyncRequest,
+            response_body: ActionResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
         )
     ],
     amount_converters: [],
@@ -245,96 +247,36 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Checkout
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let connector_tx_id = &req.request.connector_transaction_id;
-        Ok(format!(
-            "{}payments/{}/actions",
-            self.connector_base_url_refunds(req),
-            connector_tx_id
-        ))
-    }
-
-    fn build_request_v2(
-        &self,
-        req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
-        let request = RequestBuilder::new()
-            .method(Method::Get)
-            .url(&self.get_url(req)?)
-            .attach_default_headers()
-            .headers(self.get_headers(req)?)
-            .build();
-        Ok(Some(request))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        errors::ConnectorError,
-    > {
-        let responses: Vec<transformers::ActionResponse> = res
-            .response
-            .parse_struct("Vec<ActionResponse>")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(i) = event_builder {
-            i.set_response_body(&responses);
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Checkout,
+    curl_request: Json(CheckoutRefundSyncRequest),
+    curl_response: ActionResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
         }
-
-        // Find the specific refund action by its ID
-        let refund_action_id = data.request.connector_refund_id.clone();
-        let response = responses
-            .iter()
-            .find(|action| action.action_id == refund_action_id)
-            .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
-
-        // Create a refund status based on the approval status
-        let refund_status = match response.approved {
-            Some(true) => RefundStatus::Success,
-            Some(false) => RefundStatus::Failure,
-            None => RefundStatus::Pending,
-        };
-
-        // Directly construct the response instead of using try_from
-        let mut router_data = data.clone();
-        router_data.response = Ok(RefundsResponseData {
-            connector_refund_id: response.action_id.clone(),
-            refund_status,
-            raw_connector_response: None,
-        });
-
-        Ok(router_data)
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_tx_id = &req.request.connector_transaction_id;
+            Ok(format!(
+                "{}payments/{}/actions",
+                self.connector_base_url_refunds(req),
+                connector_tx_id
+            ))
+        }
     }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
+);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],

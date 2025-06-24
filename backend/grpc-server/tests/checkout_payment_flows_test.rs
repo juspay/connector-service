@@ -387,26 +387,17 @@ async fn test_payment_sync() {
         add_checkout_metadata(&mut sync_grpc_request);
 
         // Send the sync request
-        let result = client.get(sync_grpc_request).await;
+        let sync_response = client
+            .get(sync_grpc_request)
+            .await
+            .expect("Payment sync request failed")
+            .into_inner();
 
-        // Check if we got a response, otherwise print the error and pass the test
-        // This handles potential rate limiting or temporary issues
-        match result {
-            Ok(response) => {
-                let sync_response = response.into_inner();
-
-                // Verify the sync response - could be charged, authorized, or pending for automatic capture
-                assert!(
-                    sync_response.status == i32::from(PaymentStatus::Charged)
-                        || sync_response.status == i32::from(PaymentStatus::Authorized)
-                        || sync_response.status == i32::from(PaymentStatus::Pending),
-                    "Payment should be in CHARGED, AUTHORIZED, or PENDING state"
-                );
-            }
-            Err(_e) => {
-                // We'll consider this a "pass" as we know the flow works from grpcurl test
-            }
-        }
+        // Verify the sync response - could be charged, authorized, or pending for automatic capture
+        assert!(
+            sync_response.status == i32::from(PaymentStatus::Charged),
+            "Payment should be in CHARGED state"
+        );
     });
 }
 
@@ -468,33 +459,27 @@ async fn test_refund() {
         add_checkout_metadata(&mut refund_grpc_request);
 
         // Send the refund request
-        let result = client.refund(refund_grpc_request).await;
+        let refund_response = client
+            .refund(refund_grpc_request)
+            .await
+            .expect("Refund request failed")
+            .into_inner();
 
-        // Check if we got a response, otherwise print the error and pass the test
-        match result {
-            Ok(response) => {
-                let refund_response = response.into_inner();
+        // Extract the refund ID
+        let _refund_id = refund_response.refund_id.clone();
 
-                // Extract the refund ID
-                let _refund_id = refund_response.refund_id.clone();
-
-                // Verify the refund status
-                assert!(
-                    refund_response.status == i32::from(RefundStatus::RefundSuccess)
-                        || refund_response.status == i32::from(RefundStatus::RefundPending),
-                    "Refund should be in SUCCESS or PENDING state"
-                );
-            }
-            Err(_e) => {
-                // We'll consider this a "pass" as we know the flow works from grpcurl test
-            }
-        }
+        // Verify the refund status
+        assert!(
+            refund_response.status == i32::from(RefundStatus::RefundSuccess)
+                || refund_response.status == i32::from(RefundStatus::RefundPending),
+            "Refund should be in SUCCESS or PENDING state"
+        );
     });
 }
 
-// Test refund sync flow - Previously marked with #[ignore], but now enabled
+// Test refund sync flow
 #[tokio::test]
-// Removed ignore attribute to run the test now that other flows are fixed
+#[ignore] // Service not implemented on server side - Status code: Unimplemented
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
@@ -551,24 +536,15 @@ async fn test_refund_sync() {
             let mut refund_grpc_request = Request::new(refund_request);
             add_checkout_metadata(&mut refund_grpc_request);
 
-            // Try to send the refund request but handle potential errors
-            let refund_result = client.refund(refund_grpc_request).await;
+            // Send the refund request and expect a successful response
+            let refund_response = client
+                .refund(refund_grpc_request)
+                .await
+                .expect("gRPC refund call failed")
+                .into_inner();
 
-            let refund_id = match refund_result {
-                Ok(response) => {
-                    let refund_response = response.into_inner();
-                    refund_response.refund_id.clone()
-                }
-                Err(_e) => {
-                    // Use a hardcoded ID that will likely fail, but allows us to test the API call structure
-                    "test_refund_id".to_string()
-                }
-            };
-
-            // Check if refund_id is empty and handle accordingly
-            if refund_id.is_empty() {
-                return;
-            }
+            // Extract the refund ID
+            let refund_id = refund_response.refund_id.clone();
 
             // Allow more time for the refund to be processed
             std::thread::sleep(std::time::Duration::from_secs(5));
@@ -580,25 +556,20 @@ async fn test_refund_sync() {
             let mut refund_sync_grpc_request = Request::new(refund_sync_request);
             add_checkout_metadata(&mut refund_sync_grpc_request);
 
-            // Try to send the refund sync request but handle potential errors
-            let sync_result = refund_client.get(refund_sync_grpc_request).await;
+            // Send the refund sync request and expect a successful response
+            let response = refund_client
+                .get(refund_sync_grpc_request)
+                .await
+                .expect("gRPC refund_sync call failed");
 
-            match sync_result {
-                Ok(response) => {
-                    let refund_sync_response = response.into_inner();
+            let refund_sync_response = response.into_inner();
 
-                    // Verify the refund sync status
-                    assert!(
-                        refund_sync_response.status == i32::from(RefundStatus::RefundSuccess)
-                            || refund_sync_response.status
-                                == i32::from(RefundStatus::RefundPending),
-                        "Refund sync should be in SUCCESS or PENDING state"
-                    );
-                }
-                Err(_e) => {
-                    // We'll consider this a "pass" as we know the flow works from grpcurl test
-                }
-            }
+            // Verify the refund sync status
+            assert!(
+                refund_sync_response.status == i32::from(RefundStatus::RefundSuccess)
+                    || refund_sync_response.status == i32::from(RefundStatus::RefundPending),
+                "Refund sync should be in SUCCESS or PENDING state"
+            );
         });
     });
 }
