@@ -9,30 +9,29 @@ use domain_types::{
 
 use crate::connectors::xendit::XenditRouterData;
 use crate::types::ResponseRouterData;
-use error_stack::ResultExt;
-use hyperswitch_common_utils::{
+use common_utils::{
     pii,
     request::Method,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
+use error_stack::ResultExt;
 
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_method_data::PaymentMethodData,
-    router_data::{ConnectorAuthType, ErrorResponse}, // Added for XenditErrorResponse
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
 
 use std::collections::HashMap;
 
-use hyperswitch_interfaces::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors::{self, ConnectorError},
-};
+use interfaces::errors::{self, ConnectorError};
 
-use hyperswitch_common_enums::Currency;
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 
-use hyperswitch_cards::CardNumber;
+use common_enums::Currency;
+
+use cards::CardNumber;
 
 use serde::{Deserialize, Serialize};
 
@@ -155,7 +154,7 @@ impl TryFrom<&ConnectorAuthType> for XenditAuthType {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct XenditPaymentsRequest {
     pub amount: FloatMajorUnit,
-    pub currency: hyperswitch_common_enums::Currency,
+    pub currency: common_enums::Currency,
     pub capture_method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method: Option<PaymentMethod>,
@@ -242,16 +241,16 @@ pub struct XenditErrorResponse {
 
 fn is_auto_capture(data: &PaymentsAuthorizeData) -> Result<bool, ConnectorError> {
     match data.capture_method {
-        Some(hyperswitch_common_enums::CaptureMethod::Automatic) | None => Ok(true),
-        Some(hyperswitch_common_enums::CaptureMethod::Manual) => Ok(false),
+        Some(common_enums::CaptureMethod::Automatic) | None => Ok(true),
+        Some(common_enums::CaptureMethod::Manual) => Ok(false),
         Some(_) => Err(ConnectorError::CaptureMethodNotSupported),
     }
 }
 
 fn is_auto_capture_psync(data: &PaymentsSyncData) -> Result<bool, ConnectorError> {
     match data.capture_method {
-        Some(hyperswitch_common_enums::CaptureMethod::Automatic) | None => Ok(true),
-        Some(hyperswitch_common_enums::CaptureMethod::Manual) => Ok(false),
+        Some(common_enums::CaptureMethod::Automatic) | None => Ok(true),
+        Some(common_enums::CaptureMethod::Manual) => Ok(false),
         Some(_) => Err(ConnectorError::CaptureMethodNotSupported),
     }
 }
@@ -259,21 +258,19 @@ fn is_auto_capture_psync(data: &PaymentsSyncData) -> Result<bool, ConnectorError
 fn map_payment_response_to_attempt_status(
     response: XenditPaymentResponse,
     is_auto_capture: bool,
-) -> hyperswitch_common_enums::AttemptStatus {
+) -> common_enums::AttemptStatus {
     match response.status {
-        PaymentStatus::Failed => hyperswitch_common_enums::AttemptStatus::Failure,
+        PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
         PaymentStatus::Succeeded | PaymentStatus::Verified => {
             if is_auto_capture {
-                hyperswitch_common_enums::AttemptStatus::Charged
+                common_enums::AttemptStatus::Charged
             } else {
-                hyperswitch_common_enums::AttemptStatus::Authorized
+                common_enums::AttemptStatus::Authorized
             }
         }
-        PaymentStatus::Pending => hyperswitch_common_enums::AttemptStatus::Pending,
-        PaymentStatus::RequiresAction => {
-            hyperswitch_common_enums::AttemptStatus::AuthenticationPending
-        }
-        PaymentStatus::AwaitingCapture => hyperswitch_common_enums::AttemptStatus::Authorized,
+        PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
+        PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
     }
 }
 
@@ -313,7 +310,12 @@ impl
 
         let payment_method = Some(PaymentMethod::Card(CardPaymentRequest {
             payment_type: PaymentMethodType::CARD,
-            reference_id: Secret::new(item.router_data.connector_request_reference_id.clone()),
+            reference_id: Secret::new(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             card: CardInfo {
                 channel_properties: ChannelProperties {
                     success_return_url: item.router_data.request.router_return_url.clone(),
@@ -362,7 +364,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
             is_auto_capture(&router_data.request)?,
         );
 
-        let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
+        let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: response
                     .failure_code
@@ -380,6 +382,9 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 attempt_status: None,
                 connector_transaction_id: Some(response.id.clone()),
                 status_code: http_code,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -441,7 +446,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                     payment_response.clone(),
                     is_auto_capture_psync(&router_data.request)?,
                 );
-                let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
+                let response = if status == common_enums::AttemptStatus::Failure {
                     Err(ErrorResponse {
                         code: payment_response
                             .failure_code
@@ -459,6 +464,9 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         attempt_status: None,
                         connector_transaction_id: Some(payment_response.id.clone()),
                         status_code: http_code,
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
                     })
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -484,13 +492,13 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
             XenditResponse::Webhook(webhook_event) => {
                 let status = match webhook_event.event {
                     XenditEventType::PaymentSucceeded | XenditEventType::CaptureSucceeded => {
-                        hyperswitch_common_enums::AttemptStatus::Charged
+                        common_enums::AttemptStatus::Charged
                     }
                     XenditEventType::PaymentAwaitingCapture => {
-                        hyperswitch_common_enums::AttemptStatus::Authorized
+                        common_enums::AttemptStatus::Authorized
                     }
                     XenditEventType::PaymentFailed | XenditEventType::CaptureFailed => {
-                        hyperswitch_common_enums::AttemptStatus::Failure
+                        common_enums::AttemptStatus::Failure
                     }
                 };
                 Ok(Self {
@@ -549,7 +557,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
             http_code,
         } = item;
         let status = map_payment_response_to_attempt_status(response.clone(), true);
-        let response = if status == hyperswitch_common_enums::AttemptStatus::Failure {
+        let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: response
                     .failure_code
@@ -567,6 +575,9 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 attempt_status: None,
                 connector_transaction_id: None,
                 status_code: http_code,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -651,7 +662,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
-                refund_status: hyperswitch_common_enums::RefundStatus::from(response.status),
+                refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
             }),
             ..router_data
@@ -659,7 +670,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     }
 }
 
-impl From<RefundStatus> for hyperswitch_common_enums::RefundStatus {
+impl From<RefundStatus> for common_enums::RefundStatus {
     fn from(item: RefundStatus) -> Self {
         match item {
             RefundStatus::Succeeded => Self::Success,
@@ -682,7 +693,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
-                refund_status: hyperswitch_common_enums::RefundStatus::from(response.status),
+                refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
             }),
             ..router_data
@@ -691,7 +702,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 }
 
 fn is_mandate_payment(item: &PaymentsAuthorizeData) -> bool {
-    (item.setup_future_usage == Some(hyperswitch_common_enums::enums::FutureUsage::OffSession))
+    (item.setup_future_usage == Some(common_enums::enums::FutureUsage::OffSession))
         || item
             .mandate_id
             .as_ref()

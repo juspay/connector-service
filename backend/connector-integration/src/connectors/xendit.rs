@@ -15,30 +15,30 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
-        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2,
-        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
+    types::Connectors,
 };
 
-use hyperswitch_common_utils::{
+use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::FloatMajorUnit,
 };
 
-use hyperswitch_domain_models::{
+use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
-use hyperswitch_interfaces::{
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
+
+use interfaces::{
     api::{self, ConnectorCommon},
-    configs::Connectors,
     connector_integration_v2::ConnectorIntegrationV2,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    connector_types,
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
@@ -113,25 +113,28 @@ impl ConnectorCommon for Xendit {
             reason: response.reason,
             attempt_status: None,
             connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
         })
     }
 }
 
 //marker traits
-impl ConnectorServiceTrait for Xendit {}
-impl ValidationTrait for Xendit {}
-impl PaymentAuthorizeV2 for Xendit {}
-impl PaymentSyncV2 for Xendit {}
-impl PaymentOrderCreate for Xendit {}
-impl PaymentVoidV2 for Xendit {}
-impl RefundSyncV2 for Xendit {}
-impl RefundV2 for Xendit {}
-impl PaymentCapture for Xendit {}
-impl IncomingWebhook for Xendit {}
-impl SubmitEvidenceV2 for Xendit {}
-impl DisputeDefend for Xendit {}
-impl AcceptDispute for Xendit {}
-impl SetupMandateV2 for Xendit {}
+impl connector_types::ConnectorServiceTrait for Xendit {}
+impl connector_types::PaymentAuthorizeV2 for Xendit {}
+impl connector_types::PaymentSyncV2 for Xendit {}
+impl connector_types::PaymentVoidV2 for Xendit {}
+impl connector_types::RefundSyncV2 for Xendit {}
+impl connector_types::RefundV2 for Xendit {}
+impl connector_types::PaymentCapture for Xendit {}
+impl connector_types::ValidationTrait for Xendit {}
+impl connector_types::PaymentOrderCreate for Xendit {}
+impl connector_types::SetupMandateV2 for Xendit {}
+impl connector_types::AcceptDispute for Xendit {}
+impl connector_types::SubmitEvidenceV2 for Xendit {}
+impl connector_types::DisputeDefend for Xendit {}
+impl connector_types::IncomingWebhook for Xendit {}
 
 macros::create_all_prerequisites!(
     connector_name: Xendit,

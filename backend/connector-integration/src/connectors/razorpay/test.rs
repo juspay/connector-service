@@ -118,7 +118,7 @@ mod tests {
                         bank_code: None,
                         nick_name: None,
                         card_holder_name: Some("Test User".to_string().into()),
-                        co_badged_card_data: None
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -533,7 +533,7 @@ mod tests {
                         bank_code: None,
                         nick_name: None,
                         card_holder_name: Some("Test User".to_string().into()),
-                        co_badged_card_data: None
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -832,7 +832,7 @@ mod tests {
                     bank_code: None,
                     nick_name: None,
                     card_holder_name: Some("Test User".to_string().into()),
-                    co_badged_card_data: None
+                    co_badged_card_data: None,
                 }),
                 amount: 1000,
                 order_tax_amount: None,
@@ -862,9 +862,7 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                    ),
+                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
                     os_type: None,
                     os_version: None,
                     device_model: None,
@@ -1004,7 +1002,7 @@ mod tests {
                     bank_code: None,
                     nick_name: None,
                     card_holder_name: Some("Test User".to_string().into()),
-                    co_badged_card_data: None
+                    co_badged_card_data: None,
                 }),
                 amount: 1000,
                 order_tax_amount: None,
@@ -1034,9 +1032,7 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                    ),
+                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
                     os_type: None,
                     os_version: None,
                     device_model: None,
