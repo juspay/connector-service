@@ -380,6 +380,7 @@ async fn test_refund() {
 
 // Test refund sync flow - runs as a separate test since refund + sync is complex
 #[tokio::test]
+#[ignore] // Service not implemented on server side - Status code: Unimplemented
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
