@@ -1,5 +1,5 @@
 [workspace]
-resolver = "3"
+resolver = "2"
 members = [
   "backend/grpc-api-types",
   "backend/connector-integration",
