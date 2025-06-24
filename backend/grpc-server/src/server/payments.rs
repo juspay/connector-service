@@ -4,7 +4,7 @@ use crate::{
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{
         auth_from_metadata, connector_from_metadata,
-        connector_merchant_id_tenant_id_request_id_from_metadata, mask_sensitive_fields,
+        connector_merchant_id_tenant_id_request_id_from_metadata,
     },
 };
 use connector_integration::types::ConnectorData;
@@ -297,8 +297,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -441,8 +440,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -510,8 +508,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -580,8 +577,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -740,8 +736,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -804,8 +799,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -875,8 +869,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -946,8 +939,7 @@ impl PaymentService for Payments {
                 "<serialization error>".to_string()
             }
         };
-        let masked_request_body = mask_sensitive_fields(req_body_json);
-        current_span.record("request_body", masked_request_body);
+        current_span.record("request_body", req_body_json);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);

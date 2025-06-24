@@ -7,7 +7,6 @@ use error_stack::Report;
 use http::request::Request;
 use hyperswitch_common_utils::errors::CustomResult;
 use hyperswitch_domain_models::router_data::ConnectorAuthType;
-use serde_json::Value;
 use tonic::metadata;
 
 /// Record the header's fields in request's trace
@@ -175,49 +174,6 @@ fn parse_metadata<'a>(
                 }))
             })
         })
-}
-
-pub fn mask_sensitive_fields(body: String) -> String {
-    let sensitive_keys = [
-        "card_number",
-        "card_exp_month",
-        "card_exp_year",
-        "card_cvc",
-        "card_holder_name",
-        "eci",
-        "cavv",
-        "ds_transaction_id",
-    ];
-
-    let parsed: Result<Value, _> = serde_json::from_str(&body);
-
-    match parsed {
-        Ok(mut json_value) => {
-            fn mask(value: &mut Value, keys: &[&str]) {
-                match value {
-                    Value::Object(map) => {
-                        for (k, v) in map.iter_mut() {
-                            if keys.contains(&k.as_str()) {
-                                *v = Value::String("****".to_string());
-                            } else {
-                                mask(v, keys);
-                            }
-                        }
-                    }
-                    Value::Array(arr) => {
-                        for item in arr.iter_mut() {
-                            mask(item, keys);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            mask(&mut json_value, &sensitive_keys);
-            json_value.to_string()
-        }
-        Err(_) => "{\"error\": \"Invalid JSON\"}".to_string(),
-    }
 }
 
 #[macro_export]
