@@ -270,7 +270,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -298,7 +297,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -390,7 +388,7 @@ impl PaymentService for Payments {
 
                 let status = response.get_ref().status;
                 let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .unwrap_or(AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -414,7 +412,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -441,7 +438,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -458,7 +454,7 @@ impl PaymentService for Payments {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
                 let status = response.get_ref().status;
                 let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .unwrap_or(AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -482,7 +478,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -509,7 +504,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -527,7 +521,7 @@ impl PaymentService for Payments {
 
                 let status = response.get_ref().status;
                 let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .unwrap_or(AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -551,7 +545,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -578,7 +571,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -710,7 +702,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -737,7 +728,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -773,7 +763,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -800,7 +789,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -843,7 +831,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -870,7 +857,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -888,7 +874,7 @@ impl PaymentService for Payments {
 
                 let status = response.get_ref().status;
                 let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .unwrap_or(AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -912,7 +898,6 @@ impl PaymentService for Payments {
             merchant_id = tracing::field::Empty,
             gateway = tracing::field::Empty,
             request_id = tracing::field::Empty,
-            time_stamp = tracing::field::Empty,
             status_code = tracing::field::Empty,
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
@@ -940,7 +925,6 @@ impl PaymentService for Payments {
             }
         };
         current_span.record("request_body", req_body_json);
-        current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
         current_span.record("tenant_id", tenant_id);
@@ -1031,7 +1015,7 @@ impl PaymentService for Payments {
 
                 let status = response.get_ref().status;
                 let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .unwrap_or(AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }

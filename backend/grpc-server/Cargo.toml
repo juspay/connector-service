@@ -75,7 +75,6 @@ hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag 
 hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
 log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = ["tracing"] }
 build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = ["cargo-workspace", "framework-libs-members-env"] }
-chrono = "0.4.41"
 
 [build-dependencies]
 build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = ["cargo-workspace-build", "vergen-gix-build", "framework-libs-members-env"] }

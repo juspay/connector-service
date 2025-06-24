@@ -17,7 +17,7 @@ pub fn setup(
     config: &config::Log,
     service_name: &str,
     crates_to_filter: impl AsRef<[&'static str]>,
-) -> Result<TelemetryGuard, SetupError> {
+) -> Result<TelemetryGuard, log_utils::LoggerError> {
     let static_top_level_fields = HashMap::from_iter([
         ("service".to_string(), serde_json::json!(service_name)),
         (
@@ -70,13 +70,7 @@ pub fn setup(
         global_filtering_directive: None,
     };
 
-    let logging_components = match log_utils::build_logging_components(logger_config) {
-        Ok(components) => components,
-        Err(e) => {
-            tracing::error!("Build error for Logging Components: {:?}", e);
-            return Err(SetupError::BuildError);
-        }
-    };
+    let logging_components = log_utils::build_logging_components(logger_config)?;
 
     let mut subscriber_layers = Vec::new();
 
@@ -124,10 +118,4 @@ fn get_envfilter_directive(
             },
         )
         .join(",")
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum SetupError {
-    #[error("Failed to build logging components")]
-    BuildError,
 }
