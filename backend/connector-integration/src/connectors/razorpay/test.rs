@@ -833,9 +833,7 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                    ),
+                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
                 }),
                 order_category: None,
                 session_token: None,
@@ -997,9 +995,7 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                    ),
+                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
                 }),
                 order_category: None,
                 session_token: None,
