@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common_enums = { version = "*", path = "../common_enums" }
+common_enums = { path = "../common_enums" }
 
 
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }

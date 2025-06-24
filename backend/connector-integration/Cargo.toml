@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-domain_types ={ version = "0.1.0", path = "../domain_types" }
+domain_types = { path = "../domain_types" }
 base64 = "0.21"
-common_enums = { version = "*", path = "../common_enums" }
-common_utils = { version = "0.1.0", path = "../common_utils" }
-interfaces = { version = "0.1.0", path = "../interfaces"}
+common_enums = { path = "../common_enums" }
+common_utils = { path = "../common_utils" }
+interfaces = { path = "../interfaces"}
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
@@ -20,7 +20,7 @@ error-stack = "0.4.0"
 strum = { version = "0.26", features = ["derive"] }
 time = "0.3.35"
 url = "2.5.0"
-cards = { version = "0.1.0",  path = "../cards"}
+cards = {  path = "../cards"}
 paste = "1.0"
 reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
 bytes = "1.6.0"
