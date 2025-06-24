@@ -2,39 +2,41 @@ mod test;
 pub mod transformers;
 use crate::types::ResponseRouterData;
 use crate::with_error_response_body;
-use domain_types::{
-    connector_types::{is_mandate_supported, ConnectorSpecifications},
-    connector_types::{ConnectorValidation, SupportedPaymentMethodsExt},
-    types::{
-        self, CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentMethodDataType,
-        PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
-    },
-};
-use hyperswitch_common_enums::{
+use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
-use hyperswitch_common_utils::{
+use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
+};
+use domain_types::{
+    connector_types::{ConnectorSpecifications, SupportedPaymentMethodsExt},
+    types::{
+        self, CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus,
+        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+        SupportedPaymentMethods,
+    },
 };
 use std::sync::LazyLock;
 
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 
 use error_stack::report;
-use hyperswitch_interfaces::errors::ConnectorError;
-use hyperswitch_interfaces::{
+use hyperswitch_masking::{Mask, Maskable};
+use interfaces::{
     api::{self, ConnectorCommon},
-    configs::Connectors,
     connector_integration_v2::ConnectorIntegrationV2,
     errors,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use hyperswitch_masking::{Mask, Maskable};
+use interfaces::{
+    connector_types::{self, is_mandate_supported, ConnectorValidation},
+    errors::ConnectorError,
+};
 
 use super::macros;
 use domain_types::{
@@ -43,15 +45,12 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, IncomingWebhook,
-        PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentOrderCreate, PaymentSyncV2, PaymentVoidData, PaymentVoidV2,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundSyncV2, RefundV2, RefundWebhookDetailsResponse,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RequestDetails, ResponseId, SetupMandateRequestData,
-        SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
-        WebhookDetailsResponse,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
 };
 use transformers::{
@@ -68,17 +67,17 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-impl ConnectorServiceTrait for Adyen {}
-impl PaymentAuthorizeV2 for Adyen {}
-impl PaymentSyncV2 for Adyen {}
-impl PaymentVoidV2 for Adyen {}
-impl RefundSyncV2 for Adyen {}
-impl RefundV2 for Adyen {}
-impl PaymentCapture for Adyen {}
-impl SetupMandateV2 for Adyen {}
-impl AcceptDispute for Adyen {}
-impl SubmitEvidenceV2 for Adyen {}
-impl DisputeDefend for Adyen {}
+impl connector_types::ConnectorServiceTrait for Adyen {}
+impl connector_types::PaymentAuthorizeV2 for Adyen {}
+impl connector_types::PaymentSyncV2 for Adyen {}
+impl connector_types::PaymentVoidV2 for Adyen {}
+impl connector_types::RefundSyncV2 for Adyen {}
+impl connector_types::RefundV2 for Adyen {}
+impl connector_types::PaymentCapture for Adyen {}
+impl connector_types::SetupMandateV2 for Adyen {}
+impl connector_types::AcceptDispute for Adyen {}
+impl connector_types::SubmitEvidenceV2 for Adyen {}
+impl connector_types::DisputeDefend for Adyen {}
 
 macros::create_all_prerequisites!(
     connector_name: Adyen,
@@ -218,6 +217,9 @@ impl ConnectorCommon for Adyen {
             reason: Some(response.message),
             attempt_status: None,
             connector_transaction_id: response.psp_reference,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 }
@@ -306,9 +308,9 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl ValidationTrait for Adyen {}
+impl connector_types::ValidationTrait for Adyen {}
 
-impl PaymentOrderCreate for Adyen {}
+impl connector_types::PaymentOrderCreate for Adyen {}
 
 impl
     ConnectorIntegrationV2<
@@ -369,7 +371,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{}ca/services/DisputeService/v30/defendDispute", dispute_url))
         }
     }
@@ -377,7 +379,7 @@ macros::macro_connector_implementation!(
 
 impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Adyen {}
 
-impl IncomingWebhook for Adyen {
+impl connector_types::IncomingWebhook for Adyen {
     fn get_event_type(
         &self,
         request: RequestDetails,
@@ -544,7 +546,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
-                                  .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                                  .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{}ca/services/DisputeService/v30/acceptDispute", dispute_url))
         }
     }
@@ -572,7 +574,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
-                                  .ok_or(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+                                  .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
             Ok(format!("{}ca/services/DisputeService/v30/supplyDefenseDocument", dispute_url))
         }
     }
@@ -668,7 +670,7 @@ impl ConnectorValidation for Adyen {
 
     fn validate_psync_reference_id(
         &self,
-        data: &hyperswitch_domain_models::router_request_types::PaymentsSyncData,
+        data: &PaymentsSyncData,
         _is_three_ds: bool,
         _status: AttemptStatus,
         _connector_meta_data: Option<SecretSerdeValue>,

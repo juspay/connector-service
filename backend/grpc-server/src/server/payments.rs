@@ -4,6 +4,7 @@ use crate::{
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{auth_from_metadata, connector_from_metadata},
 };
+use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, PSync, Refund, SetupMandate, Void},
@@ -13,6 +14,10 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
+};
+use domain_types::{
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
 };
 use domain_types::{
     types::{
@@ -31,12 +36,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_common_utils::errors::CustomResult;
-use hyperswitch_domain_models::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
 use tracing::info;
 
@@ -84,11 +84,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(payload.minor_amount),
+            amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
         };
 
@@ -143,11 +143,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(0),
+            amount: common_utils::types::MinorUnit::new(0),
             currency,
         };
 

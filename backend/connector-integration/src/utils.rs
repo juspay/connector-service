@@ -1,5 +1,5 @@
 use domain_types::connector_types::PaymentsAuthorizeData;
-use hyperswitch_interfaces::errors;
+use interfaces::errors;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 

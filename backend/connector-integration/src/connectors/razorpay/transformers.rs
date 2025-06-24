@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 
+use common_enums::{self, AttemptStatus, CardNetwork};
 use error_stack::ResultExt;
-use hyperswitch_api_models::enums::{self, AttemptStatus, CardNetwork};
 
-use hyperswitch_cards::CardNumber;
-use hyperswitch_common_enums::RefundStatus;
-use hyperswitch_common_utils::{
-    ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit,
-};
+use cards::CardNumber;
+use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
@@ -17,14 +14,14 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
 };
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_method_data::{Card, PaymentMethodData},
-    router_data::{ConnectorAuthType, RouterData},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use hyperswitch_interfaces::errors;
 use hyperswitch_masking::Secret;
+use interfaces::errors;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -36,7 +33,7 @@ pub enum Currency {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Amount {
-    pub currency: enums::Currency,
+    pub currency: common_enums::Currency,
     pub value: MinorUnit,
 }
 
@@ -85,7 +82,7 @@ pub enum AuthType {
 #[serde(rename_all = "snake_case")]
 pub struct Address {
     city: String,
-    country: enums::CountryAlpha2,
+    country: common_enums::CountryAlpha2,
     house_number_or_name: Secret<String>,
     postal_code: Secret<String>,
     state_or_province: Option<Secret<String>>,
@@ -176,7 +173,7 @@ pub struct RazorpayRouterData<T> {
 }
 
 impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
     fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
@@ -191,14 +188,14 @@ pub struct RazorpayAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 key_id: api_key.to_owned(),
                 secret_key: key1.to_owned(),
             }),
-            _ => Err(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainAuthType),
+            _ => Err(interfaces::errors::ConnectorError::FailedToObtainAuthType),
         }
     }
 }
@@ -224,10 +221,7 @@ impl TryFrom<(&Card, Option<Secret<String>>)> for RazorpayPaymentMethod {
 fn extract_payment_method_and_data(
     payment_method_data: &PaymentMethodData,
     customer_name: Option<String>,
-) -> Result<
-    (PaymentMethodType, PaymentMethodSpecificData),
-    hyperswitch_interfaces::errors::ConnectorError,
-> {
+) -> Result<(PaymentMethodType, PaymentMethodSpecificData), interfaces::errors::ConnectorError> {
     match payment_method_data {
         PaymentMethodData::Card(card_data) => {
             let card_holder_name = customer_name.clone();
@@ -256,11 +250,14 @@ fn extract_payment_method_and_data(
         | PaymentMethodData::Voucher(_)
         | PaymentMethodData::GiftCard(_)
         | PaymentMethodData::CardToken(_)
-        | PaymentMethodData::OpenBanking(_) => Err(
-            hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
+        | PaymentMethodData::CardDetailsForNetworkTransactionId(_)
+        | PaymentMethodData::NetworkToken(_)
+        | PaymentMethodData::MobilePayment(_)
+        | PaymentMethodData::OpenBanking(_) => {
+            Err(interfaces::errors::ConnectorError::NotImplemented(
                 "Only Card payment method is supported for Razorpay".to_string(),
-            ),
-        ),
+            ))
+        }
     }
 }
 
@@ -272,7 +269,7 @@ impl
         &Card,
     )> for RazorpayPaymentRequest
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn try_from(
         value: (
@@ -300,23 +297,24 @@ impl
         let contact = billing
             .and_then(|billing| billing.phone.as_ref())
             .and_then(|phone| phone.number.clone())
-            .ok_or(
-                hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
-                    field_name: "contact",
-                },
-            )?;
+            .ok_or(interfaces::errors::ConnectorError::MissingRequiredField {
+                field_name: "contact",
+            })?;
 
         let email = item.router_data.request.email.clone().ok_or(
-            hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
+            interfaces::errors::ConnectorError::MissingRequiredField {
                 field_name: "email",
             },
         )?;
 
-        let order_id = item.router_data.reference_id.clone().ok_or(
-            hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .clone()
+            .ok_or(interfaces::errors::ConnectorError::MissingRequiredField {
                 field_name: "order_id",
-            },
-        )?;
+            })?;
 
         let (method, card) = extract_payment_method_and_data(
             &item.router_data.request.payment_method_data,
@@ -381,7 +379,7 @@ impl
         >,
     > for RazorpayPaymentRequest
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -390,19 +388,11 @@ impl
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => RazorpayPaymentRequest::try_from((item, card)),
-            _ => Err(
-                hyperswitch_interfaces::errors::ConnectorError::NotImplemented(
-                    "Only card payments are supported".into(),
-                ),
-            ),
+            _ => Err(interfaces::errors::ConnectorError::NotImplemented(
+                "Only card payments are supported".into(),
+            )),
         }
     }
-}
-
-pub struct ResponseRouterData<Flow, R, Request, Response> {
-    pub response: R,
-    pub data: RouterData<Flow, Request, Response>,
-    pub http_code: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -480,8 +470,8 @@ pub struct RazorpayRefundRequest {
     pub amount: MinorUnit,
 }
 
-impl ForeignTryFrom<RazorpayRefundStatus> for hyperswitch_common_enums::RefundStatus {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+impl ForeignTryFrom<RazorpayRefundStatus> for common_enums::RefundStatus {
+    type Error = interfaces::errors::ConnectorError;
     fn foreign_try_from(item: RazorpayRefundStatus) -> Result<Self, Self::Error> {
         match item {
             RazorpayRefundStatus::Failed => Ok(Self::Failure),
@@ -609,7 +599,7 @@ impl
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     )> for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data): (
@@ -617,7 +607,7 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let status = hyperswitch_common_enums::RefundStatus::foreign_try_from(response.status)?;
+        let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
@@ -642,7 +632,7 @@ impl
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     )> for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data): (
@@ -650,7 +640,7 @@ impl
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
-        let status = hyperswitch_common_enums::RefundStatus::foreign_try_from(response.status)?;
+        let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
 
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
@@ -674,21 +664,21 @@ impl<F, Req>
         RazorpayResponse,
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
         u16,
-        Option<hyperswitch_api_models::enums::CaptureMethod>,
+        Option<common_enums::CaptureMethod>,
         bool,
-        Option<hyperswitch_api_models::enums::PaymentMethodType>,
+        Option<common_enums::PaymentMethodType>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data, _http_code, _capture_method, _is_multiple_capture_psync_flow, _pmt): (
             RazorpayResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
             u16,
-            Option<hyperswitch_api_models::enums::CaptureMethod>,
+            Option<common_enums::CaptureMethod>,
             bool,
-            Option<hyperswitch_api_models::enums::PaymentMethodType>,
+            Option<common_enums::PaymentMethodType>,
         ),
     ) -> Result<Self, Self::Error> {
         let is_manual_capture = false;
@@ -702,11 +692,11 @@ impl<F, Req>
                     .as_ref()
                     .and_then(|next_actions| next_actions.first())
                     .map(|action| action.url.clone())
-                    .ok_or_else(|| {
-                        hyperswitch_interfaces::errors::ConnectorError::MissingRequiredField {
+                    .ok_or_else(
+                        || interfaces::errors::ConnectorError::MissingRequiredField {
                             field_name: "next.url",
-                        }
-                    })?;
+                        },
+                    )?;
 
                 let form_fields = HashMap::new();
 
@@ -814,7 +804,7 @@ impl
         >,
     > for RazorpayOrderRequest
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -882,7 +872,7 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data, _status_code, _): (
@@ -1050,14 +1040,14 @@ pub(crate) fn get_razorpay_payment_webhook_status(
 pub(crate) fn get_razorpay_refund_webhook_status(
     entity: RazorpayEntity,
     status: RazorpayRefundStatus,
-) -> Result<RefundStatus, errors::ConnectorError> {
+) -> Result<common_enums::RefundStatus, errors::ConnectorError> {
     match entity {
         RazorpayEntity::Refund => match status {
-            RazorpayRefundStatus::Processed => Ok(RefundStatus::Success),
+            RazorpayRefundStatus::Processed => Ok(common_enums::RefundStatus::Success),
             RazorpayRefundStatus::Created | RazorpayRefundStatus::Pending => {
-                Ok(RefundStatus::Pending)
+                Ok(common_enums::RefundStatus::Pending)
             }
-            RazorpayRefundStatus::Failed => Ok(RefundStatus::Failure),
+            RazorpayRefundStatus::Failed => Ok(common_enums::RefundStatus::Failure),
         },
         RazorpayEntity::Payment => Err(errors::ConnectorError::RequestEncodingFailed),
     }
@@ -1111,7 +1101,7 @@ impl
         >,
     > for RazorpayCaptureRequest
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -1133,7 +1123,7 @@ impl<F, Req>
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = hyperswitch_interfaces::errors::ConnectorError;
+    type Error = interfaces::errors::ConnectorError;
     fn foreign_try_from(
         (response, data): (
             RazorpayCaptureResponse,

@@ -1,63 +1,58 @@
 pub mod test;
 pub mod transformers;
 use crate::{with_error_response_body, with_response_body};
-use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
-    },
-    connector_types::{
-        is_mandate_supported, ConnectorSpecifications, ConnectorValidation,
-        SupportedPaymentMethodsExt,
-    },
-    connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, ConnectorWebhookSecrets,
-        DisputeDefend, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
-        IncomingWebhook, PaymentAuthorizeV2, PaymentCapture, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate, PaymentSyncV2,
-        PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails,
-        ResponseId, SetupMandateRequestData, SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2,
-        ValidationTrait, WebhookDetailsResponse,
-    },
-    types::{
-        CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
-        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
-        SupportedPaymentMethods,
-    },
-};
-use hyperswitch_common_enums::{
+
+use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
-use hyperswitch_common_utils::{
+use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     pii::SecretSerdeValue,
     request::{Method, RequestContent},
     types::{AmountConvertor, MinorUnit},
 };
+use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
+    },
+    types::{
+        CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,
+        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+        SupportedPaymentMethods,
+    },
+};
 use std::sync::LazyLock;
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use error_stack::{report, ResultExt};
-use hyperswitch_domain_models::{
+use domain_types::connector_types::SupportedPaymentMethodsExt;
+use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::SyncRequestType,
 };
-use hyperswitch_interfaces::{
-    api::{self, CaptureSyncMethod, ConnectorCommon},
-    configs::Connectors,
+use error_stack::{report, ResultExt};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use interfaces::{
+    api::{self, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
-    errors,
-    errors::ConnectorError,
+    connector_types::{self, is_mandate_supported},
+    errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 
 use transformers::{self as razorpay, ForeignTryFrom};
 
@@ -72,29 +67,29 @@ pub struct Razorpay {
     pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
 }
 
-impl ValidationTrait for Razorpay {
+impl connector_types::ValidationTrait for Razorpay {
     fn should_do_order_create(&self) -> bool {
         true
     }
 }
 
-impl ConnectorServiceTrait for Razorpay {}
-impl PaymentAuthorizeV2 for Razorpay {}
-impl PaymentSyncV2 for Razorpay {}
-impl PaymentOrderCreate for Razorpay {}
-impl PaymentVoidV2 for Razorpay {}
-impl RefundSyncV2 for Razorpay {}
-impl RefundV2 for Razorpay {}
-impl PaymentCapture for Razorpay {}
-impl SetupMandateV2 for Razorpay {}
-impl AcceptDispute for Razorpay {}
-impl SubmitEvidenceV2 for Razorpay {}
-impl DisputeDefend for Razorpay {}
+impl connector_types::ConnectorServiceTrait for Razorpay {}
+impl connector_types::PaymentAuthorizeV2 for Razorpay {}
+impl connector_types::PaymentSyncV2 for Razorpay {}
+impl connector_types::PaymentOrderCreate for Razorpay {}
+impl connector_types::PaymentVoidV2 for Razorpay {}
+impl connector_types::RefundSyncV2 for Razorpay {}
+impl connector_types::RefundV2 for Razorpay {}
+impl connector_types::PaymentCapture for Razorpay {}
+impl connector_types::SetupMandateV2 for Razorpay {}
+impl connector_types::AcceptDispute for Razorpay {}
+impl connector_types::SubmitEvidenceV2 for Razorpay {}
+impl connector_types::DisputeDefend for Razorpay {}
 
 impl Razorpay {
     pub const fn new() -> &'static Self {
         &Self {
-            amount_converter: &hyperswitch_common_utils::types::MinorUnitForConnector,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
         }
     }
 }
@@ -142,6 +137,9 @@ impl ConnectorCommon for Razorpay {
             reason: Some(response.error.reason),
             attempt_status: None,
             connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 }
@@ -320,11 +318,6 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         self.build_error_response(res, event_builder)
     }
 
-    fn get_multiple_capture_sync_method(
-        &self,
-    ) -> CustomResult<CaptureSyncMethod, errors::ConnectorError> {
-        Ok(CaptureSyncMethod::Individual)
-    }
     fn get_5xx_error_response(
         &self,
         res: Response,
@@ -508,7 +501,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
     }
 }
 
-impl IncomingWebhook for Razorpay {
+impl connector_types::IncomingWebhook for Razorpay {
     fn get_event_type(
         &self,
         request: RequestDetails,
@@ -779,7 +772,7 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 {
 }
 
-impl ConnectorValidation for Razorpay {
+impl connector_types::ConnectorValidation for Razorpay {
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,
@@ -791,7 +784,7 @@ impl ConnectorValidation for Razorpay {
 
     fn validate_psync_reference_id(
         &self,
-        data: &hyperswitch_domain_models::router_request_types::PaymentsSyncData,
+        data: &PaymentsSyncData,
         _is_three_ds: bool,
         _status: AttemptStatus,
         _connector_meta_data: Option<SecretSerdeValue>,

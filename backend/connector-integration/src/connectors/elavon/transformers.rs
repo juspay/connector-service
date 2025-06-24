@@ -1,3 +1,10 @@
+use cards::CardNumber;
+use common_enums::{
+    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
+    FutureUsage,
+};
+use common_utils::consts::NO_ERROR_CODE;
+use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -6,24 +13,15 @@ use domain_types::{
         ResponseId as DomainResponseId,
     },
 };
-use error_stack::{report, ResultExt};
-use hyperswitch_cards::CardNumber;
-use hyperswitch_common_enums::{
-    AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
-    FutureUsage,
-};
-use hyperswitch_common_utils::types::StringMajorUnit;
-use hyperswitch_domain_models::{
+use domain_types::{
     payment_address::PaymentAddress,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::{
-    consts as hs_interface_consts,
-    errors::{self},
-};
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::WithoutType;
+use interfaces::errors::{self};
 use std::collections::HashMap;
 
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -97,7 +95,7 @@ pub struct CardPaymentRequest {
     pub ssl_exp_date: Secret<String>,
     pub ssl_cvv2cvc2: Option<Secret<String>>,
     pub ssl_cvv2cvc2_indicator: Option<i32>,
-    pub ssl_email: Option<hyperswitch_common_utils::pii::Email>,
+    pub ssl_email: Option<common_utils::pii::Email>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ssl_add_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -708,11 +706,14 @@ pub fn get_elavon_attempt_status(
                 code: error_resp
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_resp.error_message.clone(),
                 reason: error_resp.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
                 connector_transaction_id: error_resp.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         ),
     }
@@ -772,11 +773,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
                 connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         };
 
@@ -1004,11 +1008,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
                 connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         };
 
@@ -1125,14 +1132,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
             ElavonResult::Success(success_payload) => {
                 match success_payload.ssl_transaction_type.as_deref() {
                     Some("RETURN") => match success_payload.ssl_result {
-                        SslResult::Approved => hyperswitch_common_enums::RefundStatus::Success,
-                        SslResult::Declined => hyperswitch_common_enums::RefundStatus::Failure,
-                        SslResult::Other(_) => hyperswitch_common_enums::RefundStatus::Pending,
+                        SslResult::Approved => common_enums::RefundStatus::Success,
+                        SslResult::Declined => common_enums::RefundStatus::Failure,
+                        SslResult::Other(_) => common_enums::RefundStatus::Pending,
                     },
-                    _ => hyperswitch_common_enums::RefundStatus::Pending,
+                    _ => common_enums::RefundStatus::Pending,
                 }
             }
-            _ => hyperswitch_common_enums::RefundStatus::Failure,
+            _ => common_enums::RefundStatus::Failure,
         };
 
         // Build the response data
@@ -1148,11 +1155,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(attempt_status),
                 connector_transaction_id: error_payload.ssl_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             }),
         };
 
@@ -1249,18 +1259,18 @@ pub struct ElavonRSyncResponse {
 // Function to determine refund status from RSync response
 pub fn get_refund_status_from_elavon_sync_response(
     elavon_response: &ElavonRSyncResponse,
-) -> hyperswitch_common_enums::RefundStatus {
+) -> common_enums::RefundStatus {
     match elavon_response.ssl_transaction_type {
         SyncTransactionType::Return => match elavon_response.ssl_trans_status {
-            TransactionSyncStatus::STL => hyperswitch_common_enums::RefundStatus::Success,
-            TransactionSyncStatus::PEN => hyperswitch_common_enums::RefundStatus::Pending,
-            TransactionSyncStatus::OPN => hyperswitch_common_enums::RefundStatus::Pending,
-            TransactionSyncStatus::REV => hyperswitch_common_enums::RefundStatus::ManualReview,
+            TransactionSyncStatus::STL => common_enums::RefundStatus::Success,
+            TransactionSyncStatus::PEN => common_enums::RefundStatus::Pending,
+            TransactionSyncStatus::OPN => common_enums::RefundStatus::Pending,
+            TransactionSyncStatus::REV => common_enums::RefundStatus::ManualReview,
             TransactionSyncStatus::PST
             | TransactionSyncStatus::FPR
-            | TransactionSyncStatus::PRE => hyperswitch_common_enums::RefundStatus::Failure,
+            | TransactionSyncStatus::PRE => common_enums::RefundStatus::Failure,
         },
-        _ => hyperswitch_common_enums::RefundStatus::Pending,
+        _ => common_enums::RefundStatus::Pending,
     }
 }
 

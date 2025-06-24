@@ -5,39 +5,37 @@ use crate::types::ResponseRouterData;
 use crate::utils::preprocess_xml_response_bytes;
 use crate::with_error_response_body;
 use bytes::Bytes;
+use common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
-        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2,
-        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
+    types::Connectors,
 };
-use error_stack::ResultExt;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
-};
-use hyperswitch_domain_models::{
+use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::errors::ConnectorError;
-use hyperswitch_interfaces::{
+use error_stack::ResultExt;
+use hyperswitch_masking::Maskable;
+use interfaces::errors::ConnectorError;
+use interfaces::{
     api::ConnectorCommon,
-    configs::Connectors,
     connector_integration_v2::{self, ConnectorIntegrationV2},
-    errors,
+    connector_types, errors,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use hyperswitch_masking::Maskable;
 use transformers::{
     self as elavon, ElavonCaptureResponse, ElavonPSyncResponse, ElavonPaymentsResponse,
     ElavonRSyncResponse, ElavonRefundResponse, XMLCaptureRequest, XMLElavonRequest,
@@ -48,21 +46,21 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
 
-impl ConnectorServiceTrait for Elavon {}
-impl PaymentAuthorizeV2 for Elavon {}
-impl PaymentSyncV2 for Elavon {}
-impl PaymentVoidV2 for Elavon {}
-impl RefundSyncV2 for Elavon {}
-impl RefundV2 for Elavon {}
+impl connector_types::ConnectorServiceTrait for Elavon {}
+impl connector_types::PaymentAuthorizeV2 for Elavon {}
+impl connector_types::PaymentSyncV2 for Elavon {}
+impl connector_types::PaymentVoidV2 for Elavon {}
+impl connector_types::RefundSyncV2 for Elavon {}
+impl connector_types::RefundV2 for Elavon {}
 
-impl ValidationTrait for Elavon {}
-impl PaymentCapture for Elavon {}
-impl SetupMandateV2 for Elavon {}
-impl AcceptDispute for Elavon {}
-impl SubmitEvidenceV2 for Elavon {}
-impl DisputeDefend for Elavon {}
-impl IncomingWebhook for Elavon {}
-impl PaymentOrderCreate for Elavon {}
+impl connector_types::ValidationTrait for Elavon {}
+impl connector_types::PaymentCapture for Elavon {}
+impl connector_types::SetupMandateV2 for Elavon {}
+impl connector_types::AcceptDispute for Elavon {}
+impl connector_types::SubmitEvidenceV2 for Elavon {}
+impl connector_types::DisputeDefend for Elavon {}
+impl connector_types::IncomingWebhook for Elavon {}
+impl connector_types::PaymentOrderCreate for Elavon {}
 
 impl ConnectorCommon for Elavon {
     fn id(&self) -> &'static str {
@@ -102,8 +100,11 @@ impl ConnectorCommon for Elavon {
                         code: error_payload.error_code.unwrap_or_else(|| "".to_string()),
                         message: error_payload.error_message,
                         reason: error_payload.error_name,
-                        attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: error_payload.ssl_txn_id,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
                     }),
                     elavon::ElavonResult::Success(success_payload) => Ok(ErrorResponse {
                         status_code: res.status_code,
@@ -113,8 +114,11 @@ impl ConnectorCommon for Elavon {
                             "Unexpected success: {:?}",
                             success_payload.ssl_result_message
                         )),
-                        attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                        attempt_status: Some(common_enums::AttemptStatus::Failure),
                         connector_transaction_id: Some(success_payload.ssl_txn_id),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
                     }),
                 }
             }
@@ -134,8 +138,11 @@ impl ConnectorCommon for Elavon {
                     code: "".to_string(),
                     message,
                     reason,
-                    attempt_status: Some(hyperswitch_common_enums::AttemptStatus::Failure),
+                    attempt_status: Some(common_enums::AttemptStatus::Failure),
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 })
             }
         }
