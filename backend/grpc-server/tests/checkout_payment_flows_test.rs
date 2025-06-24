@@ -214,7 +214,9 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         cancellation_reason: None,
-        request_ref_id: None,
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
+        }),
         all_keys_required: None,
     }
 }
@@ -631,7 +633,7 @@ async fn test_payment_void() {
         // Allow some time for the authorization to be processed
         allow_processing_time();
 
-        // Create void request
+        // Create void request with a unique reference ID
         let void_request = create_payment_void_request(&transaction_id);
 
         // Add metadata headers for void request
@@ -645,10 +647,36 @@ async fn test_payment_void() {
             .expect("gRPC void_payment call failed")
             .into_inner();
 
-        // Verify void status
+        // Verify the void response
+        assert!(
+            void_response.transaction_id.is_some(),
+            "Transaction ID should be present in void response"
+        );
+
         assert!(
             void_response.status == i32::from(PaymentStatus::Voided),
             "Payment should be in VOIDED state after void"
+        );
+
+        // Allow time for void to process
+        allow_processing_time();
+
+        // Verify the payment status with a sync operation
+        let sync_request = create_payment_sync_request(&transaction_id);
+        let mut sync_grpc_request = Request::new(sync_request);
+        add_checkout_metadata(&mut sync_grpc_request);
+
+        // Send the sync request to verify void status
+        let sync_response = client
+            .get(sync_grpc_request)
+            .await
+            .expect("gRPC payment_sync call failed")
+            .into_inner();
+
+        // Verify the payment is properly voided
+        assert!(
+            sync_response.status == i32::from(PaymentStatus::Voided),
+            "Payment should be in VOIDED state after void sync"
         );
     });
 }
