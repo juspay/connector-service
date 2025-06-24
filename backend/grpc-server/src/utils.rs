@@ -143,8 +143,7 @@ macro_rules! implement_connector_operation {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
 
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
-            metrics::with_metrics_and_connector($log_prefix, &connector.to_string(), || {
-                Box::pin(async {
+
                     let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
                     let payload = request.into_inner();
 
@@ -188,7 +187,7 @@ macro_rules! implement_connector_operation {
                 connector_integration,
                 router_data,
                 $all_keys_required,
-                $log_prefix,
+                &connector.to_string(),
             )
             .await
             .switch()
@@ -199,8 +198,6 @@ macro_rules! implement_connector_operation {
                         .into_grpc_status()?;
 
                     Ok(tonic::Response::new(final_response))
-                })
-            }).await
         }
     };
 }

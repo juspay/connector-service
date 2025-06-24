@@ -174,6 +174,8 @@ impl Service {
                     .level(tracing::Level::ERROR),
             );
 
+        let metrics_layer = metrics::GrpcMetricsLayer::new();
+
         let request_id_layer = tower_http::request_id::SetRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
             MakeRequestUuid,
@@ -186,6 +188,7 @@ impl Service {
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
+            .layer(metrics_layer)
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
