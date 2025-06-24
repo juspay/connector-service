@@ -1,23 +1,20 @@
 pub mod transformers;
 
 use crate::types::ResponseRouterData;
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
 use error_stack::ResultExt;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
-};
 
-use hyperswitch_domain_models::{
+use common_utils::consts;
+use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-
-use hyperswitch_interfaces::errors::ConnectorError;
-use hyperswitch_interfaces::{
-    api::ConnectorCommon, configs::Connectors, connector_integration_v2::ConnectorIntegrationV2,
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use interfaces::errors::ConnectorError;
+use interfaces::{
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     errors, events::connector_api_logs::ConnectorEvent, types::Response,
 };
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 
 use super::macros;
 use domain_types::{
@@ -26,14 +23,13 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
-        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
-        SetupMandateV2, SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
+    types::Connectors,
 };
 use transformers::{
     ActionResponse, CheckoutAuthorizeResponse, CheckoutErrorResponse, CheckoutPSyncResponse,
@@ -46,20 +42,20 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-impl ConnectorServiceTrait for Checkout {}
-impl PaymentAuthorizeV2 for Checkout {}
-impl PaymentSyncV2 for Checkout {}
-impl PaymentVoidV2 for Checkout {}
-impl RefundSyncV2 for Checkout {}
-impl RefundV2 for Checkout {}
-impl PaymentCapture for Checkout {}
-impl ValidationTrait for Checkout {}
-impl SetupMandateV2 for Checkout {}
-impl AcceptDispute for Checkout {}
-impl SubmitEvidenceV2 for Checkout {}
-impl DisputeDefend for Checkout {}
-impl IncomingWebhook for Checkout {}
-impl PaymentOrderCreate for Checkout {}
+impl connector_types::ConnectorServiceTrait for Checkout {}
+impl connector_types::PaymentAuthorizeV2 for Checkout {}
+impl connector_types::PaymentSyncV2 for Checkout {}
+impl connector_types::PaymentVoidV2 for Checkout {}
+impl connector_types::RefundSyncV2 for Checkout {}
+impl connector_types::RefundV2 for Checkout {}
+impl connector_types::PaymentCapture for Checkout {}
+impl connector_types::ValidationTrait for Checkout {}
+impl connector_types::SetupMandateV2 for Checkout {}
+impl connector_types::AcceptDispute for Checkout {}
+impl connector_types::SubmitEvidenceV2 for Checkout {}
+impl connector_types::DisputeDefend for Checkout {}
+impl connector_types::IncomingWebhook for Checkout {}
+impl connector_types::PaymentOrderCreate for Checkout {}
 
 // The CheckoutRouterData type is now defined by the macro
 
@@ -393,14 +389,17 @@ impl ConnectorCommon for Checkout {
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: NO_ERROR_CODE.to_string(),
-            message: NO_ERROR_MESSAGE.to_string(),
+            code: consts::NO_ERROR_CODE.to_string(),
+            message: consts::NO_ERROR_MESSAGE.to_string(),
             reason: response
                 .error_codes
                 .map(|errors| errors.join(" & "))
                 .or(response.error_type),
             attempt_status: None,
             connector_transaction_id: response.request_id,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 }

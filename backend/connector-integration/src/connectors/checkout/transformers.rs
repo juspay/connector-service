@@ -1,3 +1,5 @@
+use common_enums::enums;
+use common_utils::{consts::NO_ERROR_CODE, consts::NO_ERROR_MESSAGE, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
@@ -5,20 +7,13 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-};
-use error_stack::report;
-use hyperswitch_common_enums::enums;
-use hyperswitch_common_utils::types::MinorUnit;
-use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors::ConnectorError,
-};
+use error_stack::report;
 use hyperswitch_masking::Secret;
+use interfaces::errors::ConnectorError;
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -57,7 +52,7 @@ pub enum CheckoutSourceTypes {
 pub struct CardSource {
     #[serde(rename = "type")]
     pub source_type: CheckoutSourceTypes,
-    pub number: hyperswitch_cards::CardNumber,
+    pub number: cards::CardNumber,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
     pub cvv: Secret<String>,
@@ -359,6 +354,9 @@ impl<F>
                 reason: response.response_summary,
                 attempt_status: None,
                 connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             // Handle successful response
@@ -651,6 +649,9 @@ impl<F>
                 reason: response.response_summary,
                 attempt_status: None,
                 connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             });
         } else {
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
