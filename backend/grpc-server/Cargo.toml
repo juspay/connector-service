@@ -44,7 +44,6 @@ interfaces = { version = "0.1.0", path = "../interfaces" }
 cards = { version = "0.1.0", path = "../cards" }
 common_enums = { version = "*", path = "../common_enums" }
 common_utils = { version = "0.1.0", path = "../common_utils" }
-api_models = { version = "0.1.0", path = "../api_models" }
 
 # Third-party dependencies
 config = "0.14.0"

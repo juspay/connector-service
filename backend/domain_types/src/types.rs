@@ -26,7 +26,7 @@ use hyperswitch_masking::Secret;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::consts::NO_ERROR_CODE;
 use crate::mandates::MandateData;
-use crate::payment_address::PaymentAddress;
+use crate::payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails};
 use crate::{payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2};
 use serde::Serialize;
 use std::borrow::Cow;
@@ -481,17 +481,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
         value: grpc_api_types::payments::PaymentAddress,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let shipping = match value.shipping_address {
-            Some(address) => Some(api_models::payments::Address::foreign_try_from(address)?),
+            Some(address) => Some(Address::foreign_try_from(address)?),
             None => None,
         };
 
         let billing = match value.billing_address.clone() {
-            Some(address) => Some(api_models::payments::Address::foreign_try_from(address)?),
+            Some(address) => Some(Address::foreign_try_from(address)?),
             None => None,
         };
 
         let payment_method_billing = match value.billing_address {
-            Some(address) => Some(api_models::payments::Address::foreign_try_from(address)?),
+            Some(address) => Some(Address::foreign_try_from(address)?),
             None => None,
         };
 
@@ -504,7 +504,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Address> for api_models::payments::Address {
+impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,
@@ -521,15 +521,11 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for api_models::payments:
             None => None,
         };
         Ok(Self {
-            address: Some(api_models::payments::AddressDetails::foreign_try_from(
-                value.clone(),
-            )?),
-            phone: value
-                .phone_number
-                .map(|phone_number| api_models::payments::PhoneDetails {
-                    number: Some(phone_number.into()),
-                    country_code: value.phone_country_code,
-                }),
+            address: Some(AddressDetails::foreign_try_from(value.clone())?),
+            phone: value.phone_number.map(|phone_number| PhoneDetails {
+                number: Some(phone_number.into()),
+                country_code: value.phone_country_code,
+            }),
             email,
         })
     }
@@ -799,7 +795,7 @@ impl ForeignTryFrom<i32> for common_enums::CountryAlpha2 {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Address> for api_models::payments::AddressDetails {
+impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,

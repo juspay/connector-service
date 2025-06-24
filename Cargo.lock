@@ -325,22 +325,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcfed56ad506cb2c684a14971b8861fdc3baaaae314b9e5f9bb532cbe3ba7a4f"
 
 [[package]]
-name = "api_models"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "common_enums",
- "common_utils",
- "masking",
- "mime",
- "reqwest",
- "serde",
- "serde_json",
- "strum",
- "utoipa",
-]
-
-[[package]]
 name = "arraydeque"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -838,7 +822,6 @@ dependencies = [
 name = "connector-integration"
 version = "0.1.0"
 dependencies = [
- "api_models",
  "base64 0.21.7",
  "bytes",
  "cards",
@@ -1113,7 +1096,6 @@ name = "domain_types"
 version = "0.1.0"
 dependencies = [
  "actix-web",
- "api_models",
  "cards",
  "common_enums",
  "common_utils",
@@ -1210,7 +1192,6 @@ dependencies = [
 name = "external-services"
 version = "0.1.0"
 dependencies = [
- "api_models",
  "async-trait",
  "base64 0.21.7",
  "bytes",
@@ -1479,7 +1460,6 @@ dependencies = [
 name = "grpc-server"
 version = "0.1.0"
 dependencies = [
- "api_models",
  "axum",
  "base64 0.21.7",
  "cards",
@@ -1978,7 +1958,6 @@ name = "interfaces"
 version = "0.1.0"
 dependencies = [
  "actix-web",
- "api_models",
  "async-trait",
  "bytes",
  "common_enums",

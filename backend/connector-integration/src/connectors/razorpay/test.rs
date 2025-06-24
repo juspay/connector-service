@@ -4,6 +4,7 @@ mod tests {
     use cards::CardNumber;
     use common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
     use domain_types::connector_types::{PaymentFlowData, PaymentsAuthorizeData};
+    use domain_types::payment_address::{Address, PhoneDetails};
     use domain_types::{
         payment_method_data::{Card, PaymentMethodData},
         router_request_types::BrowserInformation,
@@ -20,7 +21,6 @@ mod tests {
     mod authorize {
         use std::str::FromStr;
 
-        use api_models::payments::{Address, PhoneDetails};
         use cards::CardNumber;
         use common_enums::{
             AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
@@ -30,6 +30,7 @@ mod tests {
         };
         use domain_types::{
             connector_types::{PaymentFlowData, PaymentsAuthorizeData},
+            payment_address::{Address, PhoneDetails},
             types::{ConnectorParams, Connectors},
         };
         use domain_types::{
@@ -490,7 +491,6 @@ mod tests {
 
         #[test]
         fn test_handle_response_v2_valid_authorize_response() {
-            use api_models::payments::{Address, PhoneDetails};
             use common_enums::Currency;
             use common_utils::pii::Email;
             use common_utils::{id_type::MerchantId, types::MinorUnit};
@@ -800,7 +800,6 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_missing_fields_authorize_response() {
-        use api_models::payments::{Address, PhoneDetails};
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
@@ -984,7 +983,6 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_invalid_json_authorize_response() {
-        use api_models::payments::{Address, PhoneDetails};
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
@@ -1158,8 +1156,9 @@ mod tests {
     }
 
     mod order {
-        use api_models::payments::{Address, PhoneDetails};
+
         use common_utils::{pii::Email, request::RequestContent};
+        use domain_types::payment_address::{Address, PhoneDetails};
         use domain_types::router_data::ConnectorAuthType;
         use domain_types::types::{ConnectorParams, Connectors};
         use interfaces::connector_types::BoxedConnector;
@@ -1532,7 +1531,6 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_valid_order_response() {
-        use api_models::payments::{Address, PhoneDetails};
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
@@ -1659,7 +1657,6 @@ mod tests {
 
     #[test]
     fn test_handle_response_missing() {
-        use api_models::payments::{Address, PhoneDetails};
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};
@@ -1776,7 +1773,6 @@ mod tests {
 
     #[test]
     fn test_handle_response_invalid() {
-        use api_models::payments::{Address, PhoneDetails};
         use common_enums::Currency;
         use common_utils::pii::Email;
         use common_utils::{id_type::MerchantId, types::MinorUnit};

@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 domain_types ={ version = "0.1.0", path = "../domain_types" }
 base64 = "0.21"
-api_models = { version = "0.1.0", path = "../api_models" }
 common_enums = { version = "*", path = "../common_enums" }
 common_utils = { version = "0.1.0", path = "../common_utils" }
 interfaces = { version = "0.1.0", path = "../interfaces"}

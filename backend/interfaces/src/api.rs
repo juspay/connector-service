@@ -1,6 +1,7 @@
 use common_utils::CustomResult;
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
+    payment_address::RedirectionResponse,
     router_data::{ConnectorAuthType, ErrorResponse},
     types::Connectors,
 };
@@ -71,7 +72,7 @@ pub enum ApplicationResponse<R> {
     Json(R),
     StatusOk,
     TextPlain(String),
-    JsonForRedirection(api_models::payments::RedirectionResponse),
+    JsonForRedirection(RedirectionResponse),
     Form(Box<RedirectionFormData>),
     PaymentLinkForm(Box<PaymentLinkAction>),
     FileData((Vec<u8>, mime::Mime)),

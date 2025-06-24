@@ -1,7 +1,10 @@
 use common_utils::{crypto, ext_traits::ValueExt, CustomResult};
+use domain_types::connector_types::ConnectorWebhookSecrets;
 use error_stack::ResultExt;
 use hyperswitch_masking::ExposeInterface;
 use hyperswitch_masking::Secret;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::{
     api::{ApplicationResponse, ConnectorCommon},
@@ -91,7 +94,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         merchant_id: &common_utils::id_type::MerchantId,
         connector_name: &str,
         connector_webhook_details: Option<common_utils::pii::SecretSerdeValue>,
-    ) -> CustomResult<api_models::webhooks::ConnectorWebhookSecrets, errors::ConnectorError> {
+    ) -> CustomResult<ConnectorWebhookSecrets, errors::ConnectorError> {
         let debug_suffix = format!(
             "For merchant_id: {:?}, and connector_name: {}",
             merchant_id, connector_name
@@ -100,7 +103,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         let merchant_secret = match connector_webhook_details {
             Some(merchant_connector_webhook_details) => {
                 let connector_webhook_details = merchant_connector_webhook_details
-                    .parse_value::<api_models::admin::MerchantConnectorWebhookDetails>(
+                    .parse_value::<MerchantConnectorWebhookDetails>(
                         "MerchantConnectorWebhookDetails",
                     )
                     .change_context_lazy(|| errors::ConnectorError::WebhookSourceVerificationFailed)
@@ -110,7 +113,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
                             debug_suffix
                         )
                     })?;
-                api_models::webhooks::ConnectorWebhookSecrets {
+                ConnectorWebhookSecrets {
                     secret: connector_webhook_details
                         .merchant_secret
                         .expose()
@@ -119,7 +122,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
                 }
             }
 
-            None => api_models::webhooks::ConnectorWebhookSecrets {
+            None => ConnectorWebhookSecrets {
                 secret: default_secret.into_bytes(),
                 additional_secret: None,
             },
@@ -136,7 +139,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
     fn get_webhook_source_verification_signature(
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
-        _connector_webhook_secrets: &api_models::webhooks::ConnectorWebhookSecrets,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
     }
@@ -146,7 +149,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
         _merchant_id: &common_utils::id_type::MerchantId,
-        _connector_webhook_secrets: &api_models::webhooks::ConnectorWebhookSecrets,
+        _connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
         Ok(Vec::new())
     }
@@ -194,7 +197,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
     fn get_webhook_event_type(
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<api_models::webhooks::IncomingWebhookEvent, errors::ConnectorError>;
+    ) -> CustomResult<IncomingWebhookEvent, errors::ConnectorError>;
 
     /// fn get_webhook_resource_object
     fn get_webhook_resource_object(
@@ -252,4 +255,49 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
     > {
         Ok(None)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum IncomingWebhookEvent {
+    /// Authorization + Capture success
+    PaymentIntentFailure,
+    /// Authorization + Capture failure
+    PaymentIntentSuccess,
+    PaymentIntentProcessing,
+    PaymentIntentPartiallyFunded,
+    PaymentIntentCancelled,
+    PaymentIntentCancelFailure,
+    PaymentIntentAuthorizationSuccess,
+    PaymentIntentAuthorizationFailure,
+    PaymentIntentCaptureSuccess,
+    PaymentIntentCaptureFailure,
+    PaymentActionRequired,
+    EventNotSupported,
+    SourceChargeable,
+    SourceTransactionCreated,
+    RefundFailure,
+    RefundSuccess,
+    DisputeOpened,
+    DisputeExpired,
+    DisputeAccepted,
+    DisputeCancelled,
+    DisputeChallenged,
+    // dispute has been successfully challenged by the merchant
+    DisputeWon,
+    // dispute has been unsuccessfully challenged
+    DisputeLost,
+    MandateActive,
+    MandateRevoked,
+    EndpointVerification,
+    ExternalAuthenticationARes,
+    FrmApproved,
+    FrmRejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MerchantConnectorWebhookDetails {
+    pub merchant_secret: Secret<String>,
+    pub additional_secret: Option<Secret<String>>,
 }

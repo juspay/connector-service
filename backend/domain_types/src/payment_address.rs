@@ -1,4 +1,8 @@
-use api_models::payments::Address;
+use common_enums::ProductType;
+use common_utils::ext_traits::ConfigExt;
+use common_utils::{Email, MinorUnit};
+use hyperswitch_masking::PeekInterface;
+use hyperswitch_masking::{Secret, SerializableSecret};
 
 #[derive(Clone, Default, Debug)]
 pub struct PaymentAddress {
@@ -80,3 +84,151 @@ impl PaymentAddress {
         self.billing.as_ref()
     }
 }
+
+#[derive(Default, Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Address {
+    /// Provide the address details
+    pub address: Option<AddressDetails>,
+
+    pub phone: Option<PhoneDetails>,
+
+    pub email: Option<Email>,
+}
+
+impl SerializableSecret for Address {}
+
+impl Address {
+    /// Unify the address, giving priority to `self` when details are present in both
+    pub fn unify_address(self, other: Option<&Self>) -> Self {
+        let other_address_details = other.and_then(|address| address.address.as_ref());
+        Self {
+            address: self
+                .address
+                .map(|address| address.unify_address_details(other_address_details))
+                .or(other_address_details.cloned()),
+            email: self.email.or(other.and_then(|other| other.email.clone())),
+            phone: self.phone.or(other.and_then(|other| other.phone.clone())),
+        }
+    }
+}
+
+// used by customers also, could be moved outside
+/// Address details
+#[derive(Clone, Default, Debug, Eq, serde::Deserialize, serde::Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct AddressDetails {
+    /// The city, district, suburb, town, or village of the address.
+    pub city: Option<String>,
+
+    /// The two-letter ISO 3166-1 alpha-2 country code (e.g., US, GB).
+    pub country: Option<common_enums::CountryAlpha2>,
+
+    /// The first line of the street address or P.O. Box.
+    pub line1: Option<Secret<String>>,
+
+    /// The second line of the street address or P.O. Box (e.g., apartment, suite, unit, or building).
+    pub line2: Option<Secret<String>>,
+
+    /// The third line of the street address, if applicable.
+    pub line3: Option<Secret<String>>,
+
+    /// The zip/postal code for the address
+    pub zip: Option<Secret<String>>,
+
+    /// The address state
+    pub state: Option<Secret<String>>,
+
+    /// The first name for the address
+    pub first_name: Option<Secret<String>>,
+
+    /// The last name for the address
+    pub last_name: Option<Secret<String>>,
+}
+
+impl AddressDetails {
+    pub fn get_optional_full_name(&self) -> Option<Secret<String>> {
+        match (self.first_name.as_ref(), self.last_name.as_ref()) {
+            (Some(first_name), Some(last_name)) => Some(Secret::new(format!(
+                "{} {}",
+                first_name.peek(),
+                last_name.peek()
+            ))),
+            (Some(name), None) | (None, Some(name)) => Some(name.to_owned()),
+            _ => None,
+        }
+    }
+
+    pub fn unify_address_details(self, other: Option<&Self>) -> Self {
+        if let Some(other) = other {
+            let (first_name, last_name) = if self
+                .first_name
+                .as_ref()
+                .is_some_and(|first_name| !first_name.is_empty_after_trim())
+            {
+                (self.first_name, self.last_name)
+            } else {
+                (other.first_name.clone(), other.last_name.clone())
+            };
+
+            Self {
+                first_name,
+                last_name,
+                city: self.city.or(other.city.clone()),
+                country: self.country.or(other.country),
+                line1: self.line1.or(other.line1.clone()),
+                line2: self.line2.or(other.line2.clone()),
+                line3: self.line3.or(other.line3.clone()),
+                zip: self.zip.or(other.zip.clone()),
+                state: self.state.or(other.state.clone()),
+            }
+        } else {
+            self
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct PhoneDetails {
+    /// The contact number
+    pub number: Option<Secret<String>>,
+    /// The country code attached to the number
+    pub country_code: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize, PartialEq, Eq, serde::Deserialize)]
+pub struct RedirectionResponse {
+    pub return_url_with_query_params: String,
+}
+
+#[derive(Debug, Default, PartialEq, serde::Deserialize, serde::Serialize, Clone)]
+pub struct OrderDetailsWithAmount {
+    /// Name of the product that is being purchased
+    pub product_name: String,
+    /// The quantity of the product to be purchased
+    pub quantity: u16,
+    /// the amount per quantity of product
+    pub amount: MinorUnit,
+    /// tax rate applicable to the product
+    pub tax_rate: Option<f64>,
+    /// total tax amount applicable to the product
+    pub total_tax_amount: Option<MinorUnit>,
+    // Does the order includes shipping
+    pub requires_shipping: Option<bool>,
+    /// The image URL of the product
+    pub product_img_link: Option<String>,
+    /// ID of the product that is being purchased
+    pub product_id: Option<String>,
+    /// Category of the product that is being purchased
+    pub category: Option<String>,
+    /// Sub category of the product that is being purchased
+    pub sub_category: Option<String>,
+    /// Brand of the product that is being purchased
+    pub brand: Option<String>,
+    /// Type of the product that is being purchased
+    pub product_type: Option<ProductType>,
+    /// The tax code for the product
+    pub product_tax_code: Option<String>,
+}
+
+impl hyperswitch_masking::SerializableSecret for OrderDetailsWithAmount {}
