@@ -30,9 +30,10 @@ use hyperswitch_interfaces::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::{Display, EnumString};
 
 // snake case for enum variants
-#[derive(Clone, Debug, strum::Display, strum::EnumString)]
+#[derive(Clone, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,

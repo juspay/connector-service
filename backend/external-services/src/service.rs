@@ -89,6 +89,7 @@ where
             },
             None => serde_json::Value::Null,
         };
+        tracing::info!(request=?masked_request, "request of connector");
         tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
         masked_request
     });

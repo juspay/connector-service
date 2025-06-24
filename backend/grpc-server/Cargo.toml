@@ -73,12 +73,12 @@ hyperswitch_cards = { git = "https://github.com/juspay/hyperswitch", tag = "v1.1
 hyperswitch_common_enums = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_enums"}
 hyperswitch_common_utils = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "common_utils"}
 hyperswitch_api_models = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "api_models"}
-log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "f26cfb84b9985fd7e4b86d74f99bf9b037af46d7", package = "log_utils", features = ["tracing"] }
-build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "f26cfb84b9985fd7e4b86d74f99bf9b037af46d7", package = "build_info", features = ["cargo_workspace", "framework_libs_members_env"] }
+log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = ["tracing"] }
+build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = ["cargo-workspace", "framework-libs-members-env"] }
 chrono = "0.4.41"
 
 [build-dependencies]
-build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "f26cfb84b9985fd7e4b86d74f99bf9b037af46d7", package = "build_info", features = ["cargo_workspace", "vergen-gix", "framework_libs_members_env"] }
+build_info = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "build_info", features = ["cargo-workspace-build", "vergen-gix-build", "framework-libs-members-env"] }
 
 [dev-dependencies]
 tokio-stream = { version = "0.1.17", features = ["net"] }
