@@ -2828,3 +2828,67 @@ pub enum PaymentMethodDataType {
     DirectCarrierBilling,
     InstantBankTransfer,
 }
+
+impl TryFrom<i32> for AttemptStatus {
+    type Error = ApplicationErrorResponse;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => AttemptStatus::STARTED,
+            1 => AttemptStatus::AUTHENTICATION_FAILED,
+            2 => AttemptStatus::ROUTER_DECLINED,
+            3 => AttemptStatus::AUTHENTICATION_PENDING,
+            4 => AttemptStatus::AUTHENTICATION_SUCCESSFUL,
+            5 => AttemptStatus::AUTHORIZED,
+            6 => AttemptStatus::AUTHORIZATION_FAILED,
+            7 => AttemptStatus::CHARGED,
+            8 => AttemptStatus::AUTHORIZING,
+            9 => AttemptStatus::COD_INITIATED,
+            10 => AttemptStatus::VOIDED,
+            11 => AttemptStatus::VOID_INITIATED,
+            12 => AttemptStatus::CAPTURE_INITIATED,
+            13 => AttemptStatus::CAPTURE_FAILED,
+            14 => AttemptStatus::VOID_FAILED,
+            15 => AttemptStatus::AUTO_REFUNDED,
+            16 => AttemptStatus::PARTIAL_CHARGED,
+            17 => AttemptStatus::PARTIAL_CHARGED_AND_CHARGEABLE,
+            18 => AttemptStatus::UNRESOLVED,
+            19 => AttemptStatus::PENDING,
+            20 => AttemptStatus::FAILURE,
+            21 => AttemptStatus::PAYMENT_METHOD_AWAITED,
+            22 => AttemptStatus::CONFIRMATION_AWAITED,
+            23 => AttemptStatus::DEVICE_DATA_COLLECTION_PENDING,
+            _ => AttemptStatus::UNKNOWN,
+        })
+    }
+}
+
+#[derive(Debug, strum::Display)]
+#[allow(non_camel_case_types)]
+pub enum AttemptStatus {
+    STARTED,
+    AUTHENTICATION_FAILED,
+    ROUTER_DECLINED,
+    AUTHENTICATION_PENDING,
+    AUTHENTICATION_SUCCESSFUL,
+    AUTHORIZED,
+    AUTHORIZATION_FAILED,
+    CHARGED,
+    AUTHORIZING,
+    COD_INITIATED,
+    VOIDED,
+    VOID_INITIATED,
+    CAPTURE_INITIATED,
+    CAPTURE_FAILED,
+    VOID_FAILED,
+    AUTO_REFUNDED,
+    PARTIAL_CHARGED,
+    PARTIAL_CHARGED_AND_CHARGEABLE,
+    UNRESOLVED,
+    PENDING,
+    FAILURE,
+    PAYMENT_METHOD_AWAITED,
+    CONFIRMATION_AWAITED,
+    DEVICE_DATA_COLLECTION_PENDING,
+    UNKNOWN,
+}

@@ -220,36 +220,6 @@ pub fn mask_sensitive_fields(body: String) -> String {
     }
 }
 
-pub fn attempt_status_to_str(status: String) -> &'static str {
-    match status.parse::<i32>() {
-        Ok(0) => "STARTED",
-        Ok(1) => "AUTHENTICATION_FAILED",
-        Ok(2) => "ROUTER_DECLINED",
-        Ok(3) => "AUTHENTICATION_PENDING",
-        Ok(4) => "AUTHENTICATION_SUCCESSFUL",
-        Ok(5) => "AUTHORIZED",
-        Ok(6) => "AUTHORIZATION_FAILED",
-        Ok(7) => "CHARGED",
-        Ok(8) => "AUTHORIZING",
-        Ok(9) => "COD_INITIATED",
-        Ok(10) => "VOIDED",
-        Ok(11) => "VOID_INITIATED",
-        Ok(12) => "CAPTURE_INITIATED",
-        Ok(13) => "CAPTURE_FAILED",
-        Ok(14) => "VOID_FAILED",
-        Ok(15) => "AUTO_REFUNDED",
-        Ok(16) => "PARTIAL_CHARGED",
-        Ok(17) => "PARTIAL_CHARGED_AND_CHARGEABLE",
-        Ok(18) => "UNRESOLVED",
-        Ok(19) => "PENDING",
-        Ok(20) => "FAILURE",
-        Ok(21) => "PAYMENT_METHOD_AWAITED",
-        Ok(22) => "CONFIRMATION_AWAITED",
-        Ok(23) => "DEVICE_DATA_COLLECTION_PENDING",
-        _ => "UNKNOWN",
-    }
-}
-
 #[macro_export]
 macro_rules! implement_connector_operation {
     (

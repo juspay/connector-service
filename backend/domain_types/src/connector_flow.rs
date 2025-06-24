@@ -31,7 +31,7 @@ pub struct SubmitEvidence;
 #[derive(Debug, Clone)]
 pub struct DefendDispute;
 
-use strum_macros::Display;
+use strum::Display;
 
 #[derive(Display)]
 #[strum(serialize_all = "snake_case")]

@@ -13,7 +13,6 @@ pub struct TelemetryGuard {
 /// Setup logging sub-system specifying the logging configuration, service (binary) name, and a
 /// list of external crates for which a more verbose logging must be enabled. All crates within the
 /// current cargo workspace are automatically considered for verbose logging.
-///  # Panics
 pub fn setup(
     config: &config::Log,
     service_name: &str,
@@ -73,7 +72,10 @@ pub fn setup(
 
     let logging_components = match log_utils::build_logging_components(logger_config) {
         Ok(components) => components,
-        Err(_) => return Err(SetupError::BuildError),
+        Err(e) => {
+            tracing::error!("Build error for Logging Components: {:?}", e);
+            return Err(SetupError::BuildError);
+        }
     };
 
     let mut subscriber_layers = Vec::new();
@@ -126,8 +128,6 @@ fn get_envfilter_directive(
 
 #[derive(Debug, thiserror::Error)]
 pub enum SetupError {
-    #[error("Error in logger setup for build")]
+    #[error("Failed to build logging components")]
     BuildError,
-    #[error("Error in logger setup for unwrap")]
-    UnwrapError,
 }

@@ -73,7 +73,7 @@ where
             acc
         });
     let headers = serde_json::Value::Object(masked_headers);
-    tracing::Span::current().record("request.headers", tracing::field::display(headers.clone()));
+    tracing::Span::current().record("request.headers", tracing::field::display(&headers));
     let mut router_data = router_data.clone();
 
     let req = connector_request.as_ref().map(|connector_request| {
@@ -89,18 +89,14 @@ where
             },
             None => serde_json::Value::Null,
         };
-        // tracing::info!(request=?masked_request, "request of connector");
-        tracing::Span::current().record(
-            "request.body",
-            tracing::field::display(masked_request.clone()),
-        );
+        tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
         masked_request
     });
     let result = match connector_request {
         Some(request) => {
             let url = request.url.clone();
             let method = request.method;
-            tracing::Span::current().record("request.url", tracing::field::display(url.clone()));
+            tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
                 .await
@@ -198,7 +194,6 @@ where
         tracing::Span::current().record("request.body", tracing::field::display(req));
     }
     tracing::Span::current().record("latency", elapsed);
-    // tracing::Span::current().record("request_header", tracing::field::display(headers));
     tracing::info!(tag = ?Tag::OutgoingApi, log_type = "api", "Outgoing Request completed");
     result
 }

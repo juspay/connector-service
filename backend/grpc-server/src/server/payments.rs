@@ -3,7 +3,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{
-        attempt_status_to_str, auth_from_metadata, connector_from_metadata,
+        auth_from_metadata, connector_from_metadata,
         connector_merchant_id_tenant_id_request_id_from_metadata, mask_sensitive_fields,
     },
 };
@@ -18,6 +18,7 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    types::AttemptStatus,
 };
 use domain_types::{
     types::{
@@ -289,8 +290,13 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
         let masked_request_body = mask_sensitive_fields(req_body_json);
         current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
@@ -383,8 +389,10 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status.to_string();
-                let status_str = attempt_status_to_str(status);
+                let status = response.get_ref().status;
+                let status_str = AttemptStatus::try_from(status)
+                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
@@ -426,9 +434,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -444,8 +458,10 @@ impl PaymentService for Payments {
         match &result {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
-                let status = response.get_ref().status.to_string();
-                let status_str = attempt_status_to_str(status);
+                let status = response.get_ref().status;
+                let status_str = AttemptStatus::try_from(status)
+                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
@@ -487,9 +503,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -506,8 +528,10 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status.to_string();
-                let status_str = attempt_status_to_str(status);
+                let status = response.get_ref().status;
+                let status_str = AttemptStatus::try_from(status)
+                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
@@ -549,9 +573,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -703,9 +733,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -761,9 +797,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -826,9 +868,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -845,8 +893,10 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status.to_string();
-                let status_str = attempt_status_to_str(status);
+                let status = response.get_ref().status;
+                let status_str = AttemptStatus::try_from(status)
+                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
@@ -889,9 +939,15 @@ impl PaymentService for Payments {
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
                 .map_err(|e| e.into_grpc_status())?;
         let req_body = request.get_ref();
-        let req_body_json =
-            serde_json::to_string(req_body).unwrap_or_else(|_| "<serialization error>".to_string());
-        current_span.record("request_body", req_body_json);
+        let req_body_json = match serde_json::to_string(req_body) {
+            Ok(json) => json,
+            Err(e) => {
+                tracing::error!("Serialization error: {:?}", e);
+                "<serialization error>".to_string()
+            }
+        };
+        let masked_request_body = mask_sensitive_fields(req_body_json);
+        current_span.record("request_body", masked_request_body);
         current_span.record("time_stamp", chrono::Utc::now().to_rfc3339());
         current_span.record("gateway", gateway.to_string());
         current_span.record("merchant_id", merchant_id);
@@ -981,8 +1037,10 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status.to_string();
-                let status_str = attempt_status_to_str(status);
+                let status = response.get_ref().status;
+                let status_str = AttemptStatus::try_from(status)
+                    .unwrap_or(AttemptStatus::UNKNOWN)
+                    .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
