@@ -30,7 +30,7 @@ use hyperswitch_interfaces::{
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use strum_macros::Display;
+use strum::Display;
 
 // snake case for enum variants
 #[derive(Clone, Debug, strum::EnumString, Display)]
