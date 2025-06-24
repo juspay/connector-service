@@ -8,6 +8,11 @@ use std::{
     io::Write,
 };
 
+use common_utils::consts::{
+    LOG_FILE as FILE, LOG_FN as FN, LOG_FULL_NAME as FULL_NAME, LOG_HOSTNAME as HOSTNAME,
+    LOG_LEVEL as LEVEL, LOG_LINE as LINE, LOG_MESSAGE as MESSAGE, LOG_PID as PID,
+    LOG_SERVICE as SERVICE, LOG_TARGET as TARGET, LOG_TIME as TIME,
+};
 use once_cell::sync::Lazy;
 use serde::ser::{SerializeMap, Serializer};
 use serde_json::Value;
@@ -25,18 +30,6 @@ use tracing_subscriber::{
 // TODO: Documentation coverage for this crate
 
 // Implicit keys
-
-const MESSAGE: &str = "message";
-const HOSTNAME: &str = "hostname";
-const PID: &str = "pid";
-const LEVEL: &str = "level";
-const TARGET: &str = "target";
-const SERVICE: &str = "service";
-const LINE: &str = "line";
-const FILE: &str = "file";
-const FN: &str = "fn";
-const FULL_NAME: &str = "full_name";
-const TIME: &str = "time";
 
 /// Set of predefined implicit keys.
 pub static IMPLICIT_KEYS: Lazy<rustc_hash::FxHashSet<&str>> = Lazy::new(|| {

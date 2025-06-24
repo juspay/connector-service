@@ -1,6 +1,9 @@
 use std::{collections::HashMap, fmt, ops::Deref, str::FromStr, sync::LazyLock};
 
-use common_utils::{date_time, ValidationError};
+use common_utils::{
+    consts::{MAX_CARD_NUMBER_LENGTH, MIN_CARD_NUMBER_LENGTH},
+    date_time, ValidationError,
+};
 use error_stack::report;
 use hyperswitch_masking::{PeekInterface, Strategy, StrongSecret, WithType};
 use regex::Regex;
@@ -9,12 +12,6 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 use thiserror::Error;
-
-/// Minimum limit of a card number will not be less than 8 by ISO standards
-pub const MIN_CARD_NUMBER_LENGTH: usize = 8;
-
-/// Maximum limit of a card number will not exceed 19 by ISO standards
-pub const MAX_CARD_NUMBER_LENGTH: usize = 19;
 
 #[derive(Debug, Deserialize, Serialize, Error)]
 #[error("{0}")]

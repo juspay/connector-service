@@ -6,10 +6,10 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret, Strategy, WithType};
 use serde::Deserialize;
 
-use crate::errors::{self, ValidationError};
-
-/// A string constant representing a redacted or masked value.
-pub const REDACTED: &str = "Redacted";
+use crate::{
+    consts::REDACTED,
+    errors::{self, ValidationError},
+};
 
 /// Type alias for serde_json value which has Secret Information
 pub type SecretSerdeValue = Secret<serde_json::Value>;

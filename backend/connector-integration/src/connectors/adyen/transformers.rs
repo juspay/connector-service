@@ -20,6 +20,7 @@ use domain_types::{
 };
 use error_stack::{Report, ResultExt};
 
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use domain_types::{
     payment_method_data::{Card, PaymentMethodData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -27,10 +28,7 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
-use interfaces::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors,
-};
+use interfaces::errors;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
@@ -1196,7 +1194,7 @@ pub fn get_adyen_response(
             message: response
                 .refusal_reason
                 .clone()
-                .unwrap_or_else(|| interfaces::consts::NO_ERROR_MESSAGE.to_string()),
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
             reason: response.refusal_reason,
             status_code,
             attempt_status: Some(common_enums::AttemptStatus::Failure),

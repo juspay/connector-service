@@ -23,12 +23,12 @@ use domain_types::{
 };
 
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,

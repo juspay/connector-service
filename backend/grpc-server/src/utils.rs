@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
-use crate::consts;
-use common_utils::errors::CustomResult;
+use common_utils::{
+    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
+    errors::CustomResult,
+};
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
 use domain_types::router_data::ConnectorAuthType;
@@ -53,12 +55,6 @@ pub fn connector_from_metadata(
 pub fn auth_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
-    const X_AUTH: &str = "x-auth";
-    const X_API_KEY: &str = "x-api-key";
-    const X_KEY1: &str = "x-key1";
-    const X_KEY2: &str = "x-key2";
-    const X_API_SECRET: &str = "x-api-secret";
-
     let auth = parse_metadata(metadata, X_AUTH)?;
 
     #[allow(clippy::wildcard_in_or_patterns)]

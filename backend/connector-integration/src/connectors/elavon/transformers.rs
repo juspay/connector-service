@@ -3,6 +3,7 @@ use common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
     FutureUsage,
 };
+use common_utils::consts::NO_ERROR_CODE;
 use common_utils::types::StringMajorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
@@ -20,10 +21,7 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::WithoutType;
-use interfaces::{
-    consts as hs_interface_consts,
-    errors::{self},
-};
+use interfaces::errors::{self};
 use std::collections::HashMap;
 
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
@@ -708,7 +706,7 @@ pub fn get_elavon_attempt_status(
                 code: error_resp
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_resp.error_message.clone(),
                 reason: error_resp.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
@@ -775,7 +773,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
@@ -1010,7 +1008,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(HyperswitchAttemptStatus::Failure),
@@ -1157,7 +1155,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 code: error_payload
                     .error_code
                     .clone()
-                    .unwrap_or_else(|| hs_interface_consts::NO_ERROR_CODE.to_string()),
+                    .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
                 message: error_payload.error_message.clone(),
                 reason: error_payload.error_name.clone(),
                 attempt_status: Some(attempt_status),

@@ -1,4 +1,5 @@
 use common_enums::enums;
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use common_utils::{
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
@@ -10,10 +11,7 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
-use interfaces::{
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    errors::ConnectorError,
-};
+use interfaces::errors::ConnectorError;
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::fiserv::FiservRouterData;

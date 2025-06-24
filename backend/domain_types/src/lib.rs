@@ -1,7 +1,6 @@
 pub mod api;
 pub mod connector_flow;
 pub mod connector_types;
-pub mod consts;
 pub mod errors;
 pub mod mandates;
 pub mod payment_address;

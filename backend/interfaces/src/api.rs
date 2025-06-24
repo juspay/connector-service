@@ -7,7 +7,8 @@ use domain_types::{
 };
 use hyperswitch_masking::Maskable;
 
-use crate::{consts, errors, events::connector_api_logs::ConnectorEvent, types};
+use crate::{errors, events::connector_api_logs::ConnectorEvent, types};
+use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 
 /// Connector accepted currency unit as either "Base" or "Minor"
 #[derive(Debug)]
@@ -55,8 +56,8 @@ pub trait ConnectorCommon {
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: consts::NO_ERROR_CODE.to_string(),
-            message: consts::NO_ERROR_MESSAGE.to_string(),
+            code: NO_ERROR_CODE.to_string(),
+            message: NO_ERROR_MESSAGE.to_string(),
             reason: None,
             attempt_status: None,
             connector_transaction_id: None,

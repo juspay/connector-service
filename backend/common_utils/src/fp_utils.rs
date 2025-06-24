@@ -1,6 +1,6 @@
 //! Functional programming utilities
 
-use crate::consts;
+use crate::consts::{ALPHABETS, ID_LENGTH};
 
 /// The Applicative trait provides a pure behavior,
 /// which can be used to create values of type f a from values of type a.
@@ -41,6 +41,6 @@ where
 
 #[inline]
 pub fn generate_id_with_default_len(prefix: &str) -> String {
-    let len: usize = consts::ID_LENGTH;
-    format!("{}_{}", prefix, nanoid::nanoid!(len, &consts::ALPHABETS))
+    let len: usize = ID_LENGTH;
+    format!("{}_{}", prefix, nanoid::nanoid!(len, &ALPHABETS))
 }
