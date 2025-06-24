@@ -34,7 +34,7 @@ use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -44,7 +44,7 @@ pub struct Connectors {
     pub xendit: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
