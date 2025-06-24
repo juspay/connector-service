@@ -8,7 +8,6 @@ members = [
   "sdk/rust-grpc-client",
   "backend/common_enums",
   "backend/common_utils",
-  "backend/api_models",
   "backend/interfaces",
 ]
 exclude = [

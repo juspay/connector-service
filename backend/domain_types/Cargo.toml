@@ -8,7 +8,6 @@ grpc-api-types = { version = "0.1.0", path = "../grpc-api-types" }
 common_enums = { version = "*", path = "../common_enums" }
 cards = { version = "0.1.0", path = "../cards" }
 common_utils = { version = "0.1.0", path = "../common_utils" }
-api_models = { version = "0.1.0", path = "../api_models" }
 
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
 router_derive = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" } # verify this can be from framework-libs-rs

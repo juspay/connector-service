@@ -1623,7 +1623,7 @@ fn is_mandate_payment(
 }
 
 pub fn get_address_info(
-    address: Option<&api_models::payments::Address>,
+    address: Option<&domain_types::payment_address::Address>,
 ) -> Option<Result<Address, error_stack::Report<interfaces::errors::ConnectorError>>> {
     address.and_then(|add| {
         add.address.as_ref().map(

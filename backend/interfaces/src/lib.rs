@@ -6,5 +6,6 @@ pub mod consts;
 pub mod disputes;
 pub mod errors;
 pub mod events;
+pub mod routing;
 pub mod types;
 pub mod webhooks;

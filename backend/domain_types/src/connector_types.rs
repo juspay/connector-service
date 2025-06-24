@@ -6,6 +6,7 @@ use crate::types::{
 use crate::utils::ForeignTryFrom;
 use common_enums::Currency;
 use error_stack::ResultExt;
+use hyperswitch_masking::Secret;
 
 use crate::{
     payment_method_data, payment_method_data::PaymentMethodData,
@@ -49,8 +50,87 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct PaymentId(pub String);
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct UpdateHistory {
+    pub connector_mandate_id: Option<String>,
+    pub payment_method_id: String,
+    pub original_payment_id: Option<PaymentId>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Eq, PartialEq)]
+pub struct ConnectorMandateReferenceId {
+    connector_mandate_id: Option<String>,
+    payment_method_id: Option<String>,
+    update_history: Option<Vec<UpdateHistory>>,
+}
+
+impl ConnectorMandateReferenceId {
+    pub fn new(
+        connector_mandate_id: Option<String>,
+        payment_method_id: Option<String>,
+        update_history: Option<Vec<UpdateHistory>>,
+    ) -> Self {
+        Self {
+            connector_mandate_id,
+            payment_method_id,
+            update_history,
+        }
+    }
+
+    pub fn get_connector_mandate_id(&self) -> Option<&String> {
+        self.connector_mandate_id.as_ref()
+    }
+
+    pub fn get_payment_method_id(&self) -> Option<&String> {
+        self.payment_method_id.as_ref()
+    }
+
+    pub fn get_update_history(&self) -> Option<&Vec<UpdateHistory>> {
+        self.update_history.as_ref()
+    }
+}
+
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Eq, PartialEq)]
+pub struct NetworkTokenWithNTIRef {
+    pub network_transaction_id: String,
+    pub token_exp_month: Option<Secret<String>>,
+    pub token_exp_year: Option<Secret<String>>,
+}
+
+#[derive(Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
+pub enum MandateReferenceId {
+    ConnectorMandateId(ConnectorMandateReferenceId), // mandate_id send by connector
+    NetworkMandateId(String), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with card data
+    NetworkTokenWithNTI(NetworkTokenWithNTIRef), // network_txns_id send by Issuer to connector, Used for PG agnostic mandate txns along with network token data
+}
+
+#[derive(Default, Eq, PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
+pub struct MandateIds {
+    pub mandate_id: Option<String>,
+    pub mandate_reference_id: Option<MandateReferenceId>,
+}
+
+impl MandateIds {
+    pub fn is_network_transaction_id_flow(&self) -> bool {
+        matches!(
+            self.mandate_reference_id,
+            Some(MandateReferenceId::NetworkMandateId(_))
+        )
+    }
+
+    pub fn new(mandate_id: String) -> Self {
+        Self {
+            mandate_id: Some(mandate_id),
+            mandate_reference_id: None,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -60,7 +140,7 @@ pub struct PaymentsSyncData {
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub connector_meta: Option<serde_json::Value>,
     pub sync_type: SyncRequestType,
-    pub mandate_id: Option<api_models::payments::MandateIds>,
+    pub mandate_id: Option<MandateIds>,
     pub payment_method_type: Option<common_enums::PaymentMethodType>,
     pub currency: common_enums::Currency,
     pub payment_experience: Option<common_enums::PaymentExperience>,
@@ -138,7 +218,7 @@ pub struct PaymentsAuthorizeData {
     pub webhook_url: Option<String>,
     pub complete_authorize_url: Option<String>,
     // Mandates
-    pub mandate_id: Option<api_models::payments::MandateIds>,
+    pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
     pub browser_info: Option<crate::router_request_types::BrowserInformation>,
@@ -300,8 +380,8 @@ pub struct RequestDetails {
 
 #[derive(Debug, Clone)]
 pub struct ConnectorWebhookSecrets {
-    pub secret: String,
-    pub additional_secret: Option<String>,
+    pub secret: Vec<u8>,
+    pub additional_secret: Option<hyperswitch_masking::Secret<String>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -379,8 +459,8 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookSecrets> for ConnectorWebho
         value: grpc_api_types::payments::WebhookSecrets,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            secret: value.secret,
-            additional_secret: value.additional_secret,
+            secret: value.secret.into(),
+            additional_secret: value.additional_secret.map(Secret::new),
         })
     }
 }
@@ -429,7 +509,7 @@ pub struct SetupMandateRequestData {
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
     pub customer_acceptance: Option<crate::mandates::CustomerAcceptance>,
-    pub mandate_id: Option<api_models::payments::MandateIds>,
+    pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
     pub setup_mandate_details: Option<crate::mandates::MandateData>,

@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use api_models::routing::RoutableConnectorChoice;
+use crate::routing::RoutableConnectorChoice;
 use common_utils::request::Method;
 use serde::Serialize;
 use serde_json::json;

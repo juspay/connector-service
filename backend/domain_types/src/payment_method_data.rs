@@ -1,5 +1,4 @@
-use api_models::payment_method::{CardType, CoBadgedCardData};
-use common_enums::{CardNetwork, CountryAlpha2, SamsungPayCardBrand};
+use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
 use common_utils::{new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
@@ -559,3 +558,28 @@ pub struct SamsungPayWebWalletData {
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct AmazonPayRedirectData {}
+
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct CoBadgedCardData {
+    pub co_badged_card_networks: Vec<CardNetwork>,
+    pub issuer_country_code: CountryAlpha2,
+    pub is_regulated: bool,
+    pub regulated_name: Option<RegulatedName>,
+}
+
+#[derive(
+    Debug,
+    serde::Deserialize,
+    serde::Serialize,
+    Clone,
+    ToSchema,
+    strum::EnumString,
+    strum::Display,
+    Eq,
+    PartialEq,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum CardType {
+    Credit,
+    Debit,
+}
