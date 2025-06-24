@@ -267,12 +267,10 @@ async fn test_payment_authorization_auto_capture() {
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&response);
 
-        // Verify payment status - for automatic capture, could be CHARGED, AUTHORIZED, or PENDING
+        // Verify payment status - for automatic capture, should be PENDING according to our implementation
         assert!(
-            response.status == i32::from(PaymentStatus::Charged)
-                || response.status == i32::from(PaymentStatus::Authorized)
-                || response.status == i32::from(PaymentStatus::Pending),
-            "Payment should be in CHARGED, AUTHORIZED, or PENDING state"
+            response.status == i32::from(PaymentStatus::Pending),
+            "Payment should be in PENDING state for automatic capture before sync"
         );
 
         // Wait longer for the transaction to be fully processed
@@ -292,11 +290,11 @@ async fn test_payment_authorization_auto_capture() {
             .expect("gRPC payment_sync call failed")
             .into_inner();
 
-        // After the sync, payment must be in CHARGED state only
+        // After the sync, payment should be in CHARGED state based on connector_meta with Capture intent
         assert_eq!(
             sync_response.status,
             i32::from(PaymentStatus::Charged),
-            "Payment should be in CHARGED state after sync"
+            "Payment should be in CHARGED state after sync with Capture intent"
         );
     });
 }
@@ -327,10 +325,10 @@ async fn test_payment_authorization_manual_capture() {
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
 
-        // Verify payment status is authorized (for manual capture)
+        // Verify payment status is authorized (for manual capture, as per our implementation)
         assert!(
             auth_response.status == i32::from(PaymentStatus::Authorized),
-            "Payment should be in AUTHORIZED state with manual capture"
+            "Payment should be in AUTHORIZED state with manual capture (Authorize intent)"
         );
 
         // Create capture request

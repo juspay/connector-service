@@ -105,7 +105,11 @@ if [ ! -z "$AUTO_TX_ID" ]; then
   # Look for status field in response
   SYNC_STATUS=$(echo "$SYNC_RESPONSE" | grep -o '"status": "[^"]*' | cut -d'"' -f4)
   if [ ! -z "$SYNC_STATUS" ]; then
-    echo -e "${GREEN}✓ Payment Sync successful. Status: ${SYNC_STATUS}${NC}"
+    if [ "$SYNC_STATUS" = "CHARGED" ]; then
+      echo -e "${GREEN}✓ Payment Sync successful. Status: ${SYNC_STATUS} (expected for Capture intent)${NC}"
+    else
+      echo -e "${YELLOW}⚠ Payment Sync returned status ${SYNC_STATUS}, expected CHARGED for automatic capture${NC}"
+    fi
   else
     echo -e "${YELLOW}⚠ Payment Sync response didn't include status${NC}"
   fi
@@ -312,7 +316,11 @@ if [ ! -z "$VOID_TX_ID" ]; then
   # Look for status field in response
   VOID_STATUS=$(echo "$VOID_RESPONSE" | grep -o '"status": "[^"]*' | cut -d'"' -f4)
   if [ ! -z "$VOID_STATUS" ]; then
-    echo -e "${GREEN}✓ Payment Void successful. Status: ${VOID_STATUS}${NC}"
+    if [ "$VOID_STATUS" = "VOIDED" ]; then
+      echo -e "${GREEN}✓ Payment Void successful. Status: ${VOID_STATUS}${NC}"
+    else
+      echo -e "${YELLOW}⚠ Payment Void returned status ${VOID_STATUS}, expected VOIDED${NC}"
+    fi
     
     # Test Payment Sync after Void
     echo -e "\n${BLUE}Running Payment Sync after Void for transaction ${VOID_TX_ID}...${NC}"
@@ -335,7 +343,11 @@ if [ ! -z "$VOID_TX_ID" ]; then
     # Look for status field in response
     SYNC_AFTER_VOID_STATUS=$(echo "$VOID_SYNC_RESPONSE" | grep -o '"status": "[^"]*' | cut -d'"' -f4)
     if [ ! -z "$SYNC_AFTER_VOID_STATUS" ]; then
-      echo -e "${GREEN}✓ Payment Sync after Void successful. Status: ${SYNC_AFTER_VOID_STATUS}${NC}"
+      if [ "$SYNC_AFTER_VOID_STATUS" = "VOIDED" ]; then
+        echo -e "${GREEN}✓ Payment Sync after Void successful. Status: ${SYNC_AFTER_VOID_STATUS}${NC}"
+      else
+        echo -e "${YELLOW}⚠ Payment Sync after Void returned status ${SYNC_AFTER_VOID_STATUS}, expected VOIDED${NC}"
+      fi
     else
       echo -e "${YELLOW}⚠ Payment Sync after Void response didn't include status${NC}"
     fi
