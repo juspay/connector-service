@@ -7,6 +7,7 @@ use crate::{
         connector_merchant_id_tenant_id_request_id_from_metadata,
     },
 };
+use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -19,6 +20,10 @@ use domain_types::{
     },
     errors::{ApiError, ApplicationErrorResponse},
     types::AttemptStatus,
+};
+use domain_types::{
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
 };
 use domain_types::{
     types::{
@@ -37,12 +42,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_common_utils::errors::CustomResult;
-use hyperswitch_domain_models::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
 use tracing::info;
 
@@ -90,11 +90,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(payload.minor_amount),
+            amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
         };
 
@@ -149,11 +149,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(0),
+            amount: common_utils::types::MinorUnit::new(0),
             currency,
         };
 
@@ -261,8 +261,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_authorize",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::Authorize.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -403,8 +403,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_sync",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::Psync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -469,8 +469,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_void",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::Void.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -536,8 +536,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "incoming_webhook",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::IncomingWebhook.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -693,8 +693,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "refund",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::Refund.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -754,8 +754,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "defend_dispute",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::DefendDispute.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -822,8 +822,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_capture",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::Capture.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -889,8 +889,8 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "setup_mandate",
         fields(
-            name = crate::consts::NAME,
-            service_name = crate::consts::PAYMENT_SERVICE,
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
             service_method = FlowName::SetupMandate.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,

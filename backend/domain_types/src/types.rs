@@ -11,6 +11,9 @@ use crate::connector_types::{
 };
 use crate::errors::{ApiError, ApplicationErrorResponse};
 use crate::utils::{ForeignFrom, ForeignTryFrom};
+use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
+use common_utils::id_type::CustomerId;
+use common_utils::pii::Email;
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -19,17 +22,12 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use hyperswitch_common_utils::id_type::CustomerId;
-use hyperswitch_common_utils::pii::Email;
 use hyperswitch_masking::Secret;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
-use hyperswitch_domain_models::mandates::MandateData;
-use hyperswitch_domain_models::payment_address::PaymentAddress;
-use hyperswitch_domain_models::{
-    payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::consts::NO_ERROR_CODE;
+use crate::mandates::MandateData;
+use crate::payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails};
+use crate::{payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2};
+use common_utils::consts::NO_ERROR_CODE;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
@@ -58,9 +56,7 @@ pub struct Proxy {
     pub bypass_proxy_urls: Vec<String>,
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod>
-    for hyperswitch_common_enums::CaptureMethod
-{
+impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -81,7 +77,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod>
     }
 }
 
-impl ForeignTryFrom<i32> for hyperswitch_common_enums::CardNetwork {
+impl ForeignTryFrom<i32> for common_enums::CardNetwork {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(connector: i32) -> Result<Self, error_stack::Report<Self::Error>> {
@@ -118,8 +114,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
                     match card_type.card_type {
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => Ok(
-                            PaymentMethodData::Card(hyperswitch_domain_models::payment_method_data::Card {
-                                card_number: hyperswitch_cards::CardNumber::from_str(&card.card_number)
+                            PaymentMethodData::Card(crate::payment_method_data::Card {
+                                card_number: cards::CardNumber::from_str(&card.card_number)
                                     .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_CARD_NUMBER".to_owned(),
                                         error_identifier: 400,
@@ -133,7 +129,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 card_network: card
                                     .card_network
                                     .map(|network| {
-                                        hyperswitch_common_enums::CardNetwork::foreign_try_from(network)
+                                        common_enums::CardNetwork::foreign_try_from(network)
                                             .change_context(ApplicationErrorResponse::BadRequest(
                                                 ApiError {
                                                     sub_code: "INVALID_CARD_NETWORK".to_owned(),
@@ -148,11 +144,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 card_issuing_country: card.card_issuing_country_alpha2,
                                 bank_code: card.bank_code,
                                 nick_name: card.nick_name.map(|name| name.into()),
+                                card_holder_name: card.card_holder_name.map(Secret::new),
+                                co_badged_card_data: None, // TODO: Handle co-badged card data
                             }),
                         ),
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => Ok(
-                            PaymentMethodData::Card(hyperswitch_domain_models::payment_method_data::Card {
-                                card_number: hyperswitch_cards::CardNumber::from_str(&card.card_number)
+                            PaymentMethodData::Card(crate::payment_method_data::Card {
+                                card_number: cards::CardNumber::from_str(&card.card_number)
                                     .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_CARD_NUMBER".to_owned(),
                                         error_identifier: 400,
@@ -166,7 +164,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 card_network: card
                                     .card_network
                                     .map(|network| {
-                                        hyperswitch_common_enums::CardNetwork::foreign_try_from(network)
+                                        common_enums::CardNetwork::foreign_try_from(network)
                                             .change_context(ApplicationErrorResponse::BadRequest(
                                                 ApiError {
                                                     sub_code: "INVALID_CARD_NETWORK".to_owned(),
@@ -181,6 +179,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 card_issuing_country: card.card_issuing_country_alpha2,
                                 bank_code: card.bank_code,
                                 nick_name: card.nick_name.map(|name| name.into()),
+                                card_holder_name: card.card_holder_name.map(Secret::new),
+                                co_badged_card_data: None, // TODO: Handle co-badged card data
                             }),
                         ),
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_card_redirect)) => {
@@ -198,12 +198,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                             error_object: None,
                         })))
                     }
-                },
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_token) => Ok(
-                    PaymentMethodData::CardToken(hyperswitch_domain_models::payment_method_data::CardToken {
+                    PaymentMethodData::CardToken(crate::payment_method_data::CardToken {
                         card_holder_name: None,
                         card_cvc: None,
-                    })
+                    }),
                 ),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -217,7 +217,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Currency> for hyperswitch_common_enums::Currency {
+impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Currency {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::Currency,
@@ -398,7 +398,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
         };
 
         Ok(Self {
-            capture_method: Some(hyperswitch_common_enums::CaptureMethod::foreign_try_from(
+            capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
             payment_method_data: PaymentMethodData::foreign_try_from(
@@ -412,11 +412,11 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                 })?,
             )?,
             amount: value.amount,
-            currency: hyperswitch_common_enums::Currency::foreign_try_from(value.currency())?,
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
             confirm: true,
             webhook_url: value.webhook_url,
             browser_info: value.browser_info.map(|info| {
-                hyperswitch_domain_models::router_request_types::BrowserInformation {
+                crate::router_request_types::BrowserInformation {
                     color_depth: None,
                     java_enabled: info.java_enabled,
                     java_script_enabled: info.java_script_enabled,
@@ -427,10 +427,14 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                     ip_address: None,
                     accept_header: info.accept_header,
                     user_agent: info.user_agent,
+                    os_type: info.os_type,
+                    os_version: info.os_version,
+                    device_model: info.device_model,
+                    accept_language: info.accept_language,
                 }
             }),
-            payment_method_type: Some(hyperswitch_common_enums::PaymentMethodType::Credit), //TODO
-            minor_amount: hyperswitch_common_utils::types::MinorUnit::new(value.minor_amount),
+            payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
+            minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
             customer_name: None,
             statement_descriptor_suffix: None,
@@ -470,30 +474,24 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
-    for hyperswitch_domain_models::payment_address::PaymentAddress
+    for crate::payment_address::PaymentAddress
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentAddress,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let shipping = match value.shipping_address {
-            Some(address) => Some(hyperswitch_api_models::payments::Address::foreign_try_from(
-                address,
-            )?),
+            Some(address) => Some(Address::foreign_try_from(address)?),
             None => None,
         };
 
         let billing = match value.billing_address.clone() {
-            Some(address) => Some(hyperswitch_api_models::payments::Address::foreign_try_from(
-                address,
-            )?),
+            Some(address) => Some(Address::foreign_try_from(address)?),
             None => None,
         };
 
         let payment_method_billing = match value.billing_address {
-            Some(address) => Some(hyperswitch_api_models::payments::Address::foreign_try_from(
-                address,
-            )?),
+            Some(address) => Some(Address::foreign_try_from(address)?),
             None => None,
         };
 
@@ -506,42 +504,34 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentAddress>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Address>
-    for hyperswitch_api_models::payments::Address
-{
+impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email = match value.email.clone() {
-            Some(email) => Some(
-                hyperswitch_common_utils::pii::Email::from_str(&email).change_context(
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }),
-                )?,
-            ),
+            Some(email) => Some(common_utils::pii::Email::from_str(&email).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_EMAIL".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid email".to_owned(),
+                    error_object: None,
+                }),
+            )?),
             None => None,
         };
         Ok(Self {
-            address: Some(
-                hyperswitch_api_models::payments::AddressDetails::foreign_try_from(value.clone())?,
-            ),
-            phone: value.phone_number.map(|phone_number| {
-                hyperswitch_api_models::payments::PhoneDetails {
-                    number: Some(phone_number.into()),
-                    country_code: value.phone_country_code,
-                }
+            address: Some(AddressDetails::foreign_try_from(value.clone())?),
+            phone: value.phone_number.map(|phone_number| PhoneDetails {
+                number: Some(phone_number.into()),
+                country_code: value.phone_country_code,
             }),
             email,
         })
     }
 }
 
-impl ForeignTryFrom<i32> for hyperswitch_common_enums::CountryAlpha2 {
+impl ForeignTryFrom<i32> for common_enums::CountryAlpha2 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
@@ -805,9 +795,7 @@ impl ForeignTryFrom<i32> for hyperswitch_common_enums::CountryAlpha2 {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::Address>
-    for hyperswitch_api_models::payments::AddressDetails
-{
+impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::Address,
@@ -816,7 +804,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address>
             city: value.city,
             country: value
                 .country_alpha2_code
-                .map(hyperswitch_common_enums::CountryAlpha2::foreign_try_from)
+                .map(common_enums::CountryAlpha2::foreign_try_from)
                 .transpose()?,
             line1: value.line1.map(|val| val.into()),
             line2: value.line2.map(|val| val.into()),
@@ -841,7 +829,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             // Borrow value.address
             Some(address_value) => {
                 // address_value is &grpc_api_types::payments::PaymentAddress
-                hyperswitch_domain_models::payment_address::PaymentAddress::foreign_try_from(
+                crate::payment_address::PaymentAddress::foreign_try_from(
                     (*address_value).clone(), // Clone the grpc_api_types::payments::PaymentAddress
                 )?
             }
@@ -855,15 +843,15 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             }
         };
         Ok(Self {
-            merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+            merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::foreign_try_from(
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::foreign_try_from(
                 value.payment_method.unwrap_or_default(),
             )?, // Use direct enum
             address,
-            auth_type: hyperswitch_common_enums::AuthenticationType::foreign_try_from(
+            auth_type: common_enums::AuthenticationType::foreign_try_from(
                 grpc_api_types::payments::AuthenticationType::try_from(value.auth_type)
                     .unwrap_or_default(),
             )?, // Use direct enum
@@ -906,22 +894,16 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
     fn foreign_try_from(
         (value, connectors): (PaymentServiceVoidRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let address: PaymentAddress = {
-            hyperswitch_domain_models::payment_address::PaymentAddress::new(
-                None,
-                None,
-                None,
-                Some(false),
-            )
-        };
+        let address: PaymentAddress =
+            { crate::payment_address::PaymentAddress::new(None, None, None, Some(false)) };
         Ok(Self {
-            merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+            merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::Card, //TODO
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
-            auth_type: hyperswitch_common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value
                 .request_ref_id
                 .and_then(|id| id.id_type)
@@ -999,7 +981,7 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match form {
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
@@ -1010,7 +992,7 @@ pub fn generate_payment_authorize_response(
                                         ))
                                     })
                                 },
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Html { html_data } => {
+                                crate::router_response_types::RedirectForm::Html { html_data } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
                                             grpc_api_types::payments::HtmlData {
@@ -1075,9 +1057,7 @@ pub fn generate_payment_authorize_response(
 }
 
 // ForeignTryFrom for PaymentMethod gRPC enum to internal enum
-impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
-    for hyperswitch_common_enums::PaymentMethod
-{
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::PaymentMethod {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         item: grpc_api_types::payments::PaymentMethod,
@@ -1098,7 +1078,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod>
 
 // ForeignTryFrom for AuthenticationType gRPC enum to internal enum
 impl ForeignTryFrom<grpc_api_types::payments::AuthenticationType>
-    for hyperswitch_common_enums::AuthenticationType
+    for common_enums::AuthenticationType
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
@@ -1131,18 +1111,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         );
 
         // Default currency to USD for now (you might want to get this from somewhere else)
-        let currency = hyperswitch_common_enums::Currency::USD;
+        let currency = common_enums::Currency::USD;
 
         // Default amount to 0
-        let amount = hyperswitch_common_utils::types::MinorUnit::new(0);
+        let amount = common_utils::types::MinorUnit::new(0);
 
         Ok(Self {
             connector_transaction_id,
             encoded_data: None,
             capture_method: None,
             connector_meta: None,
-            sync_type:
-                hyperswitch_domain_models::router_request_types::SyncRequestType::SinglePaymentSync,
+            sync_type: crate::router_request_types::SyncRequestType::SinglePaymentSync,
             mandate_id: None,
             payment_method_type: None,
             currency,
@@ -1168,13 +1147,13 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+            merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "PAYMENT_ID".to_string(),
             attempt_id: "ATTEMPT_ID".to_string(),
-            status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::Card, // Default
-            address: hyperswitch_domain_models::payment_address::PaymentAddress::default(),
-            auth_type: hyperswitch_common_enums::AuthenticationType::default(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default
+            address: crate::payment_address::PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value
                 .request_ref_id
                 .and_then(|id| id.id_type)
@@ -1205,67 +1184,50 @@ impl
     }
 }
 
-impl ForeignFrom<hyperswitch_common_enums::AttemptStatus>
-    for grpc_api_types::payments::PaymentStatus
-{
-    fn foreign_from(status: hyperswitch_common_enums::AttemptStatus) -> Self {
+impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::PaymentStatus {
+    fn foreign_from(status: common_enums::AttemptStatus) -> Self {
         match status {
-            hyperswitch_common_enums::AttemptStatus::Charged => Self::Charged,
-            hyperswitch_common_enums::AttemptStatus::Pending => Self::Pending,
-            hyperswitch_common_enums::AttemptStatus::Failure => Self::Failure,
-            hyperswitch_common_enums::AttemptStatus::Authorized => Self::Authorized,
-            hyperswitch_common_enums::AttemptStatus::Started => Self::Started,
-            hyperswitch_common_enums::AttemptStatus::AuthenticationFailed => {
-                Self::AuthenticationFailed
-            }
-            hyperswitch_common_enums::AttemptStatus::AuthenticationPending => {
-                Self::AuthenticationPending
-            }
-            hyperswitch_common_enums::AttemptStatus::AuthenticationSuccessful => {
-                Self::AuthenticationSuccessful
-            }
-            hyperswitch_common_enums::AttemptStatus::Authorizing => Self::Authorizing,
-            hyperswitch_common_enums::AttemptStatus::CaptureInitiated => Self::CaptureInitiated,
-            hyperswitch_common_enums::AttemptStatus::CaptureFailed => Self::CaptureFailed,
-            hyperswitch_common_enums::AttemptStatus::VoidInitiated => Self::VoidInitiated,
-            hyperswitch_common_enums::AttemptStatus::VoidFailed => Self::VoidFailed,
-            hyperswitch_common_enums::AttemptStatus::Voided => Self::Voided,
-            hyperswitch_common_enums::AttemptStatus::Unresolved => Self::Unresolved,
-            hyperswitch_common_enums::AttemptStatus::PaymentMethodAwaited => {
-                Self::PaymentMethodAwaited
-            }
-            hyperswitch_common_enums::AttemptStatus::ConfirmationAwaited => {
-                Self::ConfirmationAwaited
-            }
-            hyperswitch_common_enums::AttemptStatus::DeviceDataCollectionPending => {
+            common_enums::AttemptStatus::Charged => Self::Charged,
+            common_enums::AttemptStatus::Pending => Self::Pending,
+            common_enums::AttemptStatus::Failure => Self::Failure,
+            common_enums::AttemptStatus::Authorized => Self::Authorized,
+            common_enums::AttemptStatus::Started => Self::Started,
+            common_enums::AttemptStatus::AuthenticationFailed => Self::AuthenticationFailed,
+            common_enums::AttemptStatus::AuthenticationPending => Self::AuthenticationPending,
+            common_enums::AttemptStatus::AuthenticationSuccessful => Self::AuthenticationSuccessful,
+            common_enums::AttemptStatus::Authorizing => Self::Authorizing,
+            common_enums::AttemptStatus::CaptureInitiated => Self::CaptureInitiated,
+            common_enums::AttemptStatus::CaptureFailed => Self::CaptureFailed,
+            common_enums::AttemptStatus::VoidInitiated => Self::VoidInitiated,
+            common_enums::AttemptStatus::VoidFailed => Self::VoidFailed,
+            common_enums::AttemptStatus::Voided => Self::Voided,
+            common_enums::AttemptStatus::Unresolved => Self::Unresolved,
+            common_enums::AttemptStatus::PaymentMethodAwaited => Self::PaymentMethodAwaited,
+            common_enums::AttemptStatus::ConfirmationAwaited => Self::ConfirmationAwaited,
+            common_enums::AttemptStatus::DeviceDataCollectionPending => {
                 Self::DeviceDataCollectionPending
             }
-            hyperswitch_common_enums::AttemptStatus::RouterDeclined => Self::RouterDeclined,
-            hyperswitch_common_enums::AttemptStatus::AuthorizationFailed => {
-                Self::AuthorizationFailed
-            }
-            hyperswitch_common_enums::AttemptStatus::CodInitiated => Self::CodInitiated,
-            hyperswitch_common_enums::AttemptStatus::AutoRefunded => Self::AutoRefunded,
-            hyperswitch_common_enums::AttemptStatus::PartialCharged => Self::PartialCharged,
-            hyperswitch_common_enums::AttemptStatus::PartialChargedAndChargeable => {
+            common_enums::AttemptStatus::RouterDeclined => Self::RouterDeclined,
+            common_enums::AttemptStatus::AuthorizationFailed => Self::AuthorizationFailed,
+            common_enums::AttemptStatus::CodInitiated => Self::CodInitiated,
+            common_enums::AttemptStatus::AutoRefunded => Self::AutoRefunded,
+            common_enums::AttemptStatus::PartialCharged => Self::PartialCharged,
+            common_enums::AttemptStatus::PartialChargedAndChargeable => {
                 Self::PartialChargedAndChargeable
             }
+            common_enums::AttemptStatus::IntegrityFailure => Self::Failure,
         }
     }
 }
 
-impl ForeignFrom<hyperswitch_common_enums::RefundStatus>
-    for grpc_api_types::payments::RefundStatus
-{
-    fn foreign_from(status: hyperswitch_common_enums::RefundStatus) -> Self {
+impl ForeignFrom<common_enums::RefundStatus> for grpc_api_types::payments::RefundStatus {
+    fn foreign_from(status: common_enums::RefundStatus) -> Self {
         match status {
-            hyperswitch_common_enums::RefundStatus::Failure => Self::RefundFailure,
-            hyperswitch_common_enums::RefundStatus::ManualReview => Self::RefundManualReview,
-            hyperswitch_common_enums::RefundStatus::Pending => Self::RefundPending,
-            hyperswitch_common_enums::RefundStatus::Success => Self::RefundSuccess,
-            hyperswitch_common_enums::RefundStatus::TransactionFailure => {
-                Self::RefundTransactionFailure
-            }
+            common_enums::RefundStatus::Failure => Self::RefundFailure,
+            common_enums::RefundStatus::ManualReview => Self::RefundManualReview,
+            common_enums::RefundStatus::Pending => Self::RefundPending,
+            common_enums::RefundStatus::Success => Self::RefundSuccess,
+            common_enums::RefundStatus::TransactionFailure => Self::RefundTransactionFailure,
         }
     }
 }
@@ -1338,14 +1300,12 @@ pub fn generate_payment_void_response(
     }
 }
 
-impl ForeignFrom<hyperswitch_common_enums::DisputeStage>
-    for grpc_api_types::payments::DisputeStage
-{
-    fn foreign_from(status: hyperswitch_common_enums::DisputeStage) -> Self {
+impl ForeignFrom<common_enums::DisputeStage> for grpc_api_types::payments::DisputeStage {
+    fn foreign_from(status: common_enums::DisputeStage) -> Self {
         match status {
-            hyperswitch_common_enums::DisputeStage::PreDispute => Self::PreDispute,
-            hyperswitch_common_enums::DisputeStage::Dispute => Self::ActiveDispute,
-            hyperswitch_common_enums::DisputeStage::PreArbitration => Self::PreArbitration,
+            common_enums::DisputeStage::PreDispute => Self::PreDispute,
+            common_enums::DisputeStage::Dispute => Self::ActiveDispute,
+            common_enums::DisputeStage::PreArbitration => Self::PreArbitration,
         }
     }
 }
@@ -1470,7 +1430,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_transaction_id,
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
-            refund_status: hyperswitch_common_enums::RefundStatus::Pending,
+            refund_status: common_enums::RefundStatus::Pending,
             refund_connector_metadata: None,
             all_keys_required: None, // Field not available in new proto structure
         })
@@ -1492,7 +1452,7 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(RefundFlowData {
-            status: hyperswitch_common_enums::RefundStatus::Pending,
+            status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
             raw_connector_response: None,
@@ -1515,7 +1475,7 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(RefundFlowData {
-            status: hyperswitch_common_enums::RefundStatus::Pending,
+            status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
             raw_connector_response: None,
@@ -1523,18 +1483,16 @@ impl
     }
 }
 
-impl ForeignFrom<hyperswitch_common_enums::DisputeStatus>
-    for grpc_api_types::payments::DisputeStatus
-{
-    fn foreign_from(status: hyperswitch_common_enums::DisputeStatus) -> Self {
+impl ForeignFrom<common_enums::DisputeStatus> for grpc_api_types::payments::DisputeStatus {
+    fn foreign_from(status: common_enums::DisputeStatus) -> Self {
         match status {
-            hyperswitch_common_enums::DisputeStatus::DisputeOpened => Self::DisputeOpened,
-            hyperswitch_common_enums::DisputeStatus::DisputeAccepted => Self::DisputeAccepted,
-            hyperswitch_common_enums::DisputeStatus::DisputeCancelled => Self::DisputeCancelled,
-            hyperswitch_common_enums::DisputeStatus::DisputeChallenged => Self::DisputeChallenged,
-            hyperswitch_common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
-            hyperswitch_common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
-            hyperswitch_common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
+            common_enums::DisputeStatus::DisputeOpened => Self::DisputeOpened,
+            common_enums::DisputeStatus::DisputeAccepted => Self::DisputeAccepted,
+            common_enums::DisputeStatus::DisputeCancelled => Self::DisputeCancelled,
+            common_enums::DisputeStatus::DisputeChallenged => Self::DisputeChallenged,
+            common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
+            common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
+            common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
         }
     }
 }
@@ -1879,11 +1837,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentServiceRefundRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let minor_refund_amount =
-            hyperswitch_common_utils::types::MinorUnit::new(value.minor_refund_amount);
+        let minor_refund_amount = common_utils::types::MinorUnit::new(value.minor_refund_amount);
 
-        let minor_payment_amount =
-            hyperswitch_common_utils::types::MinorUnit::new(value.minor_payment_amount);
+        let minor_payment_amount = common_utils::types::MinorUnit::new(value.minor_payment_amount);
 
         // Extract transaction_id as connector_transaction_id
         let connector_transaction_id = value
@@ -1900,7 +1856,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             refund_id: value.refund_id.to_string(),
             connector_transaction_id,
             connector_refund_id: None, // refund_id field is used as refund_id, not connector_refund_id
-            currency: hyperswitch_common_enums::Currency::foreign_try_from(value.currency())?,
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_amount: value.payment_amount,
             reason: value.reason.clone(),
             webhook_url: value.webhook_url,
@@ -1923,12 +1879,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
             },
             minor_payment_amount,
             minor_refund_amount,
-            refund_status: hyperswitch_common_enums::RefundStatus::Pending,
+            refund_status: common_enums::RefundStatus::Pending,
             merchant_account_id: value.merchant_account_id,
             capture_method: value
                 .capture_method
                 .map(|cm| {
-                    hyperswitch_common_enums::CaptureMethod::foreign_try_from(
+                    common_enums::CaptureMethod::foreign_try_from(
                         grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
                     )
                 })
@@ -2110,12 +2066,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                     capture_reference: data.capture_reference,
                 });
 
-        let minor_amount = hyperswitch_common_utils::types::MinorUnit::new(value.amount_to_capture);
+        let minor_amount = common_utils::types::MinorUnit::new(value.amount_to_capture);
 
         Ok(Self {
             amount_to_capture: value.amount_to_capture,
             minor_amount_to_capture: minor_amount,
-            currency: hyperswitch_common_enums::Currency::foreign_try_from(value.currency())?,
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
             connector_metadata: {
@@ -2148,13 +2104,13 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+            merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "PAYMENT_ID".to_string(),
             attempt_id: "ATTEMPT_ID".to_string(),
-            status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::Card, // Default
-            address: hyperswitch_domain_models::payment_address::PaymentAddress::default(),
-            auth_type: hyperswitch_common_enums::AuthenticationType::default(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default
+            address: crate::payment_address::PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value
                 .request_ref_id
                 .and_then(|id| id.id_type)
@@ -2264,11 +2220,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors)> for PaymentFlow
         (value, connectors): (PaymentServiceRegisterRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match value.address {
-            Some(address) => {
-                hyperswitch_domain_models::payment_address::PaymentAddress::foreign_try_from(
-                    address,
-                )?
-            }
+            Some(address) => crate::payment_address::PaymentAddress::foreign_try_from(address)?,
             None => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_ADDRESS".to_owned(),
@@ -2279,13 +2231,13 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors)> for PaymentFlow
             }
         };
         Ok(Self {
-            merchant_id: hyperswitch_common_utils::id_type::MerchantId::default(),
+            merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: hyperswitch_common_enums::AttemptStatus::Pending,
-            payment_method: hyperswitch_common_enums::PaymentMethod::Card, //TODO
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
-            auth_type: hyperswitch_common_enums::AuthenticationType::default(),
+            auth_type: common_enums::AuthenticationType::default(),
             connector_request_reference_id: value
                 .request_ref_id
                 .and_then(|id| id.id_type)
@@ -2355,16 +2307,14 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
 
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
-            customer_acceptance: Some(
-                hyperswitch_domain_models::mandates::CustomerAcceptance::foreign_try_from(
-                    customer_acceptance.clone(),
-                )?,
-            ),
+            customer_acceptance: Some(crate::mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
             mandate_type: None,
         };
 
         Ok(Self {
-            currency: hyperswitch_common_enums::Currency::foreign_try_from(value.currency())?,
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_method_data: PaymentMethodData::foreign_try_from(
                 value.payment_method.ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
@@ -2378,13 +2328,11 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             amount: Some(0),
             confirm: true,
             statement_descriptor_suffix: None,
-            customer_acceptance: Some(
-                hyperswitch_domain_models::mandates::CustomerAcceptance::foreign_try_from(
-                    customer_acceptance.clone(),
-                )?,
-            ),
+            customer_acceptance: Some(crate::mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
             mandate_id: None,
-            setup_future_usage: Some(hyperswitch_common_enums::FutureUsage::foreign_try_from(
+            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
             )?),
             off_session: Some(false),
@@ -2392,7 +2340,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             router_return_url: value.return_url.clone(),
             webhook_url: None,
             browser_info: value.browser_info.map(|info| {
-                hyperswitch_domain_models::router_request_types::BrowserInformation {
+                crate::router_request_types::BrowserInformation {
                     color_depth: None,
                     java_enabled: info.java_enabled,
                     java_script_enabled: info.java_script_enabled,
@@ -2403,6 +2351,10 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
                     ip_address: None,
                     accept_header: info.accept_header,
                     user_agent: info.user_agent,
+                    os_type: info.os_type,
+                    os_version: info.os_version,
+                    device_model: info.device_model,
+                    accept_language: info.accept_language,
                 }
             }),
             email,
@@ -2413,7 +2365,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             metadata: None,
             complete_authorize_url: None,
             capture_method: None,
-            minor_amount: Some(hyperswitch_common_utils::types::MinorUnit::new(0)),
+            minor_amount: Some(common_utils::types::MinorUnit::new(0)),
             shipping_cost: None,
             customer_id: value
                 .connector_customer_id
@@ -2433,26 +2385,26 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
-    for hyperswitch_domain_models::mandates::CustomerAcceptance
+    for crate::mandates::CustomerAcceptance
 {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         _value: grpc_api_types::payments::CustomerAcceptance,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(hyperswitch_domain_models::mandates::CustomerAcceptance {
-            acceptance_type: hyperswitch_domain_models::mandates::AcceptanceType::Offline,
+        Ok(crate::mandates::CustomerAcceptance {
+            acceptance_type: crate::mandates::AcceptanceType::Offline,
             accepted_at: None,
             online: None,
         })
     }
 }
 
-impl ForeignTryFrom<i32> for hyperswitch_common_enums::FutureUsage {
+impl ForeignTryFrom<i32> for common_enums::FutureUsage {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            0 => Ok(hyperswitch_common_enums::FutureUsage::OffSession),
-            1 => Ok(hyperswitch_common_enums::FutureUsage::OnSession),
+            0 => Ok(common_enums::FutureUsage::OffSession),
+            1 => Ok(common_enums::FutureUsage::OnSession),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_FUTURE_USAGE".to_owned(),
                 error_identifier: 401,
@@ -2492,7 +2444,7 @@ pub fn generate_setup_mandate_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match form {
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
@@ -2503,7 +2455,7 @@ pub fn generate_setup_mandate_response(
                                         ))
                                     })
                                 },
-                                hyperswitch_domain_models::router_response_types::RedirectForm::Html { html_data } => {
+                                crate::router_response_types::RedirectForm::Html { html_data } => {
                                     Ok(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
                                             grpc_api_types::payments::HtmlData {
@@ -2624,7 +2576,7 @@ pub fn generate_defend_dispute_response(
             dispute_id: e
                 .connector_transaction_id
                 .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            dispute_status: hyperswitch_common_enums::DisputeStatus::DisputeLost as i32,
+            dispute_status: common_enums::DisputeStatus::DisputeLost as i32,
             connector_status_code: None,
             error_message: Some(e.message),
             error_code: Some(e.code),
@@ -2827,6 +2779,10 @@ pub enum PaymentMethodDataType {
     NetworkTransactionIdAndCardDetails,
     DirectCarrierBilling,
     InstantBankTransfer,
+    InstantBankTransferPoland,
+    InstantBankTransferFinland,
+    CardDetailsForNetworkTransactionId,
+    RevolutPay,
 }
 
 impl TryFrom<i32> for AttemptStatus {
