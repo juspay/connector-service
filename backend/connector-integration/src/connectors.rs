@@ -2,8 +2,8 @@ pub mod adyen;
 
 pub mod razorpay;
 
-pub mod fiserv;
 pub mod authorizedotnet;
+pub mod fiserv;
 
 pub use self::adyen::Adyen;
 

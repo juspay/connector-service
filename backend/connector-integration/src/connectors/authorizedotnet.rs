@@ -1,48 +1,45 @@
 pub mod transformers;
 
 use self::transformers::{
-    // Import the flow-specific response types
-    AuthorizedotnetAuthorizeResponse,
-    AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse,
-    AuthorizedotnetCreateSyncRequest,
-    AuthorizedotnetPSyncResponse,
-    AuthorizedotnetPaymentsRequest,
-    AuthorizedotnetVoidRequest,
-    AuthorizedotnetVoidResponse,
+    AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
+    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
+    AuthorizedotnetPaymentsRequest, AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse,
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
+use common_utils::{
+    consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDispute, AcceptDisputeData, ConnectorServiceTrait, DisputeDefend, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, IncomingWebhook, PaymentAuthorizeV2, PaymentCapture,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentOrderCreate,
-        PaymentSyncV2, PaymentVoidData, PaymentVoidV2, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundSyncV2,
-        RefundV2, RefundsData, RefundsResponseData, SetupMandateRequestData, SetupMandateV2,
-        SubmitEvidenceData, SubmitEvidenceV2, ValidationTrait,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
+    router_data::ErrorResponse,
+    router_data_v2::RouterDataV2,
+    types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
-};
-use hyperswitch_domain_models::{router_data::ErrorResponse, router_data_v2::RouterDataV2};
-use hyperswitch_interfaces::errors::ConnectorError;
-use hyperswitch_interfaces::{
+use hyperswitch_masking::Maskable;
+use interfaces::{
     api::{self, ConnectorCommon},
-    configs::Connectors,
     connector_integration_v2::ConnectorIntegrationV2,
-    consts, errors,
+    connector_types::{
+        AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
+        PaymentCapture, PaymentOrderCreate, PaymentSyncV2, PaymentVoidV2, RefundSyncV2, RefundV2,
+        SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+    },
+    errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
 };
-use hyperswitch_masking::Maskable;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -105,6 +102,9 @@ impl ConnectorCommon for Authorizedotnet {
             reason: None,
             attempt_status: None,
             connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
         })
     }
 
