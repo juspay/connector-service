@@ -5,6 +5,7 @@ pub mod connector_types;
 pub mod disputes;
 pub mod errors;
 pub mod events;
+pub mod integrity;
 pub mod routing;
 pub mod types;
 pub mod webhooks;

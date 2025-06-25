@@ -1,4 +1,9 @@
 use crate::errors::{ApiError, ApplicationErrorResponse};
+use crate::router_request_types::{
+    AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
+    PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
+    SetupMandateIntegrityObject,
+};
 use crate::types::{
     ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
     PaymentMethodTypeMetadata, SupportedPaymentMethods,
@@ -146,6 +151,7 @@ pub struct PaymentsSyncData {
     pub payment_experience: Option<common_enums::PaymentExperience>,
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
+    pub integrity_object: Option<PaymentSynIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -191,6 +197,7 @@ impl RawConnectorResponse for PaymentFlowData {
 pub struct PaymentVoidData {
     pub connector_transaction_id: String,
     pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
 }
 
@@ -239,6 +246,7 @@ pub struct PaymentsAuthorizeData {
     pub merchant_order_reference_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
+    pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
 }
@@ -291,6 +299,7 @@ pub struct MandateReference {
 pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
+    pub integrity_object: Option<CreateOrderIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -482,6 +491,7 @@ pub struct RefundsData {
     pub refund_status: common_enums::RefundStatus,
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub integrity_object: Option<RefundIntegrityObject>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -498,6 +508,7 @@ pub struct PaymentsCaptureData {
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
+    pub integrity_object: Option<CaptureIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -528,6 +539,7 @@ pub struct SetupMandateRequestData {
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<common_utils::id_type::CustomerId>,
+    pub integrity_object: Option<SetupMandateIntegrityObject>,
 }
 
 #[derive(Debug, Default, Clone)]

@@ -90,6 +90,7 @@ impl Payments {
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
+            integrity_object: None,
         };
 
         let order_router_data = RouterDataV2::<
@@ -149,6 +150,7 @@ impl Payments {
         let order_create_data = PaymentCreateOrderData {
             amount: common_utils::types::MinorUnit::new(0),
             currency,
+            integrity_object: None,
         };
 
         let order_router_data = RouterDataV2::<

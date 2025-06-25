@@ -1,6 +1,7 @@
 use common_enums::{CaptureMethod, Currency};
 use common_utils::{pii, types::SemanticVersion, MinorUnit};
 use hyperswitch_masking::Secret;
+use serde::Serialize;
 
 use crate::payment_method_data::PaymentMethodData;
 
@@ -64,4 +65,53 @@ pub struct ConnectorCustomerData {
     pub preprocessing_id: Option<String>,
     pub payment_method_data: Option<PaymentMethodData>,
     // pub split_payments: Option<SplitPaymentsRequest>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AuthoriseIntegrityObject {
+    /// Authorise amount
+    pub amount: MinorUnit,
+    /// Authorise currency
+    pub currency: common_enums::Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CreateOrderIntegrityObject {
+    /// Authorise amount
+    pub amount: MinorUnit,
+    /// Authorise currency
+    pub currency: common_enums::Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SetupMandateIntegrityObject {
+    /// Authorise amount
+    pub amount: Option<MinorUnit>,
+    /// Authorise currency
+    pub currency: common_enums::Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PaymentSynIntegrityObject {
+    /// Authorise amount
+    pub amount: MinorUnit,
+    /// Authorise currency
+    pub currency: common_enums::Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PaymentVoidIntegrityObject {
+    pub connector_transaction_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RefundIntegrityObject {
+    pub refund_amount: MinorUnit,
+    pub currency: common_enums::Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaptureIntegrityObject {
+    pub amount_to_capture: MinorUnit,
+    pub currency: common_enums::Currency,
 }
