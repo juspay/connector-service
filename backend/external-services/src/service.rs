@@ -11,10 +11,10 @@ use common_utils::{
 };
 use error_stack::{report, ResultExt};
 
-use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
 };
+use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -275,8 +275,8 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<hyperswitch_masking::Secret<String>>,
-    _client_certificate_key: Option<hyperswitch_masking::Secret<String>>,
+    _client_certificate: Option<masking::Secret<String>>,
+    _client_certificate_key: Option<masking::Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
     get_base_client(proxy_config, should_bypass_proxy)
     // match (client_certificate, client_certificate_key) {

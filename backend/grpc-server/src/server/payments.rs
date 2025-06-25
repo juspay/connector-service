@@ -382,7 +382,7 @@ impl PaymentService for Payments {
             .verify_webhook_source(
                 request_details.clone(),
                 webhook_secrets.clone(),
-                // TODO: do we need to force authenticaion? we can make it optional
+                // TODO: do we need to force authentication? we can make it optional
                 Some(connector_auth_details.clone()),
             )
             .switch()
