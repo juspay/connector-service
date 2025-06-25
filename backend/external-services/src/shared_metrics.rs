@@ -60,6 +60,7 @@ lazy_static! {
 #[derive(Clone)]
 pub struct GrpcMetricsLayer;
 
+#[allow(clippy::new_without_default)]
 impl GrpcMetricsLayer {
     pub fn new() -> Self {
         Self
