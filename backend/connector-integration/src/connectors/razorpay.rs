@@ -18,13 +18,12 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     types::{
         CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentConnectorCategory,
@@ -36,7 +35,6 @@ use std::sync::LazyLock;
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use domain_types::connector_types::SupportedPaymentMethodsExt;
 use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -48,7 +46,7 @@ use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::{self, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self, is_mandate_supported},
+    connector_types::{self, is_mandate_supported, ConnectorSpecifications, ConnectorValidation},
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,
@@ -772,7 +770,7 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 {
 }
 
-impl connector_types::ConnectorValidation for Razorpay {
+impl ConnectorValidation for Razorpay {
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,
@@ -822,7 +820,7 @@ static RAZORPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
             // ref : https://razorpay.com/docs/payments/payment-methods/cards/
         ];
 
-        let mut razorpay_supported_payment_methods = SupportedPaymentMethods::new();
+        let mut razorpay_supported_payment_methods = SupportedPaymentMethods::default();
 
         razorpay_supported_payment_methods.add(
             PaymentMethod::Card,

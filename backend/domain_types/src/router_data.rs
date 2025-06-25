@@ -5,11 +5,10 @@ use common_utils::ext_traits::OptionExt;
 use common_utils::ext_traits::ValueExt;
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
-use std::collections::HashMap;
+
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "auth_type")]
 pub enum ConnectorAuthType {
-    TemporaryAuth,
     HeaderKey {
         api_key: Secret<String>,
     },
@@ -27,13 +26,6 @@ pub enum ConnectorAuthType {
         key1: Secret<String>,
         api_secret: Secret<String>,
         key2: Secret<String>,
-    },
-    CurrencyAuthKey {
-        auth_key_map: HashMap<common_enums::enums::Currency, common_utils::pii::SecretSerdeValue>,
-    },
-    CertificateAuth {
-        certificate: Secret<String>,
-        private_key: Secret<String>,
     },
     #[default]
     NoKey,
@@ -86,7 +78,6 @@ impl ConnectorAuthType {
     // Mask the keys in the auth_type
     pub fn get_masked_keys(&self) -> Self {
         match self {
-            Self::TemporaryAuth => Self::TemporaryAuth,
             Self::NoKey => Self::NoKey,
             Self::HeaderKey { api_key } => Self::HeaderKey {
                 api_key: self.mask_key(api_key.clone().expose()),
@@ -114,16 +105,6 @@ impl ConnectorAuthType {
                 key1: self.mask_key(key1.clone().expose()),
                 api_secret: self.mask_key(api_secret.clone().expose()),
                 key2: self.mask_key(key2.clone().expose()),
-            },
-            Self::CurrencyAuthKey { auth_key_map } => Self::CurrencyAuthKey {
-                auth_key_map: auth_key_map.clone(),
-            },
-            Self::CertificateAuth {
-                certificate,
-                private_key,
-            } => Self::CertificateAuth {
-                certificate: self.mask_key(certificate.clone().expose()),
-                private_key: self.mask_key(private_key.clone().expose()),
             },
         }
     }

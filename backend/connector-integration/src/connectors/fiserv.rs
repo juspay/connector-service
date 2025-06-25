@@ -7,11 +7,11 @@ use domain_types::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     types::Connectors,
 };
@@ -28,7 +28,7 @@ use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
+    connector_types::{self, ConnectorSpecifications},
     errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
     types::Response,

@@ -78,15 +78,14 @@ pub fn auth_from_metadata(
             api_secret: parse_metadata(metadata, X_API_SECRET)?.to_string().into(),
         }),
         "no-key" => Ok(ConnectorAuthType::NoKey),
-        "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
-        "currency-auth-key" | "certificate-auth" | _ => Err(Report::new(
-            ApplicationErrorResponse::BadRequest(ApiError {
+        _ => Err(Report::new(ApplicationErrorResponse::BadRequest(
+            ApiError {
                 sub_code: "INVALID_AUTH_TYPE".to_string(),
                 error_identifier: 400,
                 error_message: format!("Invalid auth type: {}", auth),
                 error_object: None,
-            }),
-        )),
+            },
+        ))),
     }
 }
 

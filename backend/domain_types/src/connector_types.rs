@@ -5,8 +5,7 @@ use crate::router_request_types::{
     SetupMandateIntegrityObject,
 };
 use crate::types::{
-    ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
-    PaymentMethodTypeMetadata, SupportedPaymentMethods,
+    Connectors, PaymentMethodDataType,
 };
 use crate::utils::ForeignTryFrom;
 use common_enums::Currency;
@@ -18,7 +17,7 @@ use crate::{
     router_request_types::SyncRequestType,
 };
 use common_enums::{
-    AttemptStatus, AuthenticationType, DisputeStatus, EventClass, PaymentMethod, PaymentMethodType,
+    AttemptStatus, AuthenticationType, DisputeStatus, PaymentMethod,
 };
 use common_utils::{errors, types::MinorUnit};
 
@@ -96,10 +95,6 @@ impl ConnectorMandateReferenceId {
     pub fn get_update_history(&self) -> Option<&Vec<UpdateHistory>> {
         self.update_history.as_ref()
     }
-}
-
-pub trait RawConnectorResponse {
-    fn set_raw_connector_response(&mut self, response: Option<String>);
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Eq, PartialEq)]
@@ -185,12 +180,6 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
-}
-
-impl RawConnectorResponse for PaymentFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<String>) {
-        self.raw_connector_response = response;
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -330,12 +319,6 @@ pub struct RefundFlowData {
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
-}
-
-impl RawConnectorResponse for RefundFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<String>) {
-        self.raw_connector_response = response;
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -554,12 +537,6 @@ pub struct DisputeFlowData {
     pub raw_connector_response: Option<String>,
 }
 
-impl RawConnectorResponse for DisputeFlowData {
-    fn set_raw_connector_response(&mut self, response: Option<String>) {
-        self.raw_connector_response = response;
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct DisputeResponseData {
     pub connector_dispute_id: String,
@@ -629,24 +606,6 @@ pub struct SubmitEvidenceData {
     pub uncategorized_file_type: Option<String>,
     pub uncategorized_file_provider_file_id: Option<String>,
     pub uncategorized_text: Option<String>,
-}
-
-/// The trait that provides specifications about the connector
-pub trait ConnectorSpecifications {
-    /// Details related to payment method supported by the connector
-    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
-        None
-    }
-
-    /// Supported webhooks flows
-    fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
-        None
-    }
-
-    /// About the connector
-    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
-        None
-    }
 }
 
 #[macro_export]
@@ -887,29 +846,29 @@ pub struct DisputeDefendData {
     pub defense_reason_code: String,
 }
 
-pub trait SupportedPaymentMethodsExt {
-    fn add(
-        &mut self,
-        payment_method: PaymentMethod,
-        payment_method_type: PaymentMethodType,
-        payment_method_details: PaymentMethodDetails,
-    );
-}
+// pub trait SupportedPaymentMethodsExt {
+//     fn add(
+//         &mut self,
+//         payment_method: PaymentMethod,
+//         payment_method_type: PaymentMethodType,
+//         payment_method_details: PaymentMethodDetails,
+//     );
+// }
 
-impl SupportedPaymentMethodsExt for SupportedPaymentMethods {
-    fn add(
-        &mut self,
-        payment_method: PaymentMethod,
-        payment_method_type: PaymentMethodType,
-        payment_method_details: PaymentMethodDetails,
-    ) {
-        if let Some(payment_method_data) = self.get_mut(&payment_method) {
-            payment_method_data.insert(payment_method_type, payment_method_details);
-        } else {
-            let mut payment_method_type_metadata = PaymentMethodTypeMetadata::new();
-            payment_method_type_metadata.insert(payment_method_type, payment_method_details);
+// impl SupportedPaymentMethods {
+//     fn add(
+//         &mut self,
+//         payment_method: PaymentMethod,
+//         payment_method_type: PaymentMethodType,
+//         payment_method_details: PaymentMethodDetails,
+//     ) {
+//         if let Some(payment_method_data) = self.get_mut(&payment_method) {
+//             payment_method_data.insert(payment_method_type, payment_method_details);
+//         } else {
+//             let mut payment_method_type_metadata = PaymentMethodTypeMetadata::new();
+//             payment_method_type_metadata.insert(payment_method_type, payment_method_details);
 
-            self.insert(payment_method, payment_method_type_metadata);
-        }
-    }
-}
+//             self.insert(payment_method, payment_method_type_metadata);
+//         }
+//     }
+// }

@@ -2641,7 +2641,37 @@ pub enum FeatureStatus {
     Supported,
 }
 pub type PaymentMethodTypeMetadata = HashMap<PaymentMethodType, PaymentMethodDetails>;
-pub type SupportedPaymentMethods = HashMap<PaymentMethod, PaymentMethodTypeMetadata>;
+pub struct SupportedPaymentMethods(pub HashMap<PaymentMethod, PaymentMethodTypeMetadata>);
+
+impl Default for SupportedPaymentMethods {
+    fn default() -> Self {
+        Self(HashMap::new())
+    }
+}
+
+
+impl SupportedPaymentMethods {
+
+    pub fn add(
+        &mut self,
+        payment_method: PaymentMethod,
+        payment_method_type: PaymentMethodType,
+        payment_method_details: PaymentMethodDetails,
+    ) {
+        if let Some(payment_method_data) = self.0.get_mut(&payment_method) {
+            payment_method_data.insert(payment_method_type, payment_method_details);
+        } else {
+            let mut payment_method_type_metadata = PaymentMethodTypeMetadata::new();
+            payment_method_type_metadata.insert(payment_method_type, payment_method_details);
+
+            self.0.insert(payment_method, payment_method_type_metadata);
+        }
+    }
+
+    pub fn get(&self, payment_method: &PaymentMethod) -> Option<&PaymentMethodTypeMetadata> {
+        self.0.get(payment_method)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ConnectorInfo {

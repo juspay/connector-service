@@ -12,18 +12,13 @@ use error_stack::{report, ResultExt};
 
 use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2,
-    errors::ConnectorError,
-    integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
-    types::Response,
+    connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::RawConnectorResponse, errors::ConnectorError, integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject}, types::Response
 };
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
-
-use domain_types::connector_types::RawConnectorResponse;
 
 use common_utils::ext_traits::AsyncExt;
 use serde_json::Value;

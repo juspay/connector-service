@@ -12,44 +12,8 @@ pub enum RedirectForm {
     Html {
         html_data: String,
     },
-    BlueSnap {
-        payment_fields_token: String, // payment-field-token
-    },
-    CybersourceAuthSetup {
-        access_token: String,
-        ddc_url: String,
-        reference_id: String,
-    },
-    CybersourceConsumerAuth {
-        access_token: String,
-        step_up_url: String,
-    },
-    DeutschebankThreeDSChallengeFlow {
-        acs_url: String,
-        creq: String,
-    },
-    Payme,
-    Braintree {
-        client_token: String,
-        card_token: String,
-        bin: String,
-        acs_url: String,
-    },
-    Nmi {
-        amount: String,
-        currency: common_enums::Currency,
-        public_key: hyperswitch_masking::Secret<String>,
-        customer_vault_id: String,
-        order_id: String,
-    },
-    Mifinity {
-        initialization_token: String,
-    },
-    WorldpayDDCForm {
-        endpoint: url::Url,
-        method: Method,
-        form_fields: HashMap<String, String>,
-        collection_id: Option<String>,
+    Uri {
+        uri: String,
     },
 }
 

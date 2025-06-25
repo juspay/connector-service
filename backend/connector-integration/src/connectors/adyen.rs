@@ -8,13 +8,9 @@ use common_enums::{
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
 };
-use domain_types::{
-    connector_types::{ConnectorSpecifications, SupportedPaymentMethodsExt},
-    types::{
-        self, CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus,
-        PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
-        SupportedPaymentMethods,
-    },
+use domain_types::types::{
+    self, CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus, PaymentMethodDataType,
+    PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
 };
 use std::sync::LazyLock;
 
@@ -29,6 +25,7 @@ use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::{self, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::ConnectorSpecifications,
     errors,
     events::connector_api_logs::ConnectorEvent,
     types::Response,
@@ -601,7 +598,7 @@ static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = Lazy
         CardNetwork::Visa,
     ];
 
-    let mut adyen_supported_payment_methods = SupportedPaymentMethods::new();
+    let mut adyen_supported_payment_methods = SupportedPaymentMethods::default();
 
     adyen_supported_payment_methods.add(
         PaymentMethod::Card,

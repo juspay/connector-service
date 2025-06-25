@@ -3,22 +3,21 @@ use std::collections::HashSet;
 use crate::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, errors::ConnectorError,
 };
-use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
+use common_enums::{AttemptStatus, CaptureMethod, EventClass, PaymentMethod, PaymentMethodType};
 use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RequestDetails, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodData,
     router_data::ConnectorAuthType,
-    types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
+    types::{ConnectorInfo, PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
 
@@ -335,5 +334,45 @@ pub fn is_mandate_supported(
             }
             .into()),
         }
+    }
+}
+
+/// The trait that provides specifications about the connector
+pub trait ConnectorSpecifications {
+    /// Details related to payment method supported by the connector
+    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
+        None
+    }
+
+    /// Supported webhooks flows
+    fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
+        None
+    }
+
+    /// About the connector
+    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
+        None
+    }
+}
+
+pub trait RawConnectorResponse {
+    fn set_raw_connector_response(&mut self, response: Option<String>);
+}
+
+impl RawConnectorResponse for PaymentFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<String>) {
+        self.raw_connector_response = response;
+    }
+}
+
+impl RawConnectorResponse for RefundFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<String>) {
+        self.raw_connector_response = response;
+    }
+}
+
+impl RawConnectorResponse for DisputeFlowData {
+    fn set_raw_connector_response(&mut self, response: Option<String>) {
+        self.raw_connector_response = response;
     }
 }
