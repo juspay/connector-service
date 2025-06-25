@@ -1,25 +1,19 @@
 use crate::types::ResponseRouterData;
+use cards::CardNumberStrategy;
+use common_enums::{self, enums, AttemptStatus, RefundStatus};
+use common_utils::{consts, pii::Email};
 use domain_types::{
-    connector_flow::Authorize,
+    connector_flow::{Authorize, PSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
-};
-use domain_types::{
-    connector_flow::{PSync, Refund},
-    connector_types::{RefundFlowData, RefundsData, RefundsResponseData},
-};
-use hyperswitch_api_models::enums as api_enums;
-use hyperswitch_cards::CardNumberStrategy;
-use hyperswitch_common_enums::enums;
-use hyperswitch_common_utils::pii::Email;
-use hyperswitch_domain_models::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use hyperswitch_interfaces::{consts, errors::ConnectorError};
+use interfaces::errors::ConnectorError;
 // Alias to make the transition easier
 type HsInterfacesConnectorError = ConnectorError;
 use super::AuthorizedotnetRouterData;
@@ -29,7 +23,12 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::str::FromStr;
 
-type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
+type Error = error_stack::Report<interfaces::errors::ConnectorError>;
+
+// Re-export common enums for use in this file
+pub mod api_enums {
+    pub use common_enums::Currency;
+}
 
 pub trait ForeignTryFrom<F>: Sized {
     type Error;
@@ -54,7 +53,7 @@ impl TryFrom<&ConnectorAuthType> for MerchantAuthentication {
                 transaction_key: key1.clone(),
             }),
             _ => Err(error_stack::report!(
-                hyperswitch_interfaces::errors::ConnectorError::FailedToObtainAuthType
+                interfaces::errors::ConnectorError::FailedToObtainAuthType
             )),
         }
     }
@@ -320,7 +319,7 @@ impl
             Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
             Some(_) => {
                 return Err(error_stack::report!(
-                    hyperswitch_interfaces::errors::ConnectorError::NotSupported {
+                    interfaces::errors::ConnectorError::NotSupported {
                         message: "Capture method not supported".to_string(),
                         connector: "authorizedotnet",
                     }
@@ -402,7 +401,11 @@ impl
         });
 
         // Process billing address
-        let billing_address = item.router_data.address.get_payment_billing();
+        let billing_address = item
+            .router_data
+            .resource_common_data
+            .address
+            .get_payment_billing();
         let bill_to =
             billing_address.as_ref().map(|billing| {
                 let first_name = billing.address.as_ref().and_then(|a| a.first_name.clone());
@@ -422,7 +425,7 @@ impl
             });
 
         // Process shipping address
-        let shipping_address = item.router_data.address.get_shipping();
+        let shipping_address = item.router_data.resource_common_data.address.get_shipping();
         let ship_to = shipping_address.as_ref().map(|shipping| {
             let first_name = shipping.address.as_ref().and_then(|a| a.first_name.clone());
             let last_name = shipping.address.as_ref().and_then(|a| a.last_name.clone());
@@ -635,7 +638,7 @@ pub struct AuthorizedotnetAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
-    type Error = error_stack::Report<hyperswitch_interfaces::errors::ConnectorError>;
+    type Error = error_stack::Report<interfaces::errors::ConnectorError>;
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
@@ -644,7 +647,7 @@ impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
                 transaction_key: key1.to_owned(),
             })
         } else {
-            Err(hyperswitch_interfaces::errors::ConnectorError::FailedToObtainAuthType)?
+            Err(interfaces::errors::ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
@@ -678,12 +681,31 @@ impl
         // No metadata available in void flow
         let po_number = None;
 
-        // Create a reference ID for the void transaction
-        let ref_id = Some("123456".to_string());
+        // Generate a unique reference ID for the void transaction
+        let ref_id = Some(format!(
+            "void_req_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        ));
+
+        // Extract transaction ID from the connector_transaction_id string
+        // This transaction ID comes from the authorization response
+        let transaction_id = match router_data.request.connector_transaction_id.as_str() {
+            "" => {
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "connector_transaction_id"
+                    }
+                ));
+            }
+            id => id.to_string(),
+        };
 
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
-            ref_trans_id: router_data.request.connector_transaction_id.clone(),
+            ref_trans_id: transaction_id,
             amount: None,
             po_number,
         };
@@ -1074,7 +1096,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
         // Set the status based on the refund result
         let refund_status = match &refund_response {
             Ok(refund_data) => refund_data.refund_status,
-            Err(_) => hyperswitch_common_enums::enums::RefundStatus::Failure,
+            Err(_) => RefundStatus::Failure,
         };
 
         // Create a new RouterDataV2 with updated fields
@@ -1110,7 +1132,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
         // Use the clean approach with the From trait implementation
         match response.transaction {
             Some(transaction) => {
-                let payment_status = enums::AttemptStatus::from(transaction.transaction_status);
+                let payment_status = AttemptStatus::from(transaction.transaction_status);
 
                 // Create a new RouterDataV2 with updated fields
                 let mut new_router_data = router_data;
@@ -1139,8 +1161,8 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
             None => {
                 // Handle missing transaction response
                 let status = match response.messages.result_code {
-                    ResultCode::Error => enums::AttemptStatus::Failure,
-                    ResultCode::Ok => enums::AttemptStatus::Pending,
+                    ResultCode::Error => AttemptStatus::Failure,
+                    ResultCode::Ok => AttemptStatus::Pending,
                 };
 
                 let error_response = ErrorResponse {
@@ -1160,6 +1182,9 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     reason: None,
                     attempt_status: Some(status),
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
 
                 // Update router data with status and error response
@@ -1263,9 +1288,9 @@ fn get_hs_status(
     _http_status_code: u16,
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
-) -> hyperswitch_common_enums::enums::AttemptStatus {
+) -> AttemptStatus {
     match response.messages.result_code {
-        ResultCode::Error => hyperswitch_common_enums::enums::AttemptStatus::Failure,
+        ResultCode::Error => AttemptStatus::Failure,
         ResultCode::Ok => {
             match response.transaction_response {
                 Some(ref trans_res_enum) => {
@@ -1279,38 +1304,40 @@ fn get_hs_status(
                                         match capture_method {
                                             // Manual capture -> Authorized status
                                             Some(enums::CaptureMethod::Manual) => {
-                                                hyperswitch_common_enums::enums::AttemptStatus::Authorized
-                                            },
+                                                AttemptStatus::Authorized
+                                            }
                                             // Automatic capture (or None) -> Charged status
                                             Some(enums::CaptureMethod::Automatic) | None => {
-                                                hyperswitch_common_enums::enums::AttemptStatus::Charged
-                                            },
+                                                AttemptStatus::Charged
+                                            }
                                             // Any other method -> Charged (for backward compatibility)
-                                            _ => hyperswitch_common_enums::enums::AttemptStatus::Charged
+                                            _ => AttemptStatus::Charged,
                                         }
-                                    },
-                                    Operation::Capture => hyperswitch_common_enums::enums::AttemptStatus::Charged,
-                                    Operation::Void => hyperswitch_common_enums::enums::AttemptStatus::Voided,
+                                    }
+                                    Operation::Capture => AttemptStatus::Charged,
+                                    Operation::Void => AttemptStatus::Voided,
                                     // For refunds, map Approved to Charged
-                                    Operation::Refund => hyperswitch_common_enums::enums::AttemptStatus::Charged,
+                                    Operation::Refund => AttemptStatus::Charged,
                                 },
-                                AuthorizedotnetPaymentStatus::Declined => hyperswitch_common_enums::enums::AttemptStatus::Failure,
-                                AuthorizedotnetPaymentStatus::Error => hyperswitch_common_enums::enums::AttemptStatus::Failure,
-                                AuthorizedotnetPaymentStatus::HeldForReview => hyperswitch_common_enums::enums::AttemptStatus::Pending,
-                                AuthorizedotnetPaymentStatus::RequiresAction => hyperswitch_common_enums::enums::AttemptStatus::AuthenticationPending,
+                                AuthorizedotnetPaymentStatus::Declined => AttemptStatus::Failure,
+                                AuthorizedotnetPaymentStatus::Error => AttemptStatus::Failure,
+                                AuthorizedotnetPaymentStatus::HeldForReview => {
+                                    AttemptStatus::Pending
+                                }
+                                AuthorizedotnetPaymentStatus::RequiresAction => {
+                                    AttemptStatus::AuthenticationPending
+                                }
                             }
                         }
                         TransactionResponse::AuthorizedotnetTransactionResponseError(_) => {
-                            hyperswitch_common_enums::enums::AttemptStatus::Failure
+                            AttemptStatus::Failure
                         }
                     }
                 }
                 None => match operation {
-                    Operation::Void => hyperswitch_common_enums::enums::AttemptStatus::Voided,
-                    Operation::Authorize | Operation::Capture => {
-                        hyperswitch_common_enums::enums::AttemptStatus::Pending
-                    }
-                    Operation::Refund => hyperswitch_common_enums::enums::AttemptStatus::Failure,
+                    Operation::Void => AttemptStatus::Voided, // Ensure this is returning Voided for void operations
+                    Operation::Authorize | Operation::Capture => AttemptStatus::Pending,
+                    Operation::Refund => AttemptStatus::Failure,
                 },
             }
         }
@@ -1322,23 +1349,18 @@ pub fn convert_to_payments_response_data_or_error(
     http_status_code: u16,
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
-) -> Result<
-    (
-        hyperswitch_common_enums::enums::AttemptStatus,
-        Result<PaymentsResponseData, ErrorResponse>,
-    ),
-    HsInterfacesConnectorError,
-> {
+) -> Result<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), HsInterfacesConnectorError>
+{
     // Pass the capture_method from the payment request
     let status = get_hs_status(response, http_status_code, operation, capture_method);
 
     let response_payload_result = match &response.transaction_response {
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
-            if status == hyperswitch_common_enums::enums::AttemptStatus::Authorized
-                || status == hyperswitch_common_enums::enums::AttemptStatus::Pending
-                || status == hyperswitch_common_enums::enums::AttemptStatus::AuthenticationPending
-                || status == hyperswitch_common_enums::enums::AttemptStatus::Charged
-                || status == hyperswitch_common_enums::enums::AttemptStatus::Voided
+            if status == AttemptStatus::Authorized
+                || status == AttemptStatus::Pending
+                || status == AttemptStatus::AuthenticationPending
+                || status == AttemptStatus::Charged
+                || status == AttemptStatus::Voided
             {
                 Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(
@@ -1377,6 +1399,9 @@ pub fn convert_to_payments_response_data_or_error(
                     reason: None,
                     attempt_status: Some(status),
                     connector_transaction_id: Some(trans_res.transaction_id.clone()),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 })
             }
         }
@@ -1398,12 +1423,13 @@ pub fn convert_to_payments_response_data_or_error(
                 reason: None,
                 attempt_status: Some(status),
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             })
         }
         None => {
-            if status == hyperswitch_common_enums::enums::AttemptStatus::Voided
-                && operation == Operation::Void
-            {
+            if status == AttemptStatus::Voided && operation == Operation::Void {
                 Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::NoResponseId,
                     redirection_data: Box::new(None),
@@ -1432,6 +1458,9 @@ pub fn convert_to_payments_response_data_or_error(
                     reason: None,
                     attempt_status: Some(status),
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 })
             }
         }
@@ -1442,58 +1471,39 @@ pub fn convert_to_payments_response_data_or_error(
 pub fn convert_to_refund_response_data_or_error(
     response: &AuthorizedotnetPaymentsResponse,
     http_status_code: u16,
-) -> Result<
-    (
-        hyperswitch_common_enums::enums::AttemptStatus,
-        Result<RefundsResponseData, ErrorResponse>,
-    ),
-    HsInterfacesConnectorError,
-> {
+) -> Result<(AttemptStatus, Result<RefundsResponseData, ErrorResponse>), HsInterfacesConnectorError>
+{
     // Operation is implicitly Refund for this function
     let api_call_attempt_status = match response.messages.result_code {
-        ResultCode::Error => hyperswitch_common_enums::enums::AttemptStatus::Failure,
+        ResultCode::Error => AttemptStatus::Failure,
         ResultCode::Ok => match response.transaction_response {
             Some(TransactionResponse::AuthorizedotnetTransactionResponse(ref trans_res)) => {
                 match trans_res.response_code {
-                    AuthorizedotnetPaymentStatus::Approved => {
-                        hyperswitch_common_enums::enums::AttemptStatus::Charged
-                    }
-                    AuthorizedotnetPaymentStatus::Declined => {
-                        hyperswitch_common_enums::enums::AttemptStatus::Failure
-                    }
-                    AuthorizedotnetPaymentStatus::Error => {
-                        hyperswitch_common_enums::enums::AttemptStatus::Failure
-                    }
-                    AuthorizedotnetPaymentStatus::HeldForReview => {
-                        hyperswitch_common_enums::enums::AttemptStatus::Pending
-                    }
+                    AuthorizedotnetPaymentStatus::Approved => AttemptStatus::Charged,
+                    AuthorizedotnetPaymentStatus::Declined => AttemptStatus::Failure,
+                    AuthorizedotnetPaymentStatus::Error => AttemptStatus::Failure,
+                    AuthorizedotnetPaymentStatus::HeldForReview => AttemptStatus::Pending,
                     AuthorizedotnetPaymentStatus::RequiresAction => {
-                        hyperswitch_common_enums::enums::AttemptStatus::AuthenticationPending
+                        AttemptStatus::AuthenticationPending
                     }
                 }
             }
             Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) => {
-                hyperswitch_common_enums::enums::AttemptStatus::Failure
+                AttemptStatus::Failure
             }
-            None => hyperswitch_common_enums::enums::AttemptStatus::Pending,
+            None => AttemptStatus::Pending,
         },
     };
 
     let refund_status = match api_call_attempt_status {
-        hyperswitch_common_enums::enums::AttemptStatus::Charged => {
-            hyperswitch_common_enums::enums::RefundStatus::Success
-        }
-        hyperswitch_common_enums::enums::AttemptStatus::Failure => {
-            hyperswitch_common_enums::enums::RefundStatus::Failure
-        }
-        _ => hyperswitch_common_enums::enums::RefundStatus::Pending,
+        AttemptStatus::Charged => RefundStatus::Success,
+        AttemptStatus::Failure => RefundStatus::Failure,
+        _ => RefundStatus::Pending,
     };
 
     match &response.transaction_response {
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
-            if refund_status == hyperswitch_common_enums::enums::RefundStatus::Success
-                || refund_status == hyperswitch_common_enums::enums::RefundStatus::Pending
-            {
+            if refund_status == RefundStatus::Success || refund_status == RefundStatus::Pending {
                 let response_data = RefundsResponseData {
                     connector_refund_id: trans_res.transaction_id.clone(),
                     refund_status,
@@ -1521,12 +1531,15 @@ pub fn convert_to_refund_response_data_or_error(
                     status_code: http_status_code,
                     attempt_status: Some(api_call_attempt_status),
                     connector_transaction_id: Some(trans_res.transaction_id.clone()),
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 Ok((api_call_attempt_status, Err(error_response)))
             }
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) | None => {
-            if refund_status == hyperswitch_common_enums::enums::RefundStatus::Success {
+            if refund_status == RefundStatus::Success {
                 let error_response = ErrorResponse {
                     code: consts::NO_ERROR_CODE.to_string(),
                     message: "Refund successful but connector_refund_id is missing from response."
@@ -1537,6 +1550,9 @@ pub fn convert_to_refund_response_data_or_error(
                     status_code: http_status_code,
                     attempt_status: Some(api_call_attempt_status),
                     connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
                 };
                 return Ok((api_call_attempt_status, Err(error_response)));
             }
@@ -1559,6 +1575,9 @@ pub fn convert_to_refund_response_data_or_error(
                 status_code: http_status_code,
                 attempt_status: Some(api_call_attempt_status),
                 connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
             };
             Ok((api_call_attempt_status, Err(error_response)))
         }
