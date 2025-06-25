@@ -140,11 +140,11 @@ macro_rules! implement_connector_operation {
 
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
 
-                    let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
-                    let payload = request.into_inner();
+            let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
+            let payload = request.into_inner();
 
-                    // Get connector data
-                    let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            // Get connector data
+            let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
             // Get connector integration
             let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
@@ -155,13 +155,13 @@ macro_rules! implement_connector_operation {
                 $response_data_type,
             > = connector_data.connector.get_connector_integration_v2();
 
-                    // Create connector request data
-                    let specific_request_data = $request_data_constructor(payload.clone())
-                        .into_grpc_status()?;
+            // Create connector request data
+            let specific_request_data = $request_data_constructor(payload.clone())
+                .into_grpc_status()?;
 
-                    // Create common request data
-                    let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
-                        .into_grpc_status()?;
+            // Create common request data
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+                .into_grpc_status()?;
 
             // Create router data
             let router_data = domain_types::router_data_v2::RouterDataV2::<
@@ -189,11 +189,11 @@ macro_rules! implement_connector_operation {
             .switch()
             .into_grpc_status()?;
 
-                    // Generate response
-                    let final_response = $generate_response_fn(response_result)
-                        .into_grpc_status()?;
+            // Generate response
+            let final_response = $generate_response_fn(response_result)
+                .into_grpc_status()?;
 
-                    Ok(tonic::Response::new(final_response))
+            Ok(tonic::Response::new(final_response))
         }
     };
 }

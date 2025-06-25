@@ -6,7 +6,7 @@ members = [
   "backend/external-services",
   "backend/grpc-server", 
   "sdk/rust-grpc-client",
- "backend/common_enums",
+  "backend/common_enums",
   "backend/common_utils",
   "backend/interfaces",
   "backend/domain_types"

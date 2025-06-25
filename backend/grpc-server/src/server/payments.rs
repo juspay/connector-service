@@ -374,6 +374,7 @@ impl PaymentService for Payments {
             })
             .transpose()?;
 
+        // Get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
         let source_verified = connector_data
@@ -381,6 +382,7 @@ impl PaymentService for Payments {
             .verify_webhook_source(
                 request_details.clone(),
                 webhook_secrets.clone(),
+                // TODO: do we need to force authenticaion? we can make it optional
                 Some(connector_auth_details.clone()),
             )
             .switch()
@@ -396,6 +398,7 @@ impl PaymentService for Payments {
             .switch()
             .map_err(|e| e.into_grpc_status())?;
 
+        // Get content for the webhook based on the event type
         let content = match event_type {
             domain_types::connector_types::EventType::Payment => get_payments_webhook_content(
                 connector_data,
@@ -475,8 +478,10 @@ impl PaymentService for Payments {
             auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let payload = request.into_inner();
 
+        // Get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
+        // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
             SetupMandate,
@@ -485,6 +490,7 @@ impl PaymentService for Payments {
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
+        // Create common request data
         let mut payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
                 .map_err(|e| e.into_grpc_status())?;
@@ -505,6 +511,7 @@ impl PaymentService for Payments {
         let setup_mandate_request_data = SetupMandateRequestData::foreign_try_from(payload.clone())
             .map_err(|e| e.into_grpc_status())?;
 
+        // Create router data
         let router_data: RouterDataV2<
             SetupMandate,
             PaymentFlowData,
@@ -529,6 +536,7 @@ impl PaymentService for Payments {
         .switch()
         .map_err(|e| e.into_grpc_status())?;
 
+        //Generate response
         let setup_mandate_response =
             generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
 
