@@ -3,7 +3,10 @@ use axum::http;
 use common_utils::consts;
 use grpc_api_types::{
     health_check::health_server,
-    payments::{payment_service_handler, payment_service_server},
+    payments::{
+        dispute_service_handler, dispute_service_server, payment_service_handler,
+        payment_service_server, refund_service_handler, refund_service_server,
+    },
 };
 use std::{future::Future, net};
 use tokio::{
@@ -85,6 +88,8 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
 pub struct Service {
     pub health_check_service: crate::server::health_check::HealthCheck,
     pub payments_service: crate::server::payments::Payments,
+    pub refunds_service: crate::server::refunds::Refunds,
+    pub disputes_service: crate::server::disputes::Disputes,
 }
 
 impl Service {
@@ -96,7 +101,9 @@ impl Service {
     pub async fn new(config: configs::Config) -> Self {
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments { config },
+            payments_service: crate::server::payments::Payments { config: config.clone() },
+            refunds_service: crate::server::refunds::Refunds { config: config.clone() },
+            disputes_service: crate::server::disputes::Disputes { config },
         }
     }
 
@@ -135,7 +142,9 @@ impl Service {
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
             .route("/health", axum::routing::get(|| async { "health is good" }))
-            .merge(payment_service_handler(self.payments_service));
+            .merge(payment_service_handler(self.payments_service))
+            .merge(refund_service_handler(self.refunds_service))
+            .merge(dispute_service_handler(self.disputes_service));
 
         let listener = tokio::net::TcpListener::bind(socket).await?;
 
@@ -187,6 +196,12 @@ impl Service {
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
                 self.payments_service,
+            ))
+            .add_service(refund_service_server::RefundServiceServer::new(
+                self.refunds_service,
+            ))
+            .add_service(dispute_service_server::DisputeServiceServer::new(
+                self.disputes_service,
             ))
             .serve_with_shutdown(socket, shutdown_signal)
             .await?;
