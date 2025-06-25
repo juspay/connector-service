@@ -1,16 +1,20 @@
-use domain_types::{errors::ApiClientError, types::Proxy};
+use domain_types::{
+    errors::{ApiClientError, ApiErrorResponse},
+    router_data_v2::RouterDataV2,
+    types::Proxy,
+};
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use error_stack::{report, ResultExt};
-use hyperswitch_common_utils::{
+use common_utils::{
     // consts::BASE64_ENGINE,
-    ext_traits::AsyncExt,
     request::{Method, Request, RequestContent},
 };
-use hyperswitch_domain_models::{
-    errors::api_error_response::ApiErrorResponse, router_data_v2::RouterDataV2,
-};
+use error_stack::{report, ResultExt};
+
 use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
+use interfaces::{
+    connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
+};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -18,9 +22,8 @@ use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
 use domain_types::connector_types::RawConnectorResponse;
-use hyperswitch_interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
-};
+
+use common_utils::ext_traits::AsyncExt;
 use serde_json::Value;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;

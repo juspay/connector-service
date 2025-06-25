@@ -1,12 +1,14 @@
 use std::str::FromStr;
 
-use crate::consts;
+use common_utils::{
+    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
+    errors::CustomResult,
+};
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
+use domain_types::router_data::ConnectorAuthType;
 use error_stack::Report;
 use http::request::Request;
-use hyperswitch_common_utils::errors::CustomResult;
-use hyperswitch_domain_models::router_data::ConnectorAuthType;
 use tonic::metadata;
 
 /// Record the header's fields in request's trace
@@ -53,12 +55,6 @@ pub fn connector_from_metadata(
 pub fn auth_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<ConnectorAuthType, ApplicationErrorResponse> {
-    const X_AUTH: &str = "x-auth";
-    const X_API_KEY: &str = "x-api-key";
-    const X_KEY1: &str = "x-key1";
-    const X_KEY2: &str = "x-key2";
-    const X_API_SECRET: &str = "x-api-secret";
-
     let auth = parse_metadata(metadata, X_AUTH)?;
 
     #[allow(clippy::wildcard_in_or_patterns)]
@@ -150,14 +146,14 @@ macro_rules! implement_connector_operation {
                     // Get connector data
                     let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
-                    // Get connector integration
-                    let connector_integration: hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
-                        '_,
-                        $flow_marker,
-                        $resource_common_data_type,
-                        $request_data_type,
-                        $response_data_type,
-                    > = connector_data.connector.get_connector_integration_v2();
+            // Get connector integration
+            let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<
+                '_,
+                $flow_marker,
+                $resource_common_data_type,
+                $request_data_type,
+                $response_data_type,
+            > = connector_data.connector.get_connector_integration_v2();
 
                     // Create connector request data
                     let specific_request_data = $request_data_constructor(payload.clone())
@@ -167,19 +163,19 @@ macro_rules! implement_connector_operation {
                     let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
                         .into_grpc_status()?;
 
-                    // Create router data
-                    let router_data = hyperswitch_domain_models::router_data_v2::RouterDataV2::<
-                        $flow_marker,
-                        $resource_common_data_type,
-                        $request_data_type,
-                        $response_data_type,
-                    > {
-                        flow: std::marker::PhantomData,
-                        resource_common_data: common_flow_data,
-                        connector_auth_type: connector_auth_details,
-                        request: specific_request_data,
-                        response: Err(hyperswitch_domain_models::router_data::ErrorResponse::default()),
-                    };
+            // Create router data
+            let router_data = domain_types::router_data_v2::RouterDataV2::<
+                $flow_marker,
+                $resource_common_data_type,
+                $request_data_type,
+                $response_data_type,
+            > {
+                flow: std::marker::PhantomData,
+                resource_common_data: common_flow_data,
+                connector_auth_type: connector_auth_details,
+                request: specific_request_data,
+                response: Err(domain_types::router_data::ErrorResponse::default()),
+            };
 
             // Execute connector processing
             let response_result = external_services::service::execute_connector_processing_step(

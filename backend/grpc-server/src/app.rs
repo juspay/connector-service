@@ -1,6 +1,6 @@
-use crate::consts;
 use crate::{configs, error::ConfigurationError, logger, utils};
 use axum::http;
+use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
