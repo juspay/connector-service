@@ -56,6 +56,7 @@ impl Config {
                     .try_parsing(true)
                     .separator("__")
                     .list_separator(",")
+                    .with_list_parse_key("proxy.bypass_proxy_urls")
                     .with_list_parse_key("redis.cluster_urls")
                     .with_list_parse_key("database.tenants"),
             )
