@@ -44,7 +44,7 @@ const AUTHORIZENET_KEY1_ENV: &str = "AUTHORIZENET_KEY1";
 // No default values - environment variables are required
 
 // Test card data
-const TEST_AMOUNT: i64 = 500; // Changed to match the test script
+const TEST_AMOUNT: i64 = 1000; // Changed to match the test script
 const TEST_CARD_NUMBER: &str = "5424000000000015"; // MasterCard test card that works with Authorize.Net
 const TEST_CARD_EXP_MONTH: &str = "12";
 const TEST_CARD_EXP_YEAR: &str = "2025";
@@ -290,6 +290,16 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         id_type: Some(IdType::Id(transaction_id.to_string())),
     };
 
+    // Create refund metadata with credit card information as required by Authorize.net
+    let mut refund_metadata = HashMap::new();
+    refund_metadata.insert(
+        "refund_metadata".to_string(),
+        format!(
+            "{{\"creditCard\":{{\"cardNumber\":\"{}\",\"expirationDate\":\"2025-12\"}}}}",
+            TEST_CARD_NUMBER
+        ),
+    );
+
     PaymentServiceRefundRequest {
         request_ref_id: Some(request_ref_id),
         refund_id: format!("refund_{}", get_timestamp()),
@@ -299,12 +309,12 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         refund_amount: TEST_AMOUNT,
         minor_payment_amount: TEST_AMOUNT,
         minor_refund_amount: TEST_AMOUNT,
-        reason: None,
+        reason: Some("Test refund".to_string()),
         webhook_url: None,
         merchant_account_id: None,
         capture_method: None,
         metadata: HashMap::new(),
-        refund_metadata: HashMap::new(),
+        refund_metadata,
         browser_info: None,
     }
 }
@@ -556,7 +566,6 @@ async fn test_void() {
 
 // Test refund flow
 #[tokio::test]
-#[ignore] // Refund functionality needs further testing
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // First create a payment
@@ -598,86 +607,23 @@ async fn test_refund() {
         let mut refund_grpc_request = Request::new(refund_request);
         add_authorizenet_metadata(&mut refund_grpc_request);
 
-        // Send the refund request and handle both success and error cases
+        // Send the refund request
         let refund_result = client.refund(refund_grpc_request).await;
 
-        match refund_result {
-            Ok(response) => {
-                let refund_response = response.into_inner();
+        // Check if we have a successful refund OR the expected error message
+        let is_success_status = refund_result.as_ref().map_or(false, |response| {
+            response.get_ref().status == i32::from(RefundStatus::RefundSuccess)
+        });
 
-                // Accept both Success and Failure states for testing purposes
-                // The refund might fail in test environment due to various reasons
-                // But we want to ensure the connector is correctly handling the request
-                assert!(
-                    refund_response.status == i32::from(RefundStatus::RefundPending)
-                        || refund_response.status == i32::from(RefundStatus::RefundFailure),
-                    "Refund should be in SUCCESS, PENDING or FAILURE state"
-                );
+        let has_expected_error = refund_result.as_ref().map_or(false, |response| {
+            response.get_ref().error_message().contains(
+                "The referenced transaction does not meet the criteria for issuing a credit.",
+            )
+        });
 
-                // Only try refund get if we have a successful refund with an ID
-                if refund_response.status == i32::from(RefundStatus::RefundSuccess) {
-                    // Extract the refund ID
-                    let refund_id = refund_response.refund_id.clone();
-
-                    if !refund_id.is_empty() {
-                        // Create refund get request
-                        let refund_sync_request =
-                            create_refund_get_request(&transaction_id, &refund_id);
-
-                        // Add metadata headers for refund sync request
-                        let mut refund_sync_grpc_request = Request::new(refund_sync_request);
-                        add_authorizenet_metadata(&mut refund_sync_grpc_request);
-
-                        // The RefundServiceGetRequest should be used with a different client
-                        // We're commenting this out for now as this needs to be fixed separately
-                        /*
-                        // Create a refund service client
-                        let mut refund_client = grpc_api_types::payments::refund_service_client::RefundServiceClient::new(channel);
-
-                        let refund_sync_result = refund_client.get(refund_sync_grpc_request).await;
-
-                        match refund_sync_result {
-                            Ok(sync_response) => {
-                                let status = sync_response.into_inner().status;
-                                assert!(
-                                    status == i32::from(RefundStatus::RefundSuccess)
-                                        || status == i32::from(RefundStatus::RefundPending),
-                                    "Refund sync should return SUCCESS or PENDING status"
-                                );
-                            }
-                            Err(status) => {
-                                // An error is acceptable if the system isn't able to sync the refund yet
-                                assert!(
-                                    status.message().contains("not found")
-                                        || status.message().contains("processing error"),
-                                    "Error should indicate refund not found or processing error"
-                                );
-                            }
-                        }
-                        */
-                    }
-                }
-            }
-            Err(status) => {
-                // If the refund fails, it could be due to timing issues or payment not being in the right state
-                // This is acceptable for our test scenario - we're testing the connector functionality
-                assert!(
-                    status.message().contains("processing error")
-                        || status.message().contains("not found")
-                        || status.message().contains("payment state"),
-                    "Error should be related to processing or payment state issues"
-                );
-            }
-        }
+        assert!(
+            is_success_status || has_expected_error,
+            "Refund should either have RefundSuccess status or the expected error message"
+        );
     });
-}
-
-// Test refund sync flow with a mock refund ID
-#[tokio::test]
-#[ignore] // Refund sync not implemented yet for AuthorizeDotNet
-async fn test_refund_sync() {
-    // Skipping test as refund sync is not implemented for AuthorizeDotNet
-
-    // This test is disabled because refund sync is not implemented for AuthorizeDotNet
-    // "Connector processing error: This step has not been implemented for: get_url for RefundSync"
 }
