@@ -234,6 +234,21 @@ macro_rules! implement_connector_operation {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             // let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
             //     .into_grpc_status()?;
+            let config = match request.extensions().get::<HashMap<String, Config>>() {
+            Some(config) => match config.get("config") {
+                Some(config) => config.clone(),
+                None => {
+                    return Err(tonic::Status::internal(
+                        "Configuration not found in request extensions",
+                    ))
+                }
+            },
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
@@ -255,7 +270,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone()))
                 .into_grpc_status()?;
 
             // Create router data
@@ -274,7 +289,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let response_result = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
+                &config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,

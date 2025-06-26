@@ -75,6 +75,7 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceAuthorizeRequest,
+        config: &Config,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -108,7 +109,7 @@ impl Payments {
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
@@ -134,6 +135,7 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceRegisterRequest,
+        config: &Config,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -167,7 +169,7 @@ impl Payments {
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
@@ -304,6 +306,7 @@ impl PaymentService for Payments {
                 &mut payment_flow_data,
                 connector_auth_details.clone(),
                 &payload,
+                &config,
             )
             .await?;
         }
@@ -481,6 +484,21 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRegisterRequest>,
     ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
+        let config = match request.extensions().get::<HashMap<String, Config>>() {
+            Some(config) => match config.get("config") {
+                Some(config) => config.clone(),
+                None => {
+                    return Err(tonic::Status::internal(
+                        "Configuration not found in request extensions",
+                    ))
+                }
+            },
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
 
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -502,7 +520,7 @@ impl PaymentService for Payments {
 
         // Create common request data
         let mut payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| e.into_grpc_status())?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
@@ -513,6 +531,7 @@ impl PaymentService for Payments {
                 &mut payment_flow_data,
                 connector_auth_details.clone(),
                 &payload,
+                &config,
             )
             .await?;
         }
@@ -535,7 +554,7 @@ impl PaymentService for Payments {
         };
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
             None,
