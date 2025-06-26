@@ -93,22 +93,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                        },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams {
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -129,7 +118,7 @@ mod tests {
                         bank_code: None,
                         nick_name: None,
                         card_holder_name: Some("Test User".to_string().into()),
-                        co_badged_card_data: None
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -265,24 +254,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
-                        },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams {
-                            // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
-                                .to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -394,24 +370,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
-                        },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams {
-                            // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
-                                .to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -545,22 +508,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                        },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -581,7 +533,7 @@ mod tests {
                         bank_code: None,
                         nick_name: None,
                         card_holder_name: Some("Test User".to_string().into()),
-                        co_badged_card_data: None
+                        co_badged_card_data: None,
                     }),
                     amount: 1000,
                     order_tax_amount: None,
@@ -855,22 +807,11 @@ mod tests {
                 connector_http_status_code: None,
                 external_latency: None,
                 connectors: Connectors {
-                    adyen: ConnectorParams {
-                        base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                    },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/".to_string(),
-                        dispute_base_url: None,
-                    },
-                    elavon: ConnectorParams {
-                        base_url: "https://api.elavon.com/".to_string(),
-                        dispute_base_url: None,
-                    },
+                    ..Default::default()
                 },
                 raw_connector_response: None,
             },
@@ -891,7 +832,7 @@ mod tests {
                     bank_code: None,
                     nick_name: None,
                     card_holder_name: Some("Test User".to_string().into()),
-                    co_badged_card_data: None
+                    co_badged_card_data: None,
                 }),
                 amount: 1000,
                 order_tax_amount: None,
@@ -921,9 +862,7 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                    ),
+                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
                     os_type: None,
                     os_version: None,
                     device_model: None,
@@ -1038,22 +977,11 @@ mod tests {
                 connector_http_status_code: None,
                 external_latency: None,
                 connectors: Connectors {
-                    adyen: ConnectorParams {
-                        base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                    },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/".to_string(),
-                        dispute_base_url: None,
-                    },
-                    elavon: ConnectorParams {
-                        base_url: "https://api.elavon.com/".to_string(),
-                        dispute_base_url: None,
-                    },
+                    ..Default::default()
                 },
                 raw_connector_response: None,
             },
@@ -1074,7 +1002,7 @@ mod tests {
                     bank_code: None,
                     nick_name: None,
                     card_holder_name: Some("Test User".to_string().into()),
-                    co_badged_card_data: None
+                    co_badged_card_data: None,
                 }),
                 amount: 1000,
                 order_tax_amount: None,
@@ -1104,9 +1032,7 @@ mod tests {
                         "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
                             .to_string(),
                     ),
-                    user_agent: Some(
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-                    ),
+                    user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
                     os_type: None,
                     os_version: None,
                     device_model: None,
@@ -1221,22 +1147,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: domain_types::types::Connectors {
-                        adyen: domain_types::types::ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                        },
-                        razorpay: domain_types::types::ConnectorParams {
+                        razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: domain_types::types::ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -1325,22 +1240,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                        },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -1433,24 +1337,11 @@ mod tests {
                     connector_http_status_code: None,
                     external_latency: None,
                     connectors: Connectors {
-                        adyen: ConnectorParams {
-                            base_url: "https://checkout-test.adyen.com/".to_string(),
-                            dispute_base_url: Some("https://ca-test.adyen.com/".to_string()),
-                        },
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
                         },
-                        fiserv: ConnectorParams {
-                            // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/https://api.razorpay.com/"
-                                .to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     raw_connector_response: None,
                 },
@@ -1584,22 +1475,11 @@ mod tests {
                 connector_http_status_code: None,
                 external_latency: None,
                 connectors: Connectors {
-                    adyen: ConnectorParams {
-                        base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                    },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/".to_string(),
-                        dispute_base_url: None,
-                    },
-                    elavon: ConnectorParams {
-                        base_url: "https://api.elavon.com/".to_string(),
-                        dispute_base_url: None,
-                    },
+                    ..Default::default()
                 },
                 raw_connector_response: None,
             },
@@ -1711,22 +1591,11 @@ mod tests {
                 connector_http_status_code: None,
                 external_latency: None,
                 connectors: Connectors {
-                    adyen: ConnectorParams {
-                        base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                    },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/".to_string(),
-                        dispute_base_url: None,
-                    },
-                    elavon: ConnectorParams {
-                        base_url: "https://api.elavon.com/".to_string(),
-                        dispute_base_url: None,
-                    },
+                    ..Default::default()
                 },
                 raw_connector_response: None,
             },
@@ -1827,22 +1696,11 @@ mod tests {
                 connector_http_status_code: None,
                 external_latency: None,
                 connectors: Connectors {
-                    adyen: ConnectorParams {
-                        base_url: "https://checkout-test.adyen.com/".to_string(),
-                        dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
-                    },
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
                     },
-                    fiserv: ConnectorParams { // Added fiserv
-                        base_url: "https://cert.api.fiserv.com/".to_string(),
-                        dispute_base_url: None,
-                    },
-                    elavon: ConnectorParams {
-                        base_url: "https://api.elavon.com/".to_string(),
-                        dispute_base_url: None,
-                    },
+                    ..Default::default()
                 },
                 raw_connector_response: None,
             },

@@ -32,16 +32,17 @@ use serde::Serialize;
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
+    pub xendit: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
@@ -1624,7 +1625,7 @@ pub fn generate_refund_sync_response(
 
     match refunds_response {
         Ok(response) => {
-            let status = router_data_v2.resource_common_data.status;
+            let status = response.refund_status;
             let grpc_status = grpc_api_types::payments::RefundStatus::foreign_from(status);
 
             Ok(RefundResponse {
