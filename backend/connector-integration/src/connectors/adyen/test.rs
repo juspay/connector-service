@@ -66,18 +66,7 @@ mod tests {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
-                        razorpay: ConnectorParams {
-                            base_url: "https://sandbox.juspay.in/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     external_latency: None,
                     raw_connector_response: None,
@@ -242,18 +231,7 @@ mod tests {
                             base_url: "https://checkout-test.adyen.com/".to_string(),
                             dispute_base_url: Some("https://ca-test.adyen.com/ca/services/DisputeService/v30/defendDispute".to_string()),
                         },
-                        razorpay: ConnectorParams {
-                            base_url: "https://sandbox.juspay.in/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        fiserv: ConnectorParams { // Added fiserv
-                            base_url: "https://cert.api.fiserv.com/".to_string(),
-                            dispute_base_url: None,
-                        },
-                        elavon: ConnectorParams {
-                            base_url: "https://api.elavon.com/".to_string(),
-                            dispute_base_url: None,
-                        },
+                        ..Default::default()
                     },
                     external_latency: None,
                     raw_connector_response: None,

@@ -13,8 +13,6 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use grpc_api_types::health_check::health_handler;
-
 /// # Panics
 ///
 /// Will panic if redis connection establishment fails or signal handling fails
@@ -136,7 +134,7 @@ impl Service {
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
-            .merge(health_handler(self.health_check_service))
+            .route("/health", axum::routing::get(|| async { "health is good" }))
             .merge(payment_service_handler(self.payments_service));
 
         let listener = tokio::net::TcpListener::bind(socket).await?;
