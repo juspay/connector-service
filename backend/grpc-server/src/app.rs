@@ -101,8 +101,12 @@ impl Service {
     pub async fn new(config: configs::Config) -> Self {
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
-            payments_service: crate::server::payments::Payments { config: config.clone() },
-            refunds_service: crate::server::refunds::Refunds { config: config.clone() },
+            payments_service: crate::server::payments::Payments {
+                config: config.clone(),
+            },
+            refunds_service: crate::server::refunds::Refunds {
+                config: config.clone(),
+            },
             disputes_service: crate::server::disputes::Disputes { config },
         }
     }

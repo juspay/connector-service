@@ -6,21 +6,20 @@ use crate::{
 };
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
+use domain_types::router_data::ConnectorAuthType;
 use domain_types::{
     connector_flow::RSync,
-    connector_types::{
-        RefundFlowData, RefundSyncData, RefundsResponseData,
-    },
+    connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
     types::generate_refund_sync_response,
     utils::ForeignTryFrom,
 };
-use domain_types::router_data::ConnectorAuthType;
 use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
-    refund_service_server::RefundService, RefundServiceGetRequest, RefundResponse,
-    RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType, WebhookResponseContent,
+    refund_service_server::RefundService, RefundResponse, RefundServiceGetRequest,
+    RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
+    WebhookResponseContent,
 };
 
 // Helper trait for refund operations
@@ -142,6 +141,8 @@ async fn get_refunds_webhook_content(
     )?;
 
     Ok(WebhookResponseContent {
-        content: Some(grpc_api_types::payments::webhook_response_content::Content::RefundsResponse(response)),
+        content: Some(
+            grpc_api_types::payments::webhook_response_content::Content::RefundsResponse(response),
+        ),
     })
 }

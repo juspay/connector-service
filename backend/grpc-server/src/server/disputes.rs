@@ -280,6 +280,8 @@ async fn get_disputes_webhook_content(
     )?;
 
     Ok(WebhookResponseContent {
-        content: Some(grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response)),
+        content: Some(
+            grpc_api_types::payments::webhook_response_content::Content::DisputesResponse(response),
+        ),
     })
 }
