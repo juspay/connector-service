@@ -15,7 +15,7 @@ pub struct Config {
     pub connectors: Connectors,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -23,13 +23,13 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, serde::Deserialize, serde::Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]

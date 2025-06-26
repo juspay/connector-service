@@ -1,11 +1,15 @@
-#![allow(clippy::panic_in_result_fn)]
+// #![allow(clippy::panic_in_result_fn)]
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::as_conversions)]
 #![allow(clippy::unnecessary_cast)]
 #![allow(clippy::print_stdout)]
+#![allow(clippy::panic_in_result_fn)]
+
 use grpc_api_types::payments::{
-    self, payment_service_client::PaymentServiceClient, Address, PaymentsAuthorizeRequest,
-    PhoneDetails,
+    card_payment_method_type, identifier::IdType, payment_method,
+    payment_service_client::PaymentServiceClient, Address, AuthenticationType, BrowserInformation,
+    CaptureMethod, CardDetails, CardPaymentMethodType, Currency, Identifier, PaymentAddress,
+    PaymentMethod, PaymentServiceAuthorizeRequest,
 };
 use grpc_server::{app, configs};
 use serde_json::json;
@@ -21,43 +25,34 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
         // .await
         // .unwrap();
         // Create a request with configuration override
-        let mut request = Request::new(PaymentsAuthorizeRequest {
-            amount: 1000 as i64,
-            currency: payments::Currency::Usd as i32, // USD
-            payment_method: payments::PaymentMethod::Card as i32, // Card
-            payment_method_data: Some(payments::PaymentMethodData {
-                data: Some(payments::payment_method_data::Data::Card(payments::Card {
-                    card_number: "5123456789012346".to_string(), // Updated card number
-                    card_exp_month: "03".to_string(),
-                    card_exp_year: "2030".to_string(),
-                    card_cvc: "100".to_string(), // Updated CVC
-                    ..Default::default()
+        let mut request = Request::new(PaymentServiceAuthorizeRequest {
+            amount: 1000,
+            minor_amount: 1000,
+            currency: Currency::Inr as i32,
+            email: Some("example@gmail.com".to_string()),
+            payment_method: Some(PaymentMethod {
+                payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
+                    card_type: Some(card_payment_method_type::CardType::Debit(CardDetails {
+                        card_number: "5123456789012346".to_string(),
+                        card_exp_month: "07".to_string(),
+                        card_exp_year: "2030".to_string(),
+                        card_cvc: "100".to_string(),
+                        ..Default::default()
+                    })),
                 })),
             }),
-            address: Some(payments::PaymentAddress {
-                shipping: None,
-                billing: Some(Address {
-                    address: None,
-                    phone: Some(PhoneDetails {
-                        number: Some("1234567890".to_string()),
-                        country_code: Some("+1".to_string()),
-                    }),
-                    email: Some("sweta.sharma@juspay.in".to_string()),
+            address: Some(PaymentAddress {
+                shipping_address: None,
+                billing_address: Some(Address {
+                    phone_number: Some("9876354210".to_string()),
+                    phone_country_code: Some("+1".to_string()),
+                    ..Default::default()
                 }),
-                unified_payment_method_billing: None,
-                payment_method_billing: None,
             }),
-            auth_type: payments::AuthenticationType::ThreeDs as i32,
-            connector_request_reference_id: "test_reference".to_string(),
-            enrolled_for_3ds: true,
-            request_incremental_authorization: false,
-            minor_amount: 1000 as i64,
-            email: Some("sweta.sharma@juspay.in".to_string()),
-            connector_customer: Some("cus_1234".to_string()),
-            return_url: Some("www.google.com".to_string()),
-            browser_info: Some(payments::BrowserInformation {
-                // Added browser_info
-                user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+            auth_type: AuthenticationType::ThreeDs as i32,
+            capture_method: Some(CaptureMethod::Manual as i32),
+            browser_info: Some(BrowserInformation {
+                user_agent: Some("Mozilla/5.0".to_string()),
                 accept_header: Some(
                     "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
                 ),
@@ -68,6 +63,10 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
                 java_enabled: Some(false),
                 ..Default::default()
             }),
+            request_ref_id: Some(Identifier {
+                id_type: Some(IdType::Id("payment_9089".to_string())),
+            }),
+            return_url: Some("www.google.com".to_string()),
             ..Default::default()
         });
 
@@ -104,12 +103,13 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
         request.metadata_mut().insert("x-key1", "".parse().unwrap());
 
         // Make the request
-        let response = client.payment_authorize(request).await;
+        let response = client.authorize(request).await;
 
         // The request should fail with an invalid argument error since we're using test data
         // but we can verify that the configuration override was processed
         println!("Response: {:?}", response);
         assert!(response.is_err());
+
         // let error = response.unwrap_err();
         // assert!(error.message().contains("Invalid request data"));
     });

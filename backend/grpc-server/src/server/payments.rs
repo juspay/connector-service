@@ -2,7 +2,7 @@ use crate::implement_connector_operation;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, config_from_metadata, connector_from_metadata},
+    utils::{auth_from_metadata, connector_from_metadata},
 };
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -38,8 +38,8 @@ use grpc_api_types::payments::{
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
-use tracing::info;
 use std::collections::HashMap;
+use tracing::info;
 
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
@@ -258,10 +258,21 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-        // let config = config_from_metadata(request.metadata(), self.config.clone())
-            // .map_err(|e| e.into_grpc_status())?;
-        let config = request.extensions().get::<HashMap<String, String>>().cloned();
-        tracing::info!("config from request: {:?}", config);
+        let config = match request.extensions().get::<HashMap<String, Config>>() {
+            Some(config) => match config.get("config") {
+                Some(config) => config.clone(),
+                None => {
+                    return Err(tonic::Status::internal(
+                        "Configuration not found in request extensions",
+                    ))
+                }
+            },
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let connector_auth_details =
@@ -282,7 +293,7 @@ impl PaymentService for Payments {
 
         // Create common request data
         let mut payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| e.into_grpc_status())?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
@@ -317,7 +328,7 @@ impl PaymentService for Payments {
         // Execute connector processing
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
             None,

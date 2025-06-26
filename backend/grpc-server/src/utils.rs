@@ -1,11 +1,11 @@
 use serde_json::Value;
 use std::str::FromStr;
 
+use crate::configs::Config;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
 };
-use crate::configs::Config;
 use domain_types::connector_types;
 use domain_types::errors::{ApiError, ApplicationErrorResponse};
 use domain_types::router_data::ConnectorAuthType;
@@ -95,72 +95,64 @@ pub fn auth_from_metadata(
 pub fn config_from_metadata(
     config_override: String,
     config: Config,
-) -> CustomResult<Value, ApplicationErrorResponse> {
-    // let Some(override_config) = extract_override_json(metadata)? else {
-    //     return Ok(config);
-    // };
-    // Ok(override_config)
-    // tracing::info!(
-    //     "i am inside the config_from_metadata function with override"
-    // );
-    let override_value = serde_json::to_value(&config_override).map_err(|e| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "CANNOT_CONVERT_TO_JSON".into(),
-            error_identifier: 400,
-            error_message: format!("Cannot convert override config to JSON: {e}"),
-            error_object: None,
-        }))
-    })?;
+) -> CustomResult<Config, ApplicationErrorResponse> {
+    if !config_override.is_empty() {
+        let override_value = serde_json::from_str(&config_override).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot convert override config to JSON: {e}"),
+                error_object: None,
+            }))
+        })?;
+        let base_value = serde_json::to_value(&config).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_SERIALIZE_TO_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot serialize base config to JSON: {e}"),
+                error_object: None,
+            }))
+        })?;
+        tracing::info!(
+            "Override config: {}",
+            serde_json::to_string_pretty(&override_value)
+                .unwrap_or_else(|_| "Invalid JSON".to_string())
+        );
+        tracing::info!(
+            "Base config: {}",
+            serde_json::to_string_pretty(&base_value)
+                .unwrap_or_else(|_| "Invalid JSON".to_string())
+        );
+        let merged = merge_configs(&override_value, &base_value);
 
-    // let Some(override_obj) = override_value.as_object() else {
-    //     return Ok(config);
-    // };
-
-    let base_value = serde_json::to_value(&config).map_err(|e| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "CANNOT_SERIALIZE_TO_JSON".into(),
-            error_identifier: 400,
-            error_message: format!("Cannot serialize base config to JSON: {e}"),
-            error_object: None,
-        }))
-    })?;
-    tracing::info!(
-        "Override config: {}",
-        serde_json::to_string_pretty(&override_value).unwrap_or_else(|_| "Invalid JSON".to_string())
-    );
-    tracing::info!(
-        "Base config: {}",
-        serde_json::to_string_pretty(&base_value).unwrap_or_else(|_| "Invalid JSON".to_string())
-    );
-    let merged = merge_configs(override_value, base_value);
-
-    tracing::info!(
-        "Merged config: {}",
-        serde_json::to_string_pretty(&merged).unwrap_or_else(|_| "Invalid JSON".to_string())
-    );
-
-    // serde_json::from_value(merged).map_err(|e| {
-    //     Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-    //         sub_code: "CANNOT_DESERIALIZE_JSON".into(),
-    //         error_identifier: 400,
-    //         error_message: format!("Cannot deserialize merged config: {e}"),
-    //         error_object: None,
-    //     }))
-    // })
-    Ok(merged)
+        tracing::info!(
+            "Merged config: {}",
+            serde_json::to_string_pretty(&merged).unwrap_or_else(|_| "Invalid JSON".to_string())
+        );
+        return serde_json::from_value(merged).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_DESERIALIZE_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot deserialize merged config: {e}"),
+                error_object: None,
+            }))
+        });
+    }
+    Ok(config)
 }
 
-fn merge_configs(override_val: Value, base_val: Value) -> Value {
-    match (override_val, base_val) {
-        (Value::Object(override_map), Value::Object(mut base_map)) => {
-            for (key, override_item) in override_map {
-                let base_item = base_map.remove(&key).unwrap_or(Value::Null);
-                base_map.insert(key, merge_configs(override_item, base_item));
+fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
+    match (base_val, override_val) {
+        (Value::Object(base_map), Value::Object(override_map)) => {
+            let mut merged = base_map.clone();
+            for (key, override_value) in override_map {
+                let base_value = base_map.get(key).unwrap_or(&Value::Null);
+                merged.insert(key.clone(), merge_configs(override_value, base_value));
             }
-            Value::Object(base_map)
+            Value::Object(merged)
         }
-        // Override replaces base for non-objects
-        (override_val, _) => override_val,
+        // override replaces base for primitive, null, or array
+        (_, override_val) => override_val.clone(),
     }
 }
 
