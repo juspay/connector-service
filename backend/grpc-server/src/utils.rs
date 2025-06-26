@@ -93,15 +93,17 @@ pub fn auth_from_metadata(
 }
 
 pub fn config_from_metadata(
-    metadata: &metadata::MetadataMap,
+    config_override: String,
     config: Config,
-) -> CustomResult<Config, ApplicationErrorResponse> {
-    let Some(override_config) = extract_override_json(metadata)? else {
-        return Ok(config);
-    };
+) -> CustomResult<Value, ApplicationErrorResponse> {
+    // let Some(override_config) = extract_override_json(metadata)? else {
+    //     return Ok(config);
+    // };
     // Ok(override_config)
-
-    let override_value = serde_json::to_value(&override_config).map_err(|e| {
+    // tracing::info!(
+    //     "i am inside the config_from_metadata function with override"
+    // );
+    let override_value = serde_json::to_value(&config_override).map_err(|e| {
         Report::new(ApplicationErrorResponse::BadRequest(ApiError {
             sub_code: "CANNOT_CONVERT_TO_JSON".into(),
             error_identifier: 400,
@@ -110,9 +112,9 @@ pub fn config_from_metadata(
         }))
     })?;
 
-    let Some(override_obj) = override_value.as_object() else {
-        return Ok(config);
-    };
+    // let Some(override_obj) = override_value.as_object() else {
+    //     return Ok(config);
+    // };
 
     let base_value = serde_json::to_value(&config).map_err(|e| {
         Report::new(ApplicationErrorResponse::BadRequest(ApiError {
@@ -122,35 +124,42 @@ pub fn config_from_metadata(
             error_object: None,
         }))
     })?;
+    tracing::info!(
+        "Override config: {}",
+        serde_json::to_string_pretty(&override_value).unwrap_or_else(|_| "Invalid JSON".to_string())
+    );
+    tracing::info!(
+        "Base config: {}",
+        serde_json::to_string_pretty(&base_value).unwrap_or_else(|_| "Invalid JSON".to_string())
+    );
+    let merged = merge_configs(override_value, base_value);
 
-    let merged = merge_configs(Value::Object(override_obj.clone()), base_value);
+    tracing::info!(
+        "Merged config: {}",
+        serde_json::to_string_pretty(&merged).unwrap_or_else(|_| "Invalid JSON".to_string())
+    );
 
-    serde_json::from_value(merged).map_err(|e| {
-        Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-            sub_code: "CANNOT_DESERIALIZE_JSON".into(),
-            error_identifier: 400,
-            error_message: format!("Cannot deserialize merged config: {e}"),
-            error_object: None,
-        }))
-    })
+    // serde_json::from_value(merged).map_err(|e| {
+    //     Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+    //         sub_code: "CANNOT_DESERIALIZE_JSON".into(),
+    //         error_identifier: 400,
+    //         error_message: format!("Cannot deserialize merged config: {e}"),
+    //         error_object: None,
+    //     }))
+    // })
+    Ok(merged)
 }
 
-fn merge_configs(override_val: Value, mut base_val: Value) -> Value {
-    match (override_val, &mut base_val) {
-        (Value::Object(override_map), Value::Object(base_map)) => {
+fn merge_configs(override_val: Value, base_val: Value) -> Value {
+    match (override_val, base_val) {
+        (Value::Object(override_map), Value::Object(mut base_map)) => {
             for (key, override_item) in override_map {
-                match base_map.get_mut(&key) {
-                    Some(base_item) => {
-                        *base_item = merge_configs(override_item, base_item.take());
-                    }
-                    None => {
-                        base_map.insert(key, override_item);
-                    }
-                }
+                let base_item = base_map.remove(&key).unwrap_or(Value::Null);
+                base_map.insert(key, merge_configs(override_item, base_item));
             }
-            Value::Object(base_map.clone())
+            Value::Object(base_map)
         }
-        // Primitive: override replaces base
+        // Override replaces base for non-objects
         (override_val, _) => override_val,
     }
 }
@@ -231,8 +240,8 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
-            let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
-                .into_grpc_status()?;
+            // let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
+            //     .into_grpc_status()?;
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
@@ -254,7 +263,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
                 .into_grpc_status()?;
 
             // Create router data
@@ -273,7 +282,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let response_result = external_services::service::execute_connector_processing_step(
-                &config.proxy,
+                &self.config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,
