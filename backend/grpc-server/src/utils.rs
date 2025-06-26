@@ -1,5 +1,7 @@
+use serde_json::Value;
 use std::str::FromStr;
 
+use crate::configs::Config;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
@@ -90,6 +92,99 @@ pub fn auth_from_metadata(
     }
 }
 
+pub fn config_from_metadata(
+    config_override: String,
+    config: Config,
+) -> CustomResult<Config, ApplicationErrorResponse> {
+    if !config_override.is_empty() {
+        let override_value = serde_json::from_str(&config_override).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot convert override config to JSON: {e}"),
+                error_object: None,
+            }))
+        })?;
+        let base_value = serde_json::to_value(&config).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_SERIALIZE_TO_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot serialize base config to JSON: {e}"),
+                error_object: None,
+            }))
+        })?;
+        tracing::info!(
+            "Override config: {}",
+            serde_json::to_string_pretty(&override_value)
+                .unwrap_or_else(|_| "Invalid JSON".to_string())
+        );
+        tracing::info!(
+            "Base config: {}",
+            serde_json::to_string_pretty(&base_value)
+                .unwrap_or_else(|_| "Invalid JSON".to_string())
+        );
+        let merged = merge_configs(&override_value, &base_value);
+
+        tracing::info!(
+            "Merged config: {}",
+            serde_json::to_string_pretty(&merged).unwrap_or_else(|_| "Invalid JSON".to_string())
+        );
+        return serde_json::from_value(merged).map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CANNOT_DESERIALIZE_JSON".into(),
+                error_identifier: 400,
+                error_message: format!("Cannot deserialize merged config: {e}"),
+                error_object: None,
+            }))
+        });
+    }
+    Ok(config)
+}
+
+fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
+    match (base_val, override_val) {
+        (Value::Object(base_map), Value::Object(override_map)) => {
+            let mut merged = base_map.clone();
+            for (key, override_value) in override_map {
+                let base_value = base_map.get(key).unwrap_or(&Value::Null);
+                merged.insert(key.clone(), merge_configs(override_value, base_value));
+            }
+            Value::Object(merged)
+        }
+        // override replaces base for primitive, null, or array
+        (_, override_val) => override_val.clone(),
+    }
+}
+
+pub fn extract_override_json(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<Value>, ApplicationErrorResponse> {
+    match metadata.get("x-config-override") {
+        Some(value) => {
+            let json_str = value.to_str().map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_METADATA".into(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid JSON in x-config-override: {e}"),
+                    error_object: None,
+                }))
+            })?;
+
+            let config = serde_json::from_str::<Value>(json_str).map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_JSON_FORMAT".into(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid JSON format in x-config-override: {e}"),
+                    error_object: None,
+                }))
+            })?;
+
+            Ok(Some(config))
+        }
+        None => Ok(None),
+    }
+}
+
 fn parse_metadata<'a>(
     metadata: &'a metadata::MetadataMap,
     key: &str,
@@ -137,7 +232,16 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
-
+            // let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
+            //     .into_grpc_status()?;
+            let config = match request.extensions().get::<Config>(){
+            Some(config) => config.clone(),
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+            };
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
@@ -159,7 +263,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), config.connectors.clone()))
                 .into_grpc_status()?;
 
             // Create router data
@@ -178,7 +282,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let response_result = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
+                &config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,

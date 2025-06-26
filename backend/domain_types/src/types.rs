@@ -28,11 +28,11 @@ use crate::mandates::MandateData;
 use crate::payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails};
 use crate::{payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2};
 use common_utils::consts::NO_ERROR_CODE;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -42,14 +42,14 @@ pub struct Connectors {
     pub xendit: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Serialize, Default)]
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,

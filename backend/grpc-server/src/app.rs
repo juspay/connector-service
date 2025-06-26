@@ -1,3 +1,4 @@
+use crate::config_overrides::RequestExtensionsLayer;
 use crate::{configs, error::ConfigurationError, logger, metrics, utils};
 use axum::http;
 use common_utils::consts;
@@ -178,11 +179,13 @@ impl Service {
         let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
+        let config_override_layer = RequestExtensionsLayer::new();
 
         Server::builder()
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
+            .layer(config_override_layer)
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
