@@ -51,15 +51,11 @@ fn get_timestamp() -> u64 {
 fn add_checkout_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - throw error if not present
     let api_key = env::var(CHECKOUT_API_KEY_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {} must be set", CHECKOUT_API_KEY_ENV));
+        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_API_KEY_ENV} must be set"));
     let key1 = env::var(CHECKOUT_KEY1_ENV)
-        .unwrap_or_else(|_| panic!("Environment variable {} must be set", CHECKOUT_KEY1_ENV));
-    let api_secret = env::var(CHECKOUT_API_SECRET_ENV).unwrap_or_else(|_| {
-        panic!(
-            "Environment variable {} must be set",
-            CHECKOUT_API_SECRET_ENV
-        )
-    });
+        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_KEY1_ENV} must be set"));
+    let api_secret = env::var(CHECKOUT_API_SECRET_ENV)
+        .unwrap_or_else(|_| panic!("Environment variable {CHECKOUT_API_SECRET_ENV} must be set"));
 
     request.metadata_mut().append(
         "x-connector",

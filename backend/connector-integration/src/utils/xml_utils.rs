@@ -44,7 +44,7 @@ pub fn preprocess_xml_response_bytes(xml_data: Bytes) -> Result<Bytes, errors::C
     let final_xml = if !cleaned_response.starts_with("<txn>")
         && (cleaned_response.contains("<ssl_") || cleaned_response.contains("<error"))
     {
-        format!("<txn>{}</txn>", cleaned_response)
+        format!("<txn>{cleaned_response}</txn>")
     } else {
         cleaned_response.to_string()
     };
