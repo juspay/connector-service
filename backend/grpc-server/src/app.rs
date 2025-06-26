@@ -136,6 +136,7 @@ impl Service {
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
+            .route("/health", axum::routing::get(|| async { "health is good" }))
             .merge(health_handler(self.health_check_service))
             .merge(payment_service_handler(self.payments_service));
 
