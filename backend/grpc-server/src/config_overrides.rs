@@ -1,7 +1,6 @@
 use crate::{configs::Config, utils::config_from_metadata};
 use http::{Request, Response};
 use std::{
-    collections::HashMap,
     future::Future,
     pin::Pin,
     task::{Context, Poll},
@@ -60,19 +59,12 @@ where
 
         let new_config = config_from_metadata(config_override, default_config.clone())
             .expect("Failed to create config from metadata");
-        let config_extensions = get_config_extensions(new_config);
 
-        req.extensions_mut().insert(config_extensions);
+        req.extensions_mut().insert(new_config);
         let future = self.inner.call(req);
         Box::pin(async move {
             let response = future.await?;
             Ok(response)
         })
     }
-}
-pub fn get_config_extensions(config: Config) -> HashMap<String, Config> {
-    let mut extensions = HashMap::<String, Config>::new();
-    extensions.insert("config".to_string(), config);
-    // Add other config fields as needed
-    extensions
 }

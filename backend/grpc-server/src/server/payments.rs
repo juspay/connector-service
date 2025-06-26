@@ -38,7 +38,6 @@ use grpc_api_types::payments::{
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
-use std::collections::HashMap;
 use tracing::info;
 
 // Helper trait for payment operations
@@ -260,15 +259,8 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-        let config = match request.extensions().get::<HashMap<String, Config>>() {
-            Some(config) => match config.get("config") {
-                Some(config) => config.clone(),
-                None => {
-                    return Err(tonic::Status::internal(
-                        "Configuration not found in request extensions",
-                    ))
-                }
-            },
+        let config = match request.extensions().get::<Config>() {
+            Some(config) => config.clone(),
             None => {
                 return Err(tonic::Status::internal(
                     "Configuration not found in request extensions",
@@ -484,15 +476,8 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRegisterRequest>,
     ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
-        let config = match request.extensions().get::<HashMap<String, Config>>() {
-            Some(config) => match config.get("config") {
-                Some(config) => config.clone(),
-                None => {
-                    return Err(tonic::Status::internal(
-                        "Configuration not found in request extensions",
-                    ))
-                }
-            },
+        let config = match request.extensions().get::<Config>() {
+            Some(config) => config.clone(),
             None => {
                 return Err(tonic::Status::internal(
                     "Configuration not found in request extensions",

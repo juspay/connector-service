@@ -234,21 +234,14 @@ macro_rules! implement_connector_operation {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             // let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
             //     .into_grpc_status()?;
-            let config = match request.extensions().get::<HashMap<String, Config>>() {
-            Some(config) => match config.get("config") {
-                Some(config) => config.clone(),
-                None => {
-                    return Err(tonic::Status::internal(
-                        "Configuration not found in request extensions",
-                    ))
-                }
-            },
+            let config = match request.extensions().get::<Config>(){
+            Some(config) => config.clone(),
             None => {
                 return Err(tonic::Status::internal(
                     "Configuration not found in request extensions",
                 ))
             }
-        };
+            };
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
