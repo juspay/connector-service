@@ -13,8 +13,6 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use grpc_api_types::health_check::health_handler;
-
 /// # Panics
 ///
 /// Will panic if redis connection establishment fails or signal handling fails
