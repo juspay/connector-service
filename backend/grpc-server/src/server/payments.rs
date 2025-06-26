@@ -304,7 +304,7 @@ impl PaymentService for Payments {
 
         let start_time = tokio::time::Instant::now();
         let result: Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> =
-            async {
+            Box::pin(async {
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
@@ -377,7 +377,7 @@ impl PaymentService for Payments {
                         .map_err(|e| e.into_grpc_status())?;
 
                 Ok(tonic::Response::new(authorize_response))
-            }
+            })
             .await;
         let duration = start_time.elapsed().as_millis();
         current_span.record("response_time", duration);
@@ -933,7 +933,7 @@ impl PaymentService for Payments {
         let start_time = tokio::time::Instant::now();
 
         let result: Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> =
-            async {
+            Box::pin(async {
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
@@ -1004,7 +1004,7 @@ impl PaymentService for Payments {
                     generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
 
                 Ok(tonic::Response::new(setup_mandate_response))
-            }
+            })
             .await;
         let duration = start_time.elapsed().as_millis();
         current_span.record("response_time", duration);
