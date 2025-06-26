@@ -611,11 +611,11 @@ async fn test_refund() {
         let refund_result = client.refund(refund_grpc_request).await;
 
         // Check if we have a successful refund OR the expected error message
-        let is_success_status = refund_result.as_ref().map_or(false, |response| {
+        let is_success_status = refund_result.as_ref().is_ok_and(|response| {
             response.get_ref().status == i32::from(RefundStatus::RefundSuccess)
         });
 
-        let has_expected_error = refund_result.as_ref().map_or(false, |response| {
+        let has_expected_error = refund_result.as_ref().is_ok_and(|response| {
             response.get_ref().error_message().contains(
                 "The referenced transaction does not meet the criteria for issuing a credit.",
             )
