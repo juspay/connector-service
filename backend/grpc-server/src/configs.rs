@@ -2,8 +2,9 @@ use crate::{consts, error::ConfigurationError, logger::config::Log};
 use domain_types::types::{Connectors, Proxy};
 use std::path::PathBuf;
 // use serde::{de::{self, Deserializer, MapAccess, Visitor}, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub server: Server,
     pub metrics: MetricsServer,

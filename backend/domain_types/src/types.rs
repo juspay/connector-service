@@ -30,7 +30,7 @@ use hyperswitch_domain_models::{
     router_data_v2::RouterDataV2,
 };
 use hyperswitch_interfaces::consts::NO_ERROR_CODE;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::{collections::HashMap, str::FromStr};
 use utoipa::ToSchema;
@@ -42,14 +42,14 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, serde::Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
