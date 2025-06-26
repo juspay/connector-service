@@ -37,6 +37,8 @@ use std::sync::LazyLock;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use domain_types::connector_types::SupportedPaymentMethodsExt;
+use domain_types::errors;
+use domain_types::router_response_types::Response;
 use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -46,12 +48,10 @@ use domain_types::{
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
-    api::{self, ConnectorCommon},
+    api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{self, is_mandate_supported},
-    errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
 };
 
 use transformers::{self as razorpay, ForeignTryFrom};
@@ -98,8 +98,8 @@ impl ConnectorCommon for Razorpay {
     fn id(&self) -> &'static str {
         "razorpay"
     }
-    fn get_currency_unit(&self) -> api::CurrencyUnit {
-        api::CurrencyUnit::Minor
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Minor
     }
     fn get_auth_header(
         &self,
@@ -777,7 +777,7 @@ impl connector_types::ConnectorValidation for Razorpay {
         &self,
         pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), errors::ConnectorError> {
         let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
         is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
     }

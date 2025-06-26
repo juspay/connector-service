@@ -1159,6 +1159,8 @@ name = "domain_types"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "base64 0.21.7",
+ "bytes",
  "cards",
  "common_enums",
  "common_utils",
@@ -1166,6 +1168,8 @@ dependencies = [
  "grpc-api-types",
  "http 0.2.12",
  "masking",
+ "rand 0.8.5",
+ "regex",
  "router_derive",
  "serde",
  "serde_json",
