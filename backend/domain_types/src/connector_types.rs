@@ -19,9 +19,10 @@ use common_utils::{errors, types::MinorUnit};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::{Display, EnumString};
 
 // snake case for enum variants
-#[derive(Clone, Debug, strum::EnumString)]
+#[derive(Clone, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
