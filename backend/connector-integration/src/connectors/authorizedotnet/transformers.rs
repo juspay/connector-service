@@ -1,13 +1,14 @@
 use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
+use common_utils::ext_traits::{OptionExt, ValueExt};
 use common_utils::{consts, pii::Email};
 use domain_types::{
-    connector_flow::{Authorize, PSync, Refund},
+    connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -739,6 +740,12 @@ pub struct AuthorizedotnetCreateSyncRequest {
     pub get_transaction_details_request: TransactionDetails,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetRSyncRequest {
+    pub get_transaction_details_request: TransactionDetails,
+}
+
 impl
     TryFrom<
         AuthorizedotnetRouterData<
@@ -778,8 +785,46 @@ impl
     }
 }
 
-// The following refund-related structs and implementations are commented out as they require L2 changes
-/*
+// Implementation for the RSync flow to support refund synchronization
+impl
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for AuthorizedotnetRSyncRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Extract connector_refund_id from the request
+        let connector_refund_id = if !item.router_data.request.connector_refund_id.is_empty() {
+            item.router_data.request.connector_refund_id.clone()
+        } else {
+            return Err(error_stack::report!(
+                HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "connector_refund_id"
+                }
+            ));
+        };
+
+        let merchant_authentication =
+            MerchantAuthentication::try_from(&item.router_data.connector_auth_type)?;
+
+        let payload = Self {
+            get_transaction_details_request: TransactionDetails {
+                merchant_authentication,
+                transaction_id: Some(connector_refund_id),
+            },
+        };
+        Ok(payload)
+    }
+}
+
+// Refund-related structs and implementations
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -788,13 +833,11 @@ pub struct AuthorizedotnetRefundCardDetails {
     expiration_date: Secret<String>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 enum AuthorizedotnetRefundPaymentDetails {
     CreditCard(CreditCardDetails),
 }
-
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
@@ -802,9 +845,9 @@ enum AuthorizedotnetRefundPaymentDetails {
 pub struct AuthorizedotnetRefundTransactionDetails {
     transaction_type: TransactionType,
     amount: String,
-    payment: CreditCardPayment,
+    payment: PaymentDetails,
     #[serde(rename = "refTransId")]
-    reference_transaction_id: String,
+    ref_trans_id: String,
 }
 
 #[skip_serializing_none]
@@ -825,74 +868,91 @@ pub struct CreateTransactionRefundRequest {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreditCardPayment {
     credit_card: CreditCardInfo,
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreditCardInfo {
+    #[serde(rename = "cardNumber")]
     card_number: String,
+    #[serde(rename = "expirationDate")]
     expiration_date: String,
 }
 
-impl<'a> TryFrom<AuthorizedotnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>> for AuthorizedotnetRefundRequest {
+impl
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    > for AuthorizedotnetRefundRequest
+{
     type Error = Error;
 
     fn try_from(
-        item: AuthorizedotnetRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        let router_data = item.router_data;
-        let req = &router_data.request;
+        // Get connector metadata which contains payment details
+        let payment_details = item
+            .router_data
+            .request
+            .refund_connector_metadata
+            .as_ref()
+            .get_required_value("refund_connector_metadata")
+            .change_context(HsInterfacesConnectorError::MissingRequiredField {
+                field_name: "refund_connector_metadata",
+            })?
+            .clone();
 
-        let amount_str = to_major_unit_string(req.minor_refund_amount, req.currency)?;
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
-        let ref_trans_id = router_data.request.connector_transaction_id.clone();
-
-        // Create a reference ID for the refund transaction
-        let ref_id = Some(router_data.request.refund_id.clone());
-
-        // For refunds in Authorize.net:
-        // 1. We need the payment object with full card details
-        // 2. We need to use the full card number for refunds, not just last 4 digits
-        // 3. The expiration date should be in YYYY-MM format
-        let credit_card_payment = CreditCardPayment {
-            credit_card: CreditCardInfo {
-                card_number: "5424000000000015".to_string(), // Test card number
-                expiration_date: "2025-12".to_string(), // YYYY-MM format
-            },
+        // Handle the payment details which might be a JSON string or a serde_json::Value
+        // We need to peek into the Secret to get the actual Value
+        let payment_details_inner = payment_details.peek();
+        let payment_details_value = match payment_details_inner {
+            serde_json::Value::String(s) => {
+                // If it's a string, try to parse it as JSON first
+                serde_json::from_str::<serde_json::Value>(s)
+                    .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
+            }
+            _ => payment_details_inner.clone(),
         };
 
-        let transaction_request_details = AuthorizedotnetRefundTransactionDetails {
+        // Build the refund transaction request with parsed payment details
+        let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
-            amount: amount_str,
-            payment: credit_card_payment,
-            reference_transaction_id: ref_trans_id,
+            amount: item.router_data.request.minor_refund_amount.to_string(),
+            payment: payment_details_value
+                .parse_value("PaymentDetails")
+                .change_context(HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "payment_details",
+                })?,
+            ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
-
-        let merchant_authentication = AuthorizedotnetAuthType::try_from(&router_data.connector_auth_type)?;
-
-
-        let create_transaction_req = CreateTransactionRefundRequest {
-            merchant_authentication,
-            ref_id,
-            transaction_request: transaction_request_details,
-        };
-
 
         Ok(Self {
-            create_transaction_request: create_transaction_req,
+            create_transaction_request: CreateTransactionRefundRequest {
+                merchant_authentication,
+                ref_id: Some(format!(
+                    "refund_{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                )),
+                transaction_request,
+            },
         })
     }
 }
-*/
 
-// Empty struct placeholder for refund functionality - will be implemented with L2 changes
-#[derive(Debug, Serialize)]
-pub struct AuthorizedotnetRefundRequest {}
+// Refund request struct is fully implemented above
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
@@ -1501,6 +1561,8 @@ pub fn convert_to_refund_response_data_or_error(
         _ => RefundStatus::Pending,
     };
 
+    println!("Refund status: {:?}", refund_status);
+
     match &response.transaction_response {
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
             if refund_status == RefundStatus::Success || refund_status == RefundStatus::Pending {
@@ -1636,6 +1698,115 @@ impl From<SyncStatus> for enums::AttemptStatus {
 }
 
 // Removing duplicate implementation
+
+// RSync related types for Refund Sync
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum RSyncStatus {
+    RefundSettledSuccessfully,
+    RefundPendingSettlement,
+    Declined,
+    GeneralError,
+    Voided,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RSyncTransactionResponse {
+    #[serde(rename = "transId")]
+    transaction_id: String,
+    transaction_status: RSyncStatus,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AuthorizedotnetRSyncResponse {
+    transaction: Option<RSyncTransactionResponse>,
+    messages: ResponseMessages,
+}
+
+impl From<RSyncStatus> for enums::RefundStatus {
+    fn from(transaction_status: RSyncStatus) -> Self {
+        match transaction_status {
+            RSyncStatus::RefundSettledSuccessfully => Self::Success,
+            RSyncStatus::RefundPendingSettlement => Self::Pending,
+            RSyncStatus::Declined | RSyncStatus::GeneralError | RSyncStatus::Voided => {
+                Self::Failure
+            }
+        }
+    }
+}
+
+impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
+    for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<HsInterfacesConnectorError>;
+
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetRSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        match response.transaction {
+            Some(transaction) => {
+                let refund_status = enums::RefundStatus::from(transaction.transaction_status);
+
+                // Create a new RouterDataV2 with updated fields
+                let mut new_router_data = router_data;
+
+                // Update the status in resource_common_data
+                let mut resource_common_data = new_router_data.resource_common_data.clone();
+                resource_common_data.status = refund_status;
+                new_router_data.resource_common_data = resource_common_data;
+
+                // Set the response
+                new_router_data.response = Ok(RefundsResponseData {
+                    connector_refund_id: transaction.transaction_id,
+                    refund_status,
+                    raw_connector_response: None,
+                });
+
+                Ok(new_router_data)
+            }
+            None => {
+                // Handle error response
+                let error_response = ErrorResponse {
+                    status_code: http_code,
+                    code: response
+                        .messages
+                        .message
+                        .first()
+                        .map(|m| m.code.clone())
+                        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
+                    message: response
+                        .messages
+                        .message
+                        .first()
+                        .map(|m| m.text.clone())
+                        .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
+                    reason: None,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                };
+
+                // Update router data with error response
+                let mut new_router_data = router_data;
+                let mut resource_common_data = new_router_data.resource_common_data.clone();
+                resource_common_data.status = RefundStatus::Failure;
+                new_router_data.resource_common_data = resource_common_data;
+                new_router_data.response = Err(error_response);
+
+                Ok(new_router_data)
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -3,7 +3,9 @@ pub mod transformers;
 use self::transformers::{
     AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
     AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
-    AuthorizedotnetPaymentsRequest, AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse,
+    AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse,
+    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse, AuthorizedotnetVoidRequest,
+    AuthorizedotnetVoidResponse,
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
@@ -140,6 +142,18 @@ macros::create_all_prerequisites!(
             request_body: AuthorizedotnetVoidRequest,
             response_body: AuthorizedotnetVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+        ),
+        (
+            flow: Refund,
+            request_body: AuthorizedotnetRefundRequest,
+            response_body: AuthorizedotnetRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+        ),
+        (
+            flow: RSync,
+            request_body: AuthorizedotnetRSyncRequest,
+            response_body: AuthorizedotnetRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
         )
     ],
     amount_converters: [],
@@ -171,6 +185,13 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> String {
+            req.resource_common_data.connectors.authorizedotnet.base_url.to_string()
+        }
+
+        pub fn connector_base_url_refunds<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> String {
             req.resource_common_data.connectors.authorizedotnet.base_url.to_string()
         }
@@ -291,40 +312,64 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Refund implementation is commented out as it requires L2 changes
-// macros::macro_connector_implementation!(
-//     connector_default_implementations: [get_content_type, get_error_response_v2],
-//     connector: Authorizedotnet,
-//     curl_request: Json(AuthorizedotnetRefundRequest),
-//     curl_response: AuthorizedotnetRefundResponse,
-//     flow_name: Refund,
-//     resource_common_data: RefundFlowData,
-//     flow_request: RefundsData,
-//     flow_response: RefundsResponseData,
-//     http_method: Post,
-//     preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
-//     other_functions: {
-//         fn get_headers(
-//             &self,
-//             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-//         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-//             self.build_headers(req)
-//         }
-//
-//         fn get_url(
-//             &self,
-//             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-//         ) -> CustomResult<String, ConnectorError> {
-//             Ok(self.connector_base_url_refunds(req).to_string())
-//         }
-//     }
-// );
+// Implement refund flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(AuthorizedotnetRefundRequest),
+    curl_response: AuthorizedotnetRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
 
-// Add stub implementations for flows we're not implementing yet
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Authorizedotnet
-{
-}
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_refunds(req).to_string())
+        }
+    }
+);
+
+// Implement RSync flow
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(AuthorizedotnetRSyncRequest),
+    curl_response: AuthorizedotnetRSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_refunds(req).to_string())
+        }
+    }
+);
+
 impl
     ConnectorIntegrationV2<
         CreateOrder,
@@ -353,10 +398,6 @@ impl
 {
 }
 impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Authorizedotnet
-{
-}
-impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for Authorizedotnet
 {
 }
