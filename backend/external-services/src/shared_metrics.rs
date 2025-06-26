@@ -38,20 +38,20 @@ lazy_static! {
     pub static ref EXTERNAL_SERVICE_API_CALLS_LATENCY: HistogramVec = register_histogram_vec!(
         "EXTERNAL_SERVICE_API_CALLS_LATENCY_SECONDS",
         "Latency of external service API calls",
-        &["endpoint", "method"],
+        &["endpoint", "service", "method"],
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
     pub static ref EXTERNAL_SERVICE_TOTAL_API_CALLS: IntCounterVec = register_int_counter_vec!(
         "EXTERNAL_SERVICE_TOTAL_API_CALLS",
         "Total number of external service API calls",
-        &["endpoint", "method"]
+        &["endpoint", "service", "method"]
     )
     .unwrap();
     pub static ref EXTERNAL_SERVICE_API_CALLS_ERRORS: IntCounterVec = register_int_counter_vec!(
         "EXTERNAL_SERVICE_API_CALLS_ERRORS",
         "Total number of errors in external service API calls",
-        &["endpoint", "method", "error"]
+        &["endpoint", "service", "method", "error"]
     )
     .unwrap();
 }
@@ -102,7 +102,7 @@ where
         self.inner.poll_ready(cx)
     }
 
-    fn call(&mut self, req: hyper::Request<B>) -> Self::Future {
+    fn call(&mut self, mut req: hyper::Request<B>) -> Self::Future {
         let clone = self.inner.clone();
         let mut inner = std::mem::replace(&mut self.inner, clone);
 
@@ -120,7 +120,7 @@ where
         GRPC_SERVER_REQUESTS_TOTAL
             .with_label_values(&[&method_name, &service_name, &connector])
             .inc();
-
+        req.extensions_mut().insert(service_name.clone());
         Box::pin(async move {
             let result = inner.call(req).await;
 

@@ -34,6 +34,7 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
     connector_name: &str,
+    service_name: &str,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -96,7 +97,7 @@ where
             let url = request.url.clone();
             let method = request.method;
             metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
-                .with_label_values(&[connector_name, &method.to_string()])
+                .with_label_values(&[connector_name, service_name, &method.to_string()])
                 .inc();
             let external_service_start_latency = tokio::time::Instant::now();
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
@@ -113,7 +114,7 @@ where
                 });
             let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
-                .with_label_values(&[connector_name, &method.to_string()])
+                .with_label_values(&[connector_name, service_name, &method.to_string()])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
 
@@ -172,6 +173,7 @@ where
                             metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
                                 .with_label_values(&[
                                     connector_name,
+                                    service_name,
                                     &method.to_string(),
                                     body.status_code.to_string().as_str(),
                                 ])

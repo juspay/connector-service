@@ -74,6 +74,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
+        service_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -112,6 +113,7 @@ impl Payments {
             order_router_data,
             None,
             connector_name,
+            service_name,
         )
         .await
         .switch()
@@ -135,6 +137,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceRegisterRequest,
         connector_name: &str,
+        service_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -173,6 +176,7 @@ impl Payments {
             order_router_data,
             None,
             connector_name,
+            service_name,
         )
         .await
         .switch()
@@ -260,6 +264,11 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
 
@@ -293,6 +302,7 @@ impl PaymentService for Payments {
                 connector_auth_details.clone(),
                 &payload,
                 &connector.to_string(),
+                &service_name,
             )
             .await?;
         }
@@ -321,6 +331,7 @@ impl PaymentService for Payments {
             router_data,
             None,
             &connector.to_string(),
+            &service_name,
         )
         .await
         .switch()
@@ -471,6 +482,11 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRegisterRequest>,
     ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
 
@@ -504,6 +520,7 @@ impl PaymentService for Payments {
                 connector_auth_details.clone(),
                 &payload,
                 &connector.to_string(),
+                &service_name,
             )
             .await?;
         }
@@ -531,6 +548,7 @@ impl PaymentService for Payments {
             router_data,
             None,
             &connector.to_string(),
+            &service_name,
         )
         .await
         .switch()
