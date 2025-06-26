@@ -17,3 +17,6 @@ pub mod xendit;
 pub use self::xendit::Xendit;
 
 pub mod macros;
+
+pub mod checkout;
+pub use self::checkout::Checkout;

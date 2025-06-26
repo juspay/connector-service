@@ -40,6 +40,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
+    pub checkout: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1748,7 +1749,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             connector_transaction_id: value
-                .request_ref_id
+                .transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
