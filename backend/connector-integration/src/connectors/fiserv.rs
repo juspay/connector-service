@@ -25,13 +25,12 @@ use domain_types::{
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
 use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+
+use domain_types::errors;
+use domain_types::router_response_types::Response;
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
-    errors::{self, ConnectorError},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
 };
 use ring::hmac;
 use time::OffsetDateTime;

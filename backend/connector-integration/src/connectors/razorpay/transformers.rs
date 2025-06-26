@@ -6,6 +6,7 @@ use error_stack::ResultExt;
 use cards::CardNumber;
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 
+use domain_types::errors;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -21,7 +22,6 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use hyperswitch_masking::Secret;
-use interfaces::errors;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -173,7 +173,7 @@ pub struct RazorpayRouterData<T> {
 }
 
 impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
@@ -188,14 +188,14 @@ pub struct RazorpayAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
                 key_id: api_key.to_owned(),
                 secret_key: key1.to_owned(),
             }),
-            _ => Err(interfaces::errors::ConnectorError::FailedToObtainAuthType),
+            _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType),
         }
     }
 }
@@ -221,7 +221,7 @@ impl TryFrom<(&Card, Option<Secret<String>>)> for RazorpayPaymentMethod {
 fn extract_payment_method_and_data(
     payment_method_data: &PaymentMethodData,
     customer_name: Option<String>,
-) -> Result<(PaymentMethodType, PaymentMethodSpecificData), interfaces::errors::ConnectorError> {
+) -> Result<(PaymentMethodType, PaymentMethodSpecificData), domain_types::errors::ConnectorError> {
     match payment_method_data {
         PaymentMethodData::Card(card_data) => {
             let card_holder_name = customer_name.clone();
@@ -254,7 +254,7 @@ fn extract_payment_method_and_data(
         | PaymentMethodData::NetworkToken(_)
         | PaymentMethodData::MobilePayment(_)
         | PaymentMethodData::OpenBanking(_) => {
-            Err(interfaces::errors::ConnectorError::NotImplemented(
+            Err(domain_types::errors::ConnectorError::NotImplemented(
                 "Only Card payment method is supported for Razorpay".to_string(),
             ))
         }
@@ -269,7 +269,7 @@ impl
         &Card,
     )> for RazorpayPaymentRequest
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn try_from(
         value: (
@@ -297,12 +297,12 @@ impl
         let contact = billing
             .and_then(|billing| billing.phone.as_ref())
             .and_then(|phone| phone.number.clone())
-            .ok_or(interfaces::errors::ConnectorError::MissingRequiredField {
+            .ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
                 field_name: "contact",
             })?;
 
         let email = item.router_data.request.email.clone().ok_or(
-            interfaces::errors::ConnectorError::MissingRequiredField {
+            domain_types::errors::ConnectorError::MissingRequiredField {
                 field_name: "email",
             },
         )?;
@@ -312,7 +312,7 @@ impl
             .resource_common_data
             .reference_id
             .clone()
-            .ok_or(interfaces::errors::ConnectorError::MissingRequiredField {
+            .ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
                 field_name: "order_id",
             })?;
 
@@ -379,7 +379,7 @@ impl
         >,
     > for RazorpayPaymentRequest
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -388,7 +388,7 @@ impl
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => RazorpayPaymentRequest::try_from((item, card)),
-            _ => Err(interfaces::errors::ConnectorError::NotImplemented(
+            _ => Err(domain_types::errors::ConnectorError::NotImplemented(
                 "Only card payments are supported".into(),
             )),
         }
@@ -471,7 +471,7 @@ pub struct RazorpayRefundRequest {
 }
 
 impl ForeignTryFrom<RazorpayRefundStatus> for common_enums::RefundStatus {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn foreign_try_from(item: RazorpayRefundStatus) -> Result<Self, Self::Error> {
         match item {
             RazorpayRefundStatus::Failed => Ok(Self::Failure),
@@ -599,7 +599,7 @@ impl
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     )> for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data): (
@@ -632,7 +632,7 @@ impl
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     )> for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data): (
@@ -669,7 +669,7 @@ impl<F, Req>
         Option<common_enums::PaymentMethodType>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data, _http_code, _capture_method, _is_multiple_capture_psync_flow, _pmt): (
@@ -693,7 +693,7 @@ impl<F, Req>
                     .and_then(|next_actions| next_actions.first())
                     .map(|action| action.url.clone())
                     .ok_or_else(
-                        || interfaces::errors::ConnectorError::MissingRequiredField {
+                        || domain_types::errors::ConnectorError::MissingRequiredField {
                             field_name: "next.url",
                         },
                     )?;
@@ -804,7 +804,7 @@ impl
         >,
     > for RazorpayOrderRequest
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -872,7 +872,7 @@ impl
         PaymentCreateOrderResponse,
     >
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
         (response, data, _status_code, _): (
@@ -1101,7 +1101,7 @@ impl
         >,
     > for RazorpayCaptureRequest
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -1123,7 +1123,7 @@ impl<F, Req>
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn foreign_try_from(
         (response, data): (
             RazorpayCaptureResponse,

@@ -3,9 +3,9 @@ use std::marker::PhantomData;
 use crate::types;
 use common_utils::errors::CustomResult;
 use common_utils::ext_traits::BytesExt;
+use domain_types::errors;
 use domain_types::router_data_v2::RouterDataV2;
 use error_stack::ResultExt;
-use interfaces::errors;
 
 pub trait FlowTypes {
     type Flow;
@@ -188,7 +188,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ConnectorError,
+            macro_types::ConnectorError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
 
@@ -218,7 +218,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ConnectorError,
+            macro_types::ConnectorError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
@@ -275,7 +275,7 @@ macro_rules! expand_default_functions {
             &self,
             res: Response,
             event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<ErrorResponse, ConnectorError> {
+        ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
             self.build_error_response(res, event_builder)
         }
     };
@@ -556,12 +556,12 @@ macro_rules! expand_imports {
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
             pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
+            pub(super) use domain_types::errors::ConnectorError;
             pub(super) use domain_types::router_data::ErrorResponse;
             pub(super) use domain_types::router_data_v2::RouterDataV2;
+            pub(super) use domain_types::router_response_types::Response;
             pub(super) use hyperswitch_masking::Maskable;
-            pub(super) use interfaces::{
-                errors::ConnectorError, events::connector_api_logs::ConnectorEvent, types::Response,
-            };
+            pub(super) use interfaces::events::connector_api_logs::ConnectorEvent;
         }
     };
 }
