@@ -62,6 +62,11 @@ where
                     service.payments_service,
                 ),
             )
+            .add_service(
+                grpc_api_types::payments::refund_service_server::RefundServiceServer::new(
+                    service.refunds_service,
+                ),
+            )
             .serve_with_incoming(stream)
             .await;
         // Server must be running fine...
