@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package ucs.v2;
+
+import "payment.proto";
+
+option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
+
+// ============================================================================
+// SERVICE DEFINITIONS
+// ============================================================================
+
+// Unified service definition for all payment related operations.
+service PaymentService {
+  // Authorizes a payment.
+  rpc Authorize(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+  
+  // Synchronizes the status of a payment.
+  rpc Get(PaymentServiceGetRequest) returns (PaymentServiceGetResponse);
+  
+  // Voids an authorized payment.
+  rpc Void(PaymentServiceVoidRequest) returns (PaymentServiceVoidResponse);
+  
+  // Captures a previously authorized payment.
+  rpc Capture(PaymentServiceCaptureRequest) returns (PaymentServiceCaptureResponse);
+
+  // Processes a refund request.
+  rpc Refund(PaymentServiceRefundRequest) returns (RefundResponse);
+
+  // Sets up a mandate for future payments.
+  rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
+
+  // Creates a new dispute.
+  rpc Dispute(PaymentServiceDisputeRequest) returns (DisputeResponse);
+
+  // Handles incoming webhooks from connectors.
+  // This will delegate to the appropriate service transform based on the event type.
+  rpc Transform(PaymentServiceTransformRequest) returns (PaymentServiceTransformResponse);
+}
+
+// Service for refund-specific operations.
+service RefundService {
+  // Synchronizes the status of a refund.
+  rpc Get(RefundServiceGetRequest) returns (RefundResponse);
+
+  // Handles incoming webhooks from connectors.
+  rpc Transform(RefundServiceTransformRequest) returns (RefundServiceTransformResponse);
+}
+
+// Service for dispute-specific operations.
+service DisputeService {
+  // Submits evidence for a dispute.
+  rpc SubmitEvidence(DisputeServiceSubmitEvidenceRequest) returns (DisputeServiceSubmitEvidenceResponse);
+
+  // Retrieves dispute information or evidence submission status.
+  rpc Get(DisputeServiceGetRequest) returns (DisputeResponse);
+
+  // Defends a dispute with a reason code.
+  rpc Defend(DisputeDefendRequest) returns (DisputeDefendResponse);
+
+  // Accepts a dispute.
+  rpc Accept(AcceptDisputeRequest) returns (AcceptDisputeResponse);
+
+  // Handles incoming webhooks from connectors.
+  rpc Transform(DisputeServiceTransformRequest) returns (DisputeServiceTransformResponse);
+}

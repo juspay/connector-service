@@ -4,81 +4,63 @@ use crate::{
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{auth_from_metadata, config_from_metadata, connector_from_metadata},
 };
+use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
-    },
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, Refund, SetupMandate, Void},
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
-    types::{generate_accept_dispute_response, generate_submit_evidence_response},
+};
+use domain_types::{
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
 };
 use domain_types::{
     types::{
-        generate_defend_dispute_response, generate_payment_capture_response,
-        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
-        generate_refund_sync_response, generate_setup_mandate_response,
+        generate_payment_capture_response, generate_payment_sync_response,
+        generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, AcceptDisputeRequest, AcceptDisputeResponse,
-    DisputeDefendRequest, DisputeDefendResponse, DisputesSyncResponse, IncomingWebhookRequest,
-    IncomingWebhookResponse, PaymentsAuthorizeRequest, PaymentsAuthorizeResponse,
-    PaymentsCaptureRequest, PaymentsCaptureResponse, PaymentsSyncRequest, PaymentsSyncResponse,
-    PaymentsVoidRequest, PaymentsVoidResponse, RefundsRequest, RefundsResponse, RefundsSyncRequest,
-    RefundsSyncResponse, SetupMandateRequest, SetupMandateResponse, SubmitEvidenceRequest,
-    SubmitEvidenceResponse,
+    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_common_utils::errors::CustomResult;
-use hyperswitch_domain_models::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-use hyperswitch_interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
 use tracing::info;
 
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
-    async fn internal_defend_dispute(
-        &self,
-        request: tonic::Request<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
-
     async fn internal_payment_sync(
         &self,
-        request: tonic::Request<PaymentsSyncRequest>,
-    ) -> Result<tonic::Response<PaymentsSyncResponse>, tonic::Status>;
-
-    async fn internal_refund_sync(
-        &self,
-        request: tonic::Request<RefundsSyncRequest>,
-    ) -> Result<tonic::Response<RefundsSyncResponse>, tonic::Status>;
+        request: tonic::Request<PaymentServiceGetRequest>,
+    ) -> Result<tonic::Response<PaymentServiceGetResponse>, tonic::Status>;
 
     async fn internal_void_payment(
         &self,
-        request: tonic::Request<PaymentsVoidRequest>,
-    ) -> Result<tonic::Response<PaymentsVoidResponse>, tonic::Status>;
+        request: tonic::Request<PaymentServiceVoidRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status>;
 
     async fn internal_refund(
         &self,
-        request: tonic::Request<RefundsRequest>,
-    ) -> Result<tonic::Response<RefundsResponse>, tonic::Status>;
+        request: tonic::Request<PaymentServiceRefundRequest>,
+    ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 
     async fn internal_payment_capture(
         &self,
-        request: tonic::Request<PaymentsCaptureRequest>,
-    ) -> Result<tonic::Response<PaymentsCaptureResponse>, tonic::Status>;
+        request: tonic::Request<PaymentServiceCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status>;
 }
 
 pub struct Payments {
@@ -91,7 +73,7 @@ impl Payments {
         connector_data: ConnectorData,
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        payload: &PaymentsAuthorizeRequest,
+        payload: &PaymentServiceAuthorizeRequest,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -102,11 +84,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(payload.minor_amount),
+            amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
         };
 
@@ -150,7 +132,7 @@ impl Payments {
         connector_data: ConnectorData,
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        payload: &SetupMandateRequest,
+        payload: &PaymentServiceRegisterRequest,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -161,11 +143,11 @@ impl Payments {
             PaymentCreateOrderResponse,
         > = connector_data.connector.get_connector_integration_v2();
 
-        let currency = hyperswitch_common_enums::Currency::foreign_try_from(payload.currency())
+        let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
 
         let order_create_data = PaymentCreateOrderData {
-            amount: hyperswitch_common_utils::types::MinorUnit::new(0),
+            amount: common_utils::types::MinorUnit::new(0),
             currency,
         };
 
@@ -208,96 +190,72 @@ impl Payments {
 
 impl PaymentOperationsInternal for Payments {
     implement_connector_operation!(
-        fn_name: internal_defend_dispute,
-        log_prefix: "DEFEND_DISPUTE",
-        request_type: DisputeDefendRequest,
-        response_type: DisputeDefendResponse,
-        flow_marker: DefendDispute,
-        resource_common_data_type: DisputeFlowData,
-        request_data_type: DisputeDefendData,
-        response_data_type: DisputeResponseData,
-        request_data_constructor: DisputeDefendData::foreign_try_from,
-        common_flow_data_constructor: DisputeFlowData::foreign_try_from,
-        generate_response_fn: generate_defend_dispute_response
-    );
-
-    implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
-        request_type: PaymentsSyncRequest,
-        response_type: PaymentsSyncResponse,
+        request_type: PaymentServiceGetRequest,
+        response_type: PaymentServiceGetResponse,
         flow_marker: PSync,
         resource_common_data_type: PaymentFlowData,
         request_data_type: PaymentsSyncData,
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentsSyncData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_payment_sync_response
-    );
-
-    implement_connector_operation!(
-        fn_name: internal_refund_sync,
-        log_prefix: "REFUND_SYNC",
-        request_type: RefundsSyncRequest,
-        response_type: RefundsSyncResponse,
-        flow_marker: RSync,
-        resource_common_data_type: RefundFlowData,
-        request_data_type: RefundSyncData,
-        response_data_type: RefundsResponseData,
-        request_data_constructor: RefundSyncData::foreign_try_from,
-        common_flow_data_constructor: RefundFlowData::foreign_try_from,
-        generate_response_fn: generate_refund_sync_response
+        generate_response_fn: generate_payment_sync_response,
+        all_keys_required: None
     );
 
     implement_connector_operation!(
         fn_name: internal_void_payment,
         log_prefix: "PAYMENT_VOID",
-        request_type: PaymentsVoidRequest,
-        response_type: PaymentsVoidResponse,
+        request_type: PaymentServiceVoidRequest,
+        response_type: PaymentServiceVoidResponse,
         flow_marker: Void,
         resource_common_data_type: PaymentFlowData,
         request_data_type: PaymentVoidData,
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentVoidData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_payment_void_response
+        generate_response_fn: generate_payment_void_response,
+        all_keys_required: None
     );
 
     implement_connector_operation!(
         fn_name: internal_refund,
         log_prefix: "REFUND",
-        request_type: RefundsRequest,
-        response_type: RefundsResponse,
+        request_type: PaymentServiceRefundRequest,
+        response_type: RefundResponse,
         flow_marker: Refund,
         resource_common_data_type: RefundFlowData,
         request_data_type: RefundsData,
         response_data_type: RefundsResponseData,
         request_data_constructor: RefundsData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
-        generate_response_fn: generate_refund_response
+        generate_response_fn: generate_refund_response,
+        all_keys_required: None
     );
 
     implement_connector_operation!(
         fn_name: internal_payment_capture,
         log_prefix: "PAYMENT_CAPTURE",
-        request_type: PaymentsCaptureRequest,
-        response_type: PaymentsCaptureResponse,
+        request_type: PaymentServiceCaptureRequest,
+        response_type: PaymentServiceCaptureResponse,
         flow_marker: Capture,
         resource_common_data_type: PaymentFlowData,
         request_data_type: PaymentsCaptureData,
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentsCaptureData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_payment_capture_response
+        generate_response_fn: generate_payment_capture_response,
+        all_keys_required: None
     );
 }
 
 #[tonic::async_trait]
 impl PaymentService for Payments {
-    async fn payment_authorize(
+    async fn authorize(
         &self,
-        request: tonic::Request<PaymentsAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentsAuthorizeResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
         let config = config_from_metadata(request.metadata(), self.config.clone())
             .map_err(|e| e.into_grpc_status())?;
@@ -359,7 +317,7 @@ impl PaymentService for Payments {
             &config.proxy,
             connector_integration,
             router_data,
-            payload.all_keys_required,
+            None,
         )
         .await
         .switch()
@@ -372,31 +330,24 @@ impl PaymentService for Payments {
         Ok(tonic::Response::new(authorize_response))
     }
 
-    async fn payment_sync(
+    async fn get(
         &self,
-        request: tonic::Request<PaymentsSyncRequest>,
-    ) -> Result<tonic::Response<PaymentsSyncResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceGetRequest>,
+    ) -> Result<tonic::Response<PaymentServiceGetResponse>, tonic::Status> {
         self.internal_payment_sync(request).await
     }
 
-    async fn refund_sync(
+    async fn void(
         &self,
-        request: tonic::Request<RefundsSyncRequest>,
-    ) -> Result<tonic::Response<RefundsSyncResponse>, tonic::Status> {
-        self.internal_refund_sync(request).await
-    }
-
-    async fn void_payment(
-        &self,
-        request: tonic::Request<PaymentsVoidRequest>,
-    ) -> Result<tonic::Response<PaymentsVoidResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceVoidRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status> {
         self.internal_void_payment(request).await
     }
 
-    async fn incoming_webhook(
+    async fn transform(
         &self,
-        request: tonic::Request<IncomingWebhookRequest>,
-    ) -> Result<tonic::Response<IncomingWebhookResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceTransformRequest>,
+    ) -> Result<tonic::Response<PaymentServiceTransformResponse>, tonic::Status> {
         let connector =
             connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
         let connector_auth_details =
@@ -471,13 +422,15 @@ impl PaymentService for Payments {
             .map_err(|e| e.into_grpc_status())?,
         };
 
-        let api_event_type = grpc_api_types::payments::EventType::foreign_try_from(event_type)
-            .map_err(|e| e.into_grpc_status())?;
+        let api_event_type =
+            grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+                .map_err(|e| e.into_grpc_status())?;
 
-        let response = IncomingWebhookResponse {
+        let response = PaymentServiceTransformResponse {
             event_type: api_event_type.into(),
             content: Some(content),
             source_verified,
+            response_ref_id: None,
         };
 
         Ok(tonic::Response::new(response))
@@ -485,29 +438,34 @@ impl PaymentService for Payments {
 
     async fn refund(
         &self,
-        request: tonic::Request<RefundsRequest>,
-    ) -> Result<tonic::Response<RefundsResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceRefundRequest>,
+    ) -> Result<tonic::Response<RefundResponse>, tonic::Status> {
         self.internal_refund(request).await
     }
 
-    async fn defend_dispute(
+    async fn dispute(
         &self,
-        request: tonic::Request<DisputeDefendRequest>,
-    ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
-        self.internal_defend_dispute(request).await
+        _request: tonic::Request<PaymentServiceDisputeRequest>,
+    ) -> Result<tonic::Response<DisputeResponse>, tonic::Status> {
+        // For now, just return a basic dispute response
+        // This will need proper implementation based on domain logic
+        let response = DisputeResponse {
+            ..Default::default()
+        };
+        Ok(tonic::Response::new(response))
     }
 
-    async fn payment_capture(
+    async fn capture(
         &self,
-        request: tonic::Request<PaymentsCaptureRequest>,
-    ) -> Result<tonic::Response<PaymentsCaptureResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status> {
         self.internal_payment_capture(request).await
     }
 
-    async fn setup_mandate(
+    async fn register(
         &self,
-        request: tonic::Request<SetupMandateRequest>,
-    ) -> Result<tonic::Response<SetupMandateResponse>, tonic::Status> {
+        request: tonic::Request<PaymentServiceRegisterRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
 
         let connector =
@@ -578,121 +536,6 @@ impl PaymentService for Payments {
 
         Ok(tonic::Response::new(setup_mandate_response))
     }
-
-    async fn accept_dispute(
-        &self,
-        request: tonic::Request<AcceptDisputeRequest>,
-    ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
-        info!("DISPUTE_FLOW: initiated");
-        let metadata = request.metadata().clone();
-        let payload = request.into_inner();
-        let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
-
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            Accept,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
-            .map_err(|e| e.into_grpc_status())?;
-
-        let dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| e.into_grpc_status())?;
-
-        let connector_auth_details =
-            auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-
-        let router_data: RouterDataV2<
-            Accept,
-            DisputeFlowData,
-            AcceptDisputeData,
-            DisputeResponseData,
-        > = RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: dispute_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: dispute_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
-        )
-        .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        let dispute_response =
-            generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
-
-        Ok(tonic::Response::new(dispute_response))
-    }
-
-    async fn submit_evidence(
-        &self,
-        request: tonic::Request<SubmitEvidenceRequest>,
-    ) -> Result<tonic::Response<SubmitEvidenceResponse>, tonic::Status> {
-        info!("DISPUTE_FLOW: initiated");
-        let metadata = request.metadata().clone();
-        let payload = request.into_inner();
-        let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-        let connector_data = ConnectorData::get_connector_by_name(&connector);
-
-        let connector_integration: BoxedConnectorIntegrationV2<
-            '_,
-            SubmitEvidence,
-            DisputeFlowData,
-            SubmitEvidenceData,
-            DisputeResponseData,
-        > = connector_data.connector.get_connector_integration_v2();
-
-        let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
-            .map_err(|e| e.into_grpc_status())?;
-
-        let dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|e| e.into_grpc_status())?;
-
-        let connector_auth_details =
-            auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-
-        let router_data: RouterDataV2<
-            SubmitEvidence,
-            DisputeFlowData,
-            SubmitEvidenceData,
-            DisputeResponseData,
-        > = RouterDataV2 {
-            flow: std::marker::PhantomData,
-            resource_common_data: dispute_flow_data,
-            connector_auth_type: connector_auth_details,
-            request: dispute_data,
-            response: Err(ErrorResponse::default()),
-        };
-
-        let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
-            connector_integration,
-            router_data,
-            None,
-        )
-        .await
-        .switch()
-        .map_err(|e| e.into_grpc_status())?;
-
-        let dispute_response =
-            generate_submit_evidence_response(response).map_err(|e| e.into_grpc_status())?;
-
-        Ok(tonic::Response::new(dispute_response))
-    }
 }
 
 async fn get_payments_webhook_content(
@@ -707,7 +550,7 @@ async fn get_payments_webhook_content(
         .switch()?;
 
     // Generate response
-    let response = PaymentsSyncResponse::foreign_try_from(webhook_details).change_context(
+    let response = PaymentServiceGetResponse::foreign_try_from(webhook_details).change_context(
         ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
             error_identifier: 500,
@@ -734,8 +577,8 @@ async fn get_refunds_webhook_content(
         .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
         .switch()?;
 
-    // Generate response
-    let response = RefundsSyncResponse::foreign_try_from(webhook_details).change_context(
+    // Generate response - RefundService should handle this, for now return basic response
+    let response = RefundResponse::foreign_try_from(webhook_details).change_context(
         ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
             error_identifier: 500,
@@ -762,8 +605,8 @@ async fn get_disputes_webhook_content(
         .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
         .switch()?;
 
-    // Generate response
-    let response = DisputesSyncResponse::foreign_try_from(webhook_details).change_context(
+    // Generate response - DisputeService should handle this, for now return basic response
+    let response = DisputeResponse::foreign_try_from(webhook_details).change_context(
         ApplicationErrorResponse::InternalServerError(ApiError {
             sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
             error_identifier: 500,

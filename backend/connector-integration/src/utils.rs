@@ -1,5 +1,5 @@
 use domain_types::connector_types::PaymentsAuthorizeData;
-use hyperswitch_interfaces::errors;
+use interfaces::errors;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -43,3 +43,6 @@ pub fn missing_field_err(
         .into()
     })
 }
+
+pub mod xml_utils;
+pub use xml_utils::preprocess_xml_response_bytes;

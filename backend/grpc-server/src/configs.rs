@@ -1,7 +1,9 @@
-use crate::{consts, error::ConfigurationError, logger::config::Log};
-use domain_types::types::{Connectors, Proxy};
 use std::path::PathBuf;
-// use serde::{de::{self, Deserializer, MapAccess, Visitor}, Deserialize};
+
+use domain_types::types::{Connectors, Proxy};
+
+use crate::{error::ConfigurationError, logger::config::Log};
+use common_utils::consts;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -55,6 +57,7 @@ impl Config {
                     .try_parsing(true)
                     .separator("__")
                     .list_separator(",")
+                    .with_list_parse_key("proxy.bypass_proxy_urls")
                     .with_list_parse_key("redis.cluster_urls")
                     .with_list_parse_key("database.tenants"),
             )

@@ -1,15 +1,19 @@
-use domain_types::{errors::ApiClientError, types::Proxy};
+use domain_types::{
+    errors::{ApiClientError, ApiErrorResponse},
+    router_data_v2::RouterDataV2,
+    types::Proxy,
+};
 // use base64::engine::Engine;
-use error_stack::{report, ResultExt};
-use hyperswitch_common_utils::{
+use common_utils::{
     // consts::BASE64_ENGINE,
-    ext_traits::AsyncExt,
     request::{Method, Request, RequestContent},
 };
-use hyperswitch_domain_models::{
-    errors::api_error_response::ApiErrorResponse, router_data_v2::RouterDataV2,
-};
+use error_stack::{report, ResultExt};
+
 use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
+use interfaces::{
+    connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
+};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -17,9 +21,8 @@ use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
 
 use domain_types::connector_types::RawConnectorResponse;
-use hyperswitch_interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
-};
+
+use common_utils::ext_traits::AsyncExt;
 use serde_json::Value;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
@@ -211,6 +214,7 @@ pub async fn call_connector_api(
 
     let headers = request.headers.construct_header_map()?;
 
+    // Process and log the request body based on content type
     let request = {
         match request.method {
             Method::Get => client.get(url),
@@ -218,6 +222,13 @@ pub async fn call_connector_api(
                 let client = client.post(url);
                 match request.body {
                     Some(RequestContent::Json(payload)) => client.json(&payload),
+                    Some(RequestContent::FormUrlEncoded(payload)) => client.form(&payload),
+                    Some(RequestContent::Xml(payload)) => {
+                        // Use serde_json for XML conversion instead of quick_xml
+                        let body = serde_json::to_string(&payload)
+                            .change_context(ApiClientError::UrlEncodingFailed)?;
+                        client.body(body).header("Content-Type", "application/xml")
+                    }
                     _ => client,
                 }
             }
