@@ -1,8 +1,14 @@
 use common_enums::{CaptureMethod, Currency};
-use common_utils::{pii, types::SemanticVersion, MinorUnit};
+use common_utils::{
+    pii::{self, IpAddress},
+    types::SemanticVersion,
+    Email, MinorUnit,
+};
 use hyperswitch_masking::Secret;
 
-use crate::payment_method_data::PaymentMethodData;
+use crate::{payment_method_data::PaymentMethodData, utils::missing_field_err};
+
+pub type Error = error_stack::Report<crate::errors::ConnectorError>;
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct BrowserInformation {
@@ -20,6 +26,54 @@ pub struct BrowserInformation {
     pub os_version: Option<String>,
     pub device_model: Option<String>,
     pub accept_language: Option<String>,
+}
+
+impl BrowserInformation {
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        let ip_address = self
+            .ip_address
+            .ok_or_else(missing_field_err("browser_info.ip_address"))?;
+        Ok(Secret::new(ip_address.to_string()))
+    }
+    pub fn get_accept_header(&self) -> Result<String, Error> {
+        self.accept_header
+            .clone()
+            .ok_or_else(missing_field_err("browser_info.accept_header"))
+    }
+    pub fn get_language(&self) -> Result<String, Error> {
+        self.language
+            .clone()
+            .ok_or_else(missing_field_err("browser_info.language"))
+    }
+    pub fn get_screen_height(&self) -> Result<u32, Error> {
+        self.screen_height
+            .ok_or_else(missing_field_err("browser_info.screen_height"))
+    }
+    pub fn get_screen_width(&self) -> Result<u32, Error> {
+        self.screen_width
+            .ok_or_else(missing_field_err("browser_info.screen_width"))
+    }
+    pub fn get_color_depth(&self) -> Result<u8, Error> {
+        self.color_depth
+            .ok_or_else(missing_field_err("browser_info.color_depth"))
+    }
+    pub fn get_user_agent(&self) -> Result<String, Error> {
+        self.user_agent
+            .clone()
+            .ok_or_else(missing_field_err("browser_info.user_agent"))
+    }
+    pub fn get_time_zone(&self) -> Result<i32, Error> {
+        self.time_zone
+            .ok_or_else(missing_field_err("browser_info.time_zone"))
+    }
+    pub fn get_java_enabled(&self) -> Result<bool, Error> {
+        self.java_enabled
+            .ok_or_else(missing_field_err("browser_info.java_enabled"))
+    }
+    pub fn get_java_script_enabled(&self) -> Result<bool, Error> {
+        self.java_script_enabled
+            .ok_or_else(missing_field_err("browser_info.java_script_enabled"))
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -64,4 +118,10 @@ pub struct ConnectorCustomerData {
     pub preprocessing_id: Option<String>,
     pub payment_method_data: Option<PaymentMethodData>,
     // pub split_payments: Option<SplitPaymentsRequest>,
+}
+
+impl ConnectorCustomerData {
+    pub fn get_email(&self) -> Result<Email, Error> {
+        self.email.clone().ok_or_else(missing_field_err("email"))
+    }
 }
