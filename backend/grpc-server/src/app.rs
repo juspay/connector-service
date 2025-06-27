@@ -203,6 +203,9 @@ impl Service {
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
+                self.payments_service.clone(),
+            ))
+            .add_service(refund_service_server::RefundServiceServer::new(
                 self.payments_service,
             ))
             .add_service(refund_service_server::RefundServiceServer::new(

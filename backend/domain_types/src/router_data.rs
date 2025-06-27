@@ -145,6 +145,7 @@ pub struct ErrorResponse {
     pub network_decline_code: Option<String>,
     pub network_advice_code: Option<String>,
     pub network_error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 impl Default for ErrorResponse {
@@ -159,6 +160,7 @@ impl Default for ErrorResponse {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         }
     }
 }
@@ -175,6 +177,7 @@ impl ErrorResponse {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         }
     }
 }

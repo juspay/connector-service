@@ -714,6 +714,7 @@ pub fn get_elavon_attempt_status(
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         ),
     }
@@ -781,6 +782,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -1013,6 +1015,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -1160,6 +1163,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 

@@ -38,6 +38,7 @@ pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
     pub razorpay: ConnectorParams,
+    pub razorpayv2: ConnectorParams,
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
@@ -117,6 +118,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentMethod,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        tracing::info!("PaymentMethod data received: {:?}", value);
         match value.payment_method {
             Some(data) => match data {
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
@@ -188,6 +190,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         card_holder_name: None,
                         card_cvc: None,
                     }),
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(upi_collect) => Ok(
+                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiCollect(
+                        crate::payment_method_data::UpiCollectData {
+                            vpa_id: upi_collect.vpa_id.map(|vpa| vpa.into()),
+                        }
+                    ))
+                ),
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => Ok(
+                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiIntent(
+                        crate::payment_method_data::UpiIntentData {}
+                    ))
                 ),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -446,7 +460,15 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                     error_object: None,
                 }))?,
             request_incremental_authorization: false,
-            metadata: None,
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::Value::Object(
+                    value.metadata.into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect()
+                ))
+            },
             merchant_order_reference_id: None,
             order_tax_amount: None,
             shipping_cost: None,
@@ -955,7 +977,7 @@ pub fn generate_payment_authorize_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference: _,
-                raw_connector_response: _,
+                raw_connector_response,
             } => {
                 PaymentServiceAuthorizeResponse {
                     transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
@@ -982,6 +1004,15 @@ pub fn generate_payment_authorize_response(
                                         ))
                                     })
                                 },
+                                crate::router_response_types::RedirectForm::Uri { uri } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
+                                            grpc_api_types::payments::UriData {
+                                                uri,
+                                            }
+                                        ))
+                                    })
+                                },
                                 _ => Err(
                                     ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_RESPONSE".to_owned(),
@@ -1000,6 +1031,7 @@ pub fn generate_payment_authorize_response(
                     status: grpc_status as i32,
                     error_message: None,
                     error_code: None,
+                    raw_connector_response,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1031,6 +1063,7 @@ pub fn generate_payment_authorize_response(
                 status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
+                raw_connector_response: err.raw_connector_response,
             }
         }
     };
@@ -1052,6 +1085,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Token(_)),
             } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(_)),
+            } => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_)),
+            } => Ok(Self::Upi),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -1360,7 +1401,7 @@ pub fn generate_payment_sync_response(
                 connector_response_reference_id: _,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
-                raw_connector_response: _,
+                raw_connector_response,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -1395,6 +1436,7 @@ pub fn generate_payment_sync_response(
                     connector_customer_id: None,
                     merchant_order_reference_id: None,
                     metadata: std::collections::HashMap::new(),
+                    raw_connector_response,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1440,6 +1482,7 @@ pub fn generate_payment_sync_response(
                 connector_customer_id: None,
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
+                raw_connector_response: None,
             })
         }
     }
@@ -1688,6 +1731,7 @@ pub fn generate_refund_sync_response(
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
+                raw_connector_response: response.raw_connector_response,
             })
         }
         Err(e) => {
@@ -1730,6 +1774,7 @@ pub fn generate_refund_sync_response(
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
+                raw_connector_response: e.raw_connector_response,
             })
         }
     }
@@ -1771,6 +1816,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             connector_customer_id: None,
             merchant_order_reference_id: None,
             metadata: std::collections::HashMap::new(),
+            raw_connector_response: value.raw_connector_response,
         })
     }
 }
@@ -1830,6 +1876,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             merchant_order_reference_id: None,
             metadata: std::collections::HashMap::new(),
             refund_metadata: std::collections::HashMap::new(),
+            raw_connector_response: value.raw_connector_response,
         })
     }
 }
@@ -2107,6 +2154,7 @@ pub fn generate_refund_response(
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
+                raw_connector_response: response.raw_connector_response,
             })
         }
         Err(e) => {
@@ -2142,6 +2190,7 @@ pub fn generate_refund_response(
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
+                raw_connector_response: e.raw_connector_response,
             })
         }
     }

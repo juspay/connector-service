@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use common_enums::{self, AttemptStatus, CardNetwork};
 use error_stack::ResultExt;
 
@@ -21,8 +23,9 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use uuid;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -183,17 +186,31 @@ impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
 }
 
 pub struct RazorpayAuthType {
-    pub(super) key_id: Secret<String>,
-    pub(super) secret_key: Secret<String>,
+    pub merchant_id: Secret<String>,
+    pub api_key: Secret<String>,
+    pub api_secret: Secret<String>,
+}
+
+impl RazorpayAuthType {
+    pub fn generate_authorization_header(&self) -> String {
+        let credentials = format!("{}:{}", self.api_key.peek(), self.api_secret.peek());
+        let encoded = STANDARD.encode(credentials);
+        format!("Basic {}", encoded)
+    }
 }
 
 impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
     type Error = domain_types::errors::ConnectorError;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                key_id: api_key.to_owned(),
-                secret_key: key1.to_owned(),
+            ConnectorAuthType::SignatureKey {
+                api_key,
+                key1,
+                api_secret,
+            } => Ok(Self {
+                merchant_id: key1.to_owned(),
+                api_key: api_key.to_owned(),
+                api_secret: api_secret.to_owned(),
             }),
             _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType),
         }
@@ -1153,4 +1170,239 @@ impl<F, Req>
             ..data
         })
     }
+}
+
+// ============ UPI Web Collect Request ============
+
+#[derive(Debug, Serialize)]
+pub struct RazorpayWebCollectRequest {
+    pub currency: String,
+    pub amount: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    pub order_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contact: Option<String>,
+    pub method: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vpa: Option<String>,
+    #[serde(
+        rename = "_[notes][txn_uuid]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_txn_uuid_93_: Option<String>,
+    #[serde(
+        rename = "_[notes][transaction_id]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_transaction_id_93_: Option<String>,
+    pub callback_url: String,
+    pub ip: String,
+    pub referer: String,
+    pub user_agent: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flow: Option<String>,
+    #[serde(rename = "_[notes][cust_id]_", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_cust_id_93_: Option<String>,
+    #[serde(
+        rename = "_[notes][cust_name]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_cust_name_93_: Option<String>,
+    #[serde(rename = "_[upi][flow]_", skip_serializing_if = "Option::is_none")]
+    pub __upi_91_flow_93_: Option<String>,
+    #[serde(rename = "_[upi][type]_", skip_serializing_if = "Option::is_none")]
+    pub __upi_91_type_93_: Option<String>,
+    #[serde(rename = "_[upi][end_date]_", skip_serializing_if = "Option::is_none")]
+    pub __upi_91_end_date_93_: Option<i64>,
+    #[serde(rename = "_[upi][vpa]_", skip_serializing_if = "Option::is_none")]
+    pub __upi_91_vpa_93_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recurring: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_id: Option<String>,
+    #[serde(
+        rename = "_[upi][expiry_time]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __upi_91_expiry_time_93_: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fee: Option<i64>,
+    #[serde(
+        rename = "_[notes][BookingID]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_BookingID_93_: Option<String>,
+    #[serde(rename = "_[notes][PNR]_", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_PNR_93_: Option<String>,
+    #[serde(
+        rename = "_[notes][PaymentID]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_PaymentID_93_: Option<String>,
+    #[serde(rename = "_[notes][lob]_", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_lob_93_: Option<String>,
+    #[serde(
+        rename = "_[notes][credit_line_id]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_credit_line_id_93_: Option<String>,
+    #[serde(rename = "_[notes][loan_id]_", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_loan_id_93_: Option<String>,
+    #[serde(
+        rename = "_[notes][transaction_type]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_transaction_type_93_: Option<String>,
+    #[serde(
+        rename = "_[notes][loan_product_code]_",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub __notes_91_loan_product_code_93_: Option<String>,
+    #[serde(rename = "_[notes][pg_flow]_", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_pg_flow_93_: Option<String>,
+    #[serde(rename = "_[notes][TID]_", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_TID_93_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_id: Option<String>,
+}
+
+impl
+    TryFrom<
+        &RazorpayRouterData<
+            &RouterDataV2<
+                domain_types::connector_flow::Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData,
+                PaymentsResponseData,
+            >,
+        >,
+    > for RazorpayWebCollectRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RazorpayRouterData<
+            &RouterDataV2<
+                domain_types::connector_flow::Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        use domain_types::payment_method_data::{PaymentMethodData, UpiData};
+        use hyperswitch_masking::PeekInterface;
+
+        let amount_in_minor_units = item.amount.get_amount_as_i64();
+
+        // Determine flow type and extract VPA based on UPI payment method
+        let (flow_type, vpa) = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) => {
+                let vpa = collect_data
+                    .vpa_id
+                    .as_ref()
+                    .map(|vpa| vpa.peek().to_string());
+                ("collect", vpa)
+            }
+            PaymentMethodData::Upi(UpiData::UpiIntent(_)) => ("intent", None),
+            _ => ("collect", None), // Default fallback
+        };
+
+        // Get order_id from the CreateOrder response (stored in reference_id)
+        let order_id = item
+            .router_data
+            .resource_common_data
+            .reference_id
+            .as_ref()
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "order_id (reference_id)",
+            })?
+            .clone();
+
+        let _txn_uuid = uuid::Uuid::new_v4().to_string().replace('-', "")[..16].to_string();
+        let _transaction_id = uuid::Uuid::new_v4().to_string().replace('-', "")[..16].to_string();
+
+        Ok(Self {
+            currency: "INR".to_string(), // Default to INR for UPI
+            amount: amount_in_minor_units,
+            email: item
+                .router_data
+                .resource_common_data
+                .address
+                .get_payment_method_billing()
+                .and_then(|addr| addr.email.as_ref())
+                .map(|email| email.peek().to_string()),
+            order_id: order_id.to_string(),
+            contact: item
+                .router_data
+                .resource_common_data
+                .address
+                .get_payment_method_billing()
+                .and_then(|addr| addr.phone.as_ref())
+                .and_then(|phone| phone.number.as_ref())
+                .map(|num| num.peek().to_string()),
+            method: "upi".to_string(),
+            vpa: vpa.clone(),
+            __notes_91_txn_uuid_93_: None,
+            __notes_91_transaction_id_93_: None,
+            callback_url: item
+                .router_data
+                .request
+                .router_return_url
+                .as_ref()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "callback_url",
+                })?
+                .to_string(),
+            ip: "127.0.0.1".to_string(),
+            referer: "https://example.com".to_string(),
+            user_agent: "Mozilla/5.0".to_string(),
+            description: Some("Payment via Razorpay".to_string()),
+            flow: Some(flow_type.to_string()),
+            __notes_91_cust_id_93_: None,
+            __notes_91_cust_name_93_: None,
+            __upi_91_flow_93_: None,
+            __upi_91_type_93_: None,
+            __upi_91_end_date_93_: None,
+            __upi_91_vpa_93_: None,
+            recurring: None,
+            customer_id: None,
+            __upi_91_expiry_time_93_: None,
+            fee: None,
+            __notes_91_BookingID_93_: None,
+            __notes_91_PNR_93_: None,
+            __notes_91_PaymentID_93_: None,
+            __notes_91_lob_93_: None,
+            __notes_91_credit_line_id_93_: None,
+            __notes_91_loan_id_93_: None,
+            __notes_91_transaction_type_93_: None,
+            __notes_91_loan_product_code_93_: None,
+            __notes_91_pg_flow_93_: None,
+            __notes_91_TID_93_: None,
+            account_id: None,
+        })
+    }
+}
+
+// ============ UPI Response Types ============
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RazorpayUpiPaymentsResponse {
+    SuccessIntent {
+        razorpay_payment_id: String,
+        link: String,
+    },
+    SuccessCollect {
+        razorpay_payment_id: String,
+    },
+    NullResponse {
+        razorpay_payment_id: Option<String>,
+    },
+    Error {
+        error: RazorpayErrorResponse,
+    },
 }

@@ -792,6 +792,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -860,6 +861,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -926,6 +928,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -999,6 +1002,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1055,6 +1059,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1120,6 +1125,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1165,6 +1171,7 @@ impl<F, Req, Res> TryFrom<ResponseRouterData<FiservErrorResponse, Self>>
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         });
 
         Ok(router_data_out)
