@@ -70,6 +70,7 @@ where
         .as_ref()
         .map(|connector_request| connector_request.headers.clone())
         .unwrap_or_default();
+    tracing::info!(?headers, "headers of connector request");
 
     let masked_headers = headers
         .iter()

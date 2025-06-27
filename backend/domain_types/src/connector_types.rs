@@ -41,6 +41,7 @@ use strum::{Display, EnumString};
 pub enum ConnectorEnum {
     Adyen,
     Razorpay,
+    RazorpayV2,
     Fiserv,
     Elavon,
     Xendit,
@@ -970,6 +971,7 @@ pub struct WebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -979,6 +981,7 @@ pub struct RefundWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -988,6 +991,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub stage: common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
