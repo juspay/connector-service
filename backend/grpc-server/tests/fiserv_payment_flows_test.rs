@@ -81,7 +81,7 @@ fn add_fiserv_metadata<T>(request: &mut Request<T>) {
 
     // Add the terminal_id in the metadata JSON
     // This metadata must be in the proper format that the connector expects
-    let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+    let metadata_json = format!(r#"{{"terminal_id":"{terminal_id}"}}"#);
 
     // For capture operations, the connector looks for terminal_id in connector_metadata
     let base64_metadata = general_purpose::STANDARD.encode(metadata_json.as_bytes());
@@ -337,7 +337,7 @@ async fn test_payment_authorization_manual_capture() {
         // Create capture request with terminal_id in metadata
         let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
             .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-        let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+        let metadata_json = format!(r#"{{"terminal_id":"{terminal_id}"}}"#);
 
         let mut metadata = HashMap::new();
         metadata.insert("terminal_id".to_string(), terminal_id);

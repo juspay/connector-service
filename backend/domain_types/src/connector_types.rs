@@ -49,7 +49,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for authenticate_by: {}", connector),
+                error_message: format!("Invalid value for authenticate_by: {connector}"),
                 error_object: None,
             })
             .into()),

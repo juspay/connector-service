@@ -183,7 +183,7 @@ mod tests {
                 };
                 masked_request
             });
-            println!("request: {:?}", req_body);
+            println!("request: {req_body:?}");
             assert_eq!(
                 req_body.as_ref().unwrap()["reference"],
                 "conn_ref_123456789"

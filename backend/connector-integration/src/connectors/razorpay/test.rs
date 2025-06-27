@@ -331,8 +331,7 @@ mod tests {
 
             assert!(
                 result.is_err(),
-                "Expected error for missing required fields, but got: {:?}",
-                result
+                "Expected error for missing required fields, but got: {result:?}"
             );
         }
 
@@ -447,8 +446,7 @@ mod tests {
 
             assert!(
                 result.is_err(),
-                "Expected error for invalid field values, but got: {:?}",
-                result
+                "Expected error for invalid field values, but got: {result:?}"
             );
         }
 
@@ -1192,8 +1190,7 @@ mod tests {
             let receipt_value = &actual_json["receipt"];
             assert!(
                 receipt_value.is_string(),
-                "Expected receipt to be a string, got: {:?}",
-                receipt_value
+                "Expected receipt to be a string, got: {receipt_value:?}"
             );
             let receipt_str = receipt_value.as_str().unwrap();
             assert!(!receipt_str.is_empty(), "Expected non-empty receipt string");
@@ -1286,8 +1283,7 @@ mod tests {
             let receipt_value = &actual_json["receipt"];
             assert!(
                 receipt_value.is_string(),
-                "Expected receipt to be a string, got: {:?}",
-                receipt_value
+                "Expected receipt to be a string, got: {receipt_value:?}"
             );
             let receipt_str = receipt_value.as_str().unwrap();
             assert!(!receipt_str.is_empty(), "Expected non-empty receipt string");
@@ -1414,8 +1410,7 @@ mod tests {
 
             assert!(
                 result.is_err(),
-                "Expected error for invalid request data, but got: {:?}",
-                result
+                "Expected error for invalid request data, but got: {result:?}"
             );
         }
     }
