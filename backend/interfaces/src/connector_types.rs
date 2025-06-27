@@ -255,7 +255,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
         let connector = self.id();
         match pm_type {
             Some(pm_type) => Err(ConnectorError::NotSupported {
-                message: format!("{} mandate payment", pm_type),
+                message: format!("{pm_type} mandate payment"),
                 connector,
             }
             .into()),
@@ -305,7 +305,7 @@ fn get_connector_payment_method_type_info(
         .map(|pmt| {
             payment_method_details.get(&pmt).cloned().ok_or_else(|| {
                 ConnectorError::NotSupported {
-                    message: format!("{} {}", payment_method, pmt),
+                    message: format!("{payment_method} {pmt}"),
                     connector,
                 }
                 .into()
@@ -325,7 +325,7 @@ pub fn is_mandate_supported(
     } else {
         match payment_method_type {
             Some(pm_type) => Err(ConnectorError::NotSupported {
-                message: format!("{} mandate payment", pm_type),
+                message: format!("{pm_type} mandate payment"),
                 connector,
             }
             .into()),
