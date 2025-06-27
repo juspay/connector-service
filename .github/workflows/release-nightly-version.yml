@@ -1,0 +1,18 @@
+name: Create a nightly tag
+
+on:
+  schedule:
+    - cron: "0 0 * * 1-5" # Run workflow at 00:00 midnight UTC (05:30 AM IST) every Monday-Friday
+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  create-nightly-tag:
+    name: Create a nightly tag
+    uses: juspay/hyperswitch/.github/workflows/release-nightly-version-reusable.yml@main
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
