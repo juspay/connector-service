@@ -3,6 +3,11 @@ use crate::payment_address::{Address, AddressDetails, PhoneDetails};
 use crate::payment_method_data::Card;
 use crate::router_data::PaymentMethodToken;
 use crate::router_request_types::BrowserInformation;
+use crate::router_request_types::{
+    AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
+    PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
+    SetupMandateIntegrityObject,
+};
 use crate::types::{
     ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
     PaymentMethodTypeMetadata, SupportedPaymentMethods,
@@ -159,6 +164,7 @@ pub struct PaymentsSyncData {
     pub payment_experience: Option<common_enums::PaymentExperience>,
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
+    pub integrity_object: Option<PaymentSynIntegrityObject>,
 }
 
 impl PaymentsSyncData {
@@ -608,6 +614,7 @@ impl RawConnectorResponse for PaymentFlowData {
 pub struct PaymentVoidData {
     pub connector_transaction_id: String,
     pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
 }
 
@@ -645,7 +652,7 @@ pub struct PaymentsAuthorizeData {
     pub order_tax_amount: Option<MinorUnit>,
     pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
@@ -675,6 +682,7 @@ pub struct PaymentsAuthorizeData {
     pub merchant_order_reference_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
+    pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
 }
@@ -903,6 +911,7 @@ pub struct MandateReference {
 pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
+    pub integrity_object: Option<CreateOrderIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -1082,7 +1091,7 @@ pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
@@ -1094,6 +1103,7 @@ pub struct RefundsData {
     pub refund_status: common_enums::RefundStatus,
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub integrity_object: Option<RefundIntegrityObject>,
 }
 
 impl RefundsData {
@@ -1126,10 +1136,11 @@ pub struct MultipleCaptureRequestData {
 pub struct PaymentsCaptureData {
     pub amount_to_capture: i64,
     pub minor_amount_to_capture: MinorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
+    pub integrity_object: Option<CaptureIntegrityObject>,
 }
 
 impl PaymentsCaptureData {
@@ -1140,7 +1151,7 @@ impl PaymentsCaptureData {
 
 #[derive(Debug, Clone)]
 pub struct SetupMandateRequestData {
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub payment_method_data: crate::payment_method_data::PaymentMethodData,
     pub amount: Option<i64>,
     pub confirm: bool,
@@ -1166,6 +1177,7 @@ pub struct SetupMandateRequestData {
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<common_utils::id_type::CustomerId>,
+    pub integrity_object: Option<SetupMandateIntegrityObject>,
 }
 
 impl SetupMandateRequestData {

@@ -5,6 +5,7 @@ use common_utils::{
     Email, MinorUnit,
 };
 use hyperswitch_masking::Secret;
+use serde::Serialize;
 
 use crate::{payment_method_data::PaymentMethodData, utils::missing_field_err};
 
@@ -124,4 +125,52 @@ impl ConnectorCustomerData {
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
     }
+}
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AuthoriseIntegrityObject {
+    /// Authorise amount
+    pub amount: MinorUnit,
+    /// Authorise currency
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CreateOrderIntegrityObject {
+    /// Authorise amount
+    pub amount: MinorUnit,
+    /// Authorise currency
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SetupMandateIntegrityObject {
+    /// Authorise amount
+    pub amount: Option<MinorUnit>,
+    /// Authorise currency
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PaymentSynIntegrityObject {
+    /// Authorise amount
+    pub amount: MinorUnit,
+    /// Authorise currency
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PaymentVoidIntegrityObject {
+    pub connector_transaction_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RefundIntegrityObject {
+    pub refund_amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct CaptureIntegrityObject {
+    pub amount_to_capture: MinorUnit,
+    pub currency: Currency,
 }
