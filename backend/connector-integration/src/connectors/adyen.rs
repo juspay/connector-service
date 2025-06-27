@@ -220,6 +220,7 @@ impl ConnectorCommon for Adyen {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -401,6 +402,7 @@ impl connector_types::IncomingWebhook for Adyen {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
@@ -414,6 +416,7 @@ impl connector_types::IncomingWebhook for Adyen {
             connector_response_reference_id: Some(notif.psp_reference),
             error_code: notif.reason.clone(),
             error_message: notif.reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
         })
     }
 
@@ -426,6 +429,7 @@ impl connector_types::IncomingWebhook for Adyen {
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
     > {
+        let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
@@ -438,6 +442,7 @@ impl connector_types::IncomingWebhook for Adyen {
             connector_response_reference_id: Some(notif.psp_reference.clone()),
             error_code: notif.reason.clone(),
             error_message: notif.reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
         })
     }
 
@@ -450,6 +455,7 @@ impl connector_types::IncomingWebhook for Adyen {
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
     > {
+        let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
@@ -466,6 +472,7 @@ impl connector_types::IncomingWebhook for Adyen {
                 status,
                 connector_response_reference_id: Some(notif.psp_reference.clone()),
                 dispute_message: notif.reason,
+                raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             },
         )
     }

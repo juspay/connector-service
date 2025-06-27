@@ -26,6 +26,7 @@ use std::collections::HashMap;
 pub enum ConnectorEnum {
     Adyen,
     Razorpay,
+    RazorpayV2,
     Fiserv,
     Elavon,
 }
@@ -37,6 +38,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
         match connector {
             2 => Ok(Self::Adyen),
             68 => Ok(Self::Razorpay),
+            69 => Ok(Self::RazorpayV2),
             28 => Ok(Self::Fiserv),
             778 => Ok(Self::Elavon),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -336,6 +338,7 @@ pub struct WebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -345,6 +348,7 @@ pub struct RefundWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -354,6 +358,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub stage: common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
