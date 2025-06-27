@@ -27,3 +27,4 @@ bytes = "1.6.0"
 ring = "0.17" 
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 tracing = { version = "0.1.40" }
+encoding_rs = "0.8"
