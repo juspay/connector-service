@@ -96,7 +96,7 @@ where
 macro_rules! grpc_test {
     ($client:ident, $c_type:ty, $body:block) => {
         let config = configs::Config::new().expect("Failed while parsing config");
-        let server = app::Service::new(config.clone()).await;
+        let server = app::Service::new(std::sync::Arc::new(config)).await;
         let (server_fut, mut $client) = common::server_and_client_stub::<$c_type>(server)
             .await
             .expect("Failed to create the server client pair");

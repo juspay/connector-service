@@ -8,7 +8,7 @@ use grpc_api_types::{
         payment_service_server, refund_service_handler, refund_service_server,
     },
 };
-use std::{future::Future, net};
+use std::{future::Future, net, sync::Arc};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
@@ -63,7 +63,7 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
         logger::info!("Shutdown signal received");
     };
 
-    let service = Service::new(config.clone());
+    let service = Service::new(Arc::new(config));
 
     logger::info!(host = %server_config.host, port = %server_config.port, r#type = ?server_config.type_, "starting connector service");
 
@@ -98,14 +98,14 @@ impl Service {
     /// Will panic either if database password, hash key isn't present in configs or unable to
     /// deserialize any of the above keys
     #[allow(clippy::expect_used)]
-    pub async fn new(config: configs::Config) -> Self {
+    pub async fn new(config: Arc<configs::Config>) -> Self {
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             payments_service: crate::server::payments::Payments {
-                config: config.clone(),
+                config: Arc::clone(&config),
             },
             refunds_service: crate::server::refunds::Refunds {
-                config: config.clone(),
+                config: Arc::clone(&config),
             },
             disputes_service: crate::server::disputes::Disputes { config },
         }

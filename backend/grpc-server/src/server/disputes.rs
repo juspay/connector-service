@@ -31,6 +31,7 @@ use grpc_api_types::payments::{
     WebhookResponseContent,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use std::sync::Arc;
 use tracing::info;
 
 // Helper trait for dispute operations
@@ -42,7 +43,7 @@ trait DisputeOperationsInternal {
 }
 
 pub struct Disputes {
-    pub config: Config,
+    pub config: Arc<Config>,
 }
 
 impl DisputeOperationsInternal for Disputes {

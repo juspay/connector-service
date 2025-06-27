@@ -21,6 +21,7 @@ use grpc_api_types::payments::{
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use std::sync::Arc;
 
 // Helper trait for refund operations
 trait RefundOperationsInternal {
@@ -31,7 +32,7 @@ trait RefundOperationsInternal {
 }
 
 pub struct Refunds {
-    pub config: Config,
+    pub config: Arc<Config>,
 }
 
 impl RefundOperationsInternal for Refunds {
