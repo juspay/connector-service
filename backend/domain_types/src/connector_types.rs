@@ -30,6 +30,7 @@ pub enum ConnectorEnum {
     Fiserv,
     Elavon,
     Xendit,
+    Checkout,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -42,6 +43,7 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             28 => Ok(Self::Fiserv),
             778 => Ok(Self::Elavon),
             87 => Ok(Self::Xendit),
+            15 => Ok(Self::Checkout),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,

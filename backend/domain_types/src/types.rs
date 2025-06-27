@@ -40,6 +40,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
+    pub checkout: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1748,7 +1749,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             connector_transaction_id: value
-                .request_ref_id
+                .transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -2784,4 +2785,68 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+}
+
+impl TryFrom<i32> for AttemptStatus {
+    type Error = ApplicationErrorResponse;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => AttemptStatus::Started,
+            1 => AttemptStatus::AuthenticationFailed,
+            2 => AttemptStatus::RouterDeclined,
+            3 => AttemptStatus::AuthenticationPending,
+            4 => AttemptStatus::AuthenticationSuccessful,
+            5 => AttemptStatus::Authorized,
+            6 => AttemptStatus::AuthorizationFailed,
+            7 => AttemptStatus::Charged,
+            8 => AttemptStatus::Authorizing,
+            9 => AttemptStatus::CodInitiated,
+            10 => AttemptStatus::Voided,
+            11 => AttemptStatus::VoidInitiated,
+            12 => AttemptStatus::CaptureInitiated,
+            13 => AttemptStatus::CaptureFailed,
+            14 => AttemptStatus::VoidFailed,
+            15 => AttemptStatus::AutoRefunded,
+            16 => AttemptStatus::PartialCharged,
+            17 => AttemptStatus::PartialChargedAndChargeable,
+            18 => AttemptStatus::Unresolved,
+            19 => AttemptStatus::Pending,
+            20 => AttemptStatus::Failure,
+            21 => AttemptStatus::PaymentMethodAwaited,
+            22 => AttemptStatus::ConfirmationAwaited,
+            23 => AttemptStatus::DeviceDataCollectionPending,
+            _ => AttemptStatus::Unknown,
+        })
+    }
+}
+
+#[derive(Debug, strum::Display)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+pub enum AttemptStatus {
+    Started,
+    AuthenticationFailed,
+    RouterDeclined,
+    AuthenticationPending,
+    AuthenticationSuccessful,
+    Authorized,
+    AuthorizationFailed,
+    Charged,
+    Authorizing,
+    CodInitiated,
+    Voided,
+    VoidInitiated,
+    CaptureInitiated,
+    CaptureFailed,
+    VoidFailed,
+    AutoRefunded,
+    PartialCharged,
+    PartialChargedAndChargeable,
+    Unresolved,
+    Pending,
+    Failure,
+    PaymentMethodAwaited,
+    ConfirmationAwaited,
+    DeviceDataCollectionPending,
+    Unknown,
 }
