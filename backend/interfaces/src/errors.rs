@@ -120,6 +120,11 @@ pub enum ConnectorError {
     InvalidConnectorConfig { config: &'static str },
     #[error("Failed to convert amount to required type")]
     AmountConversionFailed,
+    #[error("Integrity check failed")]
+    IntegrityCheckFailed {
+        field_names: String,
+        connector_transaction_id: Option<String>,
+    },
     #[error("Generic Error")]
     GenericError {
         error_message: String,

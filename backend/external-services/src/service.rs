@@ -12,7 +12,10 @@ use error_stack::{report, ResultExt};
 
 use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
+    connector_integration_v2::BoxedConnectorIntegrationV2,
+    errors::ConnectorError,
+    integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
+    types::Response,
 };
 use once_cell::sync::OnceCell;
 use reqwest::Client;
@@ -43,7 +46,7 @@ pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
         latency = Empty,
     )
 )]
-pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>(
+pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
@@ -51,7 +54,8 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
-    Req: Clone + 'static + std::fmt::Debug,
+    T: FlowIntegrity,
+    Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,
     Resp: Clone + 'static + std::fmt::Debug,
     ResourceCommonData: Clone + 'static + RawConnectorResponse,
 {
@@ -193,13 +197,27 @@ where
         }
         None => Ok(router_data),
     };
+
+    let result_with_integrity_check = match result {
+        Ok(data) => {
+            data.request
+                .check_integrity(&data.request.clone(), None)
+                .map_err(|err| ConnectorError::IntegrityCheckFailed {
+                    field_names: err.field_names,
+                    connector_transaction_id: err.connector_transaction_id,
+                })?;
+            Ok(data)
+        }
+        Err(err) => Err(err),
+    };
+
     let elapsed = start.elapsed().as_millis();
     if let Some(req) = req {
         tracing::Span::current().record("request.body", tracing::field::display(req));
     }
     tracing::Span::current().record("latency", elapsed);
     tracing::info!(tag = ?Tag::OutgoingApi, log_type = "api", "Outgoing Request completed");
-    result
+    result_with_integrity_check
 }
 
 pub enum ApplicationResponse<R> {
