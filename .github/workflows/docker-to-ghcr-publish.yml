@@ -3,12 +3,7 @@ name: Docker Build and Push to GHCR
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: 'Branch, tag or commit ID'
-        required: false
-        type: string
-  
+
   push:
     tags:
       - '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9].[0-9]*'  # Matches YYYY.MM.DD.MICRO format
@@ -23,17 +18,16 @@ jobs:
         include:
           - platform: linux/amd64
             tag: linux-amd64
-            os: ubuntu-latest
+            os: ubuntu-24.04
           - platform: linux/arm64
             tag: linux-arm64
             os: ubuntu-24.04-arm
     runs-on: ${{ matrix.os }}
+    outputs:
+      version: ${{ steps.set-outputs.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref || github.ref}}
-
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -47,25 +41,19 @@ jobs:
 
       - name: Set version
         run: |
-          COMMIT_SHA=$(git rev-parse HEAD)
+          COMMIT_SHA=${{ github.sha }}
           SHORT_SHA=${COMMIT_SHA::7}
-          REF_INPUT="${{ github.event.inputs.ref }}"
           
           # Check if triggered by tag push
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            # Use the tag name directly (YYYY.MM.DD.MICRO format)
+            # Use the tag name directly
             VERSION="${{ github.ref_name }}"
-            echo "Using CalVer tag: $VERSION"
-          elif [ -n "$REF_INPUT" ]; then
-            # Clean the ref input and add commit SHA for uniqueness
-            REF_CLEAN=$(echo "$REF_INPUT" | sed 's/\//-/g')
-            VERSION="${REF_CLEAN}-${SHORT_SHA}"
-            echo "Using ref with commit: $VERSION"
           else
-            # Default to main branch with commit SHA
-            VERSION="main-${SHORT_SHA}"
-            echo "Using default: $VERSION"
+            # Default to commit SHA
+            VERSION="${SHORT_SHA}"
           fi
+
+          echo "Using version: $VERSION"
           
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
@@ -74,8 +62,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
+          flavor: |
+            latest=false
           tags: |
-            type=ref,event=branch,separator=_
+            type=ref,event=tag
             type=raw,value=${{ env.VERSION }}
 
       - name: Build Docker image (Dockerfile)
@@ -93,6 +83,10 @@ jobs:
           CARGO_INCREMENTAL: "0"
           RUSTFLAGS: "-A warnings"
           SCCACHE_ENABLE: "true"
+      
+      - name: Set job outputs
+        id: set-outputs
+        run: echo "version=${{ env.VERSION }}" >> $GITHUB_OUTPUT
 
   create-manifest:
     needs: [build-and-push-dockerfile]
@@ -100,46 +94,19 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      VERSION: ${{ needs.build-and-push-dockerfile.outputs.version }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.ref }}
-      
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Set version
-        run: |
-          COMMIT_SHA=$(git rev-parse HEAD)
-          SHORT_SHA=${COMMIT_SHA::7}
-          REF_INPUT="${{ github.event.inputs.ref }}"
-          
-          # Check if triggered by tag push
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            # Use the tag name directly (YYYY.MM.DD.MICRO format)
-            VERSION="${{ github.ref_name }}"
-            echo "Using CalVer tag: $VERSION"
-          elif [ -n "$REF_INPUT" ]; then
-            # Clean the ref input and add commit SHA for uniqueness
-            REF_CLEAN=$(echo "$REF_INPUT" | sed 's/\//-/g')
-            VERSION="${REF_CLEAN}-${SHORT_SHA}"
-            echo "Using ref with commit: $VERSION"
-          else
-            # Default to main branch with commit SHA
-            VERSION="main-${SHORT_SHA}"
-            echo "Using default: $VERSION"
-          fi
-          
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Create manifest
         run: |
           docker buildx imagetools create --tag ghcr.io/${{ github.repository }}:${{ env.VERSION }} \
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}-linux-amd64 \
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}-linux-arm64
-
