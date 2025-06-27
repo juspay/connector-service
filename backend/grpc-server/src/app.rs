@@ -3,7 +3,7 @@ use crate::{configs, error::ConfigurationError, logger, metrics, utils};
 use axum::http;
 use grpc_api_types::{
     health_check::health_server,
-    payments::{payment_service_handler, payment_service_server},
+    payments::{payment_service_handler, payment_service_server, refund_service_server},
 };
 use std::{future::Future, net};
 use tokio::{
@@ -137,7 +137,7 @@ impl Service {
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
             .merge(health_handler(self.health_check_service))
-            .merge(payment_service_handler(self.payments_service));
+            .merge(payment_service_handler(self.payments_service.clone()));
 
         let listener = tokio::net::TcpListener::bind(socket).await?;
 
@@ -188,6 +188,9 @@ impl Service {
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
+                self.payments_service.clone(),
+            ))
+            .add_service(refund_service_server::RefundServiceServer::new(
                 self.payments_service,
             ))
             .serve_with_shutdown(socket, shutdown_signal)

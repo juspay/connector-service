@@ -1204,6 +1204,7 @@ pub fn get_adyen_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     } else {
         None
@@ -1269,6 +1270,7 @@ pub fn get_redirection_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     } else {
         None
@@ -2422,6 +2424,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2624,6 +2627,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2744,6 +2748,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
                 ..router_data
             }),

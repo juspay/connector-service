@@ -7,11 +7,11 @@ use crate::{
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{Authorize, Capture, CreateOrder, PSync, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, CreateOrder, PSync, RSync, Refund, SetupMandate, Void},
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
 };
@@ -22,19 +22,20 @@ use domain_types::{
 use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
+        generate_payment_void_response, generate_refund_response, generate_refund_sync_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use external_services;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
+    payment_service_server::PaymentService, refund_service_server::RefundService, DisputeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
     PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
     PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse,
+    PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest, RefundServiceTransformRequest,
+    RefundServiceTransformResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 
@@ -57,12 +58,18 @@ trait PaymentOperationsInternal {
         request: tonic::Request<PaymentServiceRefundRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 
+    async fn internal_refund_sync(
+        &self,
+        request: tonic::Request<RefundServiceGetRequest>,
+    ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
+
     async fn internal_payment_capture(
         &self,
         request: tonic::Request<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status>;
 }
 
+#[derive(Clone)]
 pub struct Payments {
     pub config: Config,
 }
@@ -231,6 +238,21 @@ impl PaymentOperationsInternal for Payments {
         request_data_constructor: RefundsData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
         generate_response_fn: generate_refund_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_refund_sync,
+        log_prefix: "REFUND_SYNC",
+        request_type: RefundServiceGetRequest,
+        response_type: RefundResponse,
+        flow_marker: RSync,
+        resource_common_data_type: RefundFlowData,
+        request_data_type: RefundSyncData,
+        response_data_type: RefundsResponseData,
+        request_data_constructor: RefundSyncData::foreign_try_from,
+        common_flow_data_constructor: RefundFlowData::foreign_try_from,
+        generate_response_fn: generate_refund_sync_response,
         all_keys_required: None
     );
 
@@ -533,6 +555,111 @@ impl PaymentService for Payments {
             generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
 
         Ok(tonic::Response::new(setup_mandate_response))
+    }
+}
+
+#[tonic::async_trait]
+impl RefundService for Payments {
+    async fn get(
+        &self,
+        request: tonic::Request<RefundServiceGetRequest>,
+    ) -> Result<tonic::Response<RefundResponse>, tonic::Status> {
+        self.internal_refund_sync(request).await
+    }
+
+    async fn transform(
+        &self,
+        request: tonic::Request<RefundServiceTransformRequest>,
+    ) -> Result<tonic::Response<RefundServiceTransformResponse>, tonic::Status> {
+        info!("REFUND_WEBHOOK_FLOW: initiated");
+
+        let connector =
+            connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let connector_auth_details =
+            auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+        let payload = request.into_inner();
+
+        // Get connector data
+        let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+        // Convert request details
+        let request_details = domain_types::connector_types::RequestDetails::foreign_try_from(
+            payload.request_details.ok_or_else(|| {
+                tonic::Status::invalid_argument("Request details are required")
+            })?,
+        )
+        .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
+            sub_code: "REQUEST_CONVERSION_ERROR".to_string(),
+            error_identifier: 500,
+            error_message: "Error while converting request details".to_string(),
+            error_object: None,
+        }))
+        .map_err(|e| e.into_grpc_status())?;
+
+        // Convert webhook secrets if present
+        let webhook_secrets = payload
+            .webhook_secrets
+            .map(domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from)
+            .transpose()
+            .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
+                sub_code: "WEBHOOK_SECRETS_CONVERSION_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: "Error while converting webhook secrets".to_string(),
+                error_object: None,
+            }))
+            .map_err(|e| e.into_grpc_status())?;
+
+        // Verify webhook source
+        let source_verified = connector_data
+            .connector
+            .verify_webhook_source(
+                request_details.clone(),
+                webhook_secrets.clone(),
+                Some(connector_auth_details.clone()),
+            )
+            .switch()
+            .map_err(|e| e.into_grpc_status())?;
+
+        // Get event type
+        let event_type = connector_data
+            .connector
+            .get_event_type(
+                request_details.clone(),
+                webhook_secrets.clone(),
+                Some(connector_auth_details.clone()),
+            )
+            .switch()
+            .map_err(|e| e.into_grpc_status())?;
+
+        // Get appropriate content based on event type
+        let content = match event_type {
+            domain_types::connector_types::EventType::Refund => get_refunds_webhook_content(
+                connector_data,
+                request_details,
+                webhook_secrets,
+                Some(connector_auth_details),
+            )
+            .await
+            .map_err(|e| e.into_grpc_status())?,
+            _ => {
+                return Err(tonic::Status::invalid_argument(
+                    "Invalid event type for refund webhook",
+                ));
+            }
+        };
+
+        let api_event_type =
+            grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+                .map_err(|e| e.into_grpc_status())?;
+
+        let response = RefundServiceTransformResponse {
+            event_type: api_event_type.into(),
+            content: Some(content),
+            source_verified,
+            response_ref_id: None,
+        };
+
+        Ok(tonic::Response::new(response))
     }
 }
 

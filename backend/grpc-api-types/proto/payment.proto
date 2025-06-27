@@ -912,7 +912,7 @@ message PaymentAddress {
   Address billing_address = 2;
 }
 
-// Data for a redirection, can be either form data or raw HTML.
+// Data for a redirection, can be either form data, raw HTML, or URI.
 message RedirectForm {
   oneof form_type {
     // Data for constructing an HTML form for redirection.
@@ -920,6 +920,9 @@ message RedirectForm {
     
     // Raw HTML data for redirection.
     HtmlData html = 2;
+    
+    // URI for direct redirection (e.g., UPI deep links).
+    UriData uri = 3;
   }
 }
 
@@ -939,6 +942,12 @@ message FormData {
 message HtmlData {
   // The HTML content as a string.
   string html_data = 1;
+}
+
+// Represents URI data for direct redirection.
+message UriData {
+  // The URI for redirection (e.g., UPI deep link).
+  string uri = 1;
 }
 
 // Details of an HTTP request, typically for incoming webhooks.
@@ -1093,6 +1102,9 @@ message PaymentServiceAuthorizeResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
+  
+  // Raw Response
+  optional string raw_connector_response = 9; // Raw response from the connector for debugging
 }
 
 // Request message for synchronizing payment status.
@@ -1141,6 +1153,9 @@ message PaymentServiceGetResponse {
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
+  
+  // Raw Response
+  optional string raw_connector_response = 25; // Raw response from the connector for debugging
 }
 
 // Request message for voiding a payment.
@@ -1260,6 +1275,9 @@ message RefundResponse {
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+  
+  // Raw Response
+  optional string raw_connector_response = 21; // Raw response from the connector for debugging
 }
 
 // Request message for creating a dispute.

@@ -140,6 +140,7 @@ impl ConnectorCommon for Razorpay {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -526,6 +527,7 @@ impl connector_types::IncomingWebhook for Razorpay {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
             report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                 .attach_printable(format!("error while decoing webhook body {err}"))
@@ -544,6 +546,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             connector_response_reference_id: None,
             error_code: notif.entity.error_code,
             error_message: notif.entity.error_reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
         })
     }
 
@@ -553,6 +556,7 @@ impl connector_types::IncomingWebhook for Razorpay {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<RefundWebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
             report!(errors::ConnectorError::WebhookBodyDecodingFailed)
                 .attach_printable(format!("error while decoing webhook body {err}"))
@@ -571,6 +575,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             connector_response_reference_id: None,
             error_code: None,
             error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
         })
     }
 }
