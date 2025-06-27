@@ -10,21 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Allow more retries for network requests in cargo (downloading crates) and
-  # rustup (installing toolchains). This should help to reduce flaky CI failures
-  # from transient network timeouts or other issues.
-  CARGO_NET_RETRY: 10
-  RUSTUP_MAX_RETRIES: 10
-
-  # The branch name that this workflow is allowed to run on.
-  # If the workflow is run on any other branch, this workflow will fail.
-  ALLOWED_BRANCH_NAME: main
-
 jobs:
   create-nightly-tag:
     name: Create a nightly tag
-    uses: ./.github/workflows/release-nightly-version-reusable.yml
+    uses: juspay/hyperswitch/.github/workflows/release-nightly-version-reusable.yml@main
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
-
