@@ -372,7 +372,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
                 .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{}ca/services/DisputeService/v30/defendDispute", dispute_url))
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
         }
     }
 );
@@ -547,7 +547,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
                                   .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{}ca/services/DisputeService/v30/acceptDispute", dispute_url))
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
         }
     }
 );
@@ -575,7 +575,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
                                   .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{}ca/services/DisputeService/v30/supplyDefenseDocument", dispute_url))
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
         }
     }
 );

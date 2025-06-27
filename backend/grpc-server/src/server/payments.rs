@@ -131,8 +131,7 @@ impl Payments {
                 Ok(())
             }
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Order creation error: {}",
-                message
+                "Order creation error: {message}"
             ))),
         }
     }
@@ -194,8 +193,7 @@ impl Payments {
                 Ok(())
             }
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Order creation error: {}",
-                message
+                "Order creation error: {message}"
             ))),
         }
     }

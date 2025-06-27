@@ -72,7 +72,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_capture_method".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Capture method {:?} is not supported", value),
+                error_message: format!("Capture method {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -97,7 +97,7 @@ impl ForeignTryFrom<i32> for common_enums::CardNetwork {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CARD_NETWORK".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for card network: {}", connector),
+                error_message: format!("Invalid value for card network: {connector}"),
                 error_object: None,
             })
             .into()),
@@ -373,7 +373,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_currency".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Currency {:?} is not supported", value),
+                error_message: format!("Currency {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -2410,7 +2410,7 @@ impl ForeignTryFrom<i32> for common_enums::FutureUsage {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_FUTURE_USAGE".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for future_usage: {}", value),
+                error_message: format!("Invalid value for future_usage: {value}"),
                 error_object: None,
             })
             .into()),
