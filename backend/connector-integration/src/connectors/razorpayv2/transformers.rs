@@ -6,12 +6,15 @@ use common_utils::types::MinorUnit;
 use domain_types::{
     connector_types::{PaymentCreateOrderData, PaymentsAuthorizeData, RefundsData},
     payment_method_data::{PaymentMethodData, UpiData},
+    payment_address::Address,
     router_data::ConnectorAuthType,
 };
+use common_utils::pii::Email;
 use hyperswitch_masking::{PeekInterface, Secret};
 use interfaces::errors;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::str::FromStr;
 
 // ============ Authentication Types ============
 
@@ -56,8 +59,25 @@ pub struct RazorpayV2RouterData<T> {
     pub amount: MinorUnit,
     pub order_id: Option<String>,
     pub router_data: T,
+    pub billing_address: Option<Address>,
 }
 
+impl<T> TryFrom<(MinorUnit, T, Option<String>, Option<Address>)> for RazorpayV2RouterData<T> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        (amount, item, order_id, billing_address): (MinorUnit, T, Option<String>, Option<Address>),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount,
+            order_id,
+            router_data: item,
+            billing_address,
+        })
+    }
+}
+
+// Keep backward compatibility for existing usage
 impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -68,6 +88,7 @@ impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
             amount,
             order_id,
             router_data: item,
+            billing_address: None,
         })
     }
 }
@@ -118,7 +139,7 @@ pub struct RazorpayV2PaymentsRequest {
     pub amount: i64,
     pub currency: String,
     pub order_id: String,
-    pub email: String,
+    pub email: Email,
     pub contact: String,
     pub method: String,
     pub description: Option<String>,
@@ -241,7 +262,7 @@ pub struct RazorpayV2PaymentsResponse {
     pub bank: Option<String>,
     pub wallet: Option<String>,
     pub vpa: Option<String>,
-    pub email: String,
+    pub email: Email,
     pub contact: String,
     pub notes: Option<Value>,
     pub fee: Option<i64>,
@@ -358,8 +379,15 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
             amount: amount_in_minor_units,
             currency: item.router_data.currency.to_string(),
             order_id: order_id.to_string(),
-            email: "customer@example.com".to_string(),
-            contact: "9999999999".to_string(),
+            email: item.router_data.email
+                .clone()
+                .unwrap_or_else(|| Email::from_str("customer@example.com").unwrap()),
+            contact: item.billing_address
+                .as_ref()
+                .and_then(|addr| addr.phone.as_ref())
+                .and_then(|phone| phone.number.as_ref())
+                .map(|num| num.peek().to_string())
+                .unwrap_or_else(|| "9999999999".to_string()),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
             notes: Some(RazorpayV2Notes {
@@ -408,9 +436,16 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayWebColle
         Ok(Self {
             currency: item.router_data.currency.to_string(),
             amount: amount_in_minor_units,
-            email: Some("customer@example.com".to_string()),
+            email: item.billing_address
+                .as_ref()
+                .and_then(|addr| addr.email.as_ref())
+                .map(|email| email.peek().to_string()),
             order_id: order_id.to_string(),
-            contact: Some("9999999999".to_string()),
+            contact: item.billing_address
+                .as_ref()
+                .and_then(|addr| addr.phone.as_ref())
+                .and_then(|phone| phone.number.as_ref())
+                .map(|num| num.peek().to_string()),
             method: "upi".to_string(),
             vpa: vpa.clone(),
             __notes_91_txn_uuid_93_: None, // txn_uuid,

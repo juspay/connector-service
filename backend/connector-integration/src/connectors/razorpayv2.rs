@@ -309,6 +309,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             req.request.minor_amount,
             &req.request,
             Some(order_id),
+            req.resource_common_data.address.get_payment_method_billing().cloned(),
         ))?;
         info!("Metadaata is {:?}", req.request.metadata);
         // Check version from metadata or headers - default to v2 if not specified
