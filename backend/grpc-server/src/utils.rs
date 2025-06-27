@@ -193,8 +193,14 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
+            let service_name = request
+                .extensions()
+                .get::<String>()
+                .cloned()
+                .unwrap_or_else(|| "unknown_service".to_string());
 
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
+
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
 
@@ -238,6 +244,8 @@ macro_rules! implement_connector_operation {
                 connector_integration,
                 router_data,
                 $all_keys_required,
+                &connector.to_string(),
+                &service_name,
             )
             .await
             .switch()

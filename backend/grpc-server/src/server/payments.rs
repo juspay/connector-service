@@ -33,7 +33,6 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
-use external_services;
 use grpc_api_types::payments::{
     payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
@@ -80,6 +79,8 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceAuthorizeRequest,
+        connector_name: &str,
+        service_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -117,6 +118,8 @@ impl Payments {
             connector_integration,
             order_router_data,
             None,
+            connector_name,
+            service_name,
         )
         .await
         .switch()
@@ -138,6 +141,8 @@ impl Payments {
         payment_flow_data: &mut PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceRegisterRequest,
+        connector_name: &str,
+        service_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -175,6 +180,8 @@ impl Payments {
             connector_integration,
             order_router_data,
             None,
+            connector_name,
+            service_name,
         )
         .await
         .switch()
@@ -282,6 +289,11 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
         let current_span = tracing::Span::current();
         let (gateway, merchant_id, tenant_id, request_id) =
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
@@ -336,6 +348,8 @@ impl PaymentService for Payments {
                         &mut payment_flow_data,
                         connector_auth_details.clone(),
                         &payload,
+                        &connector.to_string(),
+                        &service_name,
                     )
                     .await?;
                 }
@@ -364,6 +378,8 @@ impl PaymentService for Payments {
                     connector_integration,
                     router_data,
                     None,
+                    &connector.to_string(),
+                    &service_name,
                 )
                 .await
                 .switch()
@@ -910,6 +926,11 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRegisterRequest>,
     ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
         let current_span = tracing::Span::current();
         let (gateway, merchant_id, tenant_id, request_id) =
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
@@ -965,6 +986,8 @@ impl PaymentService for Payments {
                         &mut payment_flow_data,
                         connector_auth_details.clone(),
                         &payload,
+                        &connector.to_string(),
+                        &service_name,
                     )
                     .await?;
                 }
@@ -992,6 +1015,8 @@ impl PaymentService for Payments {
                     connector_integration,
                     router_data,
                     None,
+                    &connector.to_string(),
+                    &service_name,
                 )
                 .await
                 .switch()
