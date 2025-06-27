@@ -13,25 +13,28 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
+        generate_payment_void_response, generate_refund_response, generate_refund_sync_response,
+        generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
-    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse,
+    payment_service_server::PaymentService, refund_service_server::RefundService, DisputeResponse,
+    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
+    PaymentServiceCaptureResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest,
+    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
+    PaymentServiceRegisterResponse, PaymentServiceTransformRequest,
+    PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
+    RefundResponse, RefundServiceGetRequest, RefundServiceTransformRequest,
+    RefundServiceTransformResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use std::sync::Arc;
@@ -55,12 +58,18 @@ trait PaymentOperationsInternal {
         request: tonic::Request<PaymentServiceRefundRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 
+    async fn internal_refund_sync(
+        &self,
+        request: tonic::Request<RefundServiceGetRequest>,
+    ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
+
     async fn internal_payment_capture(
         &self,
         request: tonic::Request<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status>;
 }
 
+#[derive(Clone)]
 pub struct Payments {
     pub config: Arc<Config>,
 }
@@ -231,6 +240,21 @@ impl PaymentOperationsInternal for Payments {
         request_data_constructor: RefundsData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
         generate_response_fn: generate_refund_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_refund_sync,
+        log_prefix: "REFUND_SYNC",
+        request_type: RefundServiceGetRequest,
+        response_type: RefundResponse,
+        flow_marker: RSync,
+        resource_common_data_type: RefundFlowData,
+        request_data_type: RefundSyncData,
+        response_data_type: RefundsResponseData,
+        request_data_constructor: RefundSyncData::foreign_try_from,
+        common_flow_data_constructor: RefundFlowData::foreign_try_from,
+        generate_response_fn: generate_refund_sync_response,
         all_keys_required: None
     );
 
