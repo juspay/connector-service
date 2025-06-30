@@ -2,16 +2,16 @@
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use common_utils::pii::Email;
 use common_utils::types::MinorUnit;
+use domain_types::errors;
 use domain_types::{
     connector_types::{PaymentCreateOrderData, PaymentsAuthorizeData, RefundsData},
-    payment_method_data::{PaymentMethodData, UpiData},
     payment_address::Address,
+    payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
 };
-use common_utils::pii::Email;
 use hyperswitch_masking::{PeekInterface, Secret};
-use interfaces::errors;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::str::FromStr;
@@ -154,7 +154,6 @@ pub struct RazorpayV2PaymentsRequest {
     pub recurring: Option<String>,
 }
 
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum UpiFlow {
@@ -241,7 +240,6 @@ pub struct RazorpayV2UpiResponseDetails {
     pub expiry_time: Option<i32>,
 }
 
-
 // ============ Error Types ============
 // Error response structure is already defined above in the enum
 
@@ -312,10 +310,13 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
             amount: amount_in_minor_units,
             currency: item.router_data.currency.to_string(),
             order_id: order_id.to_string(),
-            email: item.router_data.email
+            email: item
+                .router_data
+                .email
                 .clone()
                 .unwrap_or_else(|| Email::from_str("customer@example.com").unwrap()),
-            contact: item.billing_address
+            contact: item
+                .billing_address
                 .as_ref()
                 .and_then(|addr| addr.phone.as_ref())
                 .and_then(|phone| phone.number.as_ref())
@@ -342,7 +343,6 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
         })
     }
 }
-
 
 // ============ Refund Types ============
 

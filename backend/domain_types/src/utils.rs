@@ -98,12 +98,13 @@ pub fn handle_json_response_deserialization_failure(
             status_code: res.status_code,
             code: consts::NO_ERROR_CODE.to_string(),
             message: consts::UNSUPPORTED_ERROR_MESSAGE.to_string(),
-            reason: Some(response_data),
+            reason: Some(response_data.clone()),
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: Some(response_data),
         }),
     }
 }
