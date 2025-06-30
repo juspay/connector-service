@@ -805,6 +805,11 @@ pub enum ConnectorError {
     RequestEncodingFailedWithReason(String),
     #[error("Parsing failed")]
     ParsingFailed,
+    #[error("Integrity check failed")]
+    IntegrityCheckFailed {
+        field_names: String,
+        connector_transaction_id: Option<String>,
+    },
     #[error("Failed to deserialize connector response")]
     ResponseDeserializationFailed,
     #[error("Failed to execute a processing step: {0:?}")]
