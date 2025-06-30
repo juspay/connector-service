@@ -299,7 +299,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     connector_metadata: None,
                     mandate_reference: Box::new(None),
                     network_txn_id: None,
-                    connector_response_reference_id: None,
+                    connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
                 };

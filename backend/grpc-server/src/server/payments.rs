@@ -8,7 +8,7 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, FlowName, PSync, Refund, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, FlowName, PSync, RSync, Refund, SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -130,7 +130,9 @@ impl Payments {
 
         match response.response {
             Ok(PaymentCreateOrderResponse { order_id, .. }) => {
-                payment_flow_data.reference_id = Some(order_id);
+                tracing::info!("Order created successfully with order_id: {}", order_id);
+                payment_flow_data.reference_id = Some(order_id.clone());
+                tracing::info!("Set reference_id to: {:?}", payment_flow_data.reference_id);
                 Ok(())
             }
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
