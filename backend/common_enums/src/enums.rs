@@ -901,6 +901,15 @@ impl PaymentMethodType {
     }
 }
 
+/// Connector accepted currency unit as either "Base" or "Minor"
+#[derive(Debug)]
+pub enum CurrencyUnit {
+    /// Base currency unit
+    Base,
+    /// Minor currency unit
+    Minor,
+}
+
 #[derive(
     Clone,
     Copy,

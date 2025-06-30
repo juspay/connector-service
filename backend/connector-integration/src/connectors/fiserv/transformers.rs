@@ -4,6 +4,7 @@ use common_utils::{
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
+use domain_types::errors::ConnectorError;
 use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -11,7 +12,6 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
-use interfaces::errors::ConnectorError;
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::fiserv::FiservRouterData;

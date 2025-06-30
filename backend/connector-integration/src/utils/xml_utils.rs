@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use interfaces::errors;
+use domain_types::errors;
 use serde_json::{Map, Value};
 
 /// Processes XML response bytes by converting to properly structured JSON.

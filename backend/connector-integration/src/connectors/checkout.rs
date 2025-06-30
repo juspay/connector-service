@@ -5,15 +5,16 @@ use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::Requ
 use error_stack::ResultExt;
 
 use common_utils::consts;
+use domain_types::errors::{self, ConnectorError};
 use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::Response,
 };
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-use interfaces::errors::ConnectorError;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    errors, events::connector_api_logs::ConnectorEvent, types::Response,
+    events::connector_api_logs::ConnectorEvent,
 };
 
 use super::macros;

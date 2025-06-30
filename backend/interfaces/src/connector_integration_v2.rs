@@ -1,8 +1,8 @@
 //! definition of the new connector integration trait
 
 use common_utils::{
-    errors::CustomResult,
     request::{Method, Request, RequestBuilder, RequestContent},
+    CustomResult,
 };
 use domain_types::{router_data::ErrorResponse, router_data_v2::RouterDataV2};
 use hyperswitch_masking::Maskable;
@@ -10,9 +10,7 @@ use serde_json::json;
 
 use crate::{
     api::{self},
-    errors,
     events::connector_api_logs::ConnectorEvent,
-    types,
 };
 
 /// alias for Box of a type that implements trait ConnectorIntegrationV2
@@ -49,7 +47,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_headers(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError> {
         Ok(vec![])
     }
 
@@ -67,7 +65,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_url(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<String, errors::ConnectorError> {
+    ) -> CustomResult<String, domain_types::errors::ConnectorError> {
         // metrics::UNIMPLEMENTED_FLOW
         //     .add(1, router_env::metric_attributes!(("connector", self.id()))); // TODO: discuss env
         Ok(String::new())
@@ -77,7 +75,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_request_body(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+    ) -> CustomResult<Option<RequestContent>, domain_types::errors::ConnectorError> {
         Ok(None)
     }
 
@@ -85,7 +83,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_request_form_data(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<reqwest::multipart::Form>, errors::ConnectorError> {
+    ) -> CustomResult<Option<reqwest::multipart::Form>, domain_types::errors::ConnectorError> {
         Ok(None)
     }
 
@@ -93,7 +91,7 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn build_request_v2(
         &self,
         req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<Request>, errors::ConnectorError> {
+    ) -> CustomResult<Option<Request>, domain_types::errors::ConnectorError> {
         Ok(Some(
             RequestBuilder::new()
                 .method(self.get_http_method())
@@ -112,8 +110,11 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         &self,
         data: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
         event_builder: Option<&mut ConnectorEvent>,
-        _res: types::Response,
-    ) -> CustomResult<RouterDataV2<Flow, ResourceCommonData, Req, Resp>, errors::ConnectorError>
+        _res: domain_types::router_response_types::Response,
+    ) -> CustomResult<
+        RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
+        domain_types::errors::ConnectorError,
+    >
     where
         Flow: Clone,
         ResourceCommonData: Clone,
@@ -129,9 +130,9 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     /// accepts the raw api error response and decodes it
     fn get_error_response_v2(
         &self,
-        res: types::Response,
+        res: domain_types::router_response_types::Response,
         event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         if let Some(event) = event_builder {
             event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
         }
@@ -141,9 +142,9 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     /// accepts the raw 5xx error response and decodes it
     fn get_5xx_error_response(
         &self,
-        res: types::Response,
+        res: domain_types::router_response_types::Response,
         event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         if let Some(event) = event_builder {
             event.set_error(json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
         }
@@ -178,14 +179,17 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     /// retunes the capture sync method
     // fn get_multiple_capture_sync_method(
     //     &self,
-    // ) -> CustomResult<api::CaptureSyncMethod, errors::ConnectorError> {
-    //     Err(errors::ConnectorError::NotImplemented("multiple capture sync".into()).into())
+    // ) -> CustomResult<api::CaptureSyncMethod, domain_types::errors::ConnectorError> {
+    //     Err(domain_types::errors::ConnectorError::NotImplemented("multiple capture sync".into()).into())
     // }
     /// returns certificate string
     fn get_certificate(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, errors::ConnectorError> {
+    ) -> CustomResult<
+        Option<hyperswitch_masking::Secret<String>>,
+        domain_types::errors::ConnectorError,
+    > {
         Ok(None)
     }
 
@@ -193,7 +197,10 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
     fn get_certificate_key(
         &self,
         _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
-    ) -> CustomResult<Option<hyperswitch_masking::Secret<String>>, errors::ConnectorError> {
+    ) -> CustomResult<
+        Option<hyperswitch_masking::Secret<String>>,
+        domain_types::errors::ConnectorError,
+    > {
         Ok(None)
     }
 }
