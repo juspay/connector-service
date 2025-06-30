@@ -316,8 +316,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     refund_metadata.insert(
         "refund_metadata".to_string(),
         format!(
-            "{{\"creditCard\":{{\"cardNumber\":\"{}\",\"expirationDate\":\"2025-12\"}}}}",
-            TEST_CARD_NUMBER
+            "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2025-12\"}}}}",
         ),
     );
 

@@ -299,11 +299,11 @@ impl
         let expiry_month = card_data.card_exp_month.peek().clone();
         let year = card_data.card_exp_year.peek().clone();
         let expiry_year = if year.len() == 2 {
-            format!("20{}", year)
+            format!("20{year}")
         } else {
             year
         };
-        let expiration_date = format!("{}-{}", expiry_year, expiry_month);
+        let expiration_date = format!("{expiry_year}-{expiry_month}");
 
         let credit_card_details = CreditCardDetails {
             card_number: StrongSecret::new(card_data.card_number.peek().to_string()),
