@@ -1196,8 +1196,6 @@ impl SetupMandateRequestData {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct AcceptDisputeData {}
 #[derive(Debug, Clone)]
 pub struct AcceptDisputeData {
     pub connector_dispute_id: String,
