@@ -80,28 +80,32 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
     }
 }
 
-impl ForeignTryFrom<i32> for common_enums::CardNetwork {
+impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for common_enums::CardNetwork {
     type Error = ApplicationErrorResponse;
 
-    fn foreign_try_from(connector: i32) -> Result<Self, error_stack::Report<Self::Error>> {
-        match connector {
-            0 => Ok(Self::Visa),
-            1 => Ok(Self::Mastercard),
-            2 => Ok(Self::AmericanExpress),
-            3 => Ok(Self::JCB),
-            4 => Ok(Self::DinersClub),
-            5 => Ok(Self::Discover),
-            6 => Ok(Self::CartesBancaires),
-            7 => Ok(Self::UnionPay),
-            8 => Ok(Self::RuPay),
-            9 => Ok(Self::Maestro),
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_CARD_NETWORK".to_owned(),
-                error_identifier: 401,
-                error_message: format!("Invalid value for card network: {connector}"),
-                error_object: None,
-            })
-            .into()),
+    fn foreign_try_from(
+        network: grpc_api_types::payments::CardNetwork,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match network {
+            grpc_api_types::payments::CardNetwork::Visa => Ok(Self::Visa),
+            grpc_api_types::payments::CardNetwork::Mastercard => Ok(Self::Mastercard),
+            grpc_api_types::payments::CardNetwork::Amex => Ok(Self::AmericanExpress),
+            grpc_api_types::payments::CardNetwork::Jcb => Ok(Self::JCB),
+            grpc_api_types::payments::CardNetwork::Diners => Ok(Self::DinersClub),
+            grpc_api_types::payments::CardNetwork::Discover => Ok(Self::Discover),
+            grpc_api_types::payments::CardNetwork::CartesBancaires => Ok(Self::CartesBancaires),
+            grpc_api_types::payments::CardNetwork::Unionpay => Ok(Self::UnionPay),
+            grpc_api_types::payments::CardNetwork::Rupay => Ok(Self::RuPay),
+            grpc_api_types::payments::CardNetwork::Maestro => Ok(Self::Maestro),
+            grpc_api_types::payments::CardNetwork::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_CARD_NETWORK".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Card network must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         }
     }
 }
@@ -116,8 +120,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
             Some(data) => match data {
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
                     match card_type.card_type {
-                        Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => Ok(
-                            PaymentMethodData::Card(crate::payment_method_data::Card {
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => {
+                            let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
+                            Ok(PaymentMethodData::Card(crate::payment_method_data::Card {
                                 card_number: cards::CardNumber::from_str(&card.card_number)
                                     .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_CARD_NUMBER".to_owned(),
@@ -129,30 +134,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 card_exp_year: card.card_exp_year.into(),
                                 card_cvc: card.card_cvc.into(),
                                 card_issuer: card.card_issuer,
-                                card_network: card
-                                    .card_network
-                                    .map(|network| {
-                                        common_enums::CardNetwork::foreign_try_from(network)
-                                            .change_context(ApplicationErrorResponse::BadRequest(
-                                                ApiError {
-                                                    sub_code: "INVALID_CARD_NETWORK".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Invalid card network".to_owned(),
-                                                    error_object: None,
-                                                },
-                                            ))
-                                    })
-                                    .transpose()?,
+                                card_network,
                                 card_type: card.card_type,
                                 card_issuing_country: card.card_issuing_country_alpha2,
                                 bank_code: card.bank_code,
                                 nick_name: card.nick_name.map(|name| name.into()),
                                 card_holder_name: card.card_holder_name.map(Secret::new),
                                 co_badged_card_data: None, // TODO: Handle co-badged card data
-                            }),
-                        ),
-                        Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => Ok(
-                            PaymentMethodData::Card(crate::payment_method_data::Card {
+                            }))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => {
+                            let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
+                            Ok(PaymentMethodData::Card(crate::payment_method_data::Card {
                                 card_number: cards::CardNumber::from_str(&card.card_number)
                                     .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_CARD_NUMBER".to_owned(),
@@ -164,28 +157,15 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 card_exp_year: card.card_exp_year.into(),
                                 card_cvc: card.card_cvc.into(),
                                 card_issuer: card.card_issuer,
-                                card_network: card
-                                    .card_network
-                                    .map(|network| {
-                                        common_enums::CardNetwork::foreign_try_from(network)
-                                            .change_context(ApplicationErrorResponse::BadRequest(
-                                                ApiError {
-                                                    sub_code: "INVALID_CARD_NETWORK".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Invalid card network".to_owned(),
-                                                    error_object: None,
-                                                },
-                                            ))
-                                    })
-                                    .transpose()?,
+                                card_network,
                                 card_type: card.card_type,
                                 card_issuing_country: card.card_issuing_country_alpha2,
                                 bank_code: card.bank_code,
                                 nick_name: card.nick_name.map(|name| name.into()),
                                 card_holder_name: card.card_holder_name.map(Secret::new),
                                 co_badged_card_data: None, // TODO: Handle co-badged card data
-                            }),
-                        ),
+                            }))
+                        },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_card_redirect)) => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -535,266 +515,263 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
     }
 }
 
-impl ForeignTryFrom<i32> for common_enums::CountryAlpha2 {
+impl ForeignTryFrom<grpc_api_types::payments::CountryAlpha2> for common_enums::CountryAlpha2 {
     type Error = ApplicationErrorResponse;
 
-    fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        value: grpc_api_types::payments::CountryAlpha2,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            0 => Ok(Self::US),
-            1 => Ok(Self::AF),
-            2 => Ok(Self::AX),
-            3 => Ok(Self::AL),
-            4 => Ok(Self::DZ),
-            5 => Ok(Self::AS),
-            6 => Ok(Self::AD),
-            7 => Ok(Self::AO),
-            8 => Ok(Self::AI),
-            9 => Ok(Self::AQ),
-            10 => Ok(Self::AG),
-            11 => Ok(Self::AR),
-            12 => Ok(Self::AM),
-            13 => Ok(Self::AW),
-            14 => Ok(Self::AU),
-            15 => Ok(Self::AT),
-            16 => Ok(Self::AZ),
-            17 => Ok(Self::BS),
-            18 => Ok(Self::BH),
-            19 => Ok(Self::BD),
-            20 => Ok(Self::BB),
-            21 => Ok(Self::BY),
-            22 => Ok(Self::BE),
-            23 => Ok(Self::BZ),
-            24 => Ok(Self::BJ),
-            25 => Ok(Self::BM),
-            26 => Ok(Self::BT),
-            27 => Ok(Self::BO),
-            28 => Ok(Self::BQ),
-            29 => Ok(Self::BA),
-            30 => Ok(Self::BW),
-            31 => Ok(Self::BV),
-            32 => Ok(Self::BR),
-            33 => Ok(Self::IO),
-            34 => Ok(Self::BN),
-            35 => Ok(Self::BG),
-            36 => Ok(Self::BF),
-            37 => Ok(Self::BI),
-            38 => Ok(Self::KH),
-            39 => Ok(Self::CM),
-            40 => Ok(Self::CA),
-            41 => Ok(Self::CV),
-            42 => Ok(Self::KY),
-            43 => Ok(Self::CF),
-            44 => Ok(Self::TD),
-            45 => Ok(Self::CL),
-            46 => Ok(Self::CN),
-            47 => Ok(Self::CX),
-            48 => Ok(Self::CC),
-            49 => Ok(Self::CO),
-            50 => Ok(Self::KM),
-            51 => Ok(Self::CG),
-            52 => Ok(Self::CD),
-            53 => Ok(Self::CK),
-            54 => Ok(Self::CR),
-            55 => Ok(Self::CI),
-            56 => Ok(Self::HR),
-            57 => Ok(Self::CU),
-            58 => Ok(Self::CW),
-            59 => Ok(Self::CY),
-            60 => Ok(Self::CZ),
-            61 => Ok(Self::DK),
-            62 => Ok(Self::DJ),
-            63 => Ok(Self::DM),
-            64 => Ok(Self::DO),
-            65 => Ok(Self::EC),
-            66 => Ok(Self::EG),
-            67 => Ok(Self::SV),
-            68 => Ok(Self::GQ),
-            69 => Ok(Self::ER),
-            70 => Ok(Self::EE),
-            71 => Ok(Self::ET),
-            72 => Ok(Self::FK),
-            73 => Ok(Self::FO),
-            74 => Ok(Self::FJ),
-            75 => Ok(Self::FI),
-            76 => Ok(Self::FR),
-            77 => Ok(Self::GF),
-            78 => Ok(Self::PF),
-            79 => Ok(Self::TF),
-            80 => Ok(Self::GA),
-            81 => Ok(Self::GM),
-            82 => Ok(Self::GE),
-            83 => Ok(Self::DE),
-            84 => Ok(Self::GH),
-            85 => Ok(Self::GI),
-            86 => Ok(Self::GR),
-            87 => Ok(Self::GL),
-            88 => Ok(Self::GD),
-            89 => Ok(Self::GP),
-            90 => Ok(Self::GU),
-            91 => Ok(Self::GT),
-            92 => Ok(Self::GG),
-            93 => Ok(Self::GN),
-            94 => Ok(Self::GW),
-            95 => Ok(Self::GY),
-            96 => Ok(Self::HT),
-            97 => Ok(Self::HM),
-            98 => Ok(Self::VA),
-            99 => Ok(Self::HN),
-            100 => Ok(Self::HK),
-            101 => Ok(Self::HU),
-            102 => Ok(Self::IS),
-            103 => Ok(Self::IN),
-            104 => Ok(Self::ID),
-            105 => Ok(Self::IR),
-            106 => Ok(Self::IQ),
-            107 => Ok(Self::IE),
-            108 => Ok(Self::IM),
-            109 => Ok(Self::IL),
-            110 => Ok(Self::IT),
-            111 => Ok(Self::JM),
-            112 => Ok(Self::JP),
-            113 => Ok(Self::JE),
-            114 => Ok(Self::JO),
-            115 => Ok(Self::KZ),
-            116 => Ok(Self::KE),
-            117 => Ok(Self::KI),
-            118 => Ok(Self::KP),
-            119 => Ok(Self::KR),
-            120 => Ok(Self::KW),
-            121 => Ok(Self::KG),
-            122 => Ok(Self::LA),
-            123 => Ok(Self::LV),
-            124 => Ok(Self::LB),
-            125 => Ok(Self::LS),
-            126 => Ok(Self::LR),
-            127 => Ok(Self::LY),
-            128 => Ok(Self::LI),
-            129 => Ok(Self::LT),
-            130 => Ok(Self::LU),
-            131 => Ok(Self::MO),
-            132 => Ok(Self::MK),
-            133 => Ok(Self::MG),
-            134 => Ok(Self::MW),
-            135 => Ok(Self::MY),
-            136 => Ok(Self::MV),
-            137 => Ok(Self::ML),
-            138 => Ok(Self::MT),
-            139 => Ok(Self::MH),
-            140 => Ok(Self::MQ),
-            141 => Ok(Self::MR),
-            142 => Ok(Self::MU),
-            143 => Ok(Self::YT),
-            144 => Ok(Self::MX),
-            145 => Ok(Self::FM),
-            146 => Ok(Self::MD),
-            147 => Ok(Self::MC),
-            148 => Ok(Self::MN),
-            149 => Ok(Self::ME),
-            150 => Ok(Self::MS),
-            151 => Ok(Self::MA),
-            152 => Ok(Self::MZ),
-            153 => Ok(Self::MM),
-            154 => Ok(Self::NA),
-            155 => Ok(Self::NR),
-            156 => Ok(Self::NP),
-            157 => Ok(Self::NL),
-            158 => Ok(Self::NC),
-            159 => Ok(Self::NZ),
-            160 => Ok(Self::NI),
-            161 => Ok(Self::NE),
-            162 => Ok(Self::NG),
-            163 => Ok(Self::NU),
-            164 => Ok(Self::NF),
-            165 => Ok(Self::MP),
-            166 => Ok(Self::NO),
-            167 => Ok(Self::OM),
-            168 => Ok(Self::PK),
-            169 => Ok(Self::PW),
-            170 => Ok(Self::PS),
-            171 => Ok(Self::PA),
-            172 => Ok(Self::PG),
-            173 => Ok(Self::PY),
-            174 => Ok(Self::PE),
-            175 => Ok(Self::PH),
-            176 => Ok(Self::PN),
-            177 => Ok(Self::PL),
-            178 => Ok(Self::PT),
-            179 => Ok(Self::PR),
-            180 => Ok(Self::QA),
-            181 => Ok(Self::RE),
-            182 => Ok(Self::RO),
-            183 => Ok(Self::RU),
-            184 => Ok(Self::RW),
-            185 => Ok(Self::BL),
-            186 => Ok(Self::SH),
-            187 => Ok(Self::KN),
-            188 => Ok(Self::LC),
-            189 => Ok(Self::MF),
-            190 => Ok(Self::PM),
-            191 => Ok(Self::VC),
-            192 => Ok(Self::WS),
-            193 => Ok(Self::SM),
-            194 => Ok(Self::ST),
-            195 => Ok(Self::SA),
-            196 => Ok(Self::SN),
-            197 => Ok(Self::RS),
-            198 => Ok(Self::SC),
-            199 => Ok(Self::SL),
-            200 => Ok(Self::SG),
-            201 => Ok(Self::SX),
-            202 => Ok(Self::SK),
-            203 => Ok(Self::SI),
-            204 => Ok(Self::SB),
-            205 => Ok(Self::SO),
-            206 => Ok(Self::ZA),
-            207 => Ok(Self::GS),
-            208 => Ok(Self::SS),
-            209 => Ok(Self::ES),
-            210 => Ok(Self::LK),
-            211 => Ok(Self::SD),
-            212 => Ok(Self::SR),
-            213 => Ok(Self::SJ),
-            214 => Ok(Self::SZ),
-            215 => Ok(Self::SE),
-            216 => Ok(Self::CH),
-            217 => Ok(Self::SY),
-            218 => Ok(Self::TW),
-            219 => Ok(Self::TJ),
-            220 => Ok(Self::TZ),
-            221 => Ok(Self::TH),
-            222 => Ok(Self::TL),
-            223 => Ok(Self::TG),
-            224 => Ok(Self::TK),
-            225 => Ok(Self::TO),
-            226 => Ok(Self::TT),
-            227 => Ok(Self::TN),
-            228 => Ok(Self::TR),
-            229 => Ok(Self::TM),
-            230 => Ok(Self::TC),
-            231 => Ok(Self::TV),
-            232 => Ok(Self::UG),
-            233 => Ok(Self::UA),
-            234 => Ok(Self::AE),
-            235 => Ok(Self::GB),
-            236 => Ok(Self::UM),
-            237 => Ok(Self::UY),
-            238 => Ok(Self::UZ),
-            239 => Ok(Self::VU),
-            240 => Ok(Self::VE),
-            241 => Ok(Self::VN),
-            242 => Ok(Self::VG),
-            243 => Ok(Self::VI),
-            244 => Ok(Self::WF),
-            245 => Ok(Self::EH),
-            246 => Ok(Self::YE),
-            247 => Ok(Self::ZM),
-            248 => Ok(Self::ZW),
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_ADDRESS".to_owned(),
-                error_identifier: 400,
-                error_message: "Address is required".to_owned(),
-                error_object: None,
-            }))?,
+            grpc_api_types::payments::CountryAlpha2::Us => Ok(Self::US),
+            grpc_api_types::payments::CountryAlpha2::Af => Ok(Self::AF),
+            grpc_api_types::payments::CountryAlpha2::Ax => Ok(Self::AX),
+            grpc_api_types::payments::CountryAlpha2::Al => Ok(Self::AL),
+            grpc_api_types::payments::CountryAlpha2::Dz => Ok(Self::DZ),
+            grpc_api_types::payments::CountryAlpha2::As => Ok(Self::AS),
+            grpc_api_types::payments::CountryAlpha2::Ad => Ok(Self::AD),
+            grpc_api_types::payments::CountryAlpha2::Ao => Ok(Self::AO),
+            grpc_api_types::payments::CountryAlpha2::Ai => Ok(Self::AI),
+            grpc_api_types::payments::CountryAlpha2::Aq => Ok(Self::AQ),
+            grpc_api_types::payments::CountryAlpha2::Ag => Ok(Self::AG),
+            grpc_api_types::payments::CountryAlpha2::Ar => Ok(Self::AR),
+            grpc_api_types::payments::CountryAlpha2::Am => Ok(Self::AM),
+            grpc_api_types::payments::CountryAlpha2::Aw => Ok(Self::AW),
+            grpc_api_types::payments::CountryAlpha2::Au => Ok(Self::AU),
+            grpc_api_types::payments::CountryAlpha2::At => Ok(Self::AT),
+            grpc_api_types::payments::CountryAlpha2::Az => Ok(Self::AZ),
+            grpc_api_types::payments::CountryAlpha2::Bs => Ok(Self::BS),
+            grpc_api_types::payments::CountryAlpha2::Bh => Ok(Self::BH),
+            grpc_api_types::payments::CountryAlpha2::Bd => Ok(Self::BD),
+            grpc_api_types::payments::CountryAlpha2::Bb => Ok(Self::BB),
+            grpc_api_types::payments::CountryAlpha2::By => Ok(Self::BY),
+            grpc_api_types::payments::CountryAlpha2::Be => Ok(Self::BE),
+            grpc_api_types::payments::CountryAlpha2::Bz => Ok(Self::BZ),
+            grpc_api_types::payments::CountryAlpha2::Bj => Ok(Self::BJ),
+            grpc_api_types::payments::CountryAlpha2::Bm => Ok(Self::BM),
+            grpc_api_types::payments::CountryAlpha2::Bt => Ok(Self::BT),
+            grpc_api_types::payments::CountryAlpha2::Bo => Ok(Self::BO),
+            grpc_api_types::payments::CountryAlpha2::Bq => Ok(Self::BQ),
+            grpc_api_types::payments::CountryAlpha2::Ba => Ok(Self::BA),
+            grpc_api_types::payments::CountryAlpha2::Bw => Ok(Self::BW),
+            grpc_api_types::payments::CountryAlpha2::Bv => Ok(Self::BV),
+            grpc_api_types::payments::CountryAlpha2::Br => Ok(Self::BR),
+            grpc_api_types::payments::CountryAlpha2::Io => Ok(Self::IO),
+            grpc_api_types::payments::CountryAlpha2::Bn => Ok(Self::BN),
+            grpc_api_types::payments::CountryAlpha2::Bg => Ok(Self::BG),
+            grpc_api_types::payments::CountryAlpha2::Bf => Ok(Self::BF),
+            grpc_api_types::payments::CountryAlpha2::Bi => Ok(Self::BI),
+            grpc_api_types::payments::CountryAlpha2::Kh => Ok(Self::KH),
+            grpc_api_types::payments::CountryAlpha2::Cm => Ok(Self::CM),
+            grpc_api_types::payments::CountryAlpha2::Ca => Ok(Self::CA),
+            grpc_api_types::payments::CountryAlpha2::Cv => Ok(Self::CV),
+            grpc_api_types::payments::CountryAlpha2::Ky => Ok(Self::KY),
+            grpc_api_types::payments::CountryAlpha2::Cf => Ok(Self::CF),
+            grpc_api_types::payments::CountryAlpha2::Td => Ok(Self::TD),
+            grpc_api_types::payments::CountryAlpha2::Cl => Ok(Self::CL),
+            grpc_api_types::payments::CountryAlpha2::Cn => Ok(Self::CN),
+            grpc_api_types::payments::CountryAlpha2::Cx => Ok(Self::CX),
+            grpc_api_types::payments::CountryAlpha2::Cc => Ok(Self::CC),
+            grpc_api_types::payments::CountryAlpha2::Co => Ok(Self::CO),
+            grpc_api_types::payments::CountryAlpha2::Km => Ok(Self::KM),
+            grpc_api_types::payments::CountryAlpha2::Cg => Ok(Self::CG),
+            grpc_api_types::payments::CountryAlpha2::Cd => Ok(Self::CD),
+            grpc_api_types::payments::CountryAlpha2::Ck => Ok(Self::CK),
+            grpc_api_types::payments::CountryAlpha2::Cr => Ok(Self::CR),
+            grpc_api_types::payments::CountryAlpha2::Ci => Ok(Self::CI),
+            grpc_api_types::payments::CountryAlpha2::Hr => Ok(Self::HR),
+            grpc_api_types::payments::CountryAlpha2::Cu => Ok(Self::CU),
+            grpc_api_types::payments::CountryAlpha2::Cw => Ok(Self::CW),
+            grpc_api_types::payments::CountryAlpha2::Cy => Ok(Self::CY),
+            grpc_api_types::payments::CountryAlpha2::Cz => Ok(Self::CZ),
+            grpc_api_types::payments::CountryAlpha2::Dk => Ok(Self::DK),
+            grpc_api_types::payments::CountryAlpha2::Dj => Ok(Self::DJ),
+            grpc_api_types::payments::CountryAlpha2::Dm => Ok(Self::DM),
+            grpc_api_types::payments::CountryAlpha2::Do => Ok(Self::DO),
+            grpc_api_types::payments::CountryAlpha2::Ec => Ok(Self::EC),
+            grpc_api_types::payments::CountryAlpha2::Eg => Ok(Self::EG),
+            grpc_api_types::payments::CountryAlpha2::Sv => Ok(Self::SV),
+            grpc_api_types::payments::CountryAlpha2::Gq => Ok(Self::GQ),
+            grpc_api_types::payments::CountryAlpha2::Er => Ok(Self::ER),
+            grpc_api_types::payments::CountryAlpha2::Ee => Ok(Self::EE),
+            grpc_api_types::payments::CountryAlpha2::Et => Ok(Self::ET),
+            grpc_api_types::payments::CountryAlpha2::Fk => Ok(Self::FK),
+            grpc_api_types::payments::CountryAlpha2::Fo => Ok(Self::FO),
+            grpc_api_types::payments::CountryAlpha2::Fj => Ok(Self::FJ),
+            grpc_api_types::payments::CountryAlpha2::Fi => Ok(Self::FI),
+            grpc_api_types::payments::CountryAlpha2::Fr => Ok(Self::FR),
+            grpc_api_types::payments::CountryAlpha2::Gf => Ok(Self::GF),
+            grpc_api_types::payments::CountryAlpha2::Pf => Ok(Self::PF),
+            grpc_api_types::payments::CountryAlpha2::Tf => Ok(Self::TF),
+            grpc_api_types::payments::CountryAlpha2::Ga => Ok(Self::GA),
+            grpc_api_types::payments::CountryAlpha2::Gm => Ok(Self::GM),
+            grpc_api_types::payments::CountryAlpha2::Ge => Ok(Self::GE),
+            grpc_api_types::payments::CountryAlpha2::De => Ok(Self::DE),
+            grpc_api_types::payments::CountryAlpha2::Gh => Ok(Self::GH),
+            grpc_api_types::payments::CountryAlpha2::Gi => Ok(Self::GI),
+            grpc_api_types::payments::CountryAlpha2::Gr => Ok(Self::GR),
+            grpc_api_types::payments::CountryAlpha2::Gl => Ok(Self::GL),
+            grpc_api_types::payments::CountryAlpha2::Gd => Ok(Self::GD),
+            grpc_api_types::payments::CountryAlpha2::Gp => Ok(Self::GP),
+            grpc_api_types::payments::CountryAlpha2::Gu => Ok(Self::GU),
+            grpc_api_types::payments::CountryAlpha2::Gt => Ok(Self::GT),
+            grpc_api_types::payments::CountryAlpha2::Gg => Ok(Self::GG),
+            grpc_api_types::payments::CountryAlpha2::Gn => Ok(Self::GN),
+            grpc_api_types::payments::CountryAlpha2::Gw => Ok(Self::GW),
+            grpc_api_types::payments::CountryAlpha2::Gy => Ok(Self::GY),
+            grpc_api_types::payments::CountryAlpha2::Ht => Ok(Self::HT),
+            grpc_api_types::payments::CountryAlpha2::Hm => Ok(Self::HM),
+            grpc_api_types::payments::CountryAlpha2::Va => Ok(Self::VA),
+            grpc_api_types::payments::CountryAlpha2::Hn => Ok(Self::HN),
+            grpc_api_types::payments::CountryAlpha2::Hk => Ok(Self::HK),
+            grpc_api_types::payments::CountryAlpha2::Hu => Ok(Self::HU),
+            grpc_api_types::payments::CountryAlpha2::Is => Ok(Self::IS),
+            grpc_api_types::payments::CountryAlpha2::In => Ok(Self::IN),
+            grpc_api_types::payments::CountryAlpha2::Id => Ok(Self::ID),
+            grpc_api_types::payments::CountryAlpha2::Ir => Ok(Self::IR),
+            grpc_api_types::payments::CountryAlpha2::Iq => Ok(Self::IQ),
+            grpc_api_types::payments::CountryAlpha2::Ie => Ok(Self::IE),
+            grpc_api_types::payments::CountryAlpha2::Im => Ok(Self::IM),
+            grpc_api_types::payments::CountryAlpha2::Il => Ok(Self::IL),
+            grpc_api_types::payments::CountryAlpha2::It => Ok(Self::IT),
+            grpc_api_types::payments::CountryAlpha2::Jm => Ok(Self::JM),
+            grpc_api_types::payments::CountryAlpha2::Jp => Ok(Self::JP),
+            grpc_api_types::payments::CountryAlpha2::Je => Ok(Self::JE),
+            grpc_api_types::payments::CountryAlpha2::Jo => Ok(Self::JO),
+            grpc_api_types::payments::CountryAlpha2::Kz => Ok(Self::KZ),
+            grpc_api_types::payments::CountryAlpha2::Ke => Ok(Self::KE),
+            grpc_api_types::payments::CountryAlpha2::Ki => Ok(Self::KI),
+            grpc_api_types::payments::CountryAlpha2::Kp => Ok(Self::KP),
+            grpc_api_types::payments::CountryAlpha2::Kr => Ok(Self::KR),
+            grpc_api_types::payments::CountryAlpha2::Kw => Ok(Self::KW),
+            grpc_api_types::payments::CountryAlpha2::Kg => Ok(Self::KG),
+            grpc_api_types::payments::CountryAlpha2::La => Ok(Self::LA),
+            grpc_api_types::payments::CountryAlpha2::Lv => Ok(Self::LV),
+            grpc_api_types::payments::CountryAlpha2::Lb => Ok(Self::LB),
+            grpc_api_types::payments::CountryAlpha2::Ls => Ok(Self::LS),
+            grpc_api_types::payments::CountryAlpha2::Lr => Ok(Self::LR),
+            grpc_api_types::payments::CountryAlpha2::Ly => Ok(Self::LY),
+            grpc_api_types::payments::CountryAlpha2::Li => Ok(Self::LI),
+            grpc_api_types::payments::CountryAlpha2::Lt => Ok(Self::LT),
+            grpc_api_types::payments::CountryAlpha2::Lu => Ok(Self::LU),
+            grpc_api_types::payments::CountryAlpha2::Mo => Ok(Self::MO),
+            grpc_api_types::payments::CountryAlpha2::Mk => Ok(Self::MK),
+            grpc_api_types::payments::CountryAlpha2::Mg => Ok(Self::MG),
+            grpc_api_types::payments::CountryAlpha2::Mw => Ok(Self::MW),
+            grpc_api_types::payments::CountryAlpha2::My => Ok(Self::MY),
+            grpc_api_types::payments::CountryAlpha2::Mv => Ok(Self::MV),
+            grpc_api_types::payments::CountryAlpha2::Ml => Ok(Self::ML),
+            grpc_api_types::payments::CountryAlpha2::Mt => Ok(Self::MT),
+            grpc_api_types::payments::CountryAlpha2::Mh => Ok(Self::MH),
+            grpc_api_types::payments::CountryAlpha2::Mq => Ok(Self::MQ),
+            grpc_api_types::payments::CountryAlpha2::Mr => Ok(Self::MR),
+            grpc_api_types::payments::CountryAlpha2::Mu => Ok(Self::MU),
+            grpc_api_types::payments::CountryAlpha2::Yt => Ok(Self::YT),
+            grpc_api_types::payments::CountryAlpha2::Mx => Ok(Self::MX),
+            grpc_api_types::payments::CountryAlpha2::Fm => Ok(Self::FM),
+            grpc_api_types::payments::CountryAlpha2::Md => Ok(Self::MD),
+            grpc_api_types::payments::CountryAlpha2::Mc => Ok(Self::MC),
+            grpc_api_types::payments::CountryAlpha2::Mn => Ok(Self::MN),
+            grpc_api_types::payments::CountryAlpha2::Me => Ok(Self::ME),
+            grpc_api_types::payments::CountryAlpha2::Ms => Ok(Self::MS),
+            grpc_api_types::payments::CountryAlpha2::Ma => Ok(Self::MA),
+            grpc_api_types::payments::CountryAlpha2::Mz => Ok(Self::MZ),
+            grpc_api_types::payments::CountryAlpha2::Mm => Ok(Self::MM),
+            grpc_api_types::payments::CountryAlpha2::Na => Ok(Self::NA),
+            grpc_api_types::payments::CountryAlpha2::Nr => Ok(Self::NR),
+            grpc_api_types::payments::CountryAlpha2::Np => Ok(Self::NP),
+            grpc_api_types::payments::CountryAlpha2::Nl => Ok(Self::NL),
+            grpc_api_types::payments::CountryAlpha2::Nc => Ok(Self::NC),
+            grpc_api_types::payments::CountryAlpha2::Nz => Ok(Self::NZ),
+            grpc_api_types::payments::CountryAlpha2::Ni => Ok(Self::NI),
+            grpc_api_types::payments::CountryAlpha2::Ne => Ok(Self::NE),
+            grpc_api_types::payments::CountryAlpha2::Ng => Ok(Self::NG),
+            grpc_api_types::payments::CountryAlpha2::Nu => Ok(Self::NU),
+            grpc_api_types::payments::CountryAlpha2::Nf => Ok(Self::NF),
+            grpc_api_types::payments::CountryAlpha2::Mp => Ok(Self::MP),
+            grpc_api_types::payments::CountryAlpha2::No => Ok(Self::NO),
+            grpc_api_types::payments::CountryAlpha2::Om => Ok(Self::OM),
+            grpc_api_types::payments::CountryAlpha2::Pk => Ok(Self::PK),
+            grpc_api_types::payments::CountryAlpha2::Pw => Ok(Self::PW),
+            grpc_api_types::payments::CountryAlpha2::Ps => Ok(Self::PS),
+            grpc_api_types::payments::CountryAlpha2::Pa => Ok(Self::PA),
+            grpc_api_types::payments::CountryAlpha2::Pg => Ok(Self::PG),
+            grpc_api_types::payments::CountryAlpha2::Py => Ok(Self::PY),
+            grpc_api_types::payments::CountryAlpha2::Pe => Ok(Self::PE),
+            grpc_api_types::payments::CountryAlpha2::Ph => Ok(Self::PH),
+            grpc_api_types::payments::CountryAlpha2::Pn => Ok(Self::PN),
+            grpc_api_types::payments::CountryAlpha2::Pl => Ok(Self::PL),
+            grpc_api_types::payments::CountryAlpha2::Pt => Ok(Self::PT),
+            grpc_api_types::payments::CountryAlpha2::Pr => Ok(Self::PR),
+            grpc_api_types::payments::CountryAlpha2::Qa => Ok(Self::QA),
+            grpc_api_types::payments::CountryAlpha2::Re => Ok(Self::RE),
+            grpc_api_types::payments::CountryAlpha2::Ro => Ok(Self::RO),
+            grpc_api_types::payments::CountryAlpha2::Ru => Ok(Self::RU),
+            grpc_api_types::payments::CountryAlpha2::Rw => Ok(Self::RW),
+            grpc_api_types::payments::CountryAlpha2::Bl => Ok(Self::BL),
+            grpc_api_types::payments::CountryAlpha2::Sh => Ok(Self::SH),
+            grpc_api_types::payments::CountryAlpha2::Kn => Ok(Self::KN),
+            grpc_api_types::payments::CountryAlpha2::Lc => Ok(Self::LC),
+            grpc_api_types::payments::CountryAlpha2::Mf => Ok(Self::MF),
+            grpc_api_types::payments::CountryAlpha2::Pm => Ok(Self::PM),
+            grpc_api_types::payments::CountryAlpha2::Vc => Ok(Self::VC),
+            grpc_api_types::payments::CountryAlpha2::Ws => Ok(Self::WS),
+            grpc_api_types::payments::CountryAlpha2::Sm => Ok(Self::SM),
+            grpc_api_types::payments::CountryAlpha2::St => Ok(Self::ST),
+            grpc_api_types::payments::CountryAlpha2::Sa => Ok(Self::SA),
+            grpc_api_types::payments::CountryAlpha2::Sn => Ok(Self::SN),
+            grpc_api_types::payments::CountryAlpha2::Rs => Ok(Self::RS),
+            grpc_api_types::payments::CountryAlpha2::Sc => Ok(Self::SC),
+            grpc_api_types::payments::CountryAlpha2::Sl => Ok(Self::SL),
+            grpc_api_types::payments::CountryAlpha2::Sg => Ok(Self::SG),
+            grpc_api_types::payments::CountryAlpha2::Sx => Ok(Self::SX),
+            grpc_api_types::payments::CountryAlpha2::Sk => Ok(Self::SK),
+            grpc_api_types::payments::CountryAlpha2::Si => Ok(Self::SI),
+            grpc_api_types::payments::CountryAlpha2::Sb => Ok(Self::SB),
+            grpc_api_types::payments::CountryAlpha2::So => Ok(Self::SO),
+            grpc_api_types::payments::CountryAlpha2::Za => Ok(Self::ZA),
+            grpc_api_types::payments::CountryAlpha2::Gs => Ok(Self::GS),
+            grpc_api_types::payments::CountryAlpha2::Ss => Ok(Self::SS),
+            grpc_api_types::payments::CountryAlpha2::Es => Ok(Self::ES),
+            grpc_api_types::payments::CountryAlpha2::Lk => Ok(Self::LK),
+            grpc_api_types::payments::CountryAlpha2::Sd => Ok(Self::SD),
+            grpc_api_types::payments::CountryAlpha2::Sr => Ok(Self::SR),
+            grpc_api_types::payments::CountryAlpha2::Sj => Ok(Self::SJ),
+            grpc_api_types::payments::CountryAlpha2::Sz => Ok(Self::SZ),
+            grpc_api_types::payments::CountryAlpha2::Se => Ok(Self::SE),
+            grpc_api_types::payments::CountryAlpha2::Ch => Ok(Self::CH),
+            grpc_api_types::payments::CountryAlpha2::Sy => Ok(Self::SY),
+            grpc_api_types::payments::CountryAlpha2::Tw => Ok(Self::TW),
+            grpc_api_types::payments::CountryAlpha2::Tj => Ok(Self::TJ),
+            grpc_api_types::payments::CountryAlpha2::Tz => Ok(Self::TZ),
+            grpc_api_types::payments::CountryAlpha2::Th => Ok(Self::TH),
+            grpc_api_types::payments::CountryAlpha2::Tl => Ok(Self::TL),
+            grpc_api_types::payments::CountryAlpha2::Tg => Ok(Self::TG),
+            grpc_api_types::payments::CountryAlpha2::Tk => Ok(Self::TK),
+            grpc_api_types::payments::CountryAlpha2::To => Ok(Self::TO),
+            grpc_api_types::payments::CountryAlpha2::Tt => Ok(Self::TT),
+            grpc_api_types::payments::CountryAlpha2::Tn => Ok(Self::TN),
+            grpc_api_types::payments::CountryAlpha2::Tr => Ok(Self::TR),
+            grpc_api_types::payments::CountryAlpha2::Tm => Ok(Self::TM),
+            grpc_api_types::payments::CountryAlpha2::Tc => Ok(Self::TC),
+            grpc_api_types::payments::CountryAlpha2::Tv => Ok(Self::TV),
+            grpc_api_types::payments::CountryAlpha2::Ug => Ok(Self::UG),
+            grpc_api_types::payments::CountryAlpha2::Ua => Ok(Self::UA),
+            grpc_api_types::payments::CountryAlpha2::Ae => Ok(Self::AE),
+            grpc_api_types::payments::CountryAlpha2::Gb => Ok(Self::GB),
+            grpc_api_types::payments::CountryAlpha2::Um => Ok(Self::UM),
+            grpc_api_types::payments::CountryAlpha2::Uy => Ok(Self::UY),
+            grpc_api_types::payments::CountryAlpha2::Uz => Ok(Self::UZ),
+            grpc_api_types::payments::CountryAlpha2::Vu => Ok(Self::VU),
+            grpc_api_types::payments::CountryAlpha2::Ve => Ok(Self::VE),
+            grpc_api_types::payments::CountryAlpha2::Vn => Ok(Self::VN),
+            grpc_api_types::payments::CountryAlpha2::Vg => Ok(Self::VG),
+            grpc_api_types::payments::CountryAlpha2::Vi => Ok(Self::VI),
+            grpc_api_types::payments::CountryAlpha2::Wf => Ok(Self::WF),
+            grpc_api_types::payments::CountryAlpha2::Eh => Ok(Self::EH),
+            grpc_api_types::payments::CountryAlpha2::Ye => Ok(Self::YE),
+            grpc_api_types::payments::CountryAlpha2::Zm => Ok(Self::ZM),
+            grpc_api_types::payments::CountryAlpha2::Zw => Ok(Self::ZW),
+            grpc_api_types::payments::CountryAlpha2::Unspecified => Ok(Self::US), // Default to US if unspecified
         }
     }
 }
@@ -805,11 +782,10 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            city: value.city,
-            country: value
-                .country_alpha2_code
-                .map(common_enums::CountryAlpha2::foreign_try_from)
-                .transpose()?,
+            city: value.city.clone(),
+            country: Some(common_enums::CountryAlpha2::foreign_try_from(
+                value.country_alpha2_code(),
+            )?),
             line1: value.line1.map(|val| val.into()),
             line2: value.line2.map(|val| val.into()),
             line3: value.line3.map(|val| val.into()),
@@ -1221,6 +1197,59 @@ impl ForeignFrom<common_enums::AttemptStatus> for grpc_api_types::payments::Paym
                 Self::PartialChargedAndChargeable
             }
             common_enums::AttemptStatus::IntegrityFailure => Self::Failure,
+            common_enums::AttemptStatus::Unknown => Self::AttemptStatusUnspecified,
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentStatus> for common_enums::AttemptStatus {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        status: grpc_api_types::payments::PaymentStatus,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match status {
+            grpc_api_types::payments::PaymentStatus::Charged => Ok(Self::Charged),
+            grpc_api_types::payments::PaymentStatus::Pending => Ok(Self::Pending),
+            grpc_api_types::payments::PaymentStatus::Failure => Ok(Self::Failure),
+            grpc_api_types::payments::PaymentStatus::Authorized => Ok(Self::Authorized),
+            grpc_api_types::payments::PaymentStatus::Started => Ok(Self::Started),
+            grpc_api_types::payments::PaymentStatus::AuthenticationFailed => {
+                Ok(Self::AuthenticationFailed)
+            }
+            grpc_api_types::payments::PaymentStatus::AuthenticationPending => {
+                Ok(Self::AuthenticationPending)
+            }
+            grpc_api_types::payments::PaymentStatus::AuthenticationSuccessful => {
+                Ok(Self::AuthenticationSuccessful)
+            }
+            grpc_api_types::payments::PaymentStatus::Authorizing => Ok(Self::Authorizing),
+            grpc_api_types::payments::PaymentStatus::CaptureInitiated => Ok(Self::CaptureInitiated),
+            grpc_api_types::payments::PaymentStatus::CaptureFailed => Ok(Self::CaptureFailed),
+            grpc_api_types::payments::PaymentStatus::VoidInitiated => Ok(Self::VoidInitiated),
+            grpc_api_types::payments::PaymentStatus::VoidFailed => Ok(Self::VoidFailed),
+            grpc_api_types::payments::PaymentStatus::Voided => Ok(Self::Voided),
+            grpc_api_types::payments::PaymentStatus::Unresolved => Ok(Self::Unresolved),
+            grpc_api_types::payments::PaymentStatus::PaymentMethodAwaited => {
+                Ok(Self::PaymentMethodAwaited)
+            }
+            grpc_api_types::payments::PaymentStatus::ConfirmationAwaited => {
+                Ok(Self::ConfirmationAwaited)
+            }
+            grpc_api_types::payments::PaymentStatus::DeviceDataCollectionPending => {
+                Ok(Self::DeviceDataCollectionPending)
+            }
+            grpc_api_types::payments::PaymentStatus::RouterDeclined => Ok(Self::RouterDeclined),
+            grpc_api_types::payments::PaymentStatus::AuthorizationFailed => {
+                Ok(Self::AuthorizationFailed)
+            }
+            grpc_api_types::payments::PaymentStatus::CodInitiated => Ok(Self::CodInitiated),
+            grpc_api_types::payments::PaymentStatus::AutoRefunded => Ok(Self::AutoRefunded),
+            grpc_api_types::payments::PaymentStatus::PartialCharged => Ok(Self::PartialCharged),
+            grpc_api_types::payments::PaymentStatus::PartialChargedAndChargeable => {
+                Ok(Self::PartialChargedAndChargeable)
+            }
+            grpc_api_types::payments::PaymentStatus::AttemptStatusUnspecified => Ok(Self::Unknown),
         }
     }
 }
@@ -2377,14 +2406,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             }))
         })?;
 
-        let setup_future_usage = value.setup_future_usage.ok_or_else(|| {
-            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_SETUP_FUTURE_USAGE".to_owned(),
-                error_identifier: 400,
-                error_message: "Setup future usage is missing".to_owned(),
-                error_object: None,
-            }))
-        })?;
+        let setup_future_usage = value.setup_future_usage();
 
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
@@ -2481,19 +2503,27 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
     }
 }
 
-impl ForeignTryFrom<i32> for common_enums::FutureUsage {
+impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
     type Error = ApplicationErrorResponse;
-    fn foreign_try_from(value: i32) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        value: grpc_api_types::payments::FutureUsage,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            0 => Ok(common_enums::FutureUsage::OffSession),
-            1 => Ok(common_enums::FutureUsage::OnSession),
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_FUTURE_USAGE".to_owned(),
-                error_identifier: 401,
-                error_message: format!("Invalid value for future_usage: {value}"),
-                error_object: None,
-            })
-            .into()),
+            grpc_api_types::payments::FutureUsage::OffSession => {
+                Ok(common_enums::FutureUsage::OffSession)
+            }
+            grpc_api_types::payments::FutureUsage::OnSession => {
+                Ok(common_enums::FutureUsage::OnSession)
+            }
+            grpc_api_types::payments::FutureUsage::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_FUTURE_USAGE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Future usage must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         }
     }
 }
@@ -2866,68 +2896,4 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
-}
-
-impl TryFrom<i32> for AttemptStatus {
-    type Error = ApplicationErrorResponse;
-
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => AttemptStatus::Started,
-            1 => AttemptStatus::AuthenticationFailed,
-            2 => AttemptStatus::RouterDeclined,
-            3 => AttemptStatus::AuthenticationPending,
-            4 => AttemptStatus::AuthenticationSuccessful,
-            5 => AttemptStatus::Authorized,
-            6 => AttemptStatus::AuthorizationFailed,
-            7 => AttemptStatus::Charged,
-            8 => AttemptStatus::Authorizing,
-            9 => AttemptStatus::CodInitiated,
-            10 => AttemptStatus::Voided,
-            11 => AttemptStatus::VoidInitiated,
-            12 => AttemptStatus::CaptureInitiated,
-            13 => AttemptStatus::CaptureFailed,
-            14 => AttemptStatus::VoidFailed,
-            15 => AttemptStatus::AutoRefunded,
-            16 => AttemptStatus::PartialCharged,
-            17 => AttemptStatus::PartialChargedAndChargeable,
-            18 => AttemptStatus::Unresolved,
-            19 => AttemptStatus::Pending,
-            20 => AttemptStatus::Failure,
-            21 => AttemptStatus::PaymentMethodAwaited,
-            22 => AttemptStatus::ConfirmationAwaited,
-            23 => AttemptStatus::DeviceDataCollectionPending,
-            _ => AttemptStatus::Unknown,
-        })
-    }
-}
-
-#[derive(Debug, strum::Display)]
-#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
-pub enum AttemptStatus {
-    Started,
-    AuthenticationFailed,
-    RouterDeclined,
-    AuthenticationPending,
-    AuthenticationSuccessful,
-    Authorized,
-    AuthorizationFailed,
-    Charged,
-    Authorizing,
-    CodInitiated,
-    Voided,
-    VoidInitiated,
-    CaptureInitiated,
-    CaptureFailed,
-    VoidFailed,
-    AutoRefunded,
-    PartialCharged,
-    PartialChargedAndChargeable,
-    Unresolved,
-    Pending,
-    Failure,
-    PaymentMethodAwaited,
-    ConfirmationAwaited,
-    DeviceDataCollectionPending,
-    Unknown,
 }

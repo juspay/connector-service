@@ -19,13 +19,8 @@ use domain_types::{
         RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
-    types::AttemptStatus,
-};
-use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-};
-use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
@@ -403,9 +398,9 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
+                let status = response.get_ref().status();
+                let status_str = common_enums::AttemptStatus::foreign_try_from(status)
+                    .unwrap_or(common_enums::AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -469,9 +464,9 @@ impl PaymentService for Payments {
         match &result {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
+                let status = response.get_ref().status();
+                let status_str = common_enums::AttemptStatus::foreign_try_from(status)
+                    .unwrap_or(common_enums::AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -536,9 +531,9 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
+                let status = response.get_ref().status();
+                let status_str = common_enums::AttemptStatus::foreign_try_from(status)
+                    .unwrap_or(common_enums::AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -889,9 +884,9 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
+                let status = response.get_ref().status();
+                let status_str = common_enums::AttemptStatus::foreign_try_from(status)
+                    .unwrap_or(common_enums::AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }
@@ -1040,8 +1035,12 @@ impl PaymentService for Payments {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
                 let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
+                let status_str = grpc_api_types::payments::PaymentStatus::try_from(status)
+                    .ok()
+                    .and_then(|proto_status| {
+                        common_enums::AttemptStatus::foreign_try_from(proto_status).ok()
+                    })
+                    .unwrap_or(common_enums::AttemptStatus::Unknown)
                     .to_string();
                 current_span.record("flow_specific_fields.status", status_str);
             }

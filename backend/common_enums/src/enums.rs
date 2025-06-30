@@ -984,6 +984,7 @@ pub enum AttemptStatus {
     ConfirmationAwaited,
     DeviceDataCollectionPending,
     IntegrityFailure,
+    Unknown,
 }
 
 impl AttemptStatus {

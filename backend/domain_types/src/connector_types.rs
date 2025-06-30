@@ -47,21 +47,32 @@ pub enum ConnectorEnum {
     Checkout,
 }
 
-impl ForeignTryFrom<i32> for ConnectorEnum {
+impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
     type Error = ApplicationErrorResponse;
 
-    fn foreign_try_from(connector: i32) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        connector: grpc_api_types::payments::Connector,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match connector {
-            2 => Ok(Self::Adyen),
-            68 => Ok(Self::Razorpay),
-            28 => Ok(Self::Fiserv),
-            778 => Ok(Self::Elavon),
-            87 => Ok(Self::Xendit),
-            15 => Ok(Self::Checkout),
+            grpc_api_types::payments::Connector::Adyen => Ok(Self::Adyen),
+            grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
+            grpc_api_types::payments::Connector::Fiserv => Ok(Self::Fiserv),
+            grpc_api_types::payments::Connector::Elavon => Ok(Self::Elavon),
+            grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
+            grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
+            grpc_api_types::payments::Connector::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Connector must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
-                error_identifier: 401,
-                error_message: format!("Invalid value for authenticate_by: {connector}"),
+                error_identifier: 400,
+                error_message: format!("Connector {connector:?} is not supported"),
                 error_object: None,
             })
             .into()),
