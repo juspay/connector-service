@@ -15,10 +15,6 @@ use domain_types::{
 };
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use common_utils::{
-    // consts::BASE64_ENGINE,
-    request::{Method, Request, RequestContent},
-};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
