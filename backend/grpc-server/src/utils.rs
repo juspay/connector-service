@@ -39,6 +39,17 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
     span
 }
 
+pub fn connector_merchant_id_tenant_id_request_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<(connector_types::ConnectorEnum, String, String, String), ApplicationErrorResponse>
+{
+    let connector = connector_from_metadata(metadata)?;
+    let merchant_id = merchant_id_from_metadata(metadata)?;
+    let tenant_id = tenant_id_from_metadata(metadata)?;
+    let request_id = request_id_from_metadata(metadata)?;
+    Ok((connector, merchant_id, tenant_id, request_id))
+}
+
 pub fn connector_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
@@ -47,11 +58,56 @@ pub fn connector_from_metadata(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_string(),
                 error_identifier: 400,
-                error_message: format!("Invalid connector: {}", e),
+                error_message: format!("Invalid connector: {e}"),
                 error_object: None,
             }))
         })
     })
+}
+
+pub fn merchant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_MERCHANT_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing merchant ID in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
+}
+
+pub fn request_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_REQUEST_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_REQUEST_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing request ID in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
+}
+
+pub fn tenant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_TENANT_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_TENANT_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing tenant ID in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
 }
 
 pub fn auth_from_metadata(
@@ -85,7 +141,7 @@ pub fn auth_from_metadata(
             ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_AUTH_TYPE".to_string(),
                 error_identifier: 400,
-                error_message: format!("Invalid auth type: {}", auth),
+                error_message: format!("Invalid auth type: {auth}"),
                 error_object: None,
             }),
         )),
@@ -195,7 +251,7 @@ fn parse_metadata<'a>(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_METADATA".to_string(),
                 error_identifier: 400,
-                error_message: format!("Missing {} in request metadata", key),
+                error_message: format!("Missing {key} in request metadata"),
                 error_object: None,
             }))
         })
@@ -204,7 +260,7 @@ fn parse_metadata<'a>(
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_METADATA".to_string(),
                     error_identifier: 400,
-                    error_message: format!("Invalid {} in request metadata: {}", key, e),
+                    error_message: format!("Invalid {key} in request metadata: {e}"),
                     error_object: None,
                 }))
             })

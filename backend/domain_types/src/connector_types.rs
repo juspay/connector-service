@@ -19,9 +19,10 @@ use common_utils::{errors, types::MinorUnit};
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use strum::{Display, EnumString};
 
 // snake case for enum variants
-#[derive(Clone, Debug, strum::EnumString)]
+#[derive(Clone, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -29,6 +30,7 @@ pub enum ConnectorEnum {
     Fiserv,
     Elavon,
     Xendit,
+    Checkout,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -41,10 +43,11 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             28 => Ok(Self::Fiserv),
             778 => Ok(Self::Elavon),
             87 => Ok(Self::Xendit),
+            15 => Ok(Self::Checkout),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for authenticate_by: {}", connector),
+                error_message: format!("Invalid value for authenticate_by: {connector}"),
                 error_object: None,
             })
             .into()),

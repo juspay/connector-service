@@ -40,6 +40,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
+    pub checkout: ConnectorParams,
 }
 
 #[derive(Clone, Deserialize, Debug, Serialize, Default)]
@@ -71,7 +72,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_capture_method".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Capture method {:?} is not supported", value),
+                error_message: format!("Capture method {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -96,7 +97,7 @@ impl ForeignTryFrom<i32> for common_enums::CardNetwork {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CARD_NETWORK".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for card network: {}", connector),
+                error_message: format!("Invalid value for card network: {connector}"),
                 error_object: None,
             })
             .into()),
@@ -372,7 +373,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_currency".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Currency {:?} is not supported", value),
+                error_message: format!("Currency {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -1748,7 +1749,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             connector_transaction_id: value
-                .request_ref_id
+                .transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -2409,7 +2410,7 @@ impl ForeignTryFrom<i32> for common_enums::FutureUsage {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_FUTURE_USAGE".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for future_usage: {}", value),
+                error_message: format!("Invalid value for future_usage: {value}"),
                 error_object: None,
             })
             .into()),
@@ -2784,4 +2785,68 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+}
+
+impl TryFrom<i32> for AttemptStatus {
+    type Error = ApplicationErrorResponse;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => AttemptStatus::Started,
+            1 => AttemptStatus::AuthenticationFailed,
+            2 => AttemptStatus::RouterDeclined,
+            3 => AttemptStatus::AuthenticationPending,
+            4 => AttemptStatus::AuthenticationSuccessful,
+            5 => AttemptStatus::Authorized,
+            6 => AttemptStatus::AuthorizationFailed,
+            7 => AttemptStatus::Charged,
+            8 => AttemptStatus::Authorizing,
+            9 => AttemptStatus::CodInitiated,
+            10 => AttemptStatus::Voided,
+            11 => AttemptStatus::VoidInitiated,
+            12 => AttemptStatus::CaptureInitiated,
+            13 => AttemptStatus::CaptureFailed,
+            14 => AttemptStatus::VoidFailed,
+            15 => AttemptStatus::AutoRefunded,
+            16 => AttemptStatus::PartialCharged,
+            17 => AttemptStatus::PartialChargedAndChargeable,
+            18 => AttemptStatus::Unresolved,
+            19 => AttemptStatus::Pending,
+            20 => AttemptStatus::Failure,
+            21 => AttemptStatus::PaymentMethodAwaited,
+            22 => AttemptStatus::ConfirmationAwaited,
+            23 => AttemptStatus::DeviceDataCollectionPending,
+            _ => AttemptStatus::Unknown,
+        })
+    }
+}
+
+#[derive(Debug, strum::Display)]
+#[strum(serialize_all = "SCREAMING_SNAKE_CASE")]
+pub enum AttemptStatus {
+    Started,
+    AuthenticationFailed,
+    RouterDeclined,
+    AuthenticationPending,
+    AuthenticationSuccessful,
+    Authorized,
+    AuthorizationFailed,
+    Charged,
+    Authorizing,
+    CodInitiated,
+    Voided,
+    VoidInitiated,
+    CaptureInitiated,
+    CaptureFailed,
+    VoidFailed,
+    AutoRefunded,
+    PartialCharged,
+    PartialChargedAndChargeable,
+    Unresolved,
+    Pending,
+    Failure,
+    PaymentMethodAwaited,
+    ConfirmationAwaited,
+    DeviceDataCollectionPending,
+    Unknown,
 }

@@ -35,6 +35,8 @@ pub const X_TENANT_ID: &str = "x-tenant-id";
 pub const X_REQUEST_ID: &str = "x-request-id";
 /// Header key for connector identification
 pub const X_CONNECTOR: &str = "x-connector";
+/// Header key for merchant identification
+pub const X_MERCHANT_ID: &str = "x-merchant-id";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -97,6 +99,11 @@ pub const LOG_FN: &str = "fn";
 pub const LOG_FULL_NAME: &str = "full_name";
 /// Log field for timestamp
 pub const LOG_TIME: &str = "time";
+
+/// Constant variable for name
+pub const NAME: &str = "UCS";
+/// Constant variable for payment service name
+pub const PAYMENT_SERVICE_NAME: &str = "payment_service";
 
 // =============================================================================
 // Environment and Configuration
