@@ -24,7 +24,10 @@ pub trait ConnectorCommon {
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<
+        Vec<(String, hyperswitch_masking::Maskable<String>)>,
+        domain_types::errors::ConnectorError,
+    > {
         Ok(Vec::new())
     }
 

@@ -37,10 +37,8 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
     fn get_webhook_body_decoding_algorithm(
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
-    ) -> CustomResult<
-        Box<dyn crypto::DecodeMessage + Send>,
-        domain_types::errors::ConnectorError,
-    > {
+    ) -> CustomResult<Box<dyn crypto::DecodeMessage + Send>, domain_types::errors::ConnectorError>
+    {
         Ok(Box::new(crypto::NoAlgorithm))
     }
 

@@ -39,12 +39,7 @@ pub trait ConnectorServiceTrait:
 }
 
 pub trait PaymentVoidV2:
-    ConnectorIntegrationV2<
-    connector_flow::Void,
-    PaymentFlowData,
-    PaymentVoidData,
-    PaymentsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
 }
 
@@ -87,22 +82,12 @@ pub trait PaymentSyncV2:
 }
 
 pub trait RefundV2:
-    ConnectorIntegrationV2<
-    connector_flow::Refund,
-    RefundFlowData,
-    RefundsData,
-    RefundsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
 }
 
 pub trait RefundSyncV2:
-    ConnectorIntegrationV2<
-    connector_flow::RSync,
-    RefundFlowData,
-    RefundSyncData,
-    RefundsResponseData,
->
+    ConnectorIntegrationV2<connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
 }
 
