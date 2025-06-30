@@ -1,11 +1,11 @@
+use std::collections::HashMap;
+
 use cards::CardNumber;
 use common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
     FutureUsage,
 };
-use common_utils::consts::NO_ERROR_CODE;
-use common_utils::types::StringMajorUnit;
-use domain_types::errors::{self};
+use common_utils::{consts::NO_ERROR_CODE, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -13,20 +13,18 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         ResponseId as DomainResponseId,
     },
-};
-use domain_types::{
+    errors::{self},
     payment_address::PaymentAddress,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::WithoutType;
-use std::collections::HashMap;
-
-use hyperswitch_masking::{PeekInterface, Secret};
-use serde::de::{self, Deserializer};
-use serde::{Deserialize, Serialize};
+use hyperswitch_masking::{PeekInterface, Secret, WithoutType};
+use serde::{
+    de::{self, Deserializer},
+    Deserialize, Serialize,
+};
 use serde_with::skip_serializing_none;
 
 use super::ElavonRouterData;

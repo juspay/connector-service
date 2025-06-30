@@ -1,3 +1,11 @@
+use std::{str::FromStr, time::Duration};
+
+use common_utils::ext_traits::AsyncExt;
+// use base64::engine::Engine;
+use common_utils::{
+    // consts::BASE64_ENGINE,
+    request::{Method, Request, RequestContent},
+};
 use domain_types::{
     connector_types::RawConnectorResponse,
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
@@ -12,7 +20,6 @@ use common_utils::{
     request::{Method, Request, RequestContent},
 };
 use error_stack::{report, ResultExt};
-
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
@@ -20,12 +27,8 @@ use interfaces::{
 use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
-use serde_json::json;
-use std::{str::FromStr, time::Duration};
+use serde_json::{json, Value};
 use tracing::field::Empty;
-
-use common_utils::ext_traits::AsyncExt;
-use serde_json::Value;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 

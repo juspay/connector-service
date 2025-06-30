@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::implement_connector_operation;
 use crate::{
     configs::Config,
@@ -21,7 +23,7 @@ use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_refund_sync_response,
-        generate_setup_mandate_response,
+        generate_setup_mandate_response, AttemptStatus,
     },
     utils::ForeignTryFrom,
 };
@@ -37,9 +39,17 @@ use grpc_api_types::payments::{
     RefundServiceTransformResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use std::sync::Arc;
-
 use tracing::info;
+
+use crate::{
+    configs::Config,
+    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
+    implement_connector_operation,
+    utils::{
+        auth_from_metadata, connector_from_metadata,
+        connector_merchant_id_tenant_id_request_id_from_metadata,
+    },
+};
 
 // Helper trait for payment operations
 trait PaymentOperationsInternal {

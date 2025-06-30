@@ -6,8 +6,7 @@ use std::{
 use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
 use common_utils::{consts, AmountConvertor, CustomResult, MinorUnit};
-use error_stack::report;
-use error_stack::{Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
