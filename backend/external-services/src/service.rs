@@ -13,10 +13,8 @@ use common_utils::{
 };
 use error_stack::{report, ResultExt};
 
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use masking::{ErasedMaskSerialize, Maskable};
-use interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2,
-};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -51,7 +49,10 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
     all_keys_required: Option<bool>,
     connector_name: &str,
     service_name: &str,
-) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, domain_types::errors::ConnectorError>
+) -> CustomResult<
+    RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    domain_types::errors::ConnectorError,
+>
 where
     F: Clone + 'static,
     Req: Clone + 'static + std::fmt::Debug,
