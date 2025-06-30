@@ -60,6 +60,27 @@ impl TryFrom<&ConnectorAuthType> for MerchantAuthentication {
     }
 }
 
+impl ForeignTryFrom<serde_json::Value> for Vec<UserField> {
+    type Error = Error;
+    fn foreign_try_from(metadata: serde_json::Value) -> Result<Self, Self::Error> {
+        let mut vector = Self::new();
+
+        if let serde_json::Value::Object(obj) = metadata {
+            for (key, value) in obj {
+                vector.push(UserField {
+                    name: key,
+                    value: match value {
+                        serde_json::Value::String(s) => s,
+                        _ => value.to_string(),
+                    },
+                });
+            }
+        }
+
+        Ok(vector)
+    }
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -79,15 +100,10 @@ pub enum PaymentDetails {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum TransactionType {
-    #[serde(rename = "authOnlyTransaction")]
     AuthOnlyTransaction,
-    #[serde(rename = "authCaptureTransaction")]
     AuthCaptureTransaction,
-    #[serde(rename = "priorAuthCaptureTransaction")]
     PriorAuthCaptureTransaction,
-    #[serde(rename = "voidTransaction")]
     VoidTransaction,
-    #[serde(rename = "refundTransaction")]
     RefundTransaction,
 }
 
@@ -123,7 +139,7 @@ pub struct ShipTo {
     city: Option<String>,
     state: Option<String>,
     zip: Option<Secret<String>>,
-    country: Option<String>,
+    country: Option<enums::CountryAlpha2>,
 }
 
 #[skip_serializing_none]
@@ -219,35 +235,19 @@ struct PaymentProfileDetails {
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetTransactionRequest {
     // General structure for transaction details in Authorize
-    #[serde(rename = "transactionType")]
     transaction_type: TransactionType,
     amount: Option<String>,
-    #[serde(rename = "currencyCode")]
     currency_code: Option<api_enums::Currency>,
     payment: Option<PaymentDetails>,
     profile: Option<ProfileDetails>,
     order: Option<Order>,
     customer: Option<CustomerDetails>,
-    #[serde(rename = "billTo")]
     bill_to: Option<BillTo>,
-    #[serde(rename = "shipTo")]
-    ship_to: Option<ShipTo>,
-    #[serde(rename = "customerIP")]
-    customer_ip: Option<String>,
-    #[serde(rename = "transactionSettings")]
-    transaction_settings: Option<TransactionSettings>,
-    #[serde(rename = "userFields")]
     user_fields: Option<UserFields>,
-    #[serde(rename = "processingOptions")]
     processing_options: Option<ProcessingOptions>,
-    #[serde(rename = "subsequentAuthInformation")]
     subsequent_auth_information: Option<SubsequentAuthInformation>,
-    #[serde(rename = "authorizationIndicatorType")]
     authorization_indicator_type: Option<AuthorizationIndicatorType>,
-    #[serde(rename = "refTransId")]
     ref_trans_id: Option<String>,
-    #[serde(rename = "poNumber")]
-    po_number: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -353,53 +353,13 @@ impl
             description: order_description,
         };
 
-        // Extract metadata from connector_metadata string
-        let metadata = match &item.router_data.request.metadata {
-            Some(meta) => meta.clone(),
-            None => serde_json::Value::Object(serde_json::Map::new()),
-        };
-
-        // Extract customer IP and poNumber from metadata
-        let customer_ip = metadata
-            .get("customerIP")
-            .and_then(|v| v.as_str())
-            .map(String::from);
-        let po_number = metadata
-            .get("poNumber")
-            .and_then(|v| v.as_str())
-            .map(String::from);
-
         // Extract user fields from metadata
-        let user_fields = metadata.get("userFields").and_then(|uf| {
-            if uf.is_object() {
-                let mut fields = Vec::new();
-                if let Some(obj) = uf.as_object() {
-                    for (key, value) in obj {
-                        if let Some(val_str) = value.as_str() {
-                            fields.push(UserField {
-                                name: key.clone(),
-                                value: val_str.to_string(),
-                            });
-                        }
-                    }
-                }
-                if !fields.is_empty() {
-                    Some(UserFields { user_field: fields })
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        });
-
-        // Set up transaction settings
-        let transaction_settings = Some(TransactionSettings {
-            setting: vec![TransactionSetting {
-                setting_name: "testRequest".to_string(),
-                setting_value: "false".to_string(),
-            }],
-        });
+        let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
+            Some(metadata) => Some(UserFields {
+                user_field: Vec::<UserField>::foreign_try_from(metadata)?,
+            }),
+            None => None,
+        };
 
         // Process billing address
         let billing_address = item
@@ -424,36 +384,6 @@ impl
                     ),
                 }
             });
-
-        // Process shipping address
-        let shipping_address = item.router_data.resource_common_data.address.get_shipping();
-        let ship_to = shipping_address.as_ref().map(|shipping| {
-            let first_name = shipping.address.as_ref().and_then(|a| a.first_name.clone());
-            let last_name = shipping.address.as_ref().and_then(|a| a.last_name.clone());
-
-            ShipTo {
-                first_name,
-                last_name,
-                company: shipping
-                    .address
-                    .as_ref()
-                    .and_then(|a| a.line2.clone().map(|s| s.peek().clone()))
-                    .or_else(|| Some("".to_string())),
-                address: shipping.address.as_ref().and_then(|a| a.line1.clone()),
-                city: shipping.address.as_ref().and_then(|a| a.city.clone()),
-                state: shipping
-                    .address
-                    .as_ref()
-                    .and_then(|a| a.state.clone().map(|s| s.peek().clone()))
-                    .or_else(|| Some("".to_string())),
-                zip: shipping.address.as_ref().and_then(|a| a.zip.clone()),
-                country: shipping
-                    .address
-                    .as_ref()
-                    .and_then(|a| a.country)
-                    .map(|c| c.to_string()),
-            }
-        });
 
         let customer_id_string: String = item
             .router_data
@@ -484,15 +414,11 @@ impl
             order: Some(order),
             customer: Some(customer_details),
             bill_to,
-            ship_to,
-            customer_ip,
-            transaction_settings,
             user_fields,
             processing_options: None,
             subsequent_auth_information: None,
             authorization_indicator_type: None,
             ref_trans_id: None, // Not used for initial auth
-            po_number,          // Add the poNumber from metadata
         };
 
         let create_transaction_request = CreateTransactionRequest {
@@ -513,10 +439,7 @@ pub struct AuthorizedotnetCaptureTransactionInternal {
     // Specific transaction details for Capture
     transaction_type: TransactionType,
     amount: String,
-    #[serde(rename = "refTransId")]
     ref_trans_id: String,
-    #[serde(rename = "poNumber")]
-    po_number: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -572,8 +495,6 @@ impl
             }
         };
 
-        let po_number = None;
-
         let transaction_request_payload = AuthorizedotnetCaptureTransactionInternal {
             transaction_type: TransactionType::PriorAuthCaptureTransaction,
             amount: item
@@ -583,7 +504,6 @@ impl
                 .to_string()
                 .clone(),
             ref_trans_id: original_connector_txn_id,
-            po_number,
         };
 
         let merchant_authentication =
@@ -606,11 +526,8 @@ impl
 pub struct AuthorizedotnetTransactionVoidDetails {
     // Specific transaction details for Void
     transaction_type: TransactionType,
-    #[serde(rename = "refTransId")]
     ref_trans_id: String,
     amount: Option<f64>,
-    #[serde(rename = "poNumber")]
-    po_number: Option<String>,
 }
 
 #[skip_serializing_none]
@@ -619,7 +536,6 @@ pub struct AuthorizedotnetTransactionVoidDetails {
 pub struct CreateTransactionVoidRequest {
     // Used by Void Flow, wraps specific void transaction details
     merchant_authentication: AuthorizedotnetAuthType,
-    #[serde(rename = "refId")]
     ref_id: Option<String>,
     transaction_request: AuthorizedotnetTransactionVoidDetails,
 }
@@ -679,9 +595,6 @@ impl
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
 
-        // No metadata available in void flow
-        let po_number = None;
-
         // Generate a unique reference ID for the void transaction
         let ref_id = Some(format!(
             "void_req_{}",
@@ -708,7 +621,6 @@ impl
             transaction_type: TransactionType::VoidTransaction,
             ref_trans_id: transaction_id,
             amount: None,
-            po_number,
         };
 
         let merchant_authentication =
@@ -846,7 +758,6 @@ pub struct AuthorizedotnetRefundTransactionDetails {
     transaction_type: TransactionType,
     amount: String,
     payment: PaymentDetails,
-    #[serde(rename = "refTransId")]
     ref_trans_id: String,
 }
 
@@ -862,7 +773,6 @@ pub struct AuthorizedotnetRefundRequest {
 #[serde(rename_all = "camelCase")]
 pub struct CreateTransactionRefundRequest {
     merchant_authentication: AuthorizedotnetAuthType,
-    #[serde(rename = "refId")]
     ref_id: Option<String>,
     transaction_request: AuthorizedotnetRefundTransactionDetails,
 }
@@ -876,10 +786,9 @@ pub struct CreditCardPayment {
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreditCardInfo {
-    #[serde(rename = "cardNumber")]
     card_number: String,
-    #[serde(rename = "expirationDate")]
     expiration_date: String,
 }
 
@@ -1560,8 +1469,6 @@ pub fn convert_to_refund_response_data_or_error(
         AttemptStatus::Failure => RefundStatus::Failure,
         _ => RefundStatus::Pending,
     };
-
-    println!("Refund status: {:?}", refund_status);
 
     match &response.transaction_response {
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {

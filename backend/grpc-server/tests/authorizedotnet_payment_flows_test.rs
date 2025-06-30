@@ -54,8 +54,8 @@ const TEST_EMAIL: &str = "customer@example.com";
 
 // Metadata for Authorize.Net
 // Note: BASE64_METADATA is the base64 encoded version of this JSON:
-// {"poNumber":"456654","customerIP":"192.168.1.1","userFields":{"MerchantDefinedFieldName1":"MerchantDefinedFieldValue1","favorite_color":"blue"}}
-const BASE64_METADATA: &str = "eyJwb051bWJlciI6IjQ1NjY1NCIsImN1c3RvbWVySVAiOiIxOTIuMTY4LjEuMSIsInVzZXJGaWVsZHMiOnsiTWVyY2hhbnREZWZpbmVkRmllbGROYW1lMSI6Ik1lcmNoYW50RGVmaW5lZEZpZWxkVmFsdWUxIiwiZmF2b3JpdGVfY29sb3IiOiJibHVlIn19";
+// {"userFields":{"MerchantDefinedFieldName1":"MerchantDefinedFieldValue1","favorite_color":"blue"}}
+const BASE64_METADATA: &str = "eyJ1c2VyRmllbGRzIjp7Ik1lcmNoYW50RGVmaW5lZEZpZWxkTmFtZTEiOiJNZXJjaGFudERlZmluZWRGaWVsZFZhbHVlMSIsImZhdm9yaXRlX2NvbG9yIjoiYmx1ZSJ9fQ==";
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
@@ -88,6 +88,27 @@ fn add_authorizenet_metadata<T>(request: &mut Request<T>) {
     request
         .metadata_mut()
         .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
+    // Add merchant ID which is required by the server
+    request.metadata_mut().append(
+        "x-merchant-id",
+        "test_merchant"
+            .parse()
+            .expect("Failed to parse x-merchant-id"),
+    );
+
+    // Add tenant ID which is required by the server
+    request.metadata_mut().append(
+        "x-tenant-id",
+        "default".parse().expect("Failed to parse x-tenant-id"),
+    );
+
+    // Add request ID which is required by the server
+    request.metadata_mut().append(
+        "x-request-id",
+        format!("req_{}", get_timestamp())
+            .parse()
+            .expect("Failed to parse x-request-id"),
+    );
 }
 
 // Helper function to extract transaction ID or response_ref_id from response
