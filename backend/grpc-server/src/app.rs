@@ -17,7 +17,7 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use crate::{configs, error::ConfigurationError, logger, metrics, utils};
+use crate::{configs, error::ConfigurationError, logger, utils};
 
 /// # Panics
 ///
