@@ -28,19 +28,21 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     types::Connectors,
 };
+use domain_types::{
+    errors::{self, ConnectorError},
+    router_response_types::Response,
+};
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::{self, ConnectorCommon},
+    api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
         AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
         PaymentCapture, PaymentOrderCreate, PaymentSyncV2, PaymentVoidV2, RefundSyncV2, RefundV2,
         SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
-    errors::{self, ConnectorError},
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
 };
 
 pub(crate) mod headers {
@@ -110,8 +112,8 @@ impl ConnectorCommon for Authorizedotnet {
         })
     }
 
-    fn get_currency_unit(&self) -> api::CurrencyUnit {
-        api::CurrencyUnit::Base
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Base
     }
 }
 

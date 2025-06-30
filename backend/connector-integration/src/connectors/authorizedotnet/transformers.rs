@@ -3,6 +3,7 @@ use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::ext_traits::{OptionExt, ValueExt};
 use common_utils::{consts, pii::Email};
+use domain_types::errors::ConnectorError;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
@@ -14,7 +15,6 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use interfaces::errors::ConnectorError;
 // Alias to make the transition easier
 type HsInterfacesConnectorError = ConnectorError;
 use super::AuthorizedotnetRouterData;
@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::str::FromStr;
 
-type Error = error_stack::Report<interfaces::errors::ConnectorError>;
+type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 // Re-export common enums for use in this file
 pub mod api_enums {
@@ -53,9 +53,7 @@ impl TryFrom<&ConnectorAuthType> for MerchantAuthentication {
                 name: api_key.clone(),
                 transaction_key: key1.clone(),
             }),
-            _ => Err(error_stack::report!(
-                interfaces::errors::ConnectorError::FailedToObtainAuthType
-            )),
+            _ => Err(error_stack::report!(ConnectorError::FailedToObtainAuthType)),
         }
     }
 }
@@ -319,12 +317,10 @@ impl
             Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
             Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
             Some(_) => {
-                return Err(error_stack::report!(
-                    interfaces::errors::ConnectorError::NotSupported {
-                        message: "Capture method not supported".to_string(),
-                        connector: "authorizedotnet",
-                    }
-                ))
+                return Err(error_stack::report!(ConnectorError::NotSupported {
+                    message: "Capture method not supported".to_string(),
+                    connector: "authorizedotnet",
+                }))
             }
         };
 
@@ -555,7 +551,7 @@ pub struct AuthorizedotnetAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
-    type Error = error_stack::Report<interfaces::errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         if let ConnectorAuthType::BodyKey { api_key, key1 } = auth_type {
@@ -564,7 +560,7 @@ impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
                 transaction_key: key1.to_owned(),
             })
         } else {
-            Err(interfaces::errors::ConnectorError::FailedToObtainAuthType)?
+            Err(ConnectorError::FailedToObtainAuthType)?
         }
     }
 }
@@ -827,7 +823,7 @@ impl
         let payment_details_value = match payment_details_inner {
             serde_json::Value::String(s) => {
                 // If it's a string, try to parse it as JSON first
-                serde_json::from_str::<serde_json::Value>(s)
+                serde_json::from_str::<serde_json::Value>(s.as_str())
                     .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
             }
             _ => payment_details_inner.clone(),
