@@ -6,7 +6,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     types::Connectors,
 };
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking;
 
 use crate::events::connector_api_logs::ConnectorEvent;
 use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
@@ -24,7 +24,7 @@ pub trait ConnectorCommon {
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, domain_types::errors::ConnectorError> {
         Ok(Vec::new())
     }
 
@@ -69,6 +69,6 @@ pub enum ApplicationResponse<R> {
     Form(Box<RedirectionFormData>),
     PaymentLinkForm(Box<PaymentLinkAction>),
     FileData((Vec<u8>, mime::Mime)),
-    JsonWithHeaders((R, Vec<(String, Maskable<String>)>)),
+    JsonWithHeaders((R, Vec<(String, hyperswitch_masking::Maskable<String>)>)),
     GenericLinkForm(Box<GenericLinks>),
 }
