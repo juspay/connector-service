@@ -81,7 +81,7 @@ fn add_fiserv_metadata<T>(request: &mut Request<T>) {
 
     // Add the terminal_id in the metadata JSON
     // This metadata must be in the proper format that the connector expects
-    let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+    let metadata_json = format!(r#"{{"terminal_id":"{terminal_id}"}}"#);
 
     // For capture operations, the connector looks for terminal_id in connector_metadata
     let base64_metadata = general_purpose::STANDARD.encode(metadata_json.as_bytes());
@@ -126,10 +126,15 @@ fn create_payment_authorize_request(
     // Get terminal_id for metadata
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
         .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-    // let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+
+    // Create connector metadata as a proper JSON object
+    let mut connector_metadata = HashMap::new();
+    connector_metadata.insert("terminal_id".to_string(), terminal_id);
+    let connector_metadata_json =
+        serde_json::to_string(&connector_metadata).expect("Failed to serialize connector metadata");
 
     let mut metadata = HashMap::new();
-    metadata.insert("terminal_id".to_string(), terminal_id);
+    metadata.insert("connector_meta_data".to_string(), connector_metadata_json);
 
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
         card_number: TEST_CARD_NUMBER.to_string(),
@@ -187,10 +192,15 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
         .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-    // let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+
+    // Create connector metadata as a proper JSON object
+    let mut connector_metadata = HashMap::new();
+    connector_metadata.insert("terminal_id".to_string(), terminal_id);
+    let connector_metadata_json =
+        serde_json::to_string(&connector_metadata).expect("Failed to serialize connector metadata");
 
     let mut metadata = HashMap::new();
-    metadata.insert("terminal_id".to_string(), terminal_id);
+    metadata.insert("connector_metadata".to_string(), connector_metadata_json);
 
     PaymentServiceCaptureRequest {
         transaction_id: Some(Identifier {
@@ -208,9 +218,15 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
         .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-    // let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+
+    // Create connector metadata as a proper JSON object
+    let mut connector_metadata = HashMap::new();
+    connector_metadata.insert("terminal_id".to_string(), terminal_id);
+    let connector_metadata_json =
+        serde_json::to_string(&connector_metadata).expect("Failed to serialize connector metadata");
+
     let mut metadata = HashMap::new();
-    metadata.insert("terminal_id".to_string(), terminal_id);
+    metadata.insert("connector_metadata".to_string(), connector_metadata_json);
 
     PaymentServiceRefundRequest {
         refund_id: format!("refund_{}", get_timestamp()),
@@ -334,31 +350,12 @@ async fn test_payment_authorization_manual_capture() {
             "Payment should be in AUTHORIZED state with manual capture"
         );
 
-        // Create capture request with terminal_id in metadata
-        let terminal_id = env::var(FISERV_TERMINAL_ID_ENV)
-            .expect("TEST_FISERV_TERMINAL_ID environment variable is required");
-        let metadata_json = format!(r#"{{"terminal_id":"{}"}}"#, terminal_id);
+        // Create capture request (which already includes proper connector metadata)
+        let capture_request = create_payment_capture_request(&transaction_id);
 
-        let mut metadata = HashMap::new();
-        metadata.insert("terminal_id".to_string(), terminal_id);
-
-        // Debug print has been removed
-
-        let mut capture_request = create_payment_capture_request(&transaction_id);
-        // Set the connector_meta_data field in the capture request
-        capture_request.metadata = metadata;
-
-        // Add metadata headers for capture request - make sure they include the terminal_id
+        // Add metadata headers for capture request
         let mut capture_grpc_request = Request::new(capture_request);
         add_fiserv_metadata(&mut capture_grpc_request);
-
-        // Important: Also add connector-metadata explicitly to ensure it gets passed through
-        capture_grpc_request.metadata_mut().append(
-            "connector-metadata",
-            metadata_json
-                .parse()
-                .expect("Failed to parse connector-metadata"),
-        );
 
         // Send the capture request
         let capture_response = client

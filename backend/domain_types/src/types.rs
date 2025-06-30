@@ -72,7 +72,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_capture_method".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Capture method {:?} is not supported", value),
+                error_message: format!("Capture method {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -97,7 +97,7 @@ impl ForeignTryFrom<i32> for common_enums::CardNetwork {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CARD_NETWORK".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for card network: {}", connector),
+                error_message: format!("Invalid value for card network: {connector}"),
                 error_object: None,
             })
             .into()),
@@ -373,7 +373,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_currency".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Currency {:?} is not supported", value),
+                error_message: format!("Currency {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -1913,12 +1913,11 @@ impl ForeignTryFrom<grpc_api_types::payments::DisputeServiceSubmitEvidenceReques
     fn foreign_try_from(
         value: grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // For now, we'll create a simplified SubmitEvidenceData using evidence_documents
-        // The individual fields will be extracted from evidence_documents if needed
-        Ok(SubmitEvidenceData {
+        // Initialize all fields to None
+        let mut result = SubmitEvidenceData {
             dispute_id: Some(value.dispute_id.clone()),
-            connector_dispute_id: value.dispute_id, // Using dispute_id as connector_dispute_id
-            access_activity_log: None,              // Extract from evidence_documents if present
+            connector_dispute_id: value.dispute_id,
+            access_activity_log: None,
             billing_address: None,
             cancellation_policy: None,
             cancellation_policy_file_type: None,
@@ -1964,7 +1963,76 @@ impl ForeignTryFrom<grpc_api_types::payments::DisputeServiceSubmitEvidenceReques
             uncategorized_file_type: None,
             uncategorized_file_provider_file_id: None,
             uncategorized_text: None,
-        })
+        };
+
+        // Extract evidence from evidence_documents array
+        for document in value.evidence_documents {
+            let evidence_type =
+                grpc_api_types::payments::EvidenceType::try_from(document.evidence_type)
+                    .unwrap_or(grpc_api_types::payments::EvidenceType::Unspecified);
+
+            match evidence_type {
+                grpc_api_types::payments::EvidenceType::CancellationPolicy => {
+                    result.cancellation_policy = document.file_content;
+                    result.cancellation_policy_file_type = document.file_mime_type;
+                    result.cancellation_policy_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::CustomerCommunication => {
+                    result.customer_communication = document.file_content;
+                    result.customer_communication_file_type = document.file_mime_type;
+                    result.customer_communication_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::CustomerSignature => {
+                    result.customer_signature = document.file_content;
+                    result.customer_signature_file_type = document.file_mime_type;
+                    result.customer_signature_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::Receipt => {
+                    result.receipt = document.file_content;
+                    result.receipt_file_type = document.file_mime_type;
+                    result.receipt_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::RefundPolicy => {
+                    result.refund_policy = document.file_content;
+                    result.refund_policy_file_type = document.file_mime_type;
+                    result.refund_policy_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::ServiceDocumentation => {
+                    result.service_documentation = document.file_content;
+                    result.service_documentation_file_type = document.file_mime_type;
+                    result.service_documentation_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::ShippingDocumentation => {
+                    result.shipping_documentation = document.file_content;
+                    result.shipping_documentation_file_type = document.file_mime_type;
+                    result.shipping_documentation_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::InvoiceShowingDistinctTransactions => {
+                    result.invoice_showing_distinct_transactions = document.file_content;
+                    result.invoice_showing_distinct_transactions_file_type =
+                        document.file_mime_type;
+                    result.invoice_showing_distinct_transactions_provider_file_id =
+                        document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::RecurringTransactionAgreement => {
+                    result.recurring_transaction_agreement = document.file_content;
+                    result.recurring_transaction_agreement_file_type = document.file_mime_type;
+                    result.recurring_transaction_agreement_provider_file_id =
+                        document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::UncategorizedFile => {
+                    result.uncategorized_file = document.file_content;
+                    result.uncategorized_file_type = document.file_mime_type;
+                    result.uncategorized_file_provider_file_id = document.provider_file_id;
+                    result.uncategorized_text = document.text_content;
+                }
+                grpc_api_types::payments::EvidenceType::Unspecified => {
+                    // Skip unspecified evidence types
+                }
+            }
+        }
+
+        Ok(result)
     }
 }
 
@@ -2410,7 +2478,7 @@ impl ForeignTryFrom<i32> for common_enums::FutureUsage {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_FUTURE_USAGE".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for future_usage: {}", value),
+                error_message: format!("Invalid value for future_usage: {value}"),
                 error_object: None,
             })
             .into()),

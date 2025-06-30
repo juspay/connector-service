@@ -43,6 +43,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidResponse, RefundResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use std::sync::Arc;
 
 use tracing::info;
 
@@ -70,7 +71,7 @@ trait PaymentOperationsInternal {
 }
 
 pub struct Payments {
-    pub config: Config,
+    pub config: Arc<Config>,
 }
 
 impl Payments {
@@ -128,8 +129,7 @@ impl Payments {
                 Ok(())
             }
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Order creation error: {}",
-                message
+                "Order creation error: {message}"
             ))),
         }
     }
@@ -187,8 +187,7 @@ impl Payments {
                 Ok(())
             }
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Order creation error: {}",
-                message
+                "Order creation error: {message}"
             ))),
         }
     }

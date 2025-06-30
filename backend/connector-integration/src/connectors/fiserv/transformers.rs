@@ -122,7 +122,7 @@ fn get_card_expiry_year_4_digit_placeholder(
 ) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
     let year_str = year_yy.peek();
     if year_str.len() == 2 && year_str.chars().all(char::is_numeric) {
-        Ok(Secret::new(format!("20{}", year_str)))
+        Ok(Secret::new(format!("20{year_str}")))
     } else if year_str.len() == 4 && year_str.chars().all(char::is_numeric) {
         Ok(year_yy.clone())
     } else {

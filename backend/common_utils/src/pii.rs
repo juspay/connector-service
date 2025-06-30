@@ -106,7 +106,7 @@ where
         }
 
         if let Some(segments) = segments.first() {
-            write!(f, "{}.**.**.**", segments)
+            write!(f, "{segments}.**.**.**")
         } else {
             WithType::fmt(val, f)
         }
