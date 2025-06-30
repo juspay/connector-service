@@ -232,7 +232,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::PaymentMethodAwaited
         | common_enums::AttemptStatus::ConfirmationAwaited
         | common_enums::AttemptStatus::DeviceDataCollectionPending
-        | common_enums::AttemptStatus::IntegrityFailure 
+        | common_enums::AttemptStatus::IntegrityFailure
         | common_enums::AttemptStatus::Unknown => false,
     }
 }
