@@ -8,6 +8,8 @@ use common_utils::{
     request::RequestContent,
     types::{AmountConvertor, MinorUnit},
 };
+
+use domain_types::router_response_types::Response;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -20,6 +22,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
         SetupMandateRequestData, SubmitEvidenceData,
     },
+    errors,
     types::Connectors,
 };
 use error_stack::ResultExt;
@@ -27,9 +30,7 @@ use hyperswitch_masking::Maskable;
 use interfaces::{
     api::{self, ConnectorCommon},
     connector_integration_v2::ConnectorIntegrationV2,
-    errors,
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
 };
 
 use tracing::info;
@@ -65,8 +66,8 @@ impl ConnectorCommon for RazorpayV2 {
         "razorpayv2"
     }
 
-    fn get_currency_unit(&self) -> api::CurrencyUnit {
-        api::CurrencyUnit::Base
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Base
     }
 
     fn get_auth_header(
@@ -309,7 +310,10 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             req.request.minor_amount,
             &req.request,
             Some(order_id),
-            req.resource_common_data.address.get_payment_method_billing().cloned(),
+            req.resource_common_data
+                .address
+                .get_payment_method_billing()
+                .cloned(),
         ))?;
         info!("Metadaata is {:?}", req.request.metadata);
         // Always use v2 request format
@@ -387,13 +391,17 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             }
         };
 
+        // Debug logging to trace reference_id
+        let reference_id = data.resource_common_data.reference_id.clone();
+        info!("RazorpayV2 Authorization Response - reference_id: {:?}", reference_id);
+        
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
             redirection_data: Box::new(redirection_data),
             connector_metadata: None,
             mandate_reference: Box::new(None),
             network_txn_id: None,
-            connector_response_reference_id: None, // We don't have order_id in UPI response
+            connector_response_reference_id: reference_id,
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         };

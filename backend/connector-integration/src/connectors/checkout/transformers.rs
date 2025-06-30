@@ -474,6 +474,7 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             let connector_meta =
@@ -784,6 +785,7 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             // Always include the connector metadata in the response
