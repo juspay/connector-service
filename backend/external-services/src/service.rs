@@ -104,7 +104,7 @@ where
             let url = request.url.clone();
             let method = request.method;
             metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
-                .with_label_values(&[connector_name, service_name, &method.to_string()])
+                .with_label_values(&[&method.to_string(), service_name, connector_name])
                 .inc();
             let external_service_start_latency = tokio::time::Instant::now();
             tracing::Span::current().record("request.url", tracing::field::display(&url));
@@ -123,7 +123,7 @@ where
                 });
             let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
-                .with_label_values(&[connector_name, service_name, &method.to_string()])
+                .with_label_values(&[&method.to_string(), service_name, connector_name])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
 
@@ -180,9 +180,9 @@ where
                         Err(body) => {
                             metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
                                 .with_label_values(&[
-                                    connector_name,
-                                    service_name,
                                     &method.to_string(),
+                                    service_name,
+                                    connector_name,
                                     body.status_code.to_string().as_str(),
                                 ])
                                 .inc();

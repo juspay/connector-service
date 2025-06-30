@@ -38,20 +38,20 @@ lazy_static! {
     pub static ref EXTERNAL_SERVICE_API_CALLS_LATENCY: HistogramVec = register_histogram_vec!(
         "EXTERNAL_SERVICE_API_CALLS_LATENCY_SECONDS",
         "Latency of external service API calls",
-        &["endpoint", "service", "method"],
+        &["method", "service", "connector"],
         LATENCY_BUCKETS.to_vec()
     )
     .unwrap();
     pub static ref EXTERNAL_SERVICE_TOTAL_API_CALLS: IntCounterVec = register_int_counter_vec!(
         "EXTERNAL_SERVICE_TOTAL_API_CALLS",
         "Total number of external service API calls",
-        &["endpoint", "service", "method"]
+        &["method", "service", "connector"]
     )
     .unwrap();
     pub static ref EXTERNAL_SERVICE_API_CALLS_ERRORS: IntCounterVec = register_int_counter_vec!(
         "EXTERNAL_SERVICE_API_CALLS_ERRORS",
         "Total number of errors in external service API calls",
-        &["endpoint", "service", "method", "error"]
+        &["method", "service", "connector", "error"]
     )
     .unwrap();
 }
