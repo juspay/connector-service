@@ -70,6 +70,14 @@ impl DisputeService for Disputes {
         request: tonic::Request<DisputeServiceSubmitEvidenceRequest>,
     ) -> Result<tonic::Response<DisputeServiceSubmitEvidenceResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
+        let config = match request.extensions().get::<Config>() {
+            Some(config) => config.clone(),
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
         let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -87,7 +95,7 @@ impl DisputeService for Disputes {
             .map_err(|e| e.into_grpc_status())?;
 
         let dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            DisputeFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| e.into_grpc_status())?;
 
         let connector_auth_details =
@@ -107,7 +115,7 @@ impl DisputeService for Disputes {
         };
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
             None,
@@ -147,6 +155,14 @@ impl DisputeService for Disputes {
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
+        let config = match request.extensions().get::<Config>() {
+            Some(config) => config.clone(),
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
         let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -165,7 +181,7 @@ impl DisputeService for Disputes {
             .map_err(|e| e.into_grpc_status())?;
 
         let dispute_flow_data =
-            DisputeFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            DisputeFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                 .map_err(|e| e.into_grpc_status())?;
 
         let connector_auth_details =
@@ -185,7 +201,7 @@ impl DisputeService for Disputes {
         };
 
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
             None,
