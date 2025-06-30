@@ -38,10 +38,10 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         &self,
         _request: &IncomingWebhookRequestDetails<'_>,
     ) -> CustomResult<
-        Box<dyn common_utils::crypto::DecodeMessage + Send>,
+        Box<dyn crypto::DecodeMessage + Send>,
         domain_types::errors::ConnectorError,
     > {
-        Ok(Box::new(common_utils::crypto::NoAlgorithm))
+        Ok(Box::new(crypto::NoAlgorithm))
     }
 
     /// fn get_webhook_body_decoding_message
@@ -161,7 +161,7 @@ pub trait IncomingWebhook: ConnectorCommon + Sync {
         request: &IncomingWebhookRequestDetails<'_>,
         merchant_id: &common_utils::id_type::MerchantId,
         connector_webhook_details: Option<common_utils::pii::SecretSerdeValue>,
-        _connector_account_details: common_utils::crypto::Encryptable<Secret<serde_json::Value>>,
+        _connector_account_details: crypto::Encryptable<Secret<serde_json::Value>>,
         connector_name: &str,
     ) -> CustomResult<bool, domain_types::errors::ConnectorError> {
         let algorithm = self

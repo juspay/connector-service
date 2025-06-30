@@ -40,7 +40,7 @@ pub trait ConnectorServiceTrait:
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::Void,
+    connector_flow::Void,
     PaymentFlowData,
     PaymentVoidData,
     PaymentsResponseData,
@@ -68,7 +68,7 @@ pub trait PaymentOrderCreate:
 
 pub trait PaymentAuthorizeV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::Authorize,
+    connector_flow::Authorize,
     PaymentFlowData,
     PaymentsAuthorizeData,
     PaymentsResponseData,
@@ -78,7 +78,7 @@ pub trait PaymentAuthorizeV2:
 
 pub trait PaymentSyncV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::PSync,
+    connector_flow::PSync,
     PaymentFlowData,
     PaymentsSyncData,
     PaymentsResponseData,
@@ -88,7 +88,7 @@ pub trait PaymentSyncV2:
 
 pub trait RefundV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::Refund,
+    connector_flow::Refund,
     RefundFlowData,
     RefundsData,
     RefundsResponseData,
@@ -98,7 +98,7 @@ pub trait RefundV2:
 
 pub trait RefundSyncV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::RSync,
+    connector_flow::RSync,
     RefundFlowData,
     RefundSyncData,
     RefundsResponseData,
@@ -108,7 +108,7 @@ pub trait RefundSyncV2:
 
 pub trait PaymentCapture:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::Capture,
+    connector_flow::Capture,
     PaymentFlowData,
     PaymentsCaptureData,
     PaymentsResponseData,
@@ -118,7 +118,7 @@ pub trait PaymentCapture:
 
 pub trait SetupMandateV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::SetupMandate,
+    connector_flow::SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData,
     PaymentsResponseData,
@@ -128,7 +128,7 @@ pub trait SetupMandateV2:
 
 pub trait AcceptDispute:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::Accept,
+    connector_flow::Accept,
     DisputeFlowData,
     AcceptDisputeData,
     DisputeResponseData,
@@ -138,7 +138,7 @@ pub trait AcceptDispute:
 
 pub trait SubmitEvidenceV2:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::SubmitEvidence,
+    connector_flow::SubmitEvidence,
     DisputeFlowData,
     SubmitEvidenceData,
     DisputeResponseData,
@@ -148,7 +148,7 @@ pub trait SubmitEvidenceV2:
 
 pub trait DisputeDefend:
     ConnectorIntegrationV2<
-    domain_types::connector_flow::DefendDispute,
+    connector_flow::DefendDispute,
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData,
@@ -228,7 +228,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
         &self,
         capture_method: Option<CaptureMethod>,
         payment_method: PaymentMethod,
-        pmt: Option<common_enums::PaymentMethodType>,
+        pmt: Option<PaymentMethodType>,
     ) -> CustomResult<(), domain_types::errors::ConnectorError> {
         let capture_method = capture_method.unwrap_or_default();
         let is_default_capture_method = [CaptureMethod::Automatic].contains(&capture_method);
