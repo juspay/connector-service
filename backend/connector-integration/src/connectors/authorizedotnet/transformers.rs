@@ -891,7 +891,22 @@ pub struct AuthorizedotnetCaptureResponse(pub AuthorizedotnetPaymentsResponse);
 pub struct AuthorizedotnetVoidResponse(pub AuthorizedotnetPaymentsResponse);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct AuthorizedotnetRefundResponse(pub AuthorizedotnetPaymentsResponse);
+#[serde(rename_all = "camelCase")]
+pub struct RefundResponse {
+    response_code: AuthorizedotnetRefundStatus,
+    #[serde(rename = "transId")]
+    transaction_id: String,
+    network_trans_id: Option<Secret<String>>,
+    pub account_number: Option<Secret<String>>,
+    pub errors: Option<Vec<ErrorMessage>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetRefundResponse {
+    pub transaction_response: RefundResponse,
+    pub messages: ResponseMessages,
+}
 
 // PSync response wrapper - Using direct structure instead of wrapping AuthorizedotnetPaymentsResponse
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -914,12 +929,6 @@ impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetCaptureResponse {
 }
 
 impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetVoidResponse {
-    fn from(response: AuthorizedotnetPaymentsResponse) -> Self {
-        Self(response)
-    }
-}
-
-impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetRefundResponse {
     fn from(response: AuthorizedotnetPaymentsResponse) -> Self {
         Self(response)
     }
@@ -1053,16 +1062,22 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
             http_code,
         } = value;
 
-        // Use our refund helper function directly
-        let (_attempt_status, refund_response) =
-            convert_to_refund_response_data_or_error(&response.0, http_code)
-                .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+        let transaction_response = &response.transaction_response;
+        let refund_status = enums::RefundStatus::from(transaction_response.response_code.clone());
 
-        // Set the status based on the refund result
-        let refund_status = match &refund_response {
-            Ok(refund_data) => refund_data.refund_status,
-            Err(_) => RefundStatus::Failure,
-        };
+        let error = transaction_response.errors.clone().and_then(|errors| {
+            errors.first().map(|error| ErrorResponse {
+                code: error.error_code.clone(),
+                message: error.error_text.clone(),
+                reason: Some(error.error_text.clone()),
+                status_code: http_code,
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: Some(transaction_response.transaction_id.clone()),
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+            })
+        });
 
         // Create a new RouterDataV2 with updated fields
         let mut new_router_data = router_data;
@@ -1072,8 +1087,15 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
         resource_common_data.status = refund_status;
         new_router_data.resource_common_data = resource_common_data;
 
-        // Set the response
-        new_router_data.response = refund_response;
+        // Set the response based on whether there was an error
+        new_router_data.response = match error {
+            Some(err) => Err(err),
+            None => Ok(RefundsResponseData {
+                connector_refund_id: transaction_response.transaction_id.clone(),
+                refund_status,
+                raw_connector_response: None,
+            }),
+        };
 
         Ok(new_router_data)
     }
@@ -1165,8 +1187,6 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
     }
 }
 
-// Helper function is no longer needed since we're using the direct structure
-
 #[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
 pub enum AuthorizedotnetPaymentStatus {
     #[serde(rename = "1")]
@@ -1180,6 +1200,79 @@ pub enum AuthorizedotnetPaymentStatus {
     HeldForReview,
     #[serde(rename = "5")]
     RequiresAction, // Maps to hyperswitch_common_enums::enums::AttemptStatus::AuthenticationPending
+}
+
+#[derive(Debug, Clone, Default, serde::Deserialize, serde::Serialize)]
+pub enum AuthorizedotnetRefundStatus {
+    #[serde(rename = "1")]
+    Approved,
+    #[serde(rename = "2")]
+    Declined,
+    #[serde(rename = "3")]
+    Error,
+    #[serde(rename = "4")]
+    #[default]
+    HeldForReview,
+}
+
+/// Helper function to extract error code and message from response
+fn extract_error_details(
+    response: &AuthorizedotnetPaymentsResponse,
+    trans_res: Option<&AuthorizedotnetTransactionResponse>,
+) -> (String, String) {
+    let error_code = trans_res
+        .and_then(|tr| {
+            tr.errors
+                .as_ref()
+                .and_then(|e| e.first().map(|e| e.error_code.clone()))
+        })
+        .or_else(|| response.messages.message.first().map(|m| m.code.clone()))
+        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
+
+    let error_message = trans_res
+        .and_then(|tr| {
+            tr.errors
+                .as_ref()
+                .and_then(|e| e.first().map(|e| e.error_text.clone()))
+        })
+        .or_else(|| response.messages.message.first().map(|m| m.text.clone()))
+        .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
+
+    (error_code, error_message)
+}
+
+/// Helper function to create error response
+fn create_error_response(
+    http_status_code: u16,
+    error_code: String,
+    error_message: String,
+    status: AttemptStatus,
+    connector_transaction_id: Option<String>,
+) -> ErrorResponse {
+    ErrorResponse {
+        status_code: http_status_code,
+        code: error_code,
+        message: error_message,
+        reason: None,
+        attempt_status: Some(status),
+        connector_transaction_id,
+        network_decline_code: None,
+        network_advice_code: None,
+        network_error_message: None,
+    }
+}
+
+impl From<AuthorizedotnetRefundStatus> for enums::RefundStatus {
+    fn from(item: AuthorizedotnetRefundStatus) -> Self {
+        match item {
+            AuthorizedotnetRefundStatus::Declined | AuthorizedotnetRefundStatus::Error => {
+                Self::Failure
+            }
+            AuthorizedotnetRefundStatus::Approved | AuthorizedotnetRefundStatus::HeldForReview => {
+                Self::Pending
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1254,56 +1347,43 @@ fn get_hs_status(
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
 ) -> AttemptStatus {
-    match response.messages.result_code {
-        ResultCode::Error => AttemptStatus::Failure,
-        ResultCode::Ok => {
-            match response.transaction_response {
-                Some(ref trans_res_enum) => {
-                    match trans_res_enum {
-                        TransactionResponse::AuthorizedotnetTransactionResponse(trans_res) => {
-                            match trans_res.response_code {
-                                AuthorizedotnetPaymentStatus::Approved => match operation {
-                                    // For Authorize operation, check the capture method
-                                    Operation::Authorize => {
-                                        // Check capture method to determine status
-                                        match capture_method {
-                                            // Manual capture -> Authorized status
-                                            Some(enums::CaptureMethod::Manual) => {
-                                                AttemptStatus::Authorized
-                                            }
-                                            // Automatic capture (or None) -> Charged status
-                                            Some(enums::CaptureMethod::Automatic) | None => {
-                                                AttemptStatus::Charged
-                                            }
-                                            // Any other method -> Charged (for backward compatibility)
-                                            _ => AttemptStatus::Charged,
-                                        }
-                                    }
-                                    Operation::Capture => AttemptStatus::Charged,
-                                    Operation::Void => AttemptStatus::Voided,
-                                    // For refunds, map Approved to Charged
-                                    Operation::Refund => AttemptStatus::Charged,
-                                },
-                                AuthorizedotnetPaymentStatus::Declined => AttemptStatus::Failure,
-                                AuthorizedotnetPaymentStatus::Error => AttemptStatus::Failure,
-                                AuthorizedotnetPaymentStatus::HeldForReview => {
-                                    AttemptStatus::Pending
-                                }
-                                AuthorizedotnetPaymentStatus::RequiresAction => {
-                                    AttemptStatus::AuthenticationPending
-                                }
-                            }
-                        }
-                        TransactionResponse::AuthorizedotnetTransactionResponseError(_) => {
-                            AttemptStatus::Failure
-                        }
+    // Return failure immediately if result code is Error
+    if response.messages.result_code == ResultCode::Error {
+        return AttemptStatus::Failure;
+    }
+
+    // Handle case when transaction_response is None
+    if response.transaction_response.is_none() {
+        return match operation {
+            Operation::Void => AttemptStatus::Voided,
+            Operation::Authorize | Operation::Capture => AttemptStatus::Pending,
+            Operation::Refund => AttemptStatus::Failure,
+        };
+    }
+
+    // Now handle transaction_response cases
+    match response.transaction_response.as_ref().unwrap() {
+        TransactionResponse::AuthorizedotnetTransactionResponseError(_) => AttemptStatus::Failure,
+        TransactionResponse::AuthorizedotnetTransactionResponse(trans_res) => {
+            match trans_res.response_code {
+                AuthorizedotnetPaymentStatus::Declined | AuthorizedotnetPaymentStatus::Error => {
+                    AttemptStatus::Failure
+                }
+                AuthorizedotnetPaymentStatus::HeldForReview => AttemptStatus::Pending,
+                AuthorizedotnetPaymentStatus::RequiresAction => {
+                    AttemptStatus::AuthenticationPending
+                }
+                AuthorizedotnetPaymentStatus::Approved => {
+                    // For Approved status, determine specific status based on operation and capture method
+                    match operation {
+                        Operation::Authorize => match capture_method {
+                            Some(enums::CaptureMethod::Manual) => AttemptStatus::Authorized,
+                            _ => AttemptStatus::Charged, // Automatic or None defaults to Charged
+                        },
+                        Operation::Capture | Operation::Refund => AttemptStatus::Charged,
+                        Operation::Void => AttemptStatus::Voided,
                     }
                 }
-                None => match operation {
-                    Operation::Void => AttemptStatus::Voided, // Ensure this is returning Voided for void operations
-                    Operation::Authorize | Operation::Capture => AttemptStatus::Pending,
-                    Operation::Refund => AttemptStatus::Failure,
-                },
             }
         }
     }
@@ -1316,237 +1396,81 @@ pub fn convert_to_payments_response_data_or_error(
     capture_method: Option<enums::CaptureMethod>,
 ) -> Result<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), HsInterfacesConnectorError>
 {
-    // Pass the capture_method from the payment request
     let status = get_hs_status(response, http_status_code, operation, capture_method);
 
-    let response_payload_result = match &response.transaction_response {
-        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
-            if status == AttemptStatus::Authorized
-                || status == AttemptStatus::Pending
-                || status == AttemptStatus::AuthenticationPending
-                || status == AttemptStatus::Charged
-                || status == AttemptStatus::Voided
-            {
-                Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        trans_res.transaction_id.clone(),
-                    ),
-                    redirection_data: Box::new(None),
-                    connector_metadata: None,
-                    mandate_reference: Box::new(None),
-                    network_txn_id: trans_res
-                        .network_trans_id
-                        .as_ref()
-                        .map(|s| s.peek().clone()),
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    raw_connector_response: None,
-                })
-            } else {
-                // Failure status or other non-successful/active statuses handled by specific error mapping
-                let error_code = trans_res
-                    .errors
-                    .as_ref()
-                    .and_then(|e_list| e_list.first().map(|e| e.error_code.clone()))
-                    .or_else(|| response.messages.message.first().map(|m| m.code.clone()))
-                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
-                let error_message = trans_res
-                    .errors
-                    .as_ref()
-                    .and_then(|e_list| e_list.first().map(|e| e.error_text.clone()))
-                    .or_else(|| response.messages.message.first().map(|m| m.text.clone()))
-                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
+    let is_successful_status = matches!(
+        status,
+        AttemptStatus::Authorized
+            | AttemptStatus::Pending
+            | AttemptStatus::AuthenticationPending
+            | AttemptStatus::Charged
+            | AttemptStatus::Voided
+    );
 
-                Err(ErrorResponse {
-                    status_code: http_status_code,
-                    code: error_code,
-                    message: error_message,
-                    reason: None,
-                    attempt_status: Some(status),
-                    connector_transaction_id: Some(trans_res.transaction_id.clone()),
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                })
-            }
+    let response_payload_result = match &response.transaction_response {
+        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res))
+            if is_successful_status =>
+        {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(trans_res.transaction_id.clone()),
+                redirection_data: Box::new(None),
+                connector_metadata: None,
+                mandate_reference: Box::new(None),
+                network_txn_id: trans_res
+                    .network_trans_id
+                    .as_ref()
+                    .map(|s| s.peek().clone()),
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                raw_connector_response: None,
+            })
         }
-        Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_err_res)) => {
-            Err(ErrorResponse {
-                status_code: http_status_code,
-                code: response
-                    .messages
-                    .message
-                    .first()
-                    .map(|m| m.code.clone())
-                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                message: response
-                    .messages
-                    .message
-                    .first()
-                    .map(|m| m.text.clone())
-                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-                reason: None,
-                attempt_status: Some(status),
-                connector_transaction_id: None,
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
+        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
+            // Failure status or other non-successful statuses
+            let (error_code, error_message) = extract_error_details(response, Some(trans_res));
+            Err(create_error_response(
+                http_status_code,
+                error_code,
+                error_message,
+                status,
+                Some(trans_res.transaction_id.clone()),
+            ))
+        }
+        Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) => {
+            let (error_code, error_message) = extract_error_details(response, None);
+            Err(create_error_response(
+                http_status_code,
+                error_code,
+                error_message,
+                status,
+                None,
+            ))
+        }
+        None if status == AttemptStatus::Voided && operation == Operation::Void => {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::NoResponseId,
+                redirection_data: Box::new(None),
+                connector_metadata: None,
+                mandate_reference: Box::new(None),
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                raw_connector_response: None,
             })
         }
         None => {
-            if status == AttemptStatus::Voided && operation == Operation::Void {
-                Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::NoResponseId,
-                    redirection_data: Box::new(None),
-                    connector_metadata: None,
-                    mandate_reference: Box::new(None),
-                    network_txn_id: None,
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    raw_connector_response: None,
-                })
-            } else {
-                Err(ErrorResponse {
-                    status_code: http_status_code,
-                    code: response
-                        .messages
-                        .message
-                        .first()
-                        .map(|m| m.code.clone())
-                        .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
-                    message: response
-                        .messages
-                        .message
-                        .first()
-                        .map(|m| m.text.clone())
-                        .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
-                    reason: None,
-                    attempt_status: Some(status),
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                })
-            }
+            let (error_code, error_message) = extract_error_details(response, None);
+            Err(create_error_response(
+                http_status_code,
+                error_code,
+                error_message,
+                status,
+                None,
+            ))
         }
     };
+
     Ok((status, response_payload_result))
-}
-
-pub fn convert_to_refund_response_data_or_error(
-    response: &AuthorizedotnetPaymentsResponse,
-    http_status_code: u16,
-) -> Result<(AttemptStatus, Result<RefundsResponseData, ErrorResponse>), HsInterfacesConnectorError>
-{
-    // Operation is implicitly Refund for this function
-    let api_call_attempt_status = match response.messages.result_code {
-        ResultCode::Error => AttemptStatus::Failure,
-        ResultCode::Ok => match response.transaction_response {
-            Some(TransactionResponse::AuthorizedotnetTransactionResponse(ref trans_res)) => {
-                match trans_res.response_code {
-                    AuthorizedotnetPaymentStatus::Approved => AttemptStatus::Charged,
-                    AuthorizedotnetPaymentStatus::Declined => AttemptStatus::Failure,
-                    AuthorizedotnetPaymentStatus::Error => AttemptStatus::Failure,
-                    AuthorizedotnetPaymentStatus::HeldForReview => AttemptStatus::Pending,
-                    AuthorizedotnetPaymentStatus::RequiresAction => {
-                        AttemptStatus::AuthenticationPending
-                    }
-                }
-            }
-            Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) => {
-                AttemptStatus::Failure
-            }
-            None => AttemptStatus::Pending,
-        },
-    };
-
-    let refund_status = match api_call_attempt_status {
-        AttemptStatus::Charged => RefundStatus::Success,
-        AttemptStatus::Failure => RefundStatus::Failure,
-        _ => RefundStatus::Pending,
-    };
-
-    match &response.transaction_response {
-        Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
-            if refund_status == RefundStatus::Success || refund_status == RefundStatus::Pending {
-                let response_data = RefundsResponseData {
-                    connector_refund_id: trans_res.transaction_id.clone(),
-                    refund_status,
-                    raw_connector_response: None,
-                };
-                Ok((api_call_attempt_status, Ok(response_data)))
-            } else {
-                let error_code = trans_res
-                    .errors
-                    .as_ref()
-                    .and_then(|e_list| e_list.first().map(|e| e.error_code.clone()))
-                    .or_else(|| response.messages.message.first().map(|m| m.code.clone()))
-                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
-                let error_message = trans_res
-                    .errors
-                    .as_ref()
-                    .and_then(|e_list| e_list.first().map(|e| e.error_text.clone()))
-                    .or_else(|| response.messages.message.first().map(|m| m.text.clone()))
-                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-
-                let error_response = ErrorResponse {
-                    code: error_code,
-                    message: error_message,
-                    reason: None,
-                    status_code: http_status_code,
-                    attempt_status: Some(api_call_attempt_status),
-                    connector_transaction_id: Some(trans_res.transaction_id.clone()),
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                };
-                Ok((api_call_attempt_status, Err(error_response)))
-            }
-        }
-        Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) | None => {
-            if refund_status == RefundStatus::Success {
-                let error_response = ErrorResponse {
-                    code: consts::NO_ERROR_CODE.to_string(),
-                    message: "Refund successful but connector_refund_id is missing from response."
-                        .to_string(),
-                    reason: Some(
-                        "Successful refund response did not contain a transaction ID.".to_string(),
-                    ),
-                    status_code: http_status_code,
-                    attempt_status: Some(api_call_attempt_status),
-                    connector_transaction_id: None,
-                    network_decline_code: None,
-                    network_advice_code: None,
-                    network_error_message: None,
-                };
-                return Ok((api_call_attempt_status, Err(error_response)));
-            }
-            let error_code = response
-                .messages
-                .message
-                .first()
-                .map(|m| m.code.clone())
-                .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string());
-            let error_message = response
-                .messages
-                .message
-                .first()
-                .map(|m| m.text.clone())
-                .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string());
-            let error_response = ErrorResponse {
-                code: error_code,
-                message: error_message,
-                reason: None,
-                status_code: http_status_code,
-                attempt_status: Some(api_call_attempt_status),
-                connector_transaction_id: None,
-                network_decline_code: None,
-                network_advice_code: None,
-                network_error_message: None,
-            };
-            Ok((api_call_attempt_status, Err(error_response)))
-        }
-    }
 }
 
 // Transaction details for sync response used in PSync implementation
@@ -1691,7 +1615,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                         .map(|m| m.text.clone())
                         .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                     reason: None,
-                    attempt_status: None,
+                    attempt_status: Some(AttemptStatus::Failure),
                     connector_transaction_id: None,
                     network_decline_code: None,
                     network_advice_code: None,
