@@ -13,11 +13,11 @@ use common_utils::{
 };
 use error_stack::{report, ResultExt};
 
-use masking::{ErasedMaskSerialize, Maskable};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
+use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
