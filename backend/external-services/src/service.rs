@@ -6,17 +6,18 @@ use domain_types::{
     types::Proxy,
 };
 // use base64::engine::Engine;
+use crate::shared_metrics as metrics;
 use common_utils::{
     // consts::BASE64_ENGINE,
     request::{Method, Request, RequestContent},
 };
 use error_stack::{report, ResultExt};
 
-use hyperswitch_masking::{ErasedMaskSerialize, Maskable};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
+use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -49,6 +50,8 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
+    connector_name: &str,
+    service_name: &str,
 ) -> CustomResult<
     RouterDataV2<F, ResourceCommonData, Req, Resp>,
     domain_types::errors::ConnectorError,
@@ -105,6 +108,10 @@ where
         Some(request) => {
             let url = request.url.clone();
             let method = request.method;
+            metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
+                .with_label_values(&[&method.to_string(), service_name, connector_name])
+                .inc();
+            let external_service_start_latency = tokio::time::Instant::now();
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
@@ -119,6 +126,10 @@ where
                         )),
                     );
                 });
+            let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
+            metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
+                .with_label_values(&[&method.to_string(), service_name, connector_name])
+                .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
 
             match response {
@@ -172,6 +183,14 @@ where
                             }?
                         }
                         Err(body) => {
+                            metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
+                                .with_label_values(&[
+                                    &method.to_string(),
+                                    service_name,
+                                    connector_name,
+                                    body.status_code.to_string().as_str(),
+                                ])
+                                .inc();
                             let error = match body.status_code {
                                 500..=511 => connector.get_5xx_error_response(body, None)?,
                                 _ => connector.get_error_response_v2(body, None)?,
@@ -294,8 +313,8 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<hyperswitch_masking::Secret<String>>,
-    _client_certificate_key: Option<hyperswitch_masking::Secret<String>>,
+    _client_certificate: Option<masking::Secret<String>>,
+    _client_certificate_key: Option<masking::Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
     get_base_client(proxy_config, should_bypass_proxy)
     // match (client_certificate, client_certificate_key) {
