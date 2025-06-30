@@ -1,5 +1,4 @@
-use domain_types::errors::ConnectorError;
-use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse};
+use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse, ConnectorError};
 use tonic::Status;
 
 use crate::logger;

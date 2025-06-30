@@ -1,20 +1,8 @@
-use crate::connector_flow::{
-    Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate, SubmitEvidence,
-    Void,
-};
-use crate::connector_types::{
-    AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-    DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData, PaymentVoidData,
-    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-    RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-    ResponseId, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
-};
-use crate::errors::{ApiError, ApplicationErrorResponse};
-use crate::utils::{ForeignFrom, ForeignTryFrom};
-use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use common_utils::id_type::CustomerId;
-use common_utils::pii::Email;
 use core::result::Result;
+use std::{borrow::Cow, collections::HashMap, str::FromStr};
+
+use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
+use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -24,15 +12,30 @@ use grpc_api_types::payments::{
     PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::Secret;
+use serde::Serialize;
+use utoipa::ToSchema;
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::mandates::MandateData;
-use crate::payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails};
-use crate::{payment_method_data::PaymentMethodData, router_data_v2::RouterDataV2};
-use common_utils::consts::NO_ERROR_CODE;
-use serde::Serialize;
-use std::borrow::Cow;
-use std::{collections::HashMap, str::FromStr};
-use utoipa::ToSchema;
+use crate::{
+    connector_flow::{
+        Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
+    },
+    errors::{ApiError, ApplicationErrorResponse},
+    payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
+    payment_method_data::PaymentMethodData,
+    router_data_v2::RouterDataV2,
+    utils::{ForeignFrom, ForeignTryFrom},
+};
 #[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
@@ -191,18 +194,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         card_cvc: None,
                     }),
                 ),
-                grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(upi_collect) => Ok(
-                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiCollect(
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(
+                    upi_collect,
+                ) => Ok(PaymentMethodData::Upi(
+                    crate::payment_method_data::UpiData::UpiCollect(
                         crate::payment_method_data::UpiCollectData {
                             vpa_id: upi_collect.vpa_id.map(|vpa| vpa.into()),
-                        }
+                        },
+                    ),
+                )),
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => {
+                    Ok(PaymentMethodData::Upi(
+                        crate::payment_method_data::UpiData::UpiIntent(
+                            crate::payment_method_data::UpiIntentData {},
+                        ),
                     ))
-                ),
-                grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => Ok(
-                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiIntent(
-                        crate::payment_method_data::UpiIntentData {}
-                    ))
-                ),
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -464,9 +471,11 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                 None
             } else {
                 Some(serde_json::Value::Object(
-                    value.metadata.into_iter()
+                    value
+                        .metadata
+                        .into_iter()
                         .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect()
+                        .collect(),
                 ))
             },
             merchant_order_reference_id: None,

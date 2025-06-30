@@ -8,8 +8,6 @@ use common_utils::{
     request::RequestContent,
     types::{AmountConvertor, MinorUnit},
 };
-
-use domain_types::router_response_types::Response;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -23,16 +21,15 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
+    router_response_types::Response,
     types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::{self, ConnectorCommon},
-    connector_integration_v2::ConnectorIntegrationV2,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
     events::connector_api_logs::ConnectorEvent,
 };
-
 use tracing::info;
 use transformers as razorpayv2;
 
@@ -393,8 +390,11 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
         // Debug logging to trace reference_id
         let reference_id = data.resource_common_data.reference_id.clone();
-        info!("RazorpayV2 Authorization Response - reference_id: {:?}", reference_id);
-        
+        info!(
+            "RazorpayV2 Authorization Response - reference_id: {:?}",
+            reference_id
+        );
+
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
             redirection_data: Box::new(redirection_data),
@@ -490,31 +490,41 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
 
-        // Extract payment ID from connector_transaction_id
-        let payment_id = match &req.request.connector_transaction_id {
-            ResponseId::ConnectorTransactionId(id) => {
-                tracing::info!(
-                    "RazorpayV2 PSync payment_id from ConnectorTransactionId: {}",
-                    id
-                );
-                id
-            }
-            ResponseId::EncodedData(data) => {
-                tracing::info!("RazorpayV2 PSync payment_id from EncodedData: {}", data);
-                data
-            }
-            ResponseId::NoResponseId => {
-                tracing::error!("RazorpayV2 PSync: No payment ID provided");
-                return Err(errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_transaction_id",
-                }
-                .into());
-            }
-        };
+        // Check if request_ref_id is provided to determine URL pattern
+        let request_ref_id = &req.resource_common_data.connector_request_reference_id;
 
-        let url = format!("{}v1/payments/{}", base_url, payment_id);
-        tracing::info!("RazorpayV2 PSync URL: {}", url);
-        Ok(url)
+        if !request_ref_id.is_empty() {
+            // Use orders endpoint when request_ref_id is provided
+            let url = format!("{}v1/orders/{}/payments", base_url, request_ref_id);
+            tracing::info!("RazorpayV2 PSync URL (orders endpoint): {}", url);
+            Ok(url)
+        } else {
+            // Extract payment ID from connector_transaction_id for standard payment sync
+            let payment_id = match &req.request.connector_transaction_id {
+                ResponseId::ConnectorTransactionId(id) => {
+                    tracing::info!(
+                        "RazorpayV2 PSync payment_id from ConnectorTransactionId: {}",
+                        id
+                    );
+                    id
+                }
+                ResponseId::EncodedData(data) => {
+                    tracing::info!("RazorpayV2 PSync payment_id from EncodedData: {}", data);
+                    data
+                }
+                ResponseId::NoResponseId => {
+                    tracing::error!("RazorpayV2 PSync: No payment ID provided");
+                    return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_transaction_id",
+                    }
+                    .into());
+                }
+            };
+
+            let url = format!("{}v1/payments/{}", base_url, payment_id);
+            tracing::info!("RazorpayV2 PSync URL (payments endpoint): {}", url);
+            Ok(url)
+        }
     }
 
     fn get_request_body(
@@ -549,16 +559,36 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         >,
         errors::ConnectorError,
     > {
-        // For PSync, Razorpay returns the payment object directly, not wrapped in our custom structure
-        let response: razorpayv2::RazorpayV2PaymentsResponse = res
+        // Parse the response using the enum that handles both collection and direct payment responses
+        let sync_response: razorpayv2::RazorpayV2SyncResponse = res
             .response
-            .parse_struct("RazorpayV2PaymentsResponse")
+            .parse_struct("RazorpayV2SyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        event_builder.map(|i| i.set_response_body(&sync_response));
+
+        // Extract the payment response from either format
+        let payment_response = match sync_response {
+            razorpayv2::RazorpayV2SyncResponse::PaymentResponse(payment) => {
+                tracing::info!("RazorpayV2 PSync: Direct payment response received");
+                payment
+            }
+            razorpayv2::RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
+                tracing::info!(
+                    "RazorpayV2 PSync: Order payments collection received with {} items",
+                    collection.count
+                );
+
+                // Get the first (and typically only) payment from the collection
+                collection.items.into_iter().next().ok_or_else(|| {
+                    tracing::error!("RazorpayV2 PSync: Empty payments collection received");
+                    errors::ConnectorError::ResponseHandlingFailed
+                })?
+            }
+        };
 
         // Map Razorpay payment status to internal status, preserving original status
-        let status = match response.status.as_str() {
+        let status = match payment_response.status.as_str() {
             "created" => AttemptStatus::Pending,
             "authorized" => AttemptStatus::Authorized,
             "captured" => AttemptStatus::Charged, // This is the mapping, but we preserve original in metadata
@@ -568,12 +598,12 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         };
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(response.id),
+            resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
             redirection_data: Box::new(None),
             connector_metadata: None,
             mandate_reference: Box::new(None),
             network_txn_id: None,
-            connector_response_reference_id: response.order_id,
+            connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         };

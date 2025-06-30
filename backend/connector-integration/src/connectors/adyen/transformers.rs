@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     ext_traits::{ByteSliceExt, OptionExt},
     request::Method,
@@ -17,25 +18,20 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
-};
-use error_stack::{Report, ResultExt};
-
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-use domain_types::errors;
-use domain_types::{
+    errors,
     payment_method_data::{Card, PaymentMethodData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
-use crate::types::ResponseRouterData;
-
 use super::AdyenRouterData;
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {

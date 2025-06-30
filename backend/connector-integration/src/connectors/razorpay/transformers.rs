@@ -1,14 +1,9 @@
 use std::collections::HashMap;
 
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
-use common_enums::{self, AttemptStatus, CardNetwork};
-use error_stack::ResultExt;
-
+use base64::{engine::general_purpose::STANDARD, Engine};
 use cards::CardNumber;
+use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
-
-use domain_types::errors;
 use domain_types::{
     connector_flow::{Authorize, Capture, CreateOrder, RSync, Refund},
     connector_types::{
@@ -16,13 +11,13 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-};
-use domain_types::{
+    errors,
     payment_method_data::{Card, PaymentMethodData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use uuid;

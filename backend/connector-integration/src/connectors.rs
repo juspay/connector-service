@@ -10,12 +10,9 @@ pub use self::razorpayv2::RazorpayV2;
 pub mod authorizedotnet;
 pub mod fiserv;
 
-pub use self::adyen::Adyen;
+pub use self::{adyen::Adyen, fiserv::Fiserv, razorpay::Razorpay};
 
 pub use self::authorizedotnet::Authorizedotnet;
-pub use self::razorpay::Razorpay;
-
-pub use self::fiserv::Fiserv;
 
 pub mod elavon;
 pub use self::elavon::Elavon;
