@@ -7,11 +7,7 @@ pub use self::razorpayv2::RazorpayV2;
 
 pub mod fiserv;
 
-pub use self::adyen::Adyen;
-
-pub use self::razorpay::Razorpay;
-
-pub use self::fiserv::Fiserv;
+pub use self::{adyen::Adyen, fiserv::Fiserv, razorpay::Razorpay};
 
 pub mod elavon;
 pub use self::elavon::Elavon;

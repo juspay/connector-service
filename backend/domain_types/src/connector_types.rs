@@ -1,39 +1,40 @@
-use crate::errors::{ApiError, ApplicationErrorResponse};
-use crate::payment_address::{Address, AddressDetails, PhoneDetails};
-use crate::payment_method_data::Card;
-use crate::router_data::PaymentMethodToken;
-use crate::router_request_types::BrowserInformation;
-use crate::router_request_types::{
-    AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
-    CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
-    PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-    SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+use std::collections::HashMap;
+
+use common_enums::{
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
+    PaymentMethodType,
 };
-use crate::types::{
-    ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
-    PaymentMethodTypeMetadata, SupportedPaymentMethods,
+use common_utils::{
+    errors,
+    ext_traits::{OptionExt, ValueExt},
+    pii::IpAddress,
+    types::MinorUnit,
+    CustomResult, CustomerId, Email, SecretSerdeValue,
 };
-use crate::utils::{missing_field_err, Error, ForeignTryFrom};
-use common_enums::Currency;
-use common_utils::ext_traits::OptionExt;
-use common_utils::ext_traits::ValueExt;
-use common_utils::pii::IpAddress;
-use common_utils::{CustomResult, CustomerId, Email, SecretSerdeValue};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
 use crate::{
-    payment_method_data, payment_method_data::PaymentMethodData,
-    router_request_types::SyncRequestType,
+    errors::{ApiError, ApplicationErrorResponse},
+    payment_address::{Address, AddressDetails, PhoneDetails},
+    payment_method_data,
+    payment_method_data::{Card, PaymentMethodData},
+    router_data::PaymentMethodToken,
+    router_request_types::{
+        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
+        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
+    },
+    types::{
+        ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
+        PaymentMethodTypeMetadata, SupportedPaymentMethods,
+    },
+    utils::{missing_field_err, Error, ForeignTryFrom},
 };
-use common_enums::{
-    AttemptStatus, AuthenticationType, DisputeStatus, EventClass, PaymentMethod, PaymentMethodType,
-};
-use common_utils::{errors, types::MinorUnit};
-
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use strum::{Display, EnumString};
 
 // snake case for enum variants
 #[derive(Clone, Debug, Display, EnumString)]

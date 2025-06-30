@@ -1,12 +1,12 @@
 //! RazorpayV2 transformers for converting between domain types and RazorpayV2 API types
 
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine;
-use common_utils::pii::Email;
-use common_utils::types::MinorUnit;
-use domain_types::errors;
+use std::str::FromStr;
+
+use base64::{engine::general_purpose::STANDARD, Engine};
+use common_utils::{pii::Email, types::MinorUnit};
 use domain_types::{
     connector_types::{PaymentCreateOrderData, PaymentsAuthorizeData, RefundsData},
+    errors,
     payment_address::Address,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
@@ -14,7 +14,6 @@ use domain_types::{
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::str::FromStr;
 
 // ============ Authentication Types ============
 
@@ -200,6 +199,20 @@ pub struct RazorpayV2PaymentsResponse {
     pub fee: Option<i64>,
     pub tax: Option<i64>,
     pub error_code: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RazorpayV2OrderPaymentsCollectionResponse {
+    pub entity: String,
+    pub count: i32,
+    pub items: Vec<RazorpayV2PaymentsResponse>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RazorpayV2SyncResponse {
+    PaymentResponse(RazorpayV2PaymentsResponse),
+    OrderPaymentsCollection(RazorpayV2OrderPaymentsCollectionResponse),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
