@@ -1,3 +1,4 @@
+use common_enums::CurrencyUnit;
 use common_utils::CustomResult;
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
@@ -7,17 +8,8 @@ use domain_types::{
 };
 use hyperswitch_masking::Maskable;
 
-use crate::{errors, events::connector_api_logs::ConnectorEvent, types};
+use crate::events::connector_api_logs::ConnectorEvent;
 use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-
-/// Connector accepted currency unit as either "Base" or "Minor"
-#[derive(Debug)]
-pub enum CurrencyUnit {
-    /// Base currency unit
-    Base,
-    /// Minor currency unit
-    Minor,
-}
 
 pub trait ConnectorCommon {
     /// Name of the connector (in lowercase).
@@ -32,7 +24,7 @@ pub trait ConnectorCommon {
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, domain_types::errors::ConnectorError> {
         Ok(Vec::new())
     }
 
@@ -51,9 +43,9 @@ pub trait ConnectorCommon {
     /// common error response for a connector if it is same in all case
     fn build_error_response(
         &self,
-        res: types::Response,
+        res: domain_types::router_response_types::Response,
         _event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, domain_types::errors::ConnectorError> {
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: NO_ERROR_CODE.to_string(),

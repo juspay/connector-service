@@ -4,6 +4,8 @@ use common_utils::{Email, MinorUnit};
 use hyperswitch_masking::PeekInterface;
 use hyperswitch_masking::{Secret, SerializableSecret};
 
+use crate::utils::{missing_field_err, Error};
+
 #[derive(Clone, Default, Debug)]
 pub struct PaymentAddress {
     shipping: Option<Address>,
@@ -113,6 +115,34 @@ impl Address {
     }
 }
 
+impl Address {
+    pub fn get_email(&self) -> Result<Email, Error> {
+        self.email.clone().ok_or_else(missing_field_err("email"))
+    }
+
+    pub fn get_phone_with_country_code(
+        &self,
+    ) -> Result<Secret<String>, error_stack::Report<crate::errors::ConnectorError>> {
+        self.phone
+            .clone()
+            .map(|phone_details| phone_details.get_number_with_country_code())
+            .transpose()?
+            .ok_or_else(missing_field_err("phone"))
+    }
+
+    pub fn get_optional_country(&self) -> Option<common_enums::CountryAlpha2> {
+        self.address
+            .as_ref()
+            .and_then(|billing_details| billing_details.country)
+    }
+
+    pub fn get_optional_full_name(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|billing_address| billing_address.get_optional_full_name())
+    }
+}
+
 // used by customers also, could be moved outside
 /// Address details
 #[derive(Clone, Default, Debug, Eq, serde::Deserialize, serde::Serialize, PartialEq)]
@@ -188,12 +218,121 @@ impl AddressDetails {
     }
 }
 
+impl AddressDetails {
+    pub fn get_first_name(&self) -> Result<&Secret<String>, Error> {
+        self.first_name
+            .as_ref()
+            .ok_or_else(missing_field_err("address.first_name"))
+    }
+
+    pub fn get_last_name(&self) -> Result<&Secret<String>, Error> {
+        self.last_name
+            .as_ref()
+            .ok_or_else(missing_field_err("address.last_name"))
+    }
+
+    pub fn get_full_name(&self) -> Result<Secret<String>, Error> {
+        let first_name = self.get_first_name()?.peek().to_owned();
+        let last_name = self
+            .get_last_name()
+            .ok()
+            .cloned()
+            .unwrap_or(Secret::new("".to_string()));
+        let last_name = last_name.peek();
+        let full_name = format!("{first_name} {last_name}").trim().to_string();
+        Ok(Secret::new(full_name))
+    }
+
+    pub fn get_line1(&self) -> Result<&Secret<String>, Error> {
+        self.line1
+            .as_ref()
+            .ok_or_else(missing_field_err("address.line1"))
+    }
+
+    pub fn get_city(&self) -> Result<&String, Error> {
+        self.city
+            .as_ref()
+            .ok_or_else(missing_field_err("address.city"))
+    }
+
+    pub fn get_state(&self) -> Result<&Secret<String>, Error> {
+        self.state
+            .as_ref()
+            .ok_or_else(missing_field_err("address.state"))
+    }
+
+    pub fn get_line2(&self) -> Result<&Secret<String>, Error> {
+        self.line2
+            .as_ref()
+            .ok_or_else(missing_field_err("address.line2"))
+    }
+
+    pub fn get_zip(&self) -> Result<&Secret<String>, Error> {
+        self.zip
+            .as_ref()
+            .ok_or_else(missing_field_err("address.zip"))
+    }
+
+    pub fn get_country(&self) -> Result<&common_enums::CountryAlpha2, Error> {
+        self.country
+            .as_ref()
+            .ok_or_else(missing_field_err("address.country"))
+    }
+
+    pub fn get_combined_address_line(&self) -> Result<Secret<String>, Error> {
+        Ok(Secret::new(format!(
+            "{},{}",
+            self.get_line1()?.peek(),
+            self.get_line2()?.peek()
+        )))
+    }
+
+    pub fn get_optional_line2(&self) -> Option<Secret<String>> {
+        self.line2.clone()
+    }
+    pub fn get_optional_country(&self) -> Option<common_enums::CountryAlpha2> {
+        self.country
+    }
+}
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct PhoneDetails {
     /// The contact number
     pub number: Option<Secret<String>>,
     /// The country code attached to the number
     pub country_code: Option<String>,
+}
+
+impl PhoneDetails {
+    pub fn get_country_code(&self) -> Result<String, Error> {
+        self.country_code
+            .clone()
+            .ok_or_else(missing_field_err("billing.phone.country_code"))
+    }
+    pub fn extract_country_code(&self) -> Result<String, Error> {
+        self.get_country_code()
+            .map(|cc| cc.trim_start_matches('+').to_string())
+    }
+    pub fn get_number(&self) -> Result<Secret<String>, Error> {
+        self.number
+            .clone()
+            .ok_or_else(missing_field_err("billing.phone.number"))
+    }
+    pub fn get_number_with_country_code(&self) -> Result<Secret<String>, Error> {
+        let number = self.get_number()?;
+        let country_code = self.get_country_code()?;
+        Ok(Secret::new(format!("{}{}", country_code, number.peek())))
+    }
+    pub fn get_number_with_hash_country_code(&self) -> Result<Secret<String>, Error> {
+        let number = self.get_number()?;
+        let country_code = self.get_country_code()?;
+        let number_without_plus = country_code.trim_start_matches('+');
+        Ok(Secret::new(format!(
+            "{}#{}",
+            number_without_plus,
+            number.peek()
+        )))
+    }
 }
 
 #[derive(Debug, serde::Serialize, PartialEq, Eq, serde::Deserialize)]
