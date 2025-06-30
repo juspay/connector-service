@@ -8,13 +8,15 @@ use common_utils::errors::IntegrityCheckError;
 
 // Domain type imports
 use domain_types::connector_types::{
-    PaymentCreateOrderData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-    PaymentsSyncData, RefundsData, SetupMandateRequestData,
+    AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentVoidData,
+    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
+    SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::router_request_types::{
-    AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
-    PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-    SetupMandateIntegrityObject,
+    AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
+    CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
+    PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+    SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
 };
 
 // ========================================================================
@@ -115,6 +117,10 @@ impl_check_integrity!(PaymentsSyncData);
 impl_check_integrity!(PaymentVoidData);
 impl_check_integrity!(RefundsData);
 impl_check_integrity!(PaymentsCaptureData);
+impl_check_integrity!(AcceptDisputeData);
+impl_check_integrity!(DisputeDefendData);
+impl_check_integrity!(RefundSyncData);
+impl_check_integrity!(SubmitEvidenceData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -206,6 +212,56 @@ impl GetIntegrityObject<CaptureIntegrityObject> for PaymentsCaptureData {
         CaptureIntegrityObject {
             amount_to_capture: self.minor_amount_to_capture,
             currency: self.currency,
+        }
+    }
+}
+
+impl GetIntegrityObject<AcceptDisputeIntegrityObject> for AcceptDisputeData {
+    fn get_response_integrity_object(&self) -> Option<AcceptDisputeIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> AcceptDisputeIntegrityObject {
+        AcceptDisputeIntegrityObject {
+            connector_dispute_id: self.connector_dispute_id.clone(),
+        }
+    }
+}
+
+impl GetIntegrityObject<DefendDisputeIntegrityObject> for DisputeDefendData {
+    fn get_response_integrity_object(&self) -> Option<DefendDisputeIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> DefendDisputeIntegrityObject {
+        DefendDisputeIntegrityObject {
+            connector_dispute_id: self.connector_dispute_id.clone(),
+            defense_reason_code: self.defense_reason_code.clone(),
+        }
+    }
+}
+
+impl GetIntegrityObject<RefundSyncIntegrityObject> for RefundSyncData {
+    fn get_response_integrity_object(&self) -> Option<RefundSyncIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> RefundSyncIntegrityObject {
+        RefundSyncIntegrityObject {
+            connector_transaction_id: self.connector_transaction_id.clone(),
+            connector_refund_id: self.connector_refund_id.clone(),
+        }
+    }
+}
+
+impl GetIntegrityObject<SubmitEvidenceIntegrityObject> for SubmitEvidenceData {
+    fn get_response_integrity_object(&self) -> Option<SubmitEvidenceIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> SubmitEvidenceIntegrityObject {
+        SubmitEvidenceIntegrityObject {
+            connector_dispute_id: self.connector_dispute_id.clone(),
         }
     }
 }
@@ -418,6 +474,112 @@ impl FlowIntegrity for CaptureIntegrityObject {
                 "currency",
                 &req_integrity_object.currency.to_string(),
                 &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for AcceptDisputeIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.connector_dispute_id != res_integrity_object.connector_dispute_id {
+            mismatched_fields.push(format_mismatch(
+                "connector_dispute_id",
+                &req_integrity_object.connector_dispute_id,
+                &res_integrity_object.connector_dispute_id,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for DefendDisputeIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.connector_dispute_id != res_integrity_object.connector_dispute_id {
+            mismatched_fields.push(format_mismatch(
+                "connector_dispute_id",
+                &req_integrity_object.connector_dispute_id,
+                &res_integrity_object.connector_dispute_id,
+            ));
+        }
+
+        if req_integrity_object.defense_reason_code != res_integrity_object.defense_reason_code {
+            mismatched_fields.push(format_mismatch(
+                "defense_reason_code",
+                &req_integrity_object.defense_reason_code,
+                &res_integrity_object.defense_reason_code,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for RefundSyncIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.connector_transaction_id
+            != res_integrity_object.connector_transaction_id
+        {
+            mismatched_fields.push(format_mismatch(
+                "connector_transaction_id",
+                &req_integrity_object.connector_transaction_id,
+                &res_integrity_object.connector_transaction_id,
+            ));
+        }
+
+        if req_integrity_object.connector_refund_id != res_integrity_object.connector_refund_id {
+            mismatched_fields.push(format_mismatch(
+                "connector_refund_id",
+                &req_integrity_object.connector_refund_id,
+                &res_integrity_object.connector_refund_id,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for SubmitEvidenceIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.connector_dispute_id != res_integrity_object.connector_dispute_id {
+            mismatched_fields.push(format_mismatch(
+                "connector_dispute_id",
+                &req_integrity_object.connector_dispute_id,
+                &res_integrity_object.connector_dispute_id,
             ));
         }
 

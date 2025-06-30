@@ -174,3 +174,25 @@ pub struct CaptureIntegrityObject {
     pub amount_to_capture: MinorUnit,
     pub currency: Currency,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AcceptDisputeIntegrityObject {
+    pub connector_dispute_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DefendDisputeIntegrityObject {
+    pub connector_dispute_id: String,
+    pub defense_reason_code: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RefundSyncIntegrityObject {
+    pub connector_transaction_id: String,
+    pub connector_refund_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SubmitEvidenceIntegrityObject {
+    pub connector_dispute_id: String,
+}

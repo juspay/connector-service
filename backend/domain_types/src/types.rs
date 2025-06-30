@@ -1438,6 +1438,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             refund_status: common_enums::RefundStatus::Pending,
             refund_connector_metadata: None,
             all_keys_required: None, // Field not available in new proto structure
+            integrity_object: None,
         })
     }
 }
@@ -1904,9 +1905,12 @@ impl ForeignTryFrom<grpc_api_types::payments::AcceptDisputeRequest> for AcceptDi
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        _value: grpc_api_types::payments::AcceptDisputeRequest,
+        value: grpc_api_types::payments::AcceptDisputeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(AcceptDisputeData {})
+        Ok(AcceptDisputeData {
+            connector_dispute_id: value.dispute_id,
+            integrity_object: None,
+        })
     }
 }
 
@@ -1922,6 +1926,7 @@ impl ForeignTryFrom<grpc_api_types::payments::DisputeServiceSubmitEvidenceReques
         let mut result = SubmitEvidenceData {
             dispute_id: Some(value.dispute_id.clone()),
             connector_dispute_id: value.dispute_id,
+            integrity_object: None,
             access_activity_log: None,
             billing_address: None,
             cancellation_policy: None,
@@ -2626,6 +2631,7 @@ impl ForeignTryFrom<DisputeDefendRequest> for DisputeDefendData {
             dispute_id: connector_dispute_id.clone(),
             connector_dispute_id,
             defense_reason_code: value.reason_code.unwrap_or_default(),
+            integrity_object: None,
         })
     }
 }

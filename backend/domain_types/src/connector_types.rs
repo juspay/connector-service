@@ -4,9 +4,10 @@ use crate::payment_method_data::Card;
 use crate::router_data::PaymentMethodToken;
 use crate::router_request_types::BrowserInformation;
 use crate::router_request_types::{
-    AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
-    PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-    SetupMandateIntegrityObject,
+    AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
+    CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
+    PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+    SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
 };
 use crate::types::{
     ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
@@ -927,6 +928,7 @@ pub struct RefundSyncData {
     pub refund_connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
+    pub integrity_object: Option<RefundSyncIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -1196,6 +1198,11 @@ impl SetupMandateRequestData {
 
 #[derive(Debug, Default, Clone)]
 pub struct AcceptDisputeData {}
+#[derive(Debug, Clone)]
+pub struct AcceptDisputeData {
+    pub connector_dispute_id: String,
+    pub integrity_object: Option<AcceptDisputeIntegrityObject>,
+}
 
 #[derive(Debug, Clone)]
 pub struct DisputeFlowData {
@@ -1224,6 +1231,7 @@ pub struct DisputeResponseData {
 pub struct SubmitEvidenceData {
     pub dispute_id: Option<String>,
     pub connector_dispute_id: String,
+    pub integrity_object: Option<SubmitEvidenceIntegrityObject>,
     pub access_activity_log: Option<String>,
     pub billing_address: Option<String>,
 
@@ -1532,11 +1540,12 @@ impl From<PaymentMethodData> for PaymentMethodDataType {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct DisputeDefendData {
     pub dispute_id: String,
     pub connector_dispute_id: String,
     pub defense_reason_code: String,
+    pub integrity_object: Option<DefendDisputeIntegrityObject>,
 }
 
 pub trait SupportedPaymentMethodsExt {
