@@ -132,6 +132,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::CurrencyNotSupported { .. }
             | Self::NoConnectorWalletDetails
             | Self::MissingConnectorMandateMetadata
+            | Self::IntegrityCheckFailed { .. }
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
