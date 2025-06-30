@@ -284,6 +284,14 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
+        let config = match request.extensions().get::<Config>() {
+            Some(config) => config.clone(),
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
         let current_span = tracing::Span::current();
         let (gateway, merchant_id, tenant_id, request_id) =
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
@@ -324,11 +332,9 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data = PaymentFlowData::foreign_try_from((
-                    payload.clone(),
-                    self.config.connectors.clone(),
-                ))
-                .map_err(|e| e.into_grpc_status())?;
+                let mut payment_flow_data =
+                    PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
+                        .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
@@ -338,6 +344,7 @@ impl PaymentService for Payments {
                         &mut payment_flow_data,
                         connector_auth_details.clone(),
                         &payload,
+                        &config,
                     )
                     .await?;
                 }
@@ -362,7 +369,7 @@ impl PaymentService for Payments {
 
                 // Execute connector processing
                 let response = external_services::service::execute_connector_processing_step(
-                    &self.config.proxy,
+                    &config.proxy,
                     connector_integration,
                     router_data,
                     None,
@@ -912,6 +919,14 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRegisterRequest>,
     ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
+        let config = match request.extensions().get::<Config>() {
+            Some(config) => config.clone(),
+            None => {
+                return Err(tonic::Status::internal(
+                    "Configuration not found in request extensions",
+                ))
+            }
+        };
         let current_span = tracing::Span::current();
         let (gateway, merchant_id, tenant_id, request_id) =
             connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
@@ -953,11 +968,9 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data = PaymentFlowData::foreign_try_from((
-                    payload.clone(),
-                    self.config.connectors.clone(),
-                ))
-                .map_err(|e| e.into_grpc_status())?;
+                let mut payment_flow_data =
+                    PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
+                        .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
@@ -967,6 +980,7 @@ impl PaymentService for Payments {
                         &mut payment_flow_data,
                         connector_auth_details.clone(),
                         &payload,
+                        &config,
                     )
                     .await?;
                 }
@@ -990,7 +1004,7 @@ impl PaymentService for Payments {
                 };
 
                 let response = external_services::service::execute_connector_processing_step(
-                    &self.config.proxy,
+                    &config.proxy,
                     connector_integration,
                     router_data,
                     None,

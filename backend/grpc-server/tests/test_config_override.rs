@@ -107,7 +107,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
 
         // The request should fail with an invalid argument error since we're using test data
         // but we can verify that the configuration override was processed
-        println!("Response: {:?}", response);
+        println!("Response: {response:?}");
         assert!(response.is_err());
 
         // let error = response.unwrap_err();
