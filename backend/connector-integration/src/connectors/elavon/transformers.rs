@@ -5,6 +5,7 @@ use common_enums::{
 };
 use common_utils::consts::NO_ERROR_CODE;
 use common_utils::types::StringMajorUnit;
+use domain_types::errors::{self};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -21,10 +22,9 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::WithoutType;
-use interfaces::errors::{self};
 use std::collections::HashMap;
 
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -788,10 +788,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
             response: payments_response_data,
             resource_common_data: PaymentFlowData {
                 status: attempt_status,
-                payment_method_token: payment_method_token.map(|t| match t {
-                    PaymentMethodToken::Token(s) => s.expose(),
-                    _ => String::new(),
-                }),
+                payment_method_token,
                 ..router_data.resource_common_data
             },
             ..router_data

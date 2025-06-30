@@ -1,5 +1,6 @@
 pub mod transformers;
 
+use common_enums::CurrencyUnit;
 use transformers::{
     self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
     XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
@@ -34,14 +35,11 @@ use domain_types::{
 };
 
 use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-
+use domain_types::errors;
+use domain_types::router_response_types::Response;
 use interfaces::{
-    api::{self, ConnectorCommon},
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
-    errors::{self, ConnectorError},
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
 };
 
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -64,8 +62,8 @@ impl ConnectorCommon for Xendit {
         "xendit"
     }
 
-    fn get_currency_unit(&self) -> api::CurrencyUnit {
-        api::CurrencyUnit::Base
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Base
     }
 
     fn common_get_content_type(&self) -> &'static str {

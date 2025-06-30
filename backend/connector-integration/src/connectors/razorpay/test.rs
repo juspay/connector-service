@@ -8,11 +8,11 @@ mod tests {
     use domain_types::{
         payment_method_data::{Card, PaymentMethodData},
         router_request_types::BrowserInformation,
+        router_response_types::Response,
     };
     use interfaces::{
         connector_integration_v2::ConnectorIntegrationV2,
         connector_types::{BoxedConnector, ConnectorServiceTrait},
-        types::Response,
     };
     use serde_json::{json, to_value};
 
@@ -39,11 +39,11 @@ mod tests {
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
+            router_response_types::Response,
         };
         use interfaces::{
             connector_integration_v2::ConnectorIntegrationV2,
             connector_types::{BoxedConnector, ConnectorServiceTrait},
-            types::Response,
         };
         use serde_json::{json, to_value, Value};
 

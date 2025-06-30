@@ -14,6 +14,7 @@ use crate::utils::{ForeignFrom, ForeignTryFrom};
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::id_type::CustomerId;
 use common_utils::pii::Email;
+use core::result::Result;
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,

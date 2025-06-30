@@ -25,7 +25,7 @@ use domain_types::{
 
 use std::collections::HashMap;
 
-use interfaces::errors::{self, ConnectorError};
+use domain_types::errors::{self, ConnectorError};
 
 use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 

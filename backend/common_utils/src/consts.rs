@@ -63,6 +63,7 @@ pub const NO_ERROR_MESSAGE: &str = "No error message";
 pub const NO_ERROR_CODE: &str = "No error code";
 /// A string constant representing a redacted or masked value
 pub const REDACTED: &str = "Redacted";
+pub const UNSUPPORTED_ERROR_MESSAGE: &str = "Unsupported response type";
 
 // =============================================================================
 // Card Validation Constants

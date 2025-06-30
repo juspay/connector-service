@@ -1,9 +1,18 @@
+use base64::Engine;
 use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
 use common_utils::{new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email};
+use error_stack::ResultExt;
+use hyperswitch_masking::ExposeInterface;
+use hyperswitch_masking::PeekInterface;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use time::Date;
 use utoipa::ToSchema;
+
+use crate::{
+    router_data::NetworkTokenNumber,
+    utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
+};
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
 pub struct Card {
@@ -19,6 +28,81 @@ pub struct Card {
     pub nick_name: Option<Secret<String>>,
     pub card_holder_name: Option<Secret<String>>,
     pub co_badged_card_data: Option<CoBadgedCardData>,
+}
+
+impl Card {
+    pub fn get_card_expiry_year_2_digit(
+        &self,
+    ) -> Result<Secret<String>, crate::errors::ConnectorError> {
+        let binding = self.card_exp_year.clone();
+        let year = binding.peek();
+        Ok(Secret::new(
+            year.get(year.len() - 2..)
+                .ok_or(crate::errors::ConnectorError::RequestEncodingFailed)?
+                .to_string(),
+        ))
+    }
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
+        get_card_issuer(self.card_number.peek())
+    }
+    pub fn get_card_expiry_month_year_2_digit_with_delimiter(
+        &self,
+        delimiter: String,
+    ) -> Result<Secret<String>, crate::errors::ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        Ok(Secret::new(format!(
+            "{}{}{}",
+            self.card_exp_month.peek(),
+            delimiter,
+            year.peek()
+        )))
+    }
+    pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
+        let year = self.get_expiry_year_4_digit();
+        Secret::new(format!(
+            "{}{}{}",
+            year.peek(),
+            delimiter,
+            self.card_exp_month.peek()
+        ))
+    }
+    pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
+        let year = self.get_expiry_year_4_digit();
+        Secret::new(format!(
+            "{}{}{}",
+            self.card_exp_month.peek(),
+            delimiter,
+            year.peek()
+        ))
+    }
+    pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
+        let mut year = self.card_exp_year.peek().clone();
+        if year.len() == 2 {
+            year = format!("20{year}");
+        }
+        Secret::new(year)
+    }
+    pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, crate::errors::ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?.expose();
+        let month = self.card_exp_month.clone().expose();
+        Ok(Secret::new(format!("{year}{month}")))
+    }
+    pub fn get_expiry_month_as_i8(&self) -> Result<Secret<i8>, Error> {
+        self.card_exp_month
+            .peek()
+            .clone()
+            .parse::<i8>()
+            .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
+            .map(Secret::new)
+    }
+    pub fn get_expiry_year_as_i32(&self) -> Result<Secret<i32>, Error> {
+        self.card_exp_year
+            .peek()
+            .clone()
+            .parse::<i32>()
+            .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
+            .map(Secret::new)
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
@@ -75,6 +159,36 @@ pub struct NetworkTokenData {
     pub card_holder_name: Option<Secret<String>>,
     pub nick_name: Option<Secret<String>>,
     pub eci: Option<String>,
+}
+
+impl NetworkTokenData {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
+        get_card_issuer(self.network_token.peek())
+    }
+
+    pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
+        let mut year = self.network_token_exp_year.peek().clone();
+        if year.len() == 2 {
+            year = format!("20{year}");
+        }
+        Secret::new(year)
+    }
+
+    pub fn get_network_token(&self) -> NetworkTokenNumber {
+        self.network_token.clone()
+    }
+
+    pub fn get_network_token_expiry_month(&self) -> Secret<String> {
+        self.network_token_exp_month.clone()
+    }
+
+    pub fn get_network_token_expiry_year(&self) -> Secret<String> {
+        self.network_token_exp_year.clone()
+    }
+
+    pub fn get_cryptogram(&self) -> Option<Secret<String>> {
+        self.cryptogram.clone()
+    }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
@@ -166,6 +280,14 @@ pub enum RealTimePaymentData {
 pub struct CryptoData {
     pub pay_currency: Option<String>,
     pub network: Option<String>,
+}
+
+impl CryptoData {
+    pub fn get_pay_currency(&self) -> Result<String, Error> {
+        self.pay_currency
+            .clone()
+            .ok_or_else(missing_field_err("crypto_data.pay_currency"))
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
@@ -343,6 +465,44 @@ pub enum WalletData {
     RevolutPay(RevolutPayData),
 }
 
+impl WalletData {
+    pub fn get_wallet_token(&self) -> Result<Secret<String>, Error> {
+        match self {
+            Self::GooglePay(data) => Ok(Secret::new(data.tokenization_data.token.clone())),
+            Self::ApplePay(data) => Ok(data.get_applepay_decoded_payment_data()?),
+            Self::PaypalSdk(data) => Ok(Secret::new(data.token.clone())),
+            _ => Err(crate::errors::ConnectorError::InvalidWallet.into()),
+        }
+    }
+    pub fn get_wallet_token_as_json<T>(&self, wallet_name: String) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        serde_json::from_str::<T>(self.get_wallet_token()?.peek())
+            .change_context(crate::errors::ConnectorError::InvalidWalletToken { wallet_name })
+    }
+
+    pub fn get_encoded_wallet_token(&self) -> Result<String, Error> {
+        match self {
+            Self::GooglePay(_) => {
+                let json_token: serde_json::Value =
+                    self.get_wallet_token_as_json("Google Pay".to_owned())?;
+                let token_as_vec = serde_json::to_vec(&json_token).change_context(
+                    crate::errors::ConnectorError::InvalidWalletToken {
+                        wallet_name: "Google Pay".to_string(),
+                    },
+                )?;
+                let encoded_token = base64::engine::general_purpose::STANDARD.encode(token_as_vec);
+                Ok(encoded_token)
+            }
+            _ => Err(crate::errors::ConnectorError::NotImplemented(
+                "SELECTED PAYMENT METHOD".to_owned(),
+            )
+            .into()),
+        }
+    }
+}
+
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]
 pub struct RevolutPayData {}
 
@@ -490,6 +650,24 @@ pub struct ApplePayWalletData {
     pub transaction_identifier: String,
 }
 
+impl ApplePayWalletData {
+    pub fn get_applepay_decoded_payment_data(&self) -> Result<Secret<String>, Error> {
+        let token = Secret::new(
+            String::from_utf8(
+                base64::engine::general_purpose::STANDARD
+                    .decode(&self.payment_data)
+                    .change_context(crate::errors::ConnectorError::InvalidWalletToken {
+                        wallet_name: "Apple Pay".to_string(),
+                    })?,
+            )
+            .change_context(crate::errors::ConnectorError::InvalidWalletToken {
+                wallet_name: "Apple Pay".to_string(),
+            })?,
+        );
+        Ok(token)
+    }
+}
+
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize)]
 pub struct GoPayRedirection {}
 
@@ -537,6 +715,81 @@ pub struct CardDetailsForNetworkTransactionId {
     pub bank_code: Option<String>,
     pub nick_name: Option<Secret<String>>,
     pub card_holder_name: Option<Secret<String>>,
+}
+
+impl CardDetailsForNetworkTransactionId {
+    pub fn get_card_expiry_year_2_digit(
+        &self,
+    ) -> Result<Secret<String>, crate::errors::ConnectorError> {
+        let binding = self.card_exp_year.clone();
+        let year = binding.peek();
+        Ok(Secret::new(
+            year.get(year.len() - 2..)
+                .ok_or(crate::errors::ConnectorError::RequestEncodingFailed)?
+                .to_string(),
+        ))
+    }
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
+        get_card_issuer(self.card_number.peek())
+    }
+    pub fn get_card_expiry_month_year_2_digit_with_delimiter(
+        &self,
+        delimiter: String,
+    ) -> Result<Secret<String>, crate::errors::ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?;
+        Ok(Secret::new(format!(
+            "{}{}{}",
+            self.card_exp_month.peek(),
+            delimiter,
+            year.peek()
+        )))
+    }
+    pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
+        let year = self.get_expiry_year_4_digit();
+        Secret::new(format!(
+            "{}{}{}",
+            year.peek(),
+            delimiter,
+            self.card_exp_month.peek()
+        ))
+    }
+    pub fn get_expiry_date_as_mmyyyy(&self, delimiter: &str) -> Secret<String> {
+        let year = self.get_expiry_year_4_digit();
+        Secret::new(format!(
+            "{}{}{}",
+            self.card_exp_month.peek(),
+            delimiter,
+            year.peek()
+        ))
+    }
+    pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
+        let mut year = self.card_exp_year.peek().clone();
+        if year.len() == 2 {
+            year = format!("20{year}");
+        }
+        Secret::new(year)
+    }
+    pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, crate::errors::ConnectorError> {
+        let year = self.get_card_expiry_year_2_digit()?.expose();
+        let month = self.card_exp_month.clone().expose();
+        Ok(Secret::new(format!("{year}{month}")))
+    }
+    pub fn get_expiry_month_as_i8(&self) -> Result<Secret<i8>, Error> {
+        self.card_exp_month
+            .peek()
+            .clone()
+            .parse::<i8>()
+            .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
+            .map(Secret::new)
+    }
+    pub fn get_expiry_year_as_i32(&self) -> Result<Secret<i32>, Error> {
+        self.card_exp_year
+            .peek()
+            .clone()
+            .parse::<i32>()
+            .change_context(crate::errors::ConnectorError::ResponseDeserializationFailed)
+            .map(Secret::new)
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, serde::Deserialize, serde::Serialize, ToSchema)]

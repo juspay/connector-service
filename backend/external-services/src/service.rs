@@ -1,6 +1,8 @@
 use domain_types::{
+    connector_types::RawConnectorResponse,
     errors::{ApiClientError, ApiErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::Proxy,
 };
 // use base64::engine::Engine;
@@ -11,17 +13,15 @@ use common_utils::{
 };
 use error_stack::{report, ResultExt};
 
-use interfaces::{
-    connector_integration_v2::BoxedConnectorIntegrationV2, errors::ConnectorError, types::Response,
-};
 use masking::{ErasedMaskSerialize, Maskable};
+use interfaces::{
+    connector_integration_v2::BoxedConnectorIntegrationV2,
+};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
 use std::{str::FromStr, time::Duration};
 use tracing::field::Empty;
-
-use domain_types::connector_types::RawConnectorResponse;
 
 use common_utils::ext_traits::AsyncExt;
 use serde_json::Value;
@@ -51,7 +51,7 @@ pub async fn execute_connector_processing_step<F, ResourceCommonData, Req, Resp>
     all_keys_required: Option<bool>,
     connector_name: &str,
     service_name: &str,
-) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
+) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, domain_types::errors::ConnectorError>
 where
     F: Clone + 'static,
     Req: Clone + 'static + std::fmt::Debug,
@@ -111,7 +111,7 @@ where
             tracing::Span::current().record("request.method", tracing::field::display(method));
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
                 .await
-                .change_context(ConnectorError::RequestEncodingFailed)
+                .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
                 .inspect_err(|err| {
                     info_log(
                         "NETWORK_ERROR",
@@ -206,7 +206,9 @@ where
                 }
                 Err(err) => {
                     tracing::Span::current().record("url", tracing::field::display(url));
-                    Err(err.change_context(ConnectorError::ProcessingStepFailed(None)))
+                    Err(err.change_context(
+                        domain_types::errors::ConnectorError::ProcessingStepFailed(None),
+                    ))
                 }
             }
         }
