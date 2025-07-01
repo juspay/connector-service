@@ -124,11 +124,26 @@ impl ConnectorCommon for Razorpay {
 
         with_error_response_body!(event_builder, response);
 
+        let (code, message, reason) = match response {
+            razorpay::RazorpayErrorResponse::StandardError { error } => {
+                (error.code, error.description, Some(error.reason))
+            }
+            razorpay::RazorpayErrorResponse::SimpleError { message } => {
+                // For simple error messages like "no Route matched with those values"
+                // Default to a generic error code
+                (
+                    "ROUTE_ERROR".to_string(),
+                    message.clone(),
+                    Some(message.clone()),
+                )
+            }
+        };
+
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.error.code,
-            message: response.error.description,
-            reason: Some(response.error.reason),
+            code,
+            message: message.clone(),
+            reason,
             attempt_status: None,
             connector_transaction_id: None,
             network_decline_code: None,
@@ -385,11 +400,10 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
-
         // Check if request_ref_id is provided to determine URL pattern
         let request_ref_id = &req.resource_common_data.connector_request_reference_id;
 
-        if !request_ref_id.is_empty() {
+        if request_ref_id != "default_reference_id" {
             // Use orders endpoint when request_ref_id is provided
             let url = format!("{}v1/orders/{}/payments", base_url, request_ref_id);
             tracing::info!("Razorpay PSync URL (orders endpoint): {}", url);
