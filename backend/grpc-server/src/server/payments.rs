@@ -10,20 +10,20 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, FlowName, PSync, RSync, Refund, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, FlowName, PSync, Refund, SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_refund_sync_response,
-        generate_setup_mandate_response, AttemptStatus,
+        generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
+        AttemptStatus,
     },
     utils::ForeignTryFrom,
 };
@@ -34,7 +34,7 @@ use grpc_api_types::payments::{
     PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
     PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
+    PaymentServiceVoidResponse, RefundResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -64,11 +64,6 @@ trait PaymentOperationsInternal {
     async fn internal_refund(
         &self,
         request: tonic::Request<PaymentServiceRefundRequest>,
-    ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
-
-    async fn internal_refund_sync(
-        &self,
-        request: tonic::Request<RefundServiceGetRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 
     async fn internal_payment_capture(
@@ -253,21 +248,6 @@ impl PaymentOperationsInternal for Payments {
         request_data_constructor: RefundsData::foreign_try_from,
         common_flow_data_constructor: RefundFlowData::foreign_try_from,
         generate_response_fn: generate_refund_response,
-        all_keys_required: None
-    );
-
-    implement_connector_operation!(
-        fn_name: internal_refund_sync,
-        log_prefix: "REFUND_SYNC",
-        request_type: RefundServiceGetRequest,
-        response_type: RefundResponse,
-        flow_marker: RSync,
-        resource_common_data_type: RefundFlowData,
-        request_data_type: RefundSyncData,
-        response_data_type: RefundsResponseData,
-        request_data_constructor: RefundSyncData::foreign_try_from,
-        common_flow_data_constructor: RefundFlowData::foreign_try_from,
-        generate_response_fn: generate_refund_sync_response,
         all_keys_required: None
     );
 
