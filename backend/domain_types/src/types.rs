@@ -1037,10 +1037,6 @@ pub fn generate_payment_authorize_response(
             }))?,
         },
         Err(err) => {
-            let status = err
-                .attempt_status
-                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
-                .unwrap_or_default();
             PaymentServiceAuthorizeResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
@@ -1055,7 +1051,7 @@ pub fn generate_payment_authorize_response(
                     }
                 }),
                 incremental_authorization_allowed: None,
-                status: status as i32,
+                status: err.status_code as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
