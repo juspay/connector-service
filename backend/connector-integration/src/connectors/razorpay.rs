@@ -772,6 +772,29 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 {
 }
 
+// SourceVerification implementations for all flows
+impl interfaces::verification::SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Razorpay {}
+
+impl interfaces::verification::SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Razorpay {}
+
 impl connector_types::ConnectorValidation for Razorpay {
     fn validate_mandate_payment(
         &self,

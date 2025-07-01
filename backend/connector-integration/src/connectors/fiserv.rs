@@ -472,6 +472,29 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 {
 }
 
+// SourceVerification implementations for all flows
+impl interfaces::verification::SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Fiserv {}
+
+impl interfaces::verification::SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Fiserv {}
+
 impl ConnectorSpecifications for Fiserv {}
 
 // We already have an implementation for ValidationTrait above

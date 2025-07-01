@@ -420,3 +420,26 @@ impl
     > for Elavon
 {
 }
+
+// SourceVerification implementations for all flows
+impl interfaces::verification::SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Elavon {}
+
+impl interfaces::verification::SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Elavon {}

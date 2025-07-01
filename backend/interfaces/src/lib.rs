@@ -7,3 +7,4 @@ pub mod events;
 pub mod integrity;
 pub mod routing;
 pub mod webhooks;
+pub mod verification;
