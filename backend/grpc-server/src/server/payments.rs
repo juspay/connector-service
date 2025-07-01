@@ -29,14 +29,12 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, refund_service_server::RefundService, DisputeResponse,
-    PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
-    PaymentServiceCaptureResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest,
-    PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
-    PaymentServiceRegisterResponse, PaymentServiceTransformRequest,
-    PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse, RefundServiceGetRequest, RefundServiceTransformRequest,
-    RefundServiceTransformResponse,
+    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
+    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
+    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
+    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
+    PaymentServiceVoidResponse, RefundResponse, RefundServiceGetRequest,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;

@@ -187,8 +187,8 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         // For UPI payments, use the specific UPI endpoint
         use domain_types::payment_method_data::PaymentMethodData;
         match &req.request.payment_method_data {
-            PaymentMethodData::Upi(_) => Ok(format!("{}v1/payments/create/upi", base_url)),
-            _ => Ok(format!("{}v1/payments/create/json", base_url)),
+            PaymentMethodData::Upi(_) => Ok(format!("{base_url}v1/payments/create/upi")),
+            _ => Ok(format!("{base_url}v1/payments/create/json")),
         }
     }
 
@@ -405,7 +405,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
 
         if request_ref_id != "default_reference_id" {
             // Use orders endpoint when request_ref_id is provided
-            let url = format!("{}v1/orders/{}/payments", base_url, request_ref_id);
+            let url = format!("{base_url}v1/orders/{request_ref_id}/payments");
             tracing::info!("Razorpay PSync URL (orders endpoint): {}", url);
             Ok(url)
         } else {
@@ -443,7 +443,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         let payment_response = match sync_response {
             RazorpayV2SyncResponse::PaymentResponse(payment) => {
                 tracing::info!("Razorpay PSync: Direct payment response received");
-                payment
+                *payment
             }
             RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
                 tracing::info!(

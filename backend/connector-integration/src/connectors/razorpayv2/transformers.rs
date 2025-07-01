@@ -211,7 +211,7 @@ pub struct RazorpayV2OrderPaymentsCollectionResponse {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RazorpayV2SyncResponse {
-    PaymentResponse(RazorpayV2PaymentsResponse),
+    PaymentResponse(Box<RazorpayV2PaymentsResponse>),
     OrderPaymentsCollection(RazorpayV2OrderPaymentsCollectionResponse),
 }
 
@@ -233,12 +233,8 @@ pub enum RazorpayV2UpiPaymentsResponse {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RazorpayV2ErrorResponse {
-    StandardError {
-        error: RazorpayV2ErrorDetails,
-    },
-    SimpleError {
-        message: String,
-    },
+    StandardError { error: RazorpayV2ErrorDetails },
+    SimpleError { message: String },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -274,7 +270,7 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
             currency: item.router_data.currency.to_string(),
             receipt: format!(
                 "order_{}",
-                uuid::Uuid::new_v4().to_string().replace('-', "")[..12].to_string()
+                &uuid::Uuid::new_v4().to_string().replace('-', "")[..12]
             ),
             payment_capture: None,
             notes: Some(RazorpayV2Notes {
