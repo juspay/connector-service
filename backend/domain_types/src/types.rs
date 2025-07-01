@@ -2671,7 +2671,7 @@ impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::Fut
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_FUTURE_USAGE".to_owned(),
                     error_identifier: 401,
-                    error_message: format!("Invalid value for future_usage: {:?}", value),
+                    error_message: format!("Invalid value for future_usage: {value:?}"),
                     error_object: None,
                 })
                 .into())
