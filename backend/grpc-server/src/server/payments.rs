@@ -4,7 +4,7 @@ use crate::{
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     utils::{
         auth_from_metadata, connector_from_metadata,
-        connector_merchant_id_tenant_id_request_id_from_metadata,
+        connector_merchant_id_tenant_id_request_id_from_metadata, grpc_logging_wrapper,
     },
 };
 use common_utils::errors::CustomResult;
@@ -270,7 +270,7 @@ impl PaymentService for Payments {
         name = "payment_authorize",
         fields(
             name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_name = tracing::field::Empty,
             service_method = FlowName::Authorize.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
@@ -297,26 +297,7 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        let current_span = tracing::Span::current();
-        let (gateway, merchant_id, tenant_id, request_id) =
-            connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
-                .map_err(|e| e.into_grpc_status())?;
-        let req_body = request.get_ref();
-        let req_body_json = match serde_json::to_string(req_body) {
-            Ok(json) => json,
-            Err(e) => {
-                tracing::error!("Serialization error: {:?}", e);
-                "<serialization error>".to_string()
-            }
-        };
-        current_span.record("request_body", req_body_json);
-        current_span.record("gateway", gateway.to_string());
-        current_span.record("merchant_id", merchant_id);
-        current_span.record("tenant_id", tenant_id);
-        current_span.record("request_id", request_id);
-
-        let start_time = tokio::time::Instant::now();
-        let result: Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> =
+            grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
@@ -395,26 +376,7 @@ impl PaymentService for Payments {
 
                 Ok(tonic::Response::new(authorize_response))
             })
-            .await;
-        let duration = start_time.elapsed().as_millis();
-        current_span.record("response_time", duration);
-
-        match &result {
-            Ok(response) => {
-                current_span.record("response_body", tracing::field::debug(response.get_ref()));
-
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
-                    .to_string();
-                current_span.record("flow_specific_fields.status", status_str);
-            }
-            Err(status) => {
-                current_span.record("error_message", status.message());
-                current_span.record("status_code", status.code().to_string());
-            }
-        }
-        result
+        }).await
     }
 
     #[tracing::instrument(
@@ -470,10 +432,10 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
                 let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
-                    .to_string();
-                current_span.record("flow_specific_fields.status", status_str);
+                // let status_str = AttemptStatus::try_from(status)
+                //     .unwrap_or(AttemptStatus::Unknown)
+                //     .to_string();
+                // current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -536,11 +498,11 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
-                    .to_string();
-                current_span.record("flow_specific_fields.status", status_str);
+                // let status = response.get_ref().status;
+                // let status_str = AttemptStatus::try_from(status)
+                //     .unwrap_or(AttemptStatus::Unknown)
+                //     .to_string();
+                // current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -889,11 +851,11 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
-                    .to_string();
-                current_span.record("flow_specific_fields.status", status_str);
+                // let status = response.get_ref().status;
+                // let status_str = AttemptStatus::try_from(status)
+                //     .unwrap_or(AttemptStatus::Unknown)
+                //     .to_string();
+                // current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
@@ -1039,11 +1001,11 @@ impl PaymentService for Payments {
             Ok(response) => {
                 current_span.record("response_body", tracing::field::debug(response.get_ref()));
 
-                let status = response.get_ref().status;
-                let status_str = AttemptStatus::try_from(status)
-                    .unwrap_or(AttemptStatus::Unknown)
-                    .to_string();
-                current_span.record("flow_specific_fields.status", status_str);
+                // let status = response.get_ref().status;
+                // let status_str = AttemptStatus::try_from(status)
+                //     .unwrap_or(AttemptStatus::Unknown)
+                //     .to_string();
+                // current_span.record("flow_specific_fields.status", status_str);
             }
             Err(status) => {
                 current_span.record("error_message", status.message());
