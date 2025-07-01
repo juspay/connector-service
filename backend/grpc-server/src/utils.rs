@@ -56,7 +56,7 @@ pub fn connector_from_metadata(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_string(),
                 error_identifier: 400,
-                error_message: format!("Invalid connector: {}", e),
+                error_message: format!("Invalid connector: {e}"),
                 error_object: None,
             }))
         })
@@ -72,7 +72,7 @@ pub fn merchant_id_from_metadata(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_MERCHANT_ID".to_string(),
                 error_identifier: 400,
-                error_message: format!("Missing merchant ID in request metadata: {}", e),
+                error_message: format!("Missing merchant ID in request metadata: {e}"),
                 error_object: None,
             }))
         })
@@ -87,7 +87,7 @@ pub fn request_id_from_metadata(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_REQUEST_ID".to_string(),
                 error_identifier: 400,
-                error_message: format!("Missing request ID in request metadata: {}", e),
+                error_message: format!("Missing request ID in request metadata: {e}"),
                 error_object: None,
             }))
         })
@@ -102,7 +102,7 @@ pub fn tenant_id_from_metadata(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_TENANT_ID".to_string(),
                 error_identifier: 400,
-                error_message: format!("Missing tenant ID in request metadata: {}", e),
+                error_message: format!("Missing tenant ID in request metadata: {e}"),
                 error_object: None,
             }))
         })
@@ -139,7 +139,7 @@ pub fn auth_from_metadata(
             ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_AUTH_TYPE".to_string(),
                 error_identifier: 400,
-                error_message: format!("Invalid auth type: {}", auth),
+                error_message: format!("Invalid auth type: {auth}"),
                 error_object: None,
             }),
         )),
@@ -156,7 +156,7 @@ fn parse_metadata<'a>(
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_METADATA".to_string(),
                 error_identifier: 400,
-                error_message: format!("Missing {} in request metadata", key),
+                error_message: format!("Missing {key} in request metadata"),
                 error_object: None,
             }))
         })
@@ -165,7 +165,7 @@ fn parse_metadata<'a>(
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_METADATA".to_string(),
                     error_identifier: 400,
-                    error_message: format!("Invalid {} in request metadata: {}", key, e),
+                    error_message: format!("Invalid {key} in request metadata: {e}"),
                     error_object: None,
                 }))
             })
@@ -193,8 +193,14 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
+            let service_name = request
+                .extensions()
+                .get::<String>()
+                .cloned()
+                .unwrap_or_else(|| "unknown_service".to_string());
 
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
+
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
 
@@ -238,6 +244,8 @@ macro_rules! implement_connector_operation {
                 connector_integration,
                 router_data,
                 $all_keys_required,
+                &connector.to_string(),
+                &service_name,
             )
             .await
             .switch()

@@ -8,6 +8,8 @@ use bytes::Bytes;
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
 };
+use domain_types::errors;
+use domain_types::router_response_types::Response;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -28,13 +30,11 @@ use domain_types::{
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
-use interfaces::errors::ConnectorError;
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::{self, ConnectorIntegrationV2},
-    connector_types, errors,
+    connector_types,
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
 };
 use transformers::{
     self as elavon, ElavonCaptureResponse, ElavonPSyncResponse, ElavonPaymentsResponse,
@@ -74,7 +74,7 @@ impl ConnectorCommon for Elavon {
     fn get_auth_header(
         &self,
         _auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         Ok(Vec::new())
     }
 
@@ -86,11 +86,11 @@ impl ConnectorCommon for Elavon {
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         match res
             .response
             .parse_struct::<elavon::ElavonPaymentsResponse>("ElavonPaymentsResponse")
-            .map_err(|_| ConnectorError::ResponseDeserializationFailed)
+            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)
         {
             Ok(elavon_response) => {
                 with_error_response_body!(event_builder, elavon_response);
@@ -197,7 +197,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             Ok(vec![(
                 headers::CONTENT_TYPE.to_string(),
                 self.common_get_content_type().to_string().into(),
@@ -221,14 +221,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
                 req.resource_common_data.connectors.elavon.base_url
@@ -252,14 +252,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
                 req.resource_common_data.connectors.elavon.base_url
@@ -293,14 +293,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
                 req.resource_common_data.connectors.elavon.base_url
@@ -324,14 +324,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
                 req.resource_common_data.connectors.elavon.base_url
@@ -355,14 +355,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ) -> CustomResult<String, ConnectorError> {
+        ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
                 "{}processxml.do",
                 req.resource_common_data.connectors.elavon.base_url

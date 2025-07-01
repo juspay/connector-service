@@ -4,6 +4,7 @@ use common_utils::{
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
+use domain_types::errors::ConnectorError;
 use domain_types::{
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -11,7 +12,6 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
-use interfaces::errors::ConnectorError;
 use serde::{Deserialize, Serialize};
 
 use crate::connectors::fiserv::FiservRouterData;
@@ -122,7 +122,7 @@ fn get_card_expiry_year_4_digit_placeholder(
 ) -> Result<Secret<String>, error_stack::Report<ConnectorError>> {
     let year_str = year_yy.peek();
     if year_str.len() == 2 && year_str.chars().all(char::is_numeric) {
-        Ok(Secret::new(format!("20{}", year_str)))
+        Ok(Secret::new(format!("20{year_str}")))
     } else if year_str.len() == 4 && year_str.chars().all(char::is_numeric) {
         Ok(year_yy.clone())
     } else {

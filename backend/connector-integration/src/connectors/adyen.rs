@@ -24,18 +24,14 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 
+use domain_types::errors;
+use domain_types::router_response_types::Response;
 use error_stack::report;
 use hyperswitch_masking::{Mask, Maskable};
+use interfaces::connector_types::{self, is_mandate_supported, ConnectorValidation};
 use interfaces::{
-    api::{self, ConnectorCommon},
-    connector_integration_v2::ConnectorIntegrationV2,
-    errors,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
     events::connector_api_logs::ConnectorEvent,
-    types::Response,
-};
-use interfaces::{
-    connector_types::{self, is_mandate_supported, ConnectorValidation},
-    errors::ConnectorError,
 };
 
 use super::macros;
@@ -143,7 +139,7 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
@@ -180,8 +176,8 @@ impl ConnectorCommon for Adyen {
     fn id(&self) -> &'static str {
         "adyen"
     }
-    fn get_currency_unit(&self) -> api::CurrencyUnit {
-        api::CurrencyUnit::Minor
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Minor
     }
     fn get_auth_header(
         &self,
@@ -371,8 +367,8 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
-                .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{}ca/services/DisputeService/v30/defendDispute", dispute_url))
+                .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/defendDispute"))
         }
     }
 );
@@ -546,8 +542,8 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
-                                  .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{}ca/services/DisputeService/v30/acceptDispute", dispute_url))
+                                  .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/acceptDispute"))
         }
     }
 );
@@ -574,8 +570,8 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let dispute_url = self.connector_base_url_disputes(req)
-                                  .ok_or(interfaces::errors::ConnectorError::FailedToObtainIntegrationUrl)?;
-            Ok(format!("{}ca/services/DisputeService/v30/supplyDefenseDocument", dispute_url))
+                                  .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
+            Ok(format!("{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"))
         }
     }
 );
@@ -663,7 +659,7 @@ impl ConnectorValidation for Adyen {
         &self,
         pm_type: Option<PaymentMethodType>,
         pm_data: PaymentMethodData,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), errors::ConnectorError> {
         let mandate_supported_pmd = std::collections::HashSet::from([PaymentMethodDataType::Card]);
         is_mandate_supported(pm_data, pm_type, mandate_supported_pmd, self.id())
     }
@@ -674,7 +670,7 @@ impl ConnectorValidation for Adyen {
         _is_three_ds: bool,
         _status: AttemptStatus,
         _connector_meta_data: Option<SecretSerdeValue>,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), errors::ConnectorError> {
         if data.encoded_data.is_some() {
             return Ok(());
         }

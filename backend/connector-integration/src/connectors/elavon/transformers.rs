@@ -5,6 +5,7 @@ use common_enums::{
 };
 use common_utils::consts::NO_ERROR_CODE;
 use common_utils::types::StringMajorUnit;
+use domain_types::errors::{self};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -21,10 +22,9 @@ use domain_types::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::WithoutType;
-use interfaces::errors::{self};
 use std::collections::HashMap;
 
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::de::{self, Deserializer};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -163,14 +163,14 @@ impl
                     None => TransactionType::CcSale,
                     Some(other_capture_method) => {
                         Err(report!(errors::ConnectorError::FlowNotSupported {
-                            flow: format!("Capture method: {:?}", other_capture_method),
+                            flow: format!("Capture method: {other_capture_method:?}"),
                             connector: "Elavon".to_string()
                         }))?
                     }
                 };
 
                 let exp_month = card.card_exp_month.peek().to_string();
-                let formatted_exp_month = format!("{:0>2}", exp_month);
+                let formatted_exp_month = format!("{exp_month:0>2}");
 
                 let exp_year = card.card_exp_year.peek().to_string();
                 let formatted_exp_year = if exp_year.len() == 4 {
@@ -178,7 +178,7 @@ impl
                 } else {
                     &exp_year
                 };
-                let exp_date = format!("{}{}", formatted_exp_month, formatted_exp_year);
+                let exp_date = format!("{formatted_exp_month}{formatted_exp_year}");
 
                 let (avs_address, avs_zip) = get_avs_details_from_payment_address(Some(
                     &router_data.resource_common_data.address,
@@ -218,7 +218,7 @@ impl
                     Ok(amount) => amount,
                     Err(e) => {
                         return Err(report!(errors::ConnectorError::AmountConversionFailed)
-                            .attach_printable(format!("Failed to convert amount: {}", e)));
+                            .attach_printable(format!("Failed to convert amount: {e}")));
                     }
                 };
                 let card_req = CardPaymentRequest {
@@ -788,10 +788,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
             response: payments_response_data,
             resource_common_data: PaymentFlowData {
                 status: attempt_status,
-                payment_method_token: payment_method_token.map(|t| match t {
-                    PaymentMethodToken::Token(s) => s.expose(),
-                    _ => String::new(),
-                }),
+                payment_method_token,
                 ..router_data.resource_common_data
             },
             ..router_data

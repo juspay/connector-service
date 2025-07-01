@@ -21,6 +21,7 @@ use domain_types::{
 use error_stack::{Report, ResultExt};
 
 use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
+use domain_types::errors;
 use domain_types::{
     payment_method_data::{Card, PaymentMethodData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -28,12 +29,11 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
-use interfaces::errors;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
-use crate::{types::ResponseRouterData, utils::PaymentsAuthorizeRequestData};
+use crate::types::ResponseRouterData;
 
 use super::AdyenRouterData;
 
@@ -50,7 +50,7 @@ pub struct Amount {
     pub value: MinorUnit,
 }
 
-type Error = error_stack::Report<interfaces::errors::ConnectorError>;
+type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -505,7 +505,7 @@ pub struct AdyenRouterData1<T> {
 }
 
 impl<T> TryFrom<(MinorUnit, T)> for AdyenRouterData1<T> {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
@@ -533,7 +533,7 @@ pub struct AdyenAuthType {
 }
 
 impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
@@ -550,13 +550,13 @@ impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
                 merchant_account: key1.to_owned(),
                 review_key: Some(api_secret.to_owned()),
             }),
-            _ => Err(interfaces::errors::ConnectorError::FailedToObtainAuthType),
+            _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType),
         }
     }
 }
 
 impl TryFrom<(&Card, Option<String>)> for AdyenPaymentMethod {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn try_from((card, card_holder_name): (&Card, Option<String>)) -> Result<Self, Self::Error> {
         let adyen_card = AdyenCard {
             number: card.card_number.clone(),
@@ -813,7 +813,7 @@ impl
             .to_owned()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
         {
-            Some(_mandate_ref) => Err(interfaces::errors::ConnectorError::NotImplemented(
+            Some(_mandate_ref) => Err(domain_types::errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
             None => match item.router_data.request.payment_method_data.clone() {
@@ -838,7 +838,7 @@ impl
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(
-                    interfaces::errors::ConnectorError::NotImplemented("payment method".into()),
+                    domain_types::errors::ConnectorError::NotImplemented("payment method".into()),
                 )?,
             },
         }
@@ -1126,7 +1126,7 @@ pub enum AdyenVoidStatus {
 }
 
 impl ForeignTryFrom<AdyenVoidStatus> for common_enums::AttemptStatus {
-    type Error = interfaces::errors::ConnectorError;
+    type Error = domain_types::errors::ConnectorError;
     fn foreign_try_from(item: AdyenVoidStatus) -> Result<Self, Self::Error> {
         match item {
             AdyenVoidStatus::Received => Ok(Self::Voided),
@@ -1180,7 +1180,7 @@ pub fn get_adyen_response(
         Option<domain_types::router_data::ErrorResponse>,
         PaymentsResponseData,
     ),
-    interfaces::errors::ConnectorError,
+    domain_types::errors::ConnectorError,
 > {
     let status = get_adyen_payment_status(is_capture_manual, response.result_code, pmt);
     let error = if response.refusal_reason.is_some()
@@ -1244,7 +1244,7 @@ pub fn get_redirection_response(
         Option<ErrorResponse>,
         PaymentsResponseData,
     ),
-    interfaces::errors::ConnectorError,
+    domain_types::errors::ConnectorError,
 > {
     let status = get_adyen_payment_status(is_manual_capture, response.result_code.clone(), pmt);
     let error = if response.refusal_reason.is_some()
@@ -1315,7 +1315,7 @@ pub struct WaitScreenData {
 
 pub fn get_wait_screen_metadata(
     next_action: &RedirectionResponse,
-) -> CustomResult<Option<serde_json::Value>, interfaces::errors::ConnectorError> {
+) -> CustomResult<Option<serde_json::Value>, domain_types::errors::ConnectorError> {
     match next_action.action.payment_method_type {
         PaymentType::Blik => {
             let current_time = OffsetDateTime::now_utc().unix_timestamp_nanos();
@@ -1622,10 +1622,10 @@ fn is_mandate_payment(
 
 pub fn get_address_info(
     address: Option<&domain_types::payment_address::Address>,
-) -> Option<Result<Address, error_stack::Report<interfaces::errors::ConnectorError>>> {
+) -> Option<Result<Address, error_stack::Report<domain_types::errors::ConnectorError>>> {
     address.and_then(|add| {
         add.address.as_ref().map(
-            |a| -> Result<Address, error_stack::Report<interfaces::errors::ConnectorError>> {
+            |a| -> Result<Address, error_stack::Report<domain_types::errors::ConnectorError>> {
                 Ok(Address {
                     city: a.city.clone().unwrap(),
                     country: a.country.unwrap(),
@@ -2120,7 +2120,7 @@ impl
             .to_owned()
             .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
         {
-            Some(_mandate_ref) => Err(interfaces::errors::ConnectorError::NotImplemented(
+            Some(_mandate_ref) => Err(domain_types::errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
             None => match item.router_data.request.payment_method_data.clone() {
@@ -2143,7 +2143,7 @@ impl
                 | PaymentMethodData::NetworkToken(_)
                 | PaymentMethodData::MobilePayment(_)
                 | PaymentMethodData::CardToken(_) => Err(
-                    interfaces::errors::ConnectorError::NotImplemented("payment method".into()),
+                    domain_types::errors::ConnectorError::NotImplemented("payment method".into()),
                 )?,
             },
         }
@@ -2699,7 +2699,7 @@ pub struct DisputeServiceResult {
 impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
     for RouterDataV2<F, DisputeFlowData, Req, DisputeResponseData>
 {
-    type Error = Report<interfaces::errors::ConnectorError>;
+    type Error = Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         value: ResponseRouterData<AdyenDefendDisputeResponse, Self>,

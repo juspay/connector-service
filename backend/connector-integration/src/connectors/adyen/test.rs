@@ -100,6 +100,7 @@ mod tests {
                     statement_descriptor_suffix: None,
                     statement_descriptor: None,
                     capture_method: None,
+                    integrity_object: None,
                     router_return_url: Some("www.google.com".to_string()),
                     webhook_url: None,
                     complete_authorize_url: None,
@@ -183,7 +184,7 @@ mod tests {
                 };
                 masked_request
             });
-            println!("request: {:?}", req_body);
+            println!("request: {req_body:?}");
             assert_eq!(
                 req_body.as_ref().unwrap()["reference"],
                 "conn_ref_123456789"
@@ -258,6 +259,7 @@ mod tests {
                     setup_future_usage: None,
                     off_session: None,
                     browser_info: None,
+                    integrity_object: None,
                     order_category: None,
                     session_token: None,
                     enrolled_for_3ds: false,

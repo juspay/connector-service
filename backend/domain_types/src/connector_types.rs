@@ -1,10 +1,24 @@
 use crate::errors::{ApiError, ApplicationErrorResponse};
+use crate::payment_address::{Address, AddressDetails, PhoneDetails};
+use crate::payment_method_data::Card;
+use crate::router_data::PaymentMethodToken;
+use crate::router_request_types::BrowserInformation;
+use crate::router_request_types::{
+    AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
+    CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
+    PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+    SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+};
 use crate::types::{
     ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
     PaymentMethodTypeMetadata, SupportedPaymentMethods,
 };
-use crate::utils::ForeignTryFrom;
+use crate::utils::{missing_field_err, Error, ForeignTryFrom};
 use common_enums::Currency;
+use common_utils::ext_traits::OptionExt;
+use common_utils::ext_traits::ValueExt;
+use common_utils::pii::IpAddress;
+use common_utils::{CustomResult, CustomerId, Email, SecretSerdeValue};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 
@@ -30,6 +44,7 @@ pub enum ConnectorEnum {
     Fiserv,
     Elavon,
     Xendit,
+    Checkout,
 }
 
 impl ForeignTryFrom<i32> for ConnectorEnum {
@@ -42,10 +57,11 @@ impl ForeignTryFrom<i32> for ConnectorEnum {
             28 => Ok(Self::Fiserv),
             778 => Ok(Self::Elavon),
             87 => Ok(Self::Xendit),
+            15 => Ok(Self::Checkout),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for authenticate_by: {}", connector),
+                error_message: format!("Invalid value for authenticate_by: {connector}"),
                 error_object: None,
             })
             .into()),
@@ -83,8 +99,8 @@ impl ConnectorMandateReferenceId {
         }
     }
 
-    pub fn get_connector_mandate_id(&self) -> Option<&String> {
-        self.connector_mandate_id.as_ref()
+    pub fn get_connector_mandate_id(&self) -> Option<String> {
+        self.connector_mandate_id.clone()
     }
 
     pub fn get_payment_method_id(&self) -> Option<&String> {
@@ -149,6 +165,31 @@ pub struct PaymentsSyncData {
     pub payment_experience: Option<common_enums::PaymentExperience>,
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
+    pub integrity_object: Option<PaymentSynIntegrityObject>,
+}
+
+impl PaymentsSyncData {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+        }
+    }
+    pub fn get_connector_transaction_id(
+        &self,
+    ) -> CustomResult<String, crate::errors::ConnectorError> {
+        match self.connector_transaction_id.clone() {
+            ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
+            _ => Err(errors::ValidationError::IncorrectValueProvided {
+                field_name: "connector_transaction_id",
+            })
+            .attach_printable("Expected connector transaction ID not found")
+            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)?,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -171,7 +212,7 @@ pub struct PaymentFlowData {
     pub access_token: Option<String>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
-    pub payment_method_token: Option<String>,
+    pub payment_method_token: Option<PaymentMethodToken>,
     pub preprocessing_id: Option<String>,
     ///for switching between two different versions of the same connector
     pub connector_api_version: Option<String>,
@@ -184,6 +225,386 @@ pub struct PaymentFlowData {
     pub raw_connector_response: Option<String>,
 }
 
+impl PaymentFlowData {
+    pub fn get_billing(&self) -> Result<&Address, Error> {
+        self.address
+            .get_payment_method_billing()
+            .ok_or_else(missing_field_err("billing"))
+    }
+
+    pub fn get_billing_country(&self) -> Result<common_enums::CountryAlpha2, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|a| a.address.as_ref())
+            .and_then(|ad| ad.country)
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.country",
+            ))
+    }
+
+    pub fn get_billing_phone(&self) -> Result<&PhoneDetails, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|a| a.phone.as_ref())
+            .ok_or_else(missing_field_err("billing.phone"))
+    }
+
+    pub fn get_optional_billing(&self) -> Option<&Address> {
+        self.address.get_payment_method_billing()
+    }
+
+    pub fn get_optional_shipping(&self) -> Option<&Address> {
+        self.address.get_shipping()
+    }
+
+    pub fn get_optional_shipping_first_name(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.first_name)
+        })
+    }
+
+    pub fn get_optional_shipping_last_name(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.last_name)
+        })
+    }
+
+    pub fn get_optional_shipping_line1(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.line1)
+        })
+    }
+
+    pub fn get_optional_shipping_line2(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.line2)
+        })
+    }
+
+    pub fn get_optional_shipping_city(&self) -> Option<String> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.city)
+        })
+    }
+
+    pub fn get_optional_shipping_state(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.state)
+        })
+    }
+
+    pub fn get_optional_shipping_country(&self) -> Option<common_enums::CountryAlpha2> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.country)
+        })
+    }
+
+    pub fn get_optional_shipping_zip(&self) -> Option<Secret<String>> {
+        self.address.get_shipping().and_then(|shipping_address| {
+            shipping_address
+                .clone()
+                .address
+                .and_then(|shipping_details| shipping_details.zip)
+        })
+    }
+
+    pub fn get_optional_shipping_email(&self) -> Option<Email> {
+        self.address
+            .get_shipping()
+            .and_then(|shipping_address| shipping_address.clone().email)
+    }
+
+    pub fn get_optional_shipping_phone_number(&self) -> Option<Secret<String>> {
+        self.address
+            .get_shipping()
+            .and_then(|shipping_address| shipping_address.clone().phone)
+            .and_then(|phone_details| phone_details.get_number_with_country_code().ok())
+    }
+
+    pub fn get_description(&self) -> Result<String, Error> {
+        self.description
+            .clone()
+            .ok_or_else(missing_field_err("description"))
+    }
+    pub fn get_billing_address(&self) -> Result<&AddressDetails, Error> {
+        self.address
+            .get_payment_method_billing()
+            .as_ref()
+            .and_then(|a| a.address.as_ref())
+            .ok_or_else(missing_field_err("billing.address"))
+    }
+
+    pub fn get_connector_meta(&self) -> Result<SecretSerdeValue, Error> {
+        self.connector_meta_data
+            .clone()
+            .ok_or_else(missing_field_err("connector_meta_data"))
+    }
+
+    pub fn get_session_token(&self) -> Result<String, Error> {
+        self.session_token
+            .clone()
+            .ok_or_else(missing_field_err("session_token"))
+    }
+
+    pub fn get_billing_first_name(&self) -> Result<Secret<String>, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.first_name.clone())
+            })
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.first_name",
+            ))
+    }
+
+    pub fn get_billing_full_name(&self) -> Result<Secret<String>, Error> {
+        self.get_optional_billing()
+            .and_then(|billing_details| billing_details.address.as_ref())
+            .and_then(|billing_address| billing_address.get_optional_full_name())
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.first_name",
+            ))
+    }
+
+    pub fn get_billing_last_name(&self) -> Result<Secret<String>, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.last_name.clone())
+            })
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.last_name",
+            ))
+    }
+
+    pub fn get_billing_line1(&self) -> Result<Secret<String>, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line1.clone())
+            })
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.line1",
+            ))
+    }
+    pub fn get_billing_city(&self) -> Result<String, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.city)
+            })
+            .ok_or_else(missing_field_err(
+                "payment_method_data.billing.address.city",
+            ))
+    }
+
+    pub fn get_billing_email(&self) -> Result<Email, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| billing_address.email.clone())
+            .ok_or_else(missing_field_err("payment_method_data.billing.email"))
+    }
+
+    pub fn get_billing_phone_number(&self) -> Result<Secret<String>, Error> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| billing_address.clone().phone)
+            .map(|phone_details| phone_details.get_number_with_country_code())
+            .transpose()?
+            .ok_or_else(missing_field_err("payment_method_data.billing.phone"))
+    }
+
+    pub fn get_optional_billing_line1(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line1)
+            })
+    }
+
+    pub fn get_optional_billing_line2(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.line2)
+            })
+    }
+
+    pub fn get_optional_billing_city(&self) -> Option<String> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.city)
+            })
+    }
+
+    pub fn get_optional_billing_country(&self) -> Option<common_enums::CountryAlpha2> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.country)
+            })
+    }
+
+    pub fn get_optional_billing_zip(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.zip)
+            })
+    }
+
+    pub fn get_optional_billing_state(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.state)
+            })
+    }
+
+    pub fn get_optional_billing_first_name(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.first_name)
+            })
+    }
+
+    pub fn get_optional_billing_last_name(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .address
+                    .and_then(|billing_details| billing_details.last_name)
+            })
+    }
+
+    pub fn get_optional_billing_phone_number(&self) -> Option<Secret<String>> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| {
+                billing_address
+                    .clone()
+                    .phone
+                    .and_then(|phone_data| phone_data.number)
+            })
+    }
+
+    pub fn get_optional_billing_email(&self) -> Option<Email> {
+        self.address
+            .get_payment_method_billing()
+            .and_then(|billing_address| billing_address.clone().email)
+    }
+    pub fn to_connector_meta<T>(&self) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.get_connector_meta()?
+            .parse_value(std::any::type_name::<T>())
+            .change_context(crate::errors::ConnectorError::NoConnectorMetaData)
+    }
+
+    pub fn is_three_ds(&self) -> bool {
+        matches!(self.auth_type, common_enums::AuthenticationType::ThreeDs)
+    }
+
+    pub fn get_shipping_address(&self) -> Result<&AddressDetails, Error> {
+        self.address
+            .get_shipping()
+            .and_then(|a| a.address.as_ref())
+            .ok_or_else(missing_field_err("shipping.address"))
+    }
+
+    pub fn get_shipping_address_with_phone_number(&self) -> Result<&Address, Error> {
+        self.address
+            .get_shipping()
+            .ok_or_else(missing_field_err("shipping"))
+    }
+
+    pub fn get_payment_method_token(&self) -> Result<PaymentMethodToken, Error> {
+        self.payment_method_token
+            .clone()
+            .ok_or_else(missing_field_err("payment_method_token"))
+    }
+    pub fn get_customer_id(&self) -> Result<CustomerId, Error> {
+        self.customer_id
+            .to_owned()
+            .ok_or_else(missing_field_err("customer_id"))
+    }
+    pub fn get_connector_customer_id(&self) -> Result<String, Error> {
+        self.connector_customer
+            .to_owned()
+            .ok_or_else(missing_field_err("connector_customer_id"))
+    }
+    pub fn get_preprocessing_id(&self) -> Result<String, Error> {
+        self.preprocessing_id
+            .to_owned()
+            .ok_or_else(missing_field_err("preprocessing_id"))
+    }
+
+    pub fn get_optional_billing_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_billing()
+            .and_then(|billing_details| billing_details.address.as_ref())
+            .and_then(|billing_address| billing_address.get_optional_full_name())
+    }
+}
+
 impl RawConnectorResponse for PaymentFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
@@ -194,7 +615,27 @@ impl RawConnectorResponse for PaymentFlowData {
 pub struct PaymentVoidData {
     pub connector_transaction_id: String,
     pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
+}
+
+impl PaymentVoidData {
+    // fn get_amount(&self) -> Result<i64, Error> {
+    //     self.amount.ok_or_else(missing_field_err("amount"))
+    // }
+    // fn get_currency(&self) -> Result<common_enums::Currency, Error> {
+    //     self.currency.ok_or_else(missing_field_err("currency"))
+    // }
+    pub fn get_cancellation_reason(&self) -> Result<String, Error> {
+        self.cancellation_reason
+            .clone()
+            .ok_or_else(missing_field_err("cancellation_reason"))
+    }
+    // fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+    //     self.browser_info
+    //         .clone()
+    //         .ok_or_else(missing_field_err("browser_info"))
+    // }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -212,7 +653,7 @@ pub struct PaymentsAuthorizeData {
     pub order_tax_amount: Option<MinorUnit>,
     pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
@@ -242,8 +683,185 @@ pub struct PaymentsAuthorizeData {
     pub merchant_order_reference_id: Option<String>,
     pub shipping_cost: Option<MinorUnit>,
     pub merchant_account_id: Option<String>,
+    pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+}
+
+impl PaymentsAuthorizeData {
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+        }
+    }
+    pub fn get_email(&self) -> Result<Email, Error> {
+        self.email.clone().ok_or_else(missing_field_err("email"))
+    }
+    pub fn get_optional_email(&self) -> Option<Email> {
+        self.email.clone()
+    }
+    pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
+    }
+    // pub fn get_order_details(&self) -> Result<Vec<OrderDetailsWithAmount>, Error> {
+    //     self.order_details
+    //         .clone()
+    //         .ok_or_else(missing_field_err("order_details"))
+    // }
+
+    pub fn get_card(&self) -> Result<Card, Error> {
+        match self.payment_method_data.clone() {
+            PaymentMethodData::Card(card) => Ok(card),
+            _ => Err(missing_field_err("card")()),
+        }
+    }
+
+    pub fn get_complete_authorize_url(&self) -> Result<String, Error> {
+        self.complete_authorize_url
+            .clone()
+            .ok_or_else(missing_field_err("complete_authorize_url"))
+    }
+
+    pub fn connector_mandate_id(&self) -> Option<String> {
+        self.mandate_id
+            .as_ref()
+            .and_then(|mandate_ids| match &mandate_ids.mandate_reference_id {
+                Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ids)) => {
+                    connector_mandate_ids.get_connector_mandate_id()
+                }
+                Some(MandateReferenceId::NetworkMandateId(_))
+                | None
+                | Some(MandateReferenceId::NetworkTokenWithNTI(_)) => None,
+            })
+    }
+
+    pub fn get_optional_network_transaction_id(&self) -> Option<String> {
+        self.mandate_id
+            .as_ref()
+            .and_then(|mandate_ids| match &mandate_ids.mandate_reference_id {
+                Some(MandateReferenceId::NetworkMandateId(network_transaction_id)) => {
+                    Some(network_transaction_id.clone())
+                }
+                Some(MandateReferenceId::ConnectorMandateId(_))
+                | Some(MandateReferenceId::NetworkTokenWithNTI(_))
+                | None => None,
+            })
+    }
+
+    // pub fn is_mandate_payment(&self) -> bool {
+    //     ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession))
+    //         || self
+    //             .mandate_id
+    //             .as_ref()
+    //             .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+    //             .is_some()
+    // }
+    // fn is_cit_mandate_payment(&self) -> bool {
+    //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
+    // }
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_router_return_url(&self) -> Result<String, Error> {
+        self.router_return_url
+            .clone()
+            .ok_or_else(missing_field_err("return_url"))
+    }
+    pub fn is_wallet(&self) -> bool {
+        matches!(self.payment_method_data, PaymentMethodData::Wallet(_))
+    }
+    pub fn is_card(&self) -> bool {
+        matches!(self.payment_method_data, PaymentMethodData::Card(_))
+    }
+
+    pub fn get_payment_method_type(&self) -> Result<common_enums::PaymentMethodType, Error> {
+        self.payment_method_type
+            .to_owned()
+            .ok_or_else(missing_field_err("payment_method_type"))
+    }
+
+    pub fn get_connector_mandate_id(&self) -> Result<String, Error> {
+        self.connector_mandate_id()
+            .ok_or_else(missing_field_err("connector_mandate_id"))
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+    // fn get_original_amount(&self) -> i64 {
+    //     self.surcharge_details
+    //         .as_ref()
+    //         .map(|surcharge_details| surcharge_details.original_amount.get_amount_as_i64())
+    //         .unwrap_or(self.amount)
+    // }
+    // fn get_surcharge_amount(&self) -> Option<i64> {
+    //     self.surcharge_details
+    //         .as_ref()
+    //         .map(|surcharge_details| surcharge_details.surcharge_amount.get_amount_as_i64())
+    // }
+    // fn get_tax_on_surcharge_amount(&self) -> Option<i64> {
+    //     self.surcharge_details.as_ref().map(|surcharge_details| {
+    //         surcharge_details
+    //             .tax_on_surcharge_amount
+    //             .get_amount_as_i64()
+    //     })
+    // }
+    // fn get_total_surcharge_amount(&self) -> Option<i64> {
+    //     self.surcharge_details.as_ref().map(|surcharge_details| {
+    //         surcharge_details
+    //             .get_total_surcharge_amount()
+    //             .get_amount_as_i64()
+    //     })
+    // }
+
+    // fn is_customer_initiated_mandate_payment(&self) -> bool {
+    //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
+    // }
+
+    pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
+        self.metadata.clone().and_then(|meta_data| match meta_data {
+            serde_json::Value::Null
+            | serde_json::Value::Bool(_)
+            | serde_json::Value::Number(_)
+            | serde_json::Value::String(_)
+            | serde_json::Value::Array(_) => None,
+            serde_json::Value::Object(_) => Some(meta_data.into()),
+        })
+    }
+
+    // fn get_authentication_data(&self) -> Result<AuthenticationData, Error> {
+    //     self.authentication_data
+    //         .clone()
+    //         .ok_or_else(missing_field_err("authentication_data"))
+    // }
+
+    // fn get_connector_mandate_request_reference_id(&self) -> Result<String, Error> {
+    //     self.mandate_id
+    //         .as_ref()
+    //         .and_then(|mandate_ids| match &mandate_ids.mandate_reference_id {
+    //             Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ids)) => {
+    //                 connector_mandate_ids.get_connector_mandate_request_reference_id()
+    //             }
+    //             Some(MandateReferenceId::NetworkMandateId(_))
+    //             | None
+    //             | Some(MandateReferenceId::NetworkTokenWithNTI(_)) => None,
+    //         })
+    //         .ok_or_else(missing_field_err("connector_mandate_request_reference_id"))
+    // }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -294,6 +912,7 @@ pub struct MandateReference {
 pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
+    pub integrity_object: Option<CreateOrderIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -309,6 +928,7 @@ pub struct RefundSyncData {
     pub refund_connector_metadata: Option<common_utils::pii::SecretSerdeValue>,
     pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
+    pub integrity_object: Option<RefundSyncIntegrityObject>,
 }
 
 #[derive(Debug, Clone)]
@@ -473,7 +1093,7 @@ pub struct RefundsData {
     pub refund_id: String,
     pub connector_transaction_id: String,
     pub connector_refund_id: Option<String>,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub payment_amount: i64,
     pub reason: Option<String>,
     pub webhook_url: Option<String>,
@@ -485,6 +1105,27 @@ pub struct RefundsData {
     pub refund_status: common_enums::RefundStatus,
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
+    pub integrity_object: Option<RefundIntegrityObject>,
+}
+
+impl RefundsData {
+    #[track_caller]
+    pub fn get_connector_refund_id(&self) -> Result<String, Error> {
+        self.connector_refund_id
+            .clone()
+            .get_required_value("connector_refund_id")
+            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)
+    }
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_connector_metadata(&self) -> Result<serde_json::Value, Error> {
+        self.connector_metadata
+            .clone()
+            .ok_or_else(missing_field_err("connector_metadata"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -497,15 +1138,22 @@ pub struct MultipleCaptureRequestData {
 pub struct PaymentsCaptureData {
     pub amount_to_capture: i64,
     pub minor_amount_to_capture: MinorUnit,
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub connector_transaction_id: ResponseId,
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
+    pub integrity_object: Option<CaptureIntegrityObject>,
+}
+
+impl PaymentsCaptureData {
+    pub fn is_multiple_capture(&self) -> bool {
+        self.multiple_capture_data.is_some()
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct SetupMandateRequestData {
-    pub currency: common_enums::Currency,
+    pub currency: Currency,
     pub payment_method_data: crate::payment_method_data::PaymentMethodData,
     pub amount: Option<i64>,
     pub confirm: bool,
@@ -531,10 +1179,28 @@ pub struct SetupMandateRequestData {
     pub minor_amount: Option<MinorUnit>,
     pub shipping_cost: Option<MinorUnit>,
     pub customer_id: Option<common_utils::id_type::CustomerId>,
+    pub integrity_object: Option<SetupMandateIntegrityObject>,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct AcceptDisputeData {}
+impl SetupMandateRequestData {
+    pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
+        self.browser_info
+            .clone()
+            .ok_or_else(missing_field_err("browser_info"))
+    }
+    pub fn get_email(&self) -> Result<Email, Error> {
+        self.email.clone().ok_or_else(missing_field_err("email"))
+    }
+    pub fn is_card(&self) -> bool {
+        matches!(self.payment_method_data, PaymentMethodData::Card(_))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct AcceptDisputeData {
+    pub connector_dispute_id: String,
+    pub integrity_object: Option<AcceptDisputeIntegrityObject>,
+}
 
 #[derive(Debug, Clone)]
 pub struct DisputeFlowData {
@@ -563,6 +1229,7 @@ pub struct DisputeResponseData {
 pub struct SubmitEvidenceData {
     pub dispute_id: Option<String>,
     pub connector_dispute_id: String,
+    pub integrity_object: Option<SubmitEvidenceIntegrityObject>,
     pub access_activity_log: Option<String>,
     pub billing_address: Option<String>,
 
@@ -871,11 +1538,12 @@ impl From<PaymentMethodData> for PaymentMethodDataType {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct DisputeDefendData {
     pub dispute_id: String,
     pub connector_dispute_id: String,
     pub defense_reason_code: String,
+    pub integrity_object: Option<DefendDisputeIntegrityObject>,
 }
 
 pub trait SupportedPaymentMethodsExt {

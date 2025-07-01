@@ -1,7 +1,10 @@
 use common_enums::Currency;
-use common_utils::{pii::IpAddress, SecretSerdeValue};
+use common_utils::{date_time, pii::IpAddress, SecretSerdeValue};
+use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use time::PrimitiveDateTime;
+
+use crate::utils::{missing_field_err, Error};
 
 #[derive(Default, Eq, PartialEq, Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct CustomerAcceptance {
@@ -55,4 +58,19 @@ pub struct MandateAmountData {
     pub start_date: Option<PrimitiveDateTime>,
     pub end_date: Option<PrimitiveDateTime>,
     pub metadata: Option<SecretSerdeValue>,
+}
+
+impl MandateAmountData {
+    pub fn get_end_date(&self, format: date_time::DateFormat) -> Result<String, Error> {
+        let date = self.end_date.ok_or_else(missing_field_err(
+            "mandate_data.mandate_type.{multi_use|single_use}.end_date",
+        ))?;
+        date_time::format_date(date, format)
+            .change_context(crate::errors::ConnectorError::DateFormattingFailed)
+    }
+    pub fn get_metadata(&self) -> Result<SecretSerdeValue, Error> {
+        self.metadata.clone().ok_or_else(missing_field_err(
+            "mandate_data.mandate_type.{multi_use|single_use}.metadata",
+        ))
+    }
 }

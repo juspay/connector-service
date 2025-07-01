@@ -14,6 +14,7 @@ use crate::utils::{ForeignFrom, ForeignTryFrom};
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::id_type::CustomerId;
 use common_utils::pii::Email;
+use core::result::Result;
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -40,6 +41,7 @@ pub struct Connectors {
     pub fiserv: ConnectorParams,
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
+    pub checkout: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -71,7 +73,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_capture_method".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Capture method {:?} is not supported", value),
+                error_message: format!("Capture method {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -96,7 +98,7 @@ impl ForeignTryFrom<i32> for common_enums::CardNetwork {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CARD_NETWORK".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for card network: {}", connector),
+                error_message: format!("Invalid value for card network: {connector}"),
                 error_object: None,
             })
             .into()),
@@ -372,7 +374,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
             _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_currency".to_string(),
                 error_identifier: 4001,
-                error_message: format!("Currency {:?} is not supported", value),
+                error_message: format!("Currency {value:?} is not supported"),
                 error_object: None,
             }))),
         }
@@ -468,6 +470,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             order_tax_amount: None,
             shipping_cost: None,
             merchant_account_id: None,
+            integrity_object: None,
             merchant_config_currency: None,
             all_keys_required: None, // Field not available in new proto structure
         })
@@ -1128,6 +1131,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
             currency,
             payment_experience: None,
             amount,
+            integrity_object: None,
             all_keys_required: None, // Field not available in new proto structure
         })
     }
@@ -1434,6 +1438,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             refund_status: common_enums::RefundStatus::Pending,
             refund_connector_metadata: None,
             all_keys_required: None, // Field not available in new proto structure
+            integrity_object: None,
         })
     }
 }
@@ -1748,7 +1753,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             connector_transaction_id: value
-                .request_ref_id
+                .transaction_id
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -1756,6 +1761,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 })
                 .unwrap_or_default(),
             cancellation_reason: value.cancellation_reason,
+            integrity_object: None,
             raw_connector_response: None,
         })
     }
@@ -1890,6 +1896,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                     )
                 })
                 .transpose()?,
+            integrity_object: None,
         })
     }
 }
@@ -1898,9 +1905,12 @@ impl ForeignTryFrom<grpc_api_types::payments::AcceptDisputeRequest> for AcceptDi
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        _value: grpc_api_types::payments::AcceptDisputeRequest,
+        value: grpc_api_types::payments::AcceptDisputeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(AcceptDisputeData {})
+        Ok(AcceptDisputeData {
+            connector_dispute_id: value.dispute_id,
+            integrity_object: None,
+        })
     }
 }
 
@@ -1912,12 +1922,12 @@ impl ForeignTryFrom<grpc_api_types::payments::DisputeServiceSubmitEvidenceReques
     fn foreign_try_from(
         value: grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // For now, we'll create a simplified SubmitEvidenceData using evidence_documents
-        // The individual fields will be extracted from evidence_documents if needed
-        Ok(SubmitEvidenceData {
+        // Initialize all fields to None
+        let mut result = SubmitEvidenceData {
             dispute_id: Some(value.dispute_id.clone()),
-            connector_dispute_id: value.dispute_id, // Using dispute_id as connector_dispute_id
-            access_activity_log: None,              // Extract from evidence_documents if present
+            connector_dispute_id: value.dispute_id,
+            integrity_object: None,
+            access_activity_log: None,
             billing_address: None,
             cancellation_policy: None,
             cancellation_policy_file_type: None,
@@ -1963,7 +1973,76 @@ impl ForeignTryFrom<grpc_api_types::payments::DisputeServiceSubmitEvidenceReques
             uncategorized_file_type: None,
             uncategorized_file_provider_file_id: None,
             uncategorized_text: None,
-        })
+        };
+
+        // Extract evidence from evidence_documents array
+        for document in value.evidence_documents {
+            let evidence_type =
+                grpc_api_types::payments::EvidenceType::try_from(document.evidence_type)
+                    .unwrap_or(grpc_api_types::payments::EvidenceType::Unspecified);
+
+            match evidence_type {
+                grpc_api_types::payments::EvidenceType::CancellationPolicy => {
+                    result.cancellation_policy = document.file_content;
+                    result.cancellation_policy_file_type = document.file_mime_type;
+                    result.cancellation_policy_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::CustomerCommunication => {
+                    result.customer_communication = document.file_content;
+                    result.customer_communication_file_type = document.file_mime_type;
+                    result.customer_communication_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::CustomerSignature => {
+                    result.customer_signature = document.file_content;
+                    result.customer_signature_file_type = document.file_mime_type;
+                    result.customer_signature_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::Receipt => {
+                    result.receipt = document.file_content;
+                    result.receipt_file_type = document.file_mime_type;
+                    result.receipt_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::RefundPolicy => {
+                    result.refund_policy = document.file_content;
+                    result.refund_policy_file_type = document.file_mime_type;
+                    result.refund_policy_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::ServiceDocumentation => {
+                    result.service_documentation = document.file_content;
+                    result.service_documentation_file_type = document.file_mime_type;
+                    result.service_documentation_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::ShippingDocumentation => {
+                    result.shipping_documentation = document.file_content;
+                    result.shipping_documentation_file_type = document.file_mime_type;
+                    result.shipping_documentation_provider_file_id = document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::InvoiceShowingDistinctTransactions => {
+                    result.invoice_showing_distinct_transactions = document.file_content;
+                    result.invoice_showing_distinct_transactions_file_type =
+                        document.file_mime_type;
+                    result.invoice_showing_distinct_transactions_provider_file_id =
+                        document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::RecurringTransactionAgreement => {
+                    result.recurring_transaction_agreement = document.file_content;
+                    result.recurring_transaction_agreement_file_type = document.file_mime_type;
+                    result.recurring_transaction_agreement_provider_file_id =
+                        document.provider_file_id;
+                }
+                grpc_api_types::payments::EvidenceType::UncategorizedFile => {
+                    result.uncategorized_file = document.file_content;
+                    result.uncategorized_file_type = document.file_mime_type;
+                    result.uncategorized_file_provider_file_id = document.provider_file_id;
+                    result.uncategorized_text = document.text_content;
+                }
+                grpc_api_types::payments::EvidenceType::Unspecified => {
+                    // Skip unspecified evidence types
+                }
+            }
+        }
+
+        Ok(result)
     }
 }
 
@@ -2086,6 +2165,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                     })
                     .transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
             },
+            integrity_object: None,
         })
     }
 }
@@ -2366,6 +2446,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             metadata: None,
             complete_authorize_url: None,
             capture_method: None,
+            integrity_object: None,
             minor_amount: Some(common_utils::types::MinorUnit::new(0)),
             shipping_cost: None,
             customer_id: value
@@ -2409,7 +2490,7 @@ impl ForeignTryFrom<i32> for common_enums::FutureUsage {
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_FUTURE_USAGE".to_owned(),
                 error_identifier: 401,
-                error_message: format!("Invalid value for future_usage: {}", value),
+                error_message: format!("Invalid value for future_usage: {value}"),
                 error_object: None,
             })
             .into()),
@@ -2550,6 +2631,7 @@ impl ForeignTryFrom<DisputeDefendRequest> for DisputeDefendData {
             dispute_id: connector_dispute_id.clone(),
             connector_dispute_id,
             defense_reason_code: value.reason_code.unwrap_or_default(),
+            integrity_object: None,
         })
     }
 }

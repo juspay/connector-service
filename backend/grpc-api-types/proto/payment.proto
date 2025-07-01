@@ -991,10 +991,25 @@ message MultipleCaptureRequestData {
   string capture_reference = 2;
 }
 
+// Type of evidence that can be submitted for a dispute.
+enum EvidenceType {
+  EVIDENCE_TYPE_UNSPECIFIED = 0;              // Default value
+  CANCELLATION_POLICY = 1;                    // Cancellation policy document
+  CUSTOMER_COMMUNICATION = 2;                 // Communication with customer
+  CUSTOMER_SIGNATURE = 3;                     // Customer signature document
+  RECEIPT = 4;                                // Receipt or proof of purchase
+  REFUND_POLICY = 5;                         // Refund policy document
+  SERVICE_DOCUMENTATION = 6;                  // Service documentation
+  SHIPPING_DOCUMENTATION = 7;                // Shipping documentation
+  INVOICE_SHOWING_DISTINCT_TRANSACTIONS = 8;  // Invoice showing distinct transactions
+  RECURRING_TRANSACTION_AGREEMENT = 9;        // Recurring transaction agreement
+  UNCATEGORIZED_FILE = 10;                   // Uncategorized evidence file
+}
+
 // Represents a single piece of evidence for a dispute.
 message EvidenceDocument {
-  // Type of the evidence (e.g., "cancellation_policy", "receipt", "customer_communication").
-  string evidence_type = 1;
+  // Type of the evidence.
+  EvidenceType evidence_type = 1;
 
   // Content Options
   // Content of the document, if it's a file.
