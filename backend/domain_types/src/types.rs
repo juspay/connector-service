@@ -70,13 +70,17 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
-            grpc_api_types::payments::CaptureMethod::SequentialAutomatic => Ok(Self::SequentialAutomatic),
-            grpc_api_types::payments::CaptureMethod::Unspecified => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "unsupported_capture_method".to_string(),
-                error_identifier: 4001,
-                error_message: format!("Capture method {value:?} is not supported"),
-                error_object: None,
-            }))),
+            grpc_api_types::payments::CaptureMethod::SequentialAutomatic => {
+                Ok(Self::SequentialAutomatic)
+            }
+            grpc_api_types::payments::CaptureMethod::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "unsupported_capture_method".to_string(),
+                    error_identifier: 4001,
+                    error_message: format!("Capture method {value:?} is not supported"),
+                    error_object: None,
+                })))
+            }
         }
     }
 }
@@ -484,9 +488,10 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             currency: common_enums::Currency::foreign_try_from(currency)?,
             confirm: true,
             webhook_url: value.webhook_url,
-            browser_info: value.browser_info.map(|info| {
-                crate::router_request_types::BrowserInformation::foreign_try_from(info)
-            }).transpose()?,
+            browser_info: value
+                .browser_info
+                .map(|info| crate::router_request_types::BrowserInformation::foreign_try_from(info))
+                .transpose()?,
             payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
@@ -495,14 +500,18 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             statement_descriptor: None,
             router_return_url: value.return_url,
             complete_authorize_url: value.complete_authorize_url,
-            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(setup_future_usage)?),
+            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
+                setup_future_usage,
+            )?),
             mandate_id: None,
             off_session: value.off_session,
             order_category: value.order_category,
             session_token: value.session_token,
             enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
-            payment_experience: Some(common_enums::PaymentExperience::foreign_try_from(payment_experience)?),
+            payment_experience: Some(common_enums::PaymentExperience::foreign_try_from(
+                payment_experience,
+            )?),
             customer_id: value
                 .connector_customer_id
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
@@ -514,18 +523,24 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                     error_object: None,
                 }))?,
             request_incremental_authorization: value.request_incremental_authorization,
-            metadata: if value.metadata.is_empty() { 
-                None 
-            } else { 
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
                 Some(serde_json::Value::Object(
-                    value.metadata.into_iter()
+                    value
+                        .metadata
+                        .into_iter()
                         .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect()
+                        .collect(),
                 ))
             },
             merchant_order_reference_id: value.merchant_order_reference_id,
-            order_tax_amount: value.order_tax_amount.map(|amount| common_utils::types::MinorUnit::new(amount)),
-            shipping_cost: value.shipping_cost.map(|cost| common_utils::types::MinorUnit::new(cost)),
+            order_tax_amount: value
+                .order_tax_amount
+                .map(|amount| common_utils::types::MinorUnit::new(amount)),
+            shipping_cost: value
+                .shipping_cost
+                .map(|cost| common_utils::types::MinorUnit::new(cost)),
             merchant_account_id: None,
             integrity_object: None,
             merchant_config_currency: None,
@@ -930,7 +945,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
-            session_token: value.session_token.map(|value|value.to_string()),
+            session_token: value.session_token.map(|value| value.to_string()),
             reference_id: None,
             payment_method_token: None,
             preprocessing_id: None,
@@ -1455,24 +1470,38 @@ pub fn generate_payment_sync_response(
                     error_code: None,
                     error_message: None,
                     network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    response_ref_id: connector_response_reference_id.map(|id| {
+                        grpc_api_types::payments::Identifier {
+                            id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                        }
                     }),
                     amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
                     minor_amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
-                    currency: Some(grpc_api_types::payments::Currency::foreign_from(router_data_v2.request.currency) as i32),
+                    currency: Some(grpc_api_types::payments::Currency::foreign_from(
+                        router_data_v2.request.currency,
+                    ) as i32),
                     captured_amount: router_data_v2.resource_common_data.amount_captured,
-                    minor_captured_amount: router_data_v2.resource_common_data.minor_amount_captured.map(|amount| amount.get_amount_as_i64()),
+                    minor_captured_amount: router_data_v2
+                        .resource_common_data
+                        .minor_amount_captured
+                        .map(|amount| amount.get_amount_as_i64()),
                     payment_method_type: None,
-                    capture_method:router_data_v2.request.capture_method.map(|cm| (grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32)),
-                    auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(router_data_v2.resource_common_data.auth_type) as i32),
-                    created_at: None, // Timestamp not available in current data
-                    updated_at: None, // Timestamp not available in current data
+                    capture_method: router_data_v2.request.capture_method.map(|cm| {
+                        (grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32)
+                    }),
+                    auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(
+                        router_data_v2.resource_common_data.auth_type,
+                    ) as i32),
+                    created_at: None,    // Timestamp not available in current data
+                    updated_at: None,    // Timestamp not available in current data
                     authorized_at: None, // Timestamp not available in current data
-                    captured_at: None, // Timestamp not available in current data
+                    captured_at: None,   // Timestamp not available in current data
                     customer_name: None, // Not available in sync data
-                    email: None, // Not available in sync data
-                    connector_customer_id: router_data_v2.resource_common_data.customer_id.map(|id| id.get_string_repr().to_string()),
+                    email: None,         // Not available in sync data
+                    connector_customer_id: router_data_v2
+                        .resource_common_data
+                        .customer_id
+                        .map(|id| id.get_string_repr().to_string()),
                     merchant_order_reference_id: None, // Not available in sync data
                     metadata: std::collections::HashMap::new(),
                 })
@@ -1505,19 +1534,32 @@ pub fn generate_payment_sync_response(
                 response_ref_id: None,
                 amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
                 minor_amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
-                currency: Some(grpc_api_types::payments::Currency::foreign_from(router_data_v2.request.currency) as i32),
+                currency: Some(grpc_api_types::payments::Currency::foreign_from(
+                    router_data_v2.request.currency,
+                ) as i32),
                 captured_amount: router_data_v2.resource_common_data.amount_captured,
-                minor_captured_amount: router_data_v2.resource_common_data.minor_amount_captured.map(|amount| amount.get_amount_as_i64()),
+                minor_captured_amount: router_data_v2
+                    .resource_common_data
+                    .minor_amount_captured
+                    .map(|amount| amount.get_amount_as_i64()),
                 payment_method_type: None,
-                capture_method: router_data_v2.request.capture_method.map(|cm| grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32),
-                auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(router_data_v2.resource_common_data.auth_type) as i32),
-                created_at: None, // Timestamp not available in current data
-                updated_at: None, // Timestamp not available in current data
+                capture_method: router_data_v2
+                    .request
+                    .capture_method
+                    .map(|cm| grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32),
+                auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(
+                    router_data_v2.resource_common_data.auth_type,
+                ) as i32),
+                created_at: None,    // Timestamp not available in current data
+                updated_at: None,    // Timestamp not available in current data
                 authorized_at: None, // Timestamp not available in current data
-                captured_at: None, // Timestamp not available in current data
+                captured_at: None,   // Timestamp not available in current data
                 customer_name: None, // Not available in sync data
-                email: None, // Not available in sync data
-                connector_customer_id: router_data_v2.resource_common_data.customer_id.map(|id| id.get_string_repr().to_string()),
+                email: None,         // Not available in sync data
+                connector_customer_id: router_data_v2
+                    .resource_common_data
+                    .customer_id
+                    .map(|id| id.get_string_repr().to_string()),
                 merchant_order_reference_id: None, // Not available in sync data
                 metadata: std::collections::HashMap::new(),
             })
@@ -1761,17 +1803,17 @@ pub fn generate_refund_sync_response(
                 }),
                 error_code: None,
                 error_message: None,
-                refund_amount: None, // Not available in sync response data
-                minor_refund_amount: None, // Not available in sync response data
-                refund_currency: None, // Not available in sync response data
-                payment_amount: None, // Not available in sync response data
+                refund_amount: None,        // Not available in sync response data
+                minor_refund_amount: None,  // Not available in sync response data
+                refund_currency: None,      // Not available in sync response data
+                payment_amount: None,       // Not available in sync response data
                 minor_payment_amount: None, // Not available in sync response data
                 refund_reason: router_data_v2.request.reason.clone(), // Map from request data
-                created_at: None, // Timestamp not available in current data
-                updated_at: None, // Timestamp not available in current data
-                processed_at: None, // Timestamp not available in current data
-                customer_name: None, // Not available in sync data
-                email: None, // Not available in sync data
+                created_at: None,           // Timestamp not available in current data
+                updated_at: None,           // Timestamp not available in current data
+                processed_at: None,         // Timestamp not available in current data
+                customer_name: None,        // Not available in sync data
+                email: None,                // Not available in sync data
                 merchant_order_reference_id: None, // Not available in sync data
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
@@ -1803,17 +1845,17 @@ pub fn generate_refund_sync_response(
                 }),
                 error_code: Some(e.code),
                 error_message: Some(e.message),
-                refund_amount: None, // Not available in sync response data
-                minor_refund_amount: None, // Not available in sync response data
-                refund_currency: None, // Not available in sync response data
-                payment_amount: None, // Not available in sync response data
+                refund_amount: None,        // Not available in sync response data
+                minor_refund_amount: None,  // Not available in sync response data
+                refund_currency: None,      // Not available in sync response data
+                payment_amount: None,       // Not available in sync response data
                 minor_payment_amount: None, // Not available in sync response data
                 refund_reason: router_data_v2.request.reason.clone(), // Map from request data
-                created_at: None, // Timestamp not available in current data
-                updated_at: None, // Timestamp not available in current data
-                processed_at: None, // Timestamp not available in current data
-                customer_name: None, // Not available in sync data
-                email: None, // Not available in sync data
+                created_at: None,           // Timestamp not available in current data
+                updated_at: None,           // Timestamp not available in current data
+                processed_at: None,         // Timestamp not available in current data
+                customer_name: None,        // Not available in sync data
+                email: None,                // Not available in sync data
                 merchant_order_reference_id: None, // Not available in sync data
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
@@ -1840,8 +1882,10 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             error_code: value.error_code,
             error_message: value.error_message,
             network_txn_id: None,
-            response_ref_id: value.connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
-                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+            response_ref_id: value.connector_response_reference_id.map(|id| {
+                grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                }
             }),
             amount: None,
             minor_amount: None,
@@ -2190,16 +2234,28 @@ pub fn generate_refund_response(
                 error_code: None,
                 error_message: None,
                 refund_amount: Some(router_data_v2.request.refund_amount),
-                minor_refund_amount: Some(router_data_v2.request.minor_refund_amount.get_amount_as_i64()),
-                refund_currency: Some(grpc_api_types::payments::Currency::foreign_from(router_data_v2.request.currency) as i32),
+                minor_refund_amount: Some(
+                    router_data_v2
+                        .request
+                        .minor_refund_amount
+                        .get_amount_as_i64(),
+                ),
+                refund_currency: Some(grpc_api_types::payments::Currency::foreign_from(
+                    router_data_v2.request.currency,
+                ) as i32),
                 payment_amount: Some(router_data_v2.request.payment_amount),
-                minor_payment_amount: Some(router_data_v2.request.minor_payment_amount.get_amount_as_i64()),
+                minor_payment_amount: Some(
+                    router_data_v2
+                        .request
+                        .minor_payment_amount
+                        .get_amount_as_i64(),
+                ),
                 refund_reason: router_data_v2.request.reason.clone(),
-                created_at: None, // Timestamp not available in current data
-                updated_at: None, // Timestamp not available in current data
-                processed_at: None, // Timestamp not available in current data
+                created_at: None,    // Timestamp not available in current data
+                updated_at: None,    // Timestamp not available in current data
+                processed_at: None,  // Timestamp not available in current data
                 customer_name: None, // Not available in refund data
-                email: None, // Not available in refund data
+                email: None,         // Not available in refund data
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
@@ -2225,16 +2281,26 @@ pub fn generate_refund_response(
                 error_code: Some(e.code),
                 error_message: Some(e.message),
                 refund_amount: Some(router_data_v2.request.refund_amount),
-                minor_refund_amount: Some(router_data_v2.request.minor_refund_amount.get_amount_as_i64()),
+                minor_refund_amount: Some(
+                    router_data_v2
+                        .request
+                        .minor_refund_amount
+                        .get_amount_as_i64(),
+                ),
                 refund_currency: Some(router_data_v2.request.currency as i32),
                 payment_amount: Some(router_data_v2.request.payment_amount),
-                minor_payment_amount: Some(router_data_v2.request.minor_payment_amount.get_amount_as_i64()),
+                minor_payment_amount: Some(
+                    router_data_v2
+                        .request
+                        .minor_payment_amount
+                        .get_amount_as_i64(),
+                ),
                 refund_reason: router_data_v2.request.reason.clone(),
-                created_at: None, // Timestamp not available in current data
-                updated_at: None, // Timestamp not available in current data
-                processed_at: None, // Timestamp not available in current data
+                created_at: None,    // Timestamp not available in current data
+                updated_at: None,    // Timestamp not available in current data
+                processed_at: None,  // Timestamp not available in current data
                 customer_name: None, // Not available in refund data
-                email: None, // Not available in refund data
+                email: None,         // Not available in refund data
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
@@ -2547,20 +2613,24 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: if value.metadata.is_empty() { 
-                None 
-            } else { 
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
                 Some(serde_json::Value::Object(
-                    value.metadata.into_iter()
+                    value
+                        .metadata
+                        .into_iter()
                         .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect()
+                        .collect(),
                 ))
             },
             complete_authorize_url: value.complete_authorize_url,
             capture_method: None,
             integrity_object: None,
             minor_amount: value.minor_amount.map(|ma| common_utils::MinorUnit(ma)),
-            shipping_cost: value.shipping_cost.map(|sh_c| common_utils::types::MinorUnit::new(sh_c)),
+            shipping_cost: value
+                .shipping_cost
+                .map(|sh_c| common_utils::types::MinorUnit::new(sh_c)),
             customer_id: value
                 .connector_customer_id
                 .clone()
@@ -2596,17 +2666,25 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
 impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
 impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
     type Error = ApplicationErrorResponse;
-    fn foreign_try_from(value: grpc_api_types::payments::FutureUsage) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(
+        value: grpc_api_types::payments::FutureUsage,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::FutureUsage::Unspecified =>Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_FUTURE_USAGE".to_owned(),
-                error_identifier: 401,
-                error_message: format!("Invalid value for future_usage: {:?}", value),
-                error_object: None,
-            })
-            .into()),
-            grpc_api_types::payments::FutureUsage::OffSession => Ok(common_enums::FutureUsage::OffSession),
-            grpc_api_types::payments::FutureUsage::OnSession => Ok(common_enums::FutureUsage::OnSession),
+            grpc_api_types::payments::FutureUsage::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_FUTURE_USAGE".to_owned(),
+                    error_identifier: 401,
+                    error_message: format!("Invalid value for future_usage: {:?}", value),
+                    error_object: None,
+                })
+                .into())
+            }
+            grpc_api_types::payments::FutureUsage::OffSession => {
+                Ok(common_enums::FutureUsage::OffSession)
+            }
+            grpc_api_types::payments::FutureUsage::OnSession => {
+                Ok(common_enums::FutureUsage::OnSession)
+            }
         }
     }
 }
@@ -2981,8 +3059,8 @@ pub enum PaymentMethodDataType {
     RevolutPay,
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::AuthenticationData> 
-    for crate::router_request_types::AuthenticationData 
+impl ForeignTryFrom<grpc_api_types::payments::AuthenticationData>
+    for crate::router_request_types::AuthenticationData
 {
     type Error = ApplicationErrorResponse;
 
@@ -2999,16 +3077,16 @@ impl ForeignTryFrom<grpc_api_types::payments::AuthenticationData>
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
                     _ => None,
                 }),
-            message_version: value.message_version.and_then(|version| {
-                common_utils::types::SemanticVersion::from_str(&version).ok()
-            }),
+            message_version: value
+                .message_version
+                .and_then(|version| common_utils::types::SemanticVersion::from_str(&version).ok()),
             ds_trans_id: value.ds_transaction_id,
         })
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> 
-    for crate::router_request_types::BrowserInformation 
+impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation>
+    for crate::router_request_types::BrowserInformation
 {
     type Error = ApplicationErrorResponse;
 
@@ -3034,8 +3112,8 @@ impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience> 
-    for common_enums::PaymentExperience 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
+    for common_enums::PaymentExperience
 {
     type Error = ApplicationErrorResponse;
 
@@ -3045,12 +3123,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience>
         match value {
             grpc_api_types::payments::PaymentExperience::Unspecified => Ok(Self::RedirectToUrl),
             grpc_api_types::payments::PaymentExperience::RedirectToUrl => Ok(Self::RedirectToUrl),
-            grpc_api_types::payments::PaymentExperience::InvokeSdkClient => Ok(Self::InvokeSdkClient),
+            grpc_api_types::payments::PaymentExperience::InvokeSdkClient => {
+                Ok(Self::InvokeSdkClient)
+            }
             grpc_api_types::payments::PaymentExperience::DisplayQrCode => Ok(Self::DisplayQrCode),
             grpc_api_types::payments::PaymentExperience::OneClick => Ok(Self::OneClick),
             grpc_api_types::payments::PaymentExperience::LinkWallet => Ok(Self::LinkWallet),
-            grpc_api_types::payments::PaymentExperience::InvokePaymentApp => Ok(Self::InvokePaymentApp),
-            grpc_api_types::payments::PaymentExperience::DisplayWaitScreen => Ok(Self::DisplayWaitScreen),
+            grpc_api_types::payments::PaymentExperience::InvokePaymentApp => {
+                Ok(Self::InvokePaymentApp)
+            }
+            grpc_api_types::payments::PaymentExperience::DisplayWaitScreen => {
+                Ok(Self::DisplayWaitScreen)
+            }
             grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
         }
     }
@@ -3236,7 +3320,9 @@ impl ForeignFrom<common_enums::CaptureMethod> for grpc_api_types::payments::Capt
     }
 }
 
-impl ForeignFrom<common_enums::AuthenticationType> for grpc_api_types::payments::AuthenticationType {
+impl ForeignFrom<common_enums::AuthenticationType>
+    for grpc_api_types::payments::AuthenticationType
+{
     fn foreign_from(value: common_enums::AuthenticationType) -> Self {
         match value {
             common_enums::AuthenticationType::ThreeDs => Self::ThreeDs,
