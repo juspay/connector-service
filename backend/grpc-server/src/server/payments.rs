@@ -23,7 +23,6 @@ use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
-        AttemptStatus,
     },
     utils::ForeignTryFrom,
 };
