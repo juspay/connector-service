@@ -231,8 +231,14 @@ pub enum RazorpayV2UpiPaymentsResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RazorpayV2ErrorResponse {
-    pub error: RazorpayV2ErrorDetails,
+#[serde(untagged)]
+pub enum RazorpayV2ErrorResponse {
+    StandardError {
+        error: RazorpayV2ErrorDetails,
+    },
+    SimpleError {
+        message: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
