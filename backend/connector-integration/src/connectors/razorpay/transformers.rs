@@ -18,9 +18,8 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use uuid;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -143,7 +142,7 @@ pub struct RazorpayPaymentRequest {
     pub card: PaymentMethodSpecificData,
     pub authentication: Option<AuthenticationDetails>,
     pub browser: Option<BrowserInfo>,
-    pub ip: String,
+    pub ip: Secret<String>,
     pub referer: String,
     pub user_agent: String,
 }
@@ -354,14 +353,14 @@ impl
             language: info.language.clone(),
         });
 
-        let ip = browser_info_opt
-            .and_then(|info| info.ip_address)
-            .map(|ip| ip.to_string())
-            .unwrap_or_default();
+        let ip = item.router_data.request.get_ip_address_as_optional()
+            .map(|ip| Secret::new(ip.expose()))
+            .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
 
-        let user_agent = browser_info_opt
-            .and_then(|info| info.user_agent.clone())
-            .unwrap_or_default();
+        let user_agent = item.router_data.request.browser_info
+            .as_ref()
+            .and_then(|info| info.get_user_agent().ok())
+            .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
         let referer = browser_info_opt
             .and_then(|info| info.accept_header.clone())
@@ -834,7 +833,11 @@ impl
         Ok(RazorpayOrderRequest {
             amount: item.amount,
             currency: request_data.currency.to_string(),
-            receipt: uuid::Uuid::new_v4().to_string(),
+            receipt: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             partial_payment: None,
             first_payment_min_amount: None,
             notes: None,
@@ -1193,7 +1196,7 @@ pub struct RazorpayWebCollectRequest {
     )]
     pub __notes_91_transaction_id_93_: Option<String>,
     pub callback_url: String,
-    pub ip: String,
+    pub ip: Secret<String>,
     pub referer: String,
     pub user_agent: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1318,11 +1321,8 @@ impl
             })?
             .clone();
 
-        let _txn_uuid = uuid::Uuid::new_v4().to_string().replace('-', "")[..16].to_string();
-        let _transaction_id = uuid::Uuid::new_v4().to_string().replace('-', "")[..16].to_string();
-
         Ok(Self {
-            currency: "INR".to_string(), // Default to INR for UPI
+            currency: item.router_data.request.currency.to_string(),
             amount: amount_in_minor_units,
             email: item
                 .router_data
@@ -1353,9 +1353,20 @@ impl
                     field_name: "callback_url",
                 })?
                 .to_string(),
-            ip: "127.0.0.1".to_string(),
+            ip: item
+                .router_data
+                .request
+                .get_ip_address_as_optional()
+                .map(|ip| Secret::new(ip.expose()))
+                .unwrap_or_else(|| Secret::new("127.0.0.1".to_string())),
             referer: "https://example.com".to_string(),
-            user_agent: "Mozilla/5.0".to_string(),
+            user_agent: item
+                .router_data
+                .request
+                .browser_info
+                .as_ref()
+                .and_then(|info| info.get_user_agent().ok())
+                .unwrap_or_else(|| "Mozilla/5.0".to_string()),
             description: Some("Payment via Razorpay".to_string()),
             flow: Some(flow_type.to_string()),
             __notes_91_cust_id_93_: None,
