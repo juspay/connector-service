@@ -422,7 +422,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             webhook_url: value.webhook_url,
             browser_info: value
                 .browser_info
-                .map(|info| crate::router_request_types::BrowserInformation::foreign_try_from(info))
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
