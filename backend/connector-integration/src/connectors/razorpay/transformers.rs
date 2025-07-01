@@ -767,10 +767,15 @@ impl<F, Req>
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub struct RazorpayErrorResponse {
-    pub error: RazorpayError,
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum RazorpayErrorResponse {
+    StandardError {
+        error: RazorpayError,
+    },
+    SimpleError {
+        message: String,
+    },
 }
 
 #[serde_with::skip_serializing_none]

@@ -95,19 +95,29 @@ impl ConnectorCommon for RazorpayV2 {
 
         event_builder.map(|i| i.set_error_response_body(&response));
 
-        let attempt_status = match response.error.code.as_str() {
-            "BAD_REQUEST_ERROR" => AttemptStatus::Failure,
-            "GATEWAY_ERROR" => AttemptStatus::Failure,
-            "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
-            "AUTHORIZATION_ERROR" => AttemptStatus::AuthorizationFailed,
-            "SERVER_ERROR" => AttemptStatus::Pending,
-            _ => AttemptStatus::Failure,
+        let (code, message, attempt_status) = match response {
+            razorpayv2::RazorpayV2ErrorResponse::StandardError { error } => {
+                let attempt_status = match error.code.as_str() {
+                    "BAD_REQUEST_ERROR" => AttemptStatus::Failure,
+                    "GATEWAY_ERROR" => AttemptStatus::Failure,
+                    "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
+                    "AUTHORIZATION_ERROR" => AttemptStatus::AuthorizationFailed,
+                    "SERVER_ERROR" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Failure,
+                };
+                (error.code, error.description.clone(), attempt_status)
+            }
+            razorpayv2::RazorpayV2ErrorResponse::SimpleError { message } => {
+                // For simple error messages like "no Route matched with those values"
+                // Default to failure status and use a generic error code
+                ("ROUTE_ERROR".to_string(), message.clone(), AttemptStatus::Failure)
+            }
         };
 
         Ok(domain_types::router_data::ErrorResponse {
-            code: response.error.code,
-            message: response.error.description.clone(),
-            reason: Some(response.error.description),
+            code,
+            message: message.clone(),
+            reason: Some(message),
             status_code: res.status_code,
             attempt_status: Some(attempt_status),
             connector_transaction_id: None,
@@ -230,10 +240,19 @@ impl
 
         event_builder.map(|i| i.set_error_response_body(&response));
 
+        let (code, message) = match response {
+            razorpayv2::RazorpayV2ErrorResponse::StandardError { error } => {
+                (error.code, error.description.clone())
+            }
+            razorpayv2::RazorpayV2ErrorResponse::SimpleError { message } => {
+                ("ROUTE_ERROR".to_string(), message.clone())
+            }
+        };
+
         Ok(domain_types::router_data::ErrorResponse {
-            code: response.error.code,
-            message: response.error.description.clone(),
-            reason: Some(response.error.description),
+            code,
+            message: message.clone(),
+            reason: Some(message),
             status_code: res.status_code,
             attempt_status: Some(AttemptStatus::Pending),
             connector_transaction_id: None,
