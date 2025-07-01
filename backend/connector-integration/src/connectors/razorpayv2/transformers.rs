@@ -268,15 +268,15 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
         Ok(Self {
             amount: amount_in_minor_units,
             currency: item.router_data.currency.to_string(),
-            receipt: format!(
-                "order_{}",
-                &uuid::Uuid::new_v4().to_string().replace('-', "")[..12]
-            ),
+            receipt: item
+                .order_id
+                .as_ref()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_request_reference_id",
+                })?
+                .clone(),
             payment_capture: None,
-            notes: Some(RazorpayV2Notes {
-                txn_uuid: Some(uuid::Uuid::new_v4().to_string().replace('-', "")[..16].to_string()),
-                merchant_order_id: None,
-            }),
+            notes: None,
         })
     }
 }
@@ -339,10 +339,7 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
                 .unwrap_or_else(|| "9999999999".to_string()),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
-            notes: Some(RazorpayV2Notes {
-                txn_uuid: Some(uuid::Uuid::new_v4().to_string().replace('-', "")[..16].to_string()),
-                merchant_order_id: None,
-            }),
+            notes: None,
             callback_url: item
                 .router_data
                 .router_return_url

@@ -184,7 +184,7 @@ impl
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let connector_router_data =
-            razorpayv2::RazorpayV2RouterData::try_from((req.request.amount, &req.request, None))?;
+            razorpayv2::RazorpayV2RouterData::try_from((req.request.amount, &req.request, Some(req.resource_common_data.connector_request_reference_id.clone())))?;
         let connector_req =
             razorpayv2::RazorpayV2CreateOrderRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
