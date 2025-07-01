@@ -70,6 +70,11 @@ impl DisputeService for Disputes {
         request: tonic::Request<DisputeServiceSubmitEvidenceRequest>,
     ) -> Result<tonic::Response<DisputeServiceSubmitEvidenceResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
         let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -111,6 +116,8 @@ impl DisputeService for Disputes {
             connector_integration,
             router_data,
             None,
+            &connector.to_string(),
+            &service_name,
         )
         .await
         .switch()
@@ -147,6 +154,11 @@ impl DisputeService for Disputes {
         request: tonic::Request<AcceptDisputeRequest>,
     ) -> Result<tonic::Response<AcceptDisputeResponse>, tonic::Status> {
         info!("DISPUTE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
         let metadata = request.metadata().clone();
         let payload = request.into_inner();
         let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -189,6 +201,8 @@ impl DisputeService for Disputes {
             connector_integration,
             router_data,
             None,
+            &connector.to_string(),
+            &service_name,
         )
         .await
         .switch()
