@@ -70,7 +70,8 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
-            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+            grpc_api_types::payments::CaptureMethod::SequentialAutomatic => Ok(Self::SequentialAutomatic),
+            grpc_api_types::payments::CaptureMethod::Unspecified => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "unsupported_capture_method".to_string(),
                 error_identifier: 4001,
                 error_message: format!("Capture method {value:?} is not supported"),
@@ -188,6 +189,85 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         card_cvc: None,
                     }),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::GooglePay(google_pay)) => {
+                            let google_pay_payment_method_info = google_pay
+                                .info
+                                .map(|info| crate::payment_method_data::GooglePayPaymentMethodInfo {
+                                    card_network: info.card_network,
+                                    card_details: info.card_details,
+                                    assurance_details: info.assurance_details.map(|assurance| {
+                                        crate::payment_method_data::GooglePayAssuranceDetails {
+                                            card_holder_authenticated: assurance.card_holder_authenticated,
+                                            account_verified: assurance.account_verified,
+                                        }
+                                    }),
+                                })
+                                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_WALLET_DATA".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Google Pay Payment Method Info is required".to_owned(),
+                                    error_object: None,
+                                }))?;
+
+                            let tokenization_data = google_pay
+                                .tokenization_data
+                                .map(|tokenization_data| crate::payment_method_data::GpayTokenizationData {
+                                    token_type: tokenization_data.token_type,
+                                    token: tokenization_data.token,
+                                })
+                                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_WALLET_DATA".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Google Pay Tokenization Data is required".to_owned(),
+                                    error_object: None,
+                                }))?;
+
+                            Ok(PaymentMethodData::Wallet(
+                                crate::payment_method_data::WalletData::GooglePay(
+                                    crate::payment_method_data::GooglePayWalletData {
+                                        pm_type: google_pay.r#type,
+                                        description: google_pay.description,
+                                        info: google_pay_payment_method_info,
+                                        tokenization_data,
+                                    },
+                                ),
+                            ))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::ApplePay(apple_pay)) => {
+                            let apple_pay_payment_method = apple_pay
+                                .payment_method
+                                .map(|payment_method| crate::payment_method_data::ApplepayPaymentMethod {
+                                    display_name: payment_method.display_name,
+                                    network: payment_method.network,
+                                    pm_type: payment_method.r#type,
+                                })
+                                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_WALLET_DATA".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Apple Pay Payment Method is required".to_owned(),
+                                    error_object: None,
+                                }))?;
+
+                            Ok(PaymentMethodData::Wallet(
+                                crate::payment_method_data::WalletData::ApplePay(
+                                    crate::payment_method_data::ApplePayWalletData {
+                                        payment_data: apple_pay.payment_data,
+                                        payment_method: apple_pay_payment_method,
+                                        transaction_identifier: apple_pay.transaction_identifier,
+                                    },
+                                ),
+                            ))
+                        }
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_WALLET_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "This wallet type is not yet supported".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -380,12 +460,18 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             None => None,
         };
 
+        // Get method results first to avoid partial moves
+        let capture_method = value.capture_method();
+        let currency = value.currency();
+        let setup_future_usage = value.setup_future_usage();
+        let payment_experience = value.payment_experience();
+
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
-                value.capture_method(),
+                capture_method,
             )?),
             payment_method_data: PaymentMethodData::foreign_try_from(
-                value.payment_method.clone().ok_or_else(|| {
+                value.payment_method.ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
                         error_identifier: 400,
@@ -395,47 +481,30 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                 })?,
             )?,
             amount: value.amount,
-            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            currency: common_enums::Currency::foreign_try_from(currency)?,
             confirm: true,
             webhook_url: value.webhook_url,
             browser_info: value.browser_info.map(|info| {
-                crate::router_request_types::BrowserInformation {
-                    color_depth: None,
-                    java_enabled: info.java_enabled,
-                    java_script_enabled: info.java_script_enabled,
-                    language: info.language,
-                    screen_height: info.screen_height,
-                    screen_width: info.screen_width,
-                    time_zone: None,
-                    ip_address: None,
-                    accept_header: info.accept_header,
-                    user_agent: info.user_agent,
-                    os_type: info.os_type,
-                    os_version: info.os_version,
-                    device_model: info.device_model,
-                    accept_language: info.accept_language,
-                }
-            }),
+                crate::router_request_types::BrowserInformation::foreign_try_from(info)
+            }).transpose()?,
             payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
-            customer_name: None,
+            customer_name: value.customer_name,
             statement_descriptor_suffix: None,
             statement_descriptor: None,
-
             router_return_url: value.return_url,
-            complete_authorize_url: None,
-            setup_future_usage: None,
+            complete_authorize_url: value.complete_authorize_url,
+            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(setup_future_usage)?),
             mandate_id: None,
-            off_session: None,
-            order_category: None,
-            session_token: None,
-            enrolled_for_3ds: false,
+            off_session: value.off_session,
+            order_category: value.order_category,
+            session_token: value.session_token,
+            enrolled_for_3ds: value.enrolled_for_3ds,
             related_transaction_id: None,
-            payment_experience: None,
+            payment_experience: Some(common_enums::PaymentExperience::foreign_try_from(payment_experience)?),
             customer_id: value
                 .connector_customer_id
-                .clone()
                 .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
                 .transpose()
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
@@ -444,15 +513,23 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                     error_message: "Failed to parse Customer Id".to_owned(),
                     error_object: None,
                 }))?,
-            request_incremental_authorization: false,
-            metadata: None,
-            merchant_order_reference_id: None,
-            order_tax_amount: None,
-            shipping_cost: None,
+            request_incremental_authorization: value.request_incremental_authorization,
+            metadata: if value.metadata.is_empty() { 
+                None 
+            } else { 
+                Some(serde_json::Value::Object(
+                    value.metadata.into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect()
+                ))
+            },
+            merchant_order_reference_id: value.merchant_order_reference_id,
+            order_tax_amount: value.order_tax_amount.map(|amount| common_utils::types::MinorUnit::new(amount)),
+            shipping_cost: value.shipping_cost.map(|cost| common_utils::types::MinorUnit::new(cost)),
             merchant_account_id: None,
             integrity_object: None,
             merchant_config_currency: None,
-            all_keys_required: None, // Field not available in new proto structure
+            all_keys_required: None, // Field removed in proto refactor - was not being used consistently
         })
     }
 }
@@ -805,6 +882,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
     fn foreign_try_from(
         (value, connectors): (PaymentServiceAuthorizeRequest, Connectors),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let auth_type = value.auth_type();
         let address = match &value.address {
             // Borrow value.address
             Some(address_value) => {
@@ -831,10 +909,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                 value.payment_method.unwrap_or_default(),
             )?, // Use direct enum
             address,
-            auth_type: common_enums::AuthenticationType::foreign_try_from(
-                grpc_api_types::payments::AuthenticationType::try_from(value.auth_type)
-                    .unwrap_or_default(),
-            )?, // Use direct enum
+            auth_type: common_enums::AuthenticationType::foreign_try_from(auth_type)?, // Use direct enum
             connector_request_reference_id: value
                 .request_ref_id
                 .and_then(|id| id.id_type)
@@ -855,7 +930,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             amount_captured: None,
             minor_amount_captured: None,
             access_token: None,
-            session_token: None,
+            session_token: value.session_token.map(|value|value.to_string()),
             reference_id: None,
             payment_method_token: None,
             preprocessing_id: None,
@@ -1047,6 +1122,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Card(_)),
             } => Ok(Self::Card),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Wallet(_)),
+            } => Ok(Self::Wallet),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Token(_)),
@@ -1355,8 +1434,8 @@ pub fn generate_payment_sync_response(
                 resource_id,
                 redirection_data: _,
                 connector_metadata: _,
-                network_txn_id: _,
-                connector_response_reference_id: _,
+                network_txn_id,
+                connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response: _,
@@ -1375,24 +1454,26 @@ pub fn generate_payment_sync_response(
                     mandate_reference: mandate_reference_grpc,
                     error_code: None,
                     error_message: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    amount: None,
-                    minor_amount: None,
-                    currency: None,
-                    captured_amount: None,
-                    minor_captured_amount: None,
+                    network_txn_id,
+                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }),
+                    amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
+                    minor_amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
+                    currency: Some(grpc_api_types::payments::Currency::foreign_from(router_data_v2.request.currency) as i32),
+                    captured_amount: router_data_v2.resource_common_data.amount_captured,
+                    minor_captured_amount: router_data_v2.resource_common_data.minor_amount_captured.map(|amount| amount.get_amount_as_i64()),
                     payment_method_type: None,
-                    capture_method: None,
-                    auth_type: None,
-                    created_at: None,
-                    updated_at: None,
-                    authorized_at: None,
-                    captured_at: None,
-                    customer_name: None,
-                    email: None,
-                    connector_customer_id: None,
-                    merchant_order_reference_id: None,
+                    capture_method:router_data_v2.request.capture_method.map(|cm| (grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32)),
+                    auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(router_data_v2.resource_common_data.auth_type) as i32),
+                    created_at: None, // Timestamp not available in current data
+                    updated_at: None, // Timestamp not available in current data
+                    authorized_at: None, // Timestamp not available in current data
+                    captured_at: None, // Timestamp not available in current data
+                    customer_name: None, // Not available in sync data
+                    email: None, // Not available in sync data
+                    connector_customer_id: router_data_v2.resource_common_data.customer_id.map(|id| id.get_string_repr().to_string()),
+                    merchant_order_reference_id: None, // Not available in sync data
                     metadata: std::collections::HashMap::new(),
                 })
             }
@@ -1422,22 +1503,22 @@ pub fn generate_payment_sync_response(
                 error_code: Some(e.code),
                 network_txn_id: None,
                 response_ref_id: None,
-                amount: None,
-                minor_amount: None,
-                currency: None,
-                captured_amount: None,
-                minor_captured_amount: None,
+                amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
+                minor_amount: Some(router_data_v2.request.amount.get_amount_as_i64()),
+                currency: Some(grpc_api_types::payments::Currency::foreign_from(router_data_v2.request.currency) as i32),
+                captured_amount: router_data_v2.resource_common_data.amount_captured,
+                minor_captured_amount: router_data_v2.resource_common_data.minor_amount_captured.map(|amount| amount.get_amount_as_i64()),
                 payment_method_type: None,
-                capture_method: None,
-                auth_type: None,
-                created_at: None,
-                updated_at: None,
-                authorized_at: None,
-                captured_at: None,
-                customer_name: None,
-                email: None,
-                connector_customer_id: None,
-                merchant_order_reference_id: None,
+                capture_method: router_data_v2.request.capture_method.map(|cm| grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32),
+                auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(router_data_v2.resource_common_data.auth_type) as i32),
+                created_at: None, // Timestamp not available in current data
+                updated_at: None, // Timestamp not available in current data
+                authorized_at: None, // Timestamp not available in current data
+                captured_at: None, // Timestamp not available in current data
+                customer_name: None, // Not available in sync data
+                email: None, // Not available in sync data
+                connector_customer_id: router_data_v2.resource_common_data.customer_id.map(|id| id.get_string_repr().to_string()),
+                merchant_order_reference_id: None, // Not available in sync data
                 metadata: std::collections::HashMap::new(),
             })
         }
@@ -1662,8 +1743,15 @@ pub fn generate_refund_sync_response(
             let status = response.refund_status;
             let grpc_status = grpc_api_types::payments::RefundStatus::foreign_from(status);
 
+            // Create proper transaction_id from connector_transaction_id
+            let transaction_id = Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                    router_data_v2.request.connector_transaction_id.clone(),
+                )),
+            });
+
             Ok(RefundResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier::default()),
+                transaction_id,
                 refund_id: response.connector_refund_id.clone(),
                 status: grpc_status as i32,
                 response_ref_id: Some(grpc_api_types::payments::Identifier {
@@ -1673,18 +1761,18 @@ pub fn generate_refund_sync_response(
                 }),
                 error_code: None,
                 error_message: None,
-                refund_amount: None,
-                minor_refund_amount: None,
-                refund_currency: None,
-                payment_amount: None,
-                minor_payment_amount: None,
-                refund_reason: None,
-                created_at: None,
-                updated_at: None,
-                processed_at: None,
-                customer_name: None,
-                email: None,
-                merchant_order_reference_id: None,
+                refund_amount: None, // Not available in sync response data
+                minor_refund_amount: None, // Not available in sync response data
+                refund_currency: None, // Not available in sync response data
+                payment_amount: None, // Not available in sync response data
+                minor_payment_amount: None, // Not available in sync response data
+                refund_reason: router_data_v2.request.reason.clone(), // Map from request data
+                created_at: None, // Timestamp not available in current data
+                updated_at: None, // Timestamp not available in current data
+                processed_at: None, // Timestamp not available in current data
+                customer_name: None, // Not available in sync data
+                email: None, // Not available in sync data
+                merchant_order_reference_id: None, // Not available in sync data
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
             })
@@ -1715,18 +1803,18 @@ pub fn generate_refund_sync_response(
                 }),
                 error_code: Some(e.code),
                 error_message: Some(e.message),
-                refund_amount: None,
-                minor_refund_amount: None,
-                refund_currency: None,
-                payment_amount: None,
-                minor_payment_amount: None,
-                refund_reason: None,
-                created_at: None,
-                updated_at: None,
-                processed_at: None,
-                customer_name: None,
-                email: None,
-                merchant_order_reference_id: None,
+                refund_amount: None, // Not available in sync response data
+                minor_refund_amount: None, // Not available in sync response data
+                refund_currency: None, // Not available in sync response data
+                payment_amount: None, // Not available in sync response data
+                minor_payment_amount: None, // Not available in sync response data
+                refund_reason: router_data_v2.request.reason.clone(), // Map from request data
+                created_at: None, // Timestamp not available in current data
+                updated_at: None, // Timestamp not available in current data
+                processed_at: None, // Timestamp not available in current data
+                customer_name: None, // Not available in sync data
+                email: None, // Not available in sync data
+                merchant_order_reference_id: None, // Not available in sync data
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
             })
@@ -1752,7 +1840,9 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             error_code: value.error_code,
             error_message: value.error_message,
             network_txn_id: None,
-            response_ref_id: None,
+            response_ref_id: value.connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+            }),
             amount: None,
             minor_amount: None,
             currency: None,
@@ -2085,24 +2175,31 @@ pub fn generate_refund_response(
             let status = response.refund_status;
             let grpc_status = grpc_api_types::payments::RefundStatus::foreign_from(status);
 
+            // Create proper transaction_id from connector_transaction_id
+            let transaction_id = Some(grpc_api_types::payments::Identifier {
+                id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                    router_data_v2.request.connector_transaction_id.clone(),
+                )),
+            });
+
             Ok(RefundResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier::default()),
+                transaction_id,
                 refund_id: response.connector_refund_id,
                 status: grpc_status as i32,
                 response_ref_id: None,
                 error_code: None,
                 error_message: None,
-                refund_amount: None,
-                minor_refund_amount: None,
-                refund_currency: None,
-                payment_amount: None,
-                minor_payment_amount: None,
-                refund_reason: None,
-                created_at: None,
-                updated_at: None,
-                processed_at: None,
-                customer_name: None,
-                email: None,
+                refund_amount: Some(router_data_v2.request.refund_amount),
+                minor_refund_amount: Some(router_data_v2.request.minor_refund_amount.get_amount_as_i64()),
+                refund_currency: Some(grpc_api_types::payments::Currency::foreign_from(router_data_v2.request.currency) as i32),
+                payment_amount: Some(router_data_v2.request.payment_amount),
+                minor_payment_amount: Some(router_data_v2.request.minor_payment_amount.get_amount_as_i64()),
+                refund_reason: router_data_v2.request.reason.clone(),
+                created_at: None, // Timestamp not available in current data
+                updated_at: None, // Timestamp not available in current data
+                processed_at: None, // Timestamp not available in current data
+                customer_name: None, // Not available in refund data
+                email: None, // Not available in refund data
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
@@ -2127,17 +2224,17 @@ pub fn generate_refund_response(
                 response_ref_id: None,
                 error_code: Some(e.code),
                 error_message: Some(e.message),
-                refund_amount: None,
-                minor_refund_amount: None,
-                refund_currency: None,
-                payment_amount: None,
-                minor_payment_amount: None,
-                refund_reason: None,
-                created_at: None,
-                updated_at: None,
-                processed_at: None,
-                customer_name: None,
-                email: None,
+                refund_amount: Some(router_data_v2.request.refund_amount),
+                minor_refund_amount: Some(router_data_v2.request.minor_refund_amount.get_amount_as_i64()),
+                refund_currency: Some(router_data_v2.request.currency as i32),
+                payment_amount: Some(router_data_v2.request.payment_amount),
+                minor_payment_amount: Some(router_data_v2.request.minor_payment_amount.get_amount_as_i64()),
+                refund_reason: router_data_v2.request.reason.clone(),
+                created_at: None, // Timestamp not available in current data
+                updated_at: None, // Timestamp not available in current data
+                processed_at: None, // Timestamp not available in current data
+                customer_name: None, // Not available in refund data
+                email: None, // Not available in refund data
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
@@ -2442,35 +2539,28 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
             webhook_url: None,
-            browser_info: value.browser_info.map(|info| {
-                crate::router_request_types::BrowserInformation {
-                    color_depth: None,
-                    java_enabled: info.java_enabled,
-                    java_script_enabled: info.java_script_enabled,
-                    language: info.language,
-                    screen_height: info.screen_height,
-                    screen_width: info.screen_width,
-                    time_zone: None,
-                    ip_address: None,
-                    accept_header: info.accept_header,
-                    user_agent: info.user_agent,
-                    os_type: info.os_type,
-                    os_version: info.os_version,
-                    device_model: info.device_model,
-                    accept_language: info.accept_language,
-                }
+            browser_info: value.browser_info.and_then(|info| {
+                crate::router_request_types::BrowserInformation::foreign_try_from(info).ok()
             }),
             email,
-            customer_name: None,
+            customer_name: value.customer_name,
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: None,
-            complete_authorize_url: None,
+            metadata: if value.metadata.is_empty() { 
+                None 
+            } else { 
+                Some(serde_json::Value::Object(
+                    value.metadata.into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect()
+                ))
+            },
+            complete_authorize_url: value.complete_authorize_url,
             capture_method: None,
             integrity_object: None,
-            minor_amount: Some(common_utils::types::MinorUnit::new(0)),
-            shipping_cost: None,
+            minor_amount: value.minor_amount.map(|ma| common_utils::MinorUnit(ma)),
+            shipping_cost: value.shipping_cost.map(|sh_c| common_utils::types::MinorUnit::new(sh_c)),
             customer_id: value
                 .connector_customer_id
                 .clone()
@@ -2483,7 +2573,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
                     error_object: None,
                 }))?,
             statement_descriptor: None,
-            merchant_order_reference_id: None,
+            merchant_order_reference_id: value.merchant_order_reference_id,
         })
     }
 }
@@ -2504,26 +2594,19 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
+impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
     type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        value: grpc_api_types::payments::FutureUsage,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
+    fn foreign_try_from(value: grpc_api_types::payments::FutureUsage) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::FutureUsage::OffSession => {
-                Ok(common_enums::FutureUsage::OffSession)
-            }
-            grpc_api_types::payments::FutureUsage::OnSession => {
-                Ok(common_enums::FutureUsage::OnSession)
-            }
-            grpc_api_types::payments::FutureUsage::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_FUTURE_USAGE".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Future usage must be specified".to_owned(),
-                    error_object: None,
-                })
-                .into())
-            }
+            grpc_api_types::payments::FutureUsage::Unspecified =>Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_FUTURE_USAGE".to_owned(),
+                error_identifier: 401,
+                error_message: format!("Invalid value for future_usage: {:?}", value),
+                error_object: None,
+            })
+            .into()),
+            grpc_api_types::payments::FutureUsage::OffSession => Ok(common_enums::FutureUsage::OffSession),
+            grpc_api_types::payments::FutureUsage::OnSession => Ok(common_enums::FutureUsage::OnSession),
         }
     }
 }
@@ -2896,4 +2979,268 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::AuthenticationData> 
+    for crate::router_request_types::AuthenticationData 
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::AuthenticationData,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            eci: value.eci,
+            cavv: Secret::new(value.cavv),
+            threeds_server_transaction_id: value
+                .threeds_server_transaction_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                }),
+            message_version: value.message_version.and_then(|version| {
+                common_utils::types::SemanticVersion::from_str(&version).ok()
+            }),
+            ds_trans_id: value.ds_transaction_id,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> 
+    for crate::router_request_types::BrowserInformation 
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::BrowserInformation,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            color_depth: value.color_depth.map(|cd| cd as u8),
+            java_enabled: value.java_enabled,
+            java_script_enabled: value.java_script_enabled,
+            language: value.language,
+            screen_height: value.screen_height,
+            screen_width: value.screen_width,
+            time_zone: value.time_zone_offset_minutes,
+            ip_address: value.ip_address.and_then(|ip| ip.parse().ok()),
+            accept_header: value.accept_header,
+            user_agent: value.user_agent,
+            os_type: value.os_type,
+            os_version: value.os_version,
+            device_model: value.device_model,
+            accept_language: value.accept_language,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentExperience> 
+    for common_enums::PaymentExperience 
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentExperience,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::PaymentExperience::Unspecified => Ok(Self::RedirectToUrl),
+            grpc_api_types::payments::PaymentExperience::RedirectToUrl => Ok(Self::RedirectToUrl),
+            grpc_api_types::payments::PaymentExperience::InvokeSdkClient => Ok(Self::InvokeSdkClient),
+            grpc_api_types::payments::PaymentExperience::DisplayQrCode => Ok(Self::DisplayQrCode),
+            grpc_api_types::payments::PaymentExperience::OneClick => Ok(Self::OneClick),
+            grpc_api_types::payments::PaymentExperience::LinkWallet => Ok(Self::LinkWallet),
+            grpc_api_types::payments::PaymentExperience::InvokePaymentApp => Ok(Self::InvokePaymentApp),
+            grpc_api_types::payments::PaymentExperience::DisplayWaitScreen => Ok(Self::DisplayWaitScreen),
+            grpc_api_types::payments::PaymentExperience::CollectOtp => Ok(Self::CollectOtp),
+        }
+    }
+}
+
+// ForeignFrom implementations for reverse direction (common_enums -> grpc_api_types)
+impl ForeignFrom<common_enums::Currency> for grpc_api_types::payments::Currency {
+    fn foreign_from(value: common_enums::Currency) -> Self {
+        match value {
+            common_enums::Currency::AED => Self::Aed,
+            common_enums::Currency::ALL => Self::All,
+            common_enums::Currency::AMD => Self::Amd,
+            common_enums::Currency::ANG => Self::Ang,
+            common_enums::Currency::AOA => Self::Aoa,
+            common_enums::Currency::ARS => Self::Ars,
+            common_enums::Currency::AUD => Self::Aud,
+            common_enums::Currency::AWG => Self::Awg,
+            common_enums::Currency::AZN => Self::Azn,
+            common_enums::Currency::BAM => Self::Bam,
+            common_enums::Currency::BBD => Self::Bbd,
+            common_enums::Currency::BDT => Self::Bdt,
+            common_enums::Currency::BGN => Self::Bgn,
+            common_enums::Currency::BHD => Self::Bhd,
+            common_enums::Currency::BIF => Self::Bif,
+            common_enums::Currency::BMD => Self::Bmd,
+            common_enums::Currency::BND => Self::Bnd,
+            common_enums::Currency::BOB => Self::Bob,
+            common_enums::Currency::BRL => Self::Brl,
+            common_enums::Currency::BSD => Self::Bsd,
+            common_enums::Currency::BWP => Self::Bwp,
+            common_enums::Currency::BYN => Self::Byn,
+            common_enums::Currency::BZD => Self::Bzd,
+            common_enums::Currency::CAD => Self::Cad,
+            common_enums::Currency::CHF => Self::Chf,
+            common_enums::Currency::CLP => Self::Clp,
+            common_enums::Currency::CNY => Self::Cny,
+            common_enums::Currency::COP => Self::Cop,
+            common_enums::Currency::CRC => Self::Crc,
+            common_enums::Currency::CUP => Self::Cup,
+            common_enums::Currency::CVE => Self::Cve,
+            common_enums::Currency::CZK => Self::Czk,
+            common_enums::Currency::DJF => Self::Djf,
+            common_enums::Currency::DKK => Self::Dkk,
+            common_enums::Currency::DOP => Self::Dop,
+            common_enums::Currency::DZD => Self::Dzd,
+            common_enums::Currency::EGP => Self::Egp,
+            common_enums::Currency::ETB => Self::Etb,
+            common_enums::Currency::EUR => Self::Eur,
+            common_enums::Currency::FJD => Self::Fjd,
+            common_enums::Currency::FKP => Self::Fkp,
+            common_enums::Currency::GBP => Self::Gbp,
+            common_enums::Currency::GEL => Self::Gel,
+            common_enums::Currency::GHS => Self::Ghs,
+            common_enums::Currency::GIP => Self::Gip,
+            common_enums::Currency::GMD => Self::Gmd,
+            common_enums::Currency::GNF => Self::Gnf,
+            common_enums::Currency::GTQ => Self::Gtq,
+            common_enums::Currency::GYD => Self::Gyd,
+            common_enums::Currency::HKD => Self::Hkd,
+            common_enums::Currency::HNL => Self::Hnl,
+            common_enums::Currency::HRK => Self::Hrk,
+            common_enums::Currency::HTG => Self::Htg,
+            common_enums::Currency::HUF => Self::Huf,
+            common_enums::Currency::IDR => Self::Idr,
+            common_enums::Currency::ILS => Self::Ils,
+            common_enums::Currency::INR => Self::Inr,
+            common_enums::Currency::IQD => Self::Iqd,
+            common_enums::Currency::JMD => Self::Jmd,
+            common_enums::Currency::JOD => Self::Jod,
+            common_enums::Currency::JPY => Self::Jpy,
+            common_enums::Currency::KES => Self::Kes,
+            common_enums::Currency::KGS => Self::Kgs,
+            common_enums::Currency::KHR => Self::Khr,
+            common_enums::Currency::KMF => Self::Kmf,
+            common_enums::Currency::KRW => Self::Krw,
+            common_enums::Currency::KWD => Self::Kwd,
+            common_enums::Currency::KYD => Self::Kyd,
+            common_enums::Currency::KZT => Self::Kzt,
+            common_enums::Currency::LAK => Self::Lak,
+            common_enums::Currency::LBP => Self::Lbp,
+            common_enums::Currency::LKR => Self::Lkr,
+            common_enums::Currency::LRD => Self::Lrd,
+            common_enums::Currency::LSL => Self::Lsl,
+            common_enums::Currency::LYD => Self::Lyd,
+            common_enums::Currency::MAD => Self::Mad,
+            common_enums::Currency::MDL => Self::Mdl,
+            common_enums::Currency::MGA => Self::Mga,
+            common_enums::Currency::MKD => Self::Mkd,
+            common_enums::Currency::MMK => Self::Mmk,
+            common_enums::Currency::MNT => Self::Mnt,
+            common_enums::Currency::MOP => Self::Mop,
+            common_enums::Currency::MRU => Self::Mru,
+            common_enums::Currency::MUR => Self::Mur,
+            common_enums::Currency::MVR => Self::Mvr,
+            common_enums::Currency::MWK => Self::Mwk,
+            common_enums::Currency::MXN => Self::Mxn,
+            common_enums::Currency::MYR => Self::Myr,
+            common_enums::Currency::MZN => Self::Mzn,
+            common_enums::Currency::NAD => Self::Nad,
+            common_enums::Currency::NGN => Self::Ngn,
+            common_enums::Currency::NIO => Self::Nio,
+            common_enums::Currency::NOK => Self::Nok,
+            common_enums::Currency::NPR => Self::Npr,
+            common_enums::Currency::NZD => Self::Nzd,
+            common_enums::Currency::OMR => Self::Omr,
+            common_enums::Currency::PAB => Self::Pab,
+            common_enums::Currency::PEN => Self::Pen,
+            common_enums::Currency::PGK => Self::Pgk,
+            common_enums::Currency::PHP => Self::Php,
+            common_enums::Currency::PKR => Self::Pkr,
+            common_enums::Currency::PLN => Self::Pln,
+            common_enums::Currency::PYG => Self::Pyg,
+            common_enums::Currency::QAR => Self::Qar,
+            common_enums::Currency::RON => Self::Ron,
+            common_enums::Currency::RSD => Self::Rsd,
+            common_enums::Currency::RUB => Self::Rub,
+            common_enums::Currency::RWF => Self::Rwf,
+            common_enums::Currency::SAR => Self::Sar,
+            common_enums::Currency::SBD => Self::Sbd,
+            common_enums::Currency::SCR => Self::Scr,
+            common_enums::Currency::SEK => Self::Sek,
+            common_enums::Currency::SGD => Self::Sgd,
+            common_enums::Currency::SHP => Self::Shp,
+            common_enums::Currency::SLE => Self::Sle,
+            common_enums::Currency::SLL => Self::Sll,
+            common_enums::Currency::SOS => Self::Sos,
+            common_enums::Currency::SRD => Self::Srd,
+            common_enums::Currency::SSP => Self::Ssp,
+            common_enums::Currency::STN => Self::Stn,
+            common_enums::Currency::SVC => Self::Svc,
+            common_enums::Currency::SZL => Self::Szl,
+            common_enums::Currency::THB => Self::Thb,
+            common_enums::Currency::TND => Self::Tnd,
+            common_enums::Currency::TOP => Self::Top,
+            common_enums::Currency::TRY => Self::Try,
+            common_enums::Currency::TTD => Self::Ttd,
+            common_enums::Currency::TWD => Self::Twd,
+            common_enums::Currency::TZS => Self::Tzs,
+            common_enums::Currency::UAH => Self::Uah,
+            common_enums::Currency::UGX => Self::Ugx,
+            common_enums::Currency::USD => Self::Usd,
+            common_enums::Currency::UYU => Self::Uyu,
+            common_enums::Currency::UZS => Self::Uzs,
+            common_enums::Currency::VES => Self::Ves,
+            common_enums::Currency::VND => Self::Vnd,
+            common_enums::Currency::VUV => Self::Vuv,
+            common_enums::Currency::WST => Self::Wst,
+            common_enums::Currency::XAF => Self::Xaf,
+            common_enums::Currency::XCD => Self::Xcd,
+            common_enums::Currency::XOF => Self::Xof,
+            common_enums::Currency::XPF => Self::Xpf,
+            common_enums::Currency::YER => Self::Yer,
+            common_enums::Currency::ZAR => Self::Zar,
+            common_enums::Currency::ZMW => Self::Zmw,
+            common_enums::Currency::AFN => Self::Afn,
+            common_enums::Currency::BTN => Self::Btn,
+            common_enums::Currency::CDF => Self::Cdf,
+            common_enums::Currency::CLF => Self::Clf,
+            common_enums::Currency::CUC => Self::Cuc,
+            common_enums::Currency::ERN => Self::Ern,
+            common_enums::Currency::IRR => Self::Irr,
+            common_enums::Currency::ISK => Self::Isk,
+            common_enums::Currency::KPW => Self::Kpw,
+            common_enums::Currency::SDG => Self::Sdg,
+            common_enums::Currency::STD => Self::Std,
+            common_enums::Currency::SYP => Self::Syp,
+            common_enums::Currency::TJS => Self::Tjs,
+            common_enums::Currency::TMT => Self::Tmt,
+            common_enums::Currency::ZWL => Self::Zwl,
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::CaptureMethod> for grpc_api_types::payments::CaptureMethod {
+    fn foreign_from(value: common_enums::CaptureMethod) -> Self {
+        match value {
+            common_enums::CaptureMethod::Automatic => Self::Automatic,
+            common_enums::CaptureMethod::Manual => Self::Manual,
+            common_enums::CaptureMethod::ManualMultiple => Self::ManualMultiple,
+            common_enums::CaptureMethod::Scheduled => Self::Scheduled,
+            common_enums::CaptureMethod::SequentialAutomatic => Self::SequentialAutomatic,
+        }
+    }
+}
+
+impl ForeignFrom<common_enums::AuthenticationType> for grpc_api_types::payments::AuthenticationType {
+    fn foreign_from(value: common_enums::AuthenticationType) -> Self {
+        match value {
+            common_enums::AuthenticationType::ThreeDs => Self::ThreeDs,
+            common_enums::AuthenticationType::NoThreeDs => Self::NoThreeDs,
+        }
+    }
 }
