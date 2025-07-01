@@ -490,7 +490,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             webhook_url: value.webhook_url,
             browser_info: value
                 .browser_info
-                .map(|info| crate::router_request_types::BrowserInformation::foreign_try_from(info))
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
                 .transpose()?,
             payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
@@ -537,10 +537,8 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             merchant_order_reference_id: value.merchant_order_reference_id,
             order_tax_amount: value
                 .order_tax_amount
-                .map(|amount| common_utils::types::MinorUnit::new(amount)),
-            shipping_cost: value
-                .shipping_cost
-                .map(|cost| common_utils::types::MinorUnit::new(cost)),
+                .map(common_utils::types::MinorUnit::new),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
             merchant_account_id: None,
             integrity_object: None,
             merchant_config_currency: None,
@@ -1486,9 +1484,10 @@ pub fn generate_payment_sync_response(
                         .minor_amount_captured
                         .map(|amount| amount.get_amount_as_i64()),
                     payment_method_type: None,
-                    capture_method: router_data_v2.request.capture_method.map(|cm| {
-                        (grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32)
-                    }),
+                    capture_method: router_data_v2
+                        .request
+                        .capture_method
+                        .map(|cm| grpc_api_types::payments::CaptureMethod::foreign_from(cm) as i32),
                     auth_type: Some(grpc_api_types::payments::AuthenticationType::foreign_from(
                         router_data_v2.resource_common_data.auth_type,
                     ) as i32),
@@ -2627,10 +2626,8 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             complete_authorize_url: value.complete_authorize_url,
             capture_method: None,
             integrity_object: None,
-            minor_amount: value.minor_amount.map(|ma| common_utils::MinorUnit(ma)),
-            shipping_cost: value
-                .shipping_cost
-                .map(|sh_c| common_utils::types::MinorUnit::new(sh_c)),
+            minor_amount: value.minor_amount.map(common_utils::MinorUnit),
+            shipping_cost: value.shipping_cost.map(common_utils::types::MinorUnit::new),
             customer_id: value
                 .connector_customer_id
                 .clone()
