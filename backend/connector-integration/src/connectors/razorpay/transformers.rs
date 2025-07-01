@@ -190,7 +190,7 @@ impl RazorpayAuthType {
     pub fn generate_authorization_header(&self) -> String {
         let credentials = format!("{}:{}", self.api_key.peek(), self.api_secret.peek());
         let encoded = STANDARD.encode(credentials);
-        format!("Basic {}", encoded)
+        format!("Basic {encoded}")
     }
 }
 
@@ -770,12 +770,8 @@ impl<F, Req>
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum RazorpayErrorResponse {
-    StandardError {
-        error: RazorpayError,
-    },
-    SimpleError {
-        message: String,
-    },
+    StandardError { error: RazorpayError },
+    SimpleError { message: String },
 }
 
 #[serde_with::skip_serializing_none]
@@ -1234,14 +1230,14 @@ pub struct RazorpayWebCollectRequest {
         rename = "_[notes][BookingID]_",
         skip_serializing_if = "Option::is_none"
     )]
-    pub __notes_91_BookingID_93_: Option<String>,
+    pub __notes_91_booking_id_93: Option<String>,
     #[serde(rename = "_[notes][PNR]_", skip_serializing_if = "Option::is_none")]
-    pub __notes_91_PNR_93_: Option<String>,
+    pub __notes_91_pnr_93: Option<String>,
     #[serde(
         rename = "_[notes][PaymentID]_",
         skip_serializing_if = "Option::is_none"
     )]
-    pub __notes_91_PaymentID_93_: Option<String>,
+    pub __notes_91_payment_id_93: Option<String>,
     #[serde(rename = "_[notes][lob]_", skip_serializing_if = "Option::is_none")]
     pub __notes_91_lob_93_: Option<String>,
     #[serde(
@@ -1264,7 +1260,7 @@ pub struct RazorpayWebCollectRequest {
     #[serde(rename = "_[notes][pg_flow]_", skip_serializing_if = "Option::is_none")]
     pub __notes_91_pg_flow_93_: Option<String>,
     #[serde(rename = "_[notes][TID]_", skip_serializing_if = "Option::is_none")]
-    pub __notes_91_TID_93_: Option<String>,
+    pub __notes_91_tid_93: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_id: Option<String>,
 }
@@ -1372,16 +1368,16 @@ impl
             customer_id: None,
             __upi_91_expiry_time_93_: None,
             fee: None,
-            __notes_91_BookingID_93_: None,
-            __notes_91_PNR_93_: None,
-            __notes_91_PaymentID_93_: None,
+            __notes_91_booking_id_93: None,
+            __notes_91_pnr_93: None,
+            __notes_91_payment_id_93: None,
             __notes_91_lob_93_: None,
             __notes_91_credit_line_id_93_: None,
             __notes_91_loan_id_93_: None,
             __notes_91_transaction_type_93_: None,
             __notes_91_loan_product_code_93_: None,
             __notes_91_pg_flow_93_: None,
-            __notes_91_TID_93_: None,
+            __notes_91_tid_93: None,
             account_id: None,
         })
     }

@@ -13,8 +13,6 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
-// use base64::engine::Engine;
-use crate::shared_metrics as metrics;
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -25,6 +23,9 @@ use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tracing::field::Empty;
+
+// use base64::engine::Engine;
+use crate::shared_metrics as metrics;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 

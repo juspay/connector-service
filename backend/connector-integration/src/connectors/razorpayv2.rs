@@ -93,7 +93,9 @@ impl ConnectorCommon for RazorpayV2 {
             .parse_struct("RazorpayV2ErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_error_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_error_response_body(&response)
+        }
 
         let (code, message, attempt_status) = match response {
             razorpayv2::RazorpayV2ErrorResponse::StandardError { error } => {
@@ -110,7 +112,11 @@ impl ConnectorCommon for RazorpayV2 {
             razorpayv2::RazorpayV2ErrorResponse::SimpleError { message } => {
                 // For simple error messages like "no Route matched with those values"
                 // Default to failure status and use a generic error code
-                ("ROUTE_ERROR".to_string(), message.clone(), AttemptStatus::Failure)
+                (
+                    "ROUTE_ERROR".to_string(),
+                    message.clone(),
+                    AttemptStatus::Failure,
+                )
             }
         };
 
@@ -208,7 +214,9 @@ impl
             .parse_struct("RazorpayV2CreateOrderResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         let order_response = PaymentCreateOrderResponse {
             order_id: response.id,
@@ -238,7 +246,9 @@ impl
             .parse_struct("RazorpayV2ErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_error_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_error_response_body(&response)
+        }
 
         let (code, message) = match response {
             razorpayv2::RazorpayV2ErrorResponse::StandardError { error } => {
@@ -366,7 +376,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
         let (transaction_id, redirection_data) = match upi_response_result {
             Ok(upi_response) => {
-                event_builder.map(|i| i.set_response_body(&upi_response));
+                if let Some(i) = event_builder {
+                    i.set_response_body(&upi_response)
+                }
 
                 match upi_response {
                     razorpayv2::RazorpayV2UpiPaymentsResponse::SuccessIntent {
@@ -402,7 +414,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     .parse_struct("RazorpayV2PaymentsResponse")
                     .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-                event_builder.map(|i| i.set_response_body(&response));
+                if let Some(i) = event_builder {
+                    i.set_response_body(&response)
+                }
                 (ResponseId::ConnectorTransactionId(response.id), None)
             }
         };
@@ -540,7 +554,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
                 }
             };
 
-            let url = format!("{}v1/payments/{}", base_url, payment_id);
+            let url = format!("{base_url}v1/payments/{payment_id}");
             tracing::info!("RazorpayV2 PSync URL (payments endpoint): {}", url);
             Ok(url)
         }
@@ -584,13 +598,15 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
             .parse_struct("RazorpayV2SyncResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&sync_response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&sync_response)
+        }
 
         // Extract the payment response from either format
         let payment_response = match sync_response {
             razorpayv2::RazorpayV2SyncResponse::PaymentResponse(payment) => {
                 tracing::info!("RazorpayV2 PSync: Direct payment response received");
-                payment
+                *payment
             }
             razorpayv2::RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
                 tracing::info!(
@@ -703,7 +719,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
         // Extract refund ID from connector_refund_id
         let refund_id = &req.request.connector_refund_id;
 
-        Ok(format!("{}v1/refunds/{}", base_url, refund_id))
+        Ok(format!("{base_url}v1/refunds/{refund_id}"))
     }
 
     fn get_request_body(
@@ -743,7 +759,9 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
             .parse_struct("RazorpayV2RefundResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         // Map Razorpay refund status to internal status
         use common_enums::RefundStatus;
@@ -822,7 +840,7 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         // Extract payment ID from connector_transaction_id
         let payment_id = &req.request.connector_transaction_id;
 
-        Ok(format!("{}v1/payments/{}/refund", base_url, payment_id))
+        Ok(format!("{base_url}v1/payments/{payment_id}/refund"))
     }
 
     fn get_request_body(
@@ -867,7 +885,9 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
             .parse_struct("RazorpayV2RefundResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response)
+        }
 
         // Map Razorpay refund status to internal status
         use common_enums::RefundStatus;
