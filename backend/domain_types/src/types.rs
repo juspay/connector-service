@@ -2661,7 +2661,6 @@ impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance>
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
-impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
     type Error = ApplicationErrorResponse;
     fn foreign_try_from(
         value: grpc_api_types::payments::FutureUsage,
