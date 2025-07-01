@@ -163,18 +163,20 @@ pub enum PaymentMethodType {
     Netbanking,
 }
 
-#[derive(Debug, Serialize)]
 pub struct RazorpayRouterData<T> {
     pub amount: MinorUnit,
     pub router_data: T,
+    pub amount_converter:
+        &'static (dyn common_utils::types::AmountConvertor<Output = MinorUnit> + Sync),
 }
 
 impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
     fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
             router_data: item,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
         })
     }
 }
@@ -353,11 +355,17 @@ impl
             language: info.language.clone(),
         });
 
-        let ip = item.router_data.request.get_ip_address_as_optional()
+        let ip = item
+            .router_data
+            .request
+            .get_ip_address_as_optional()
             .map(|ip| Secret::new(ip.expose()))
             .unwrap_or_else(|| Secret::new("127.0.0.1".to_string()));
 
-        let user_agent = item.router_data.request.browser_info
+        let user_agent = item
+            .router_data
+            .request
+            .browser_info
             .as_ref()
             .and_then(|info| info.get_user_agent().ok())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
@@ -499,14 +507,18 @@ impl
         >,
     > for RazorpayRefundRequest
 {
-    type Error = errors::ConnectorError;
+    type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: &RazorpayRouterData<
             &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
+        let converted_amount = item
+            .amount_converter
+            .convert(item.amount, item.router_data.request.currency)
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
-            amount: item.amount,
+            amount: converted_amount,
         })
     }
 }
@@ -816,7 +828,7 @@ impl
         >,
     > for RazorpayOrderRequest
 {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -830,8 +842,12 @@ impl
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
 
+        let converted_amount = item
+            .amount_converter
+            .convert(item.amount, request_data.currency)
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         Ok(RazorpayOrderRequest {
-            amount: item.amount,
+            amount: converted_amount,
             currency: request_data.currency.to_string(),
             receipt: item
                 .router_data
@@ -1117,7 +1133,7 @@ impl
         >,
     > for RazorpayCaptureRequest
 {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -1126,8 +1142,12 @@ impl
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
 
+        let converted_amount = item
+            .amount_converter
+            .convert(item.amount, request_data.currency)
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         Ok(RazorpayCaptureRequest {
-            amount: item.amount,
+            amount: converted_amount,
             currency: request_data.currency.to_string(),
         })
     }
@@ -1295,7 +1315,11 @@ impl
         use domain_types::payment_method_data::{PaymentMethodData, UpiData};
         use hyperswitch_masking::PeekInterface;
 
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
+        let amount_in_minor_units = item
+            .amount_converter
+            .convert(item.amount, item.router_data.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?
+            .get_amount_as_i64();
 
         // Determine flow type and extract VPA based on UPI payment method
         let (flow_type, vpa) = match &item.router_data.request.payment_method_data {
@@ -1340,7 +1364,11 @@ impl
                 .and_then(|addr| addr.phone.as_ref())
                 .and_then(|phone| phone.number.as_ref())
                 .map(|num| num.peek().to_string()),
-            method: "upi".to_string(),
+            method: match &item.router_data.request.payment_method_data {
+                PaymentMethodData::Upi(_) => "upi".to_string(),
+                PaymentMethodData::Card(_) => "card".to_string(),
+                _ => "card".to_string(), // Default to card
+            },
             vpa: vpa.clone(),
             __notes_91_txn_uuid_93_: None,
             __notes_91_transaction_id_93_: None,

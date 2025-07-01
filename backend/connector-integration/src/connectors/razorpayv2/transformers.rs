@@ -11,6 +11,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -53,12 +54,13 @@ impl TryFrom<&ConnectorAuthType> for RazorpayV2AuthType {
 
 // ============ Router Data Wrapper ============
 
-#[derive(Debug)]
 pub struct RazorpayV2RouterData<T> {
     pub amount: MinorUnit,
     pub order_id: Option<String>,
     pub router_data: T,
     pub billing_address: Option<Address>,
+    pub amount_converter:
+        &'static (dyn common_utils::types::AmountConvertor<Output = MinorUnit> + Sync),
 }
 
 impl<T> TryFrom<(MinorUnit, T, Option<String>, Option<Address>)> for RazorpayV2RouterData<T> {
@@ -72,6 +74,7 @@ impl<T> TryFrom<(MinorUnit, T, Option<String>, Option<Address>)> for RazorpayV2R
             order_id,
             router_data: item,
             billing_address,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
         })
     }
 }
@@ -88,6 +91,7 @@ impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
             order_id,
             router_data: item,
             billing_address: None,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
         })
     }
 }
@@ -264,7 +268,11 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: &RazorpayV2RouterData<&PaymentCreateOrderData>) -> Result<Self, Self::Error> {
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
+        let amount_in_minor_units = item
+            .amount_converter
+            .convert(item.amount, item.router_data.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?
+            .get_amount_as_i64();
         Ok(Self {
             amount: amount_in_minor_units,
             currency: item.router_data.currency.to_string(),
@@ -284,7 +292,11 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
 impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2PaymentsRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: &RazorpayV2RouterData<&PaymentsAuthorizeData>) -> Result<Self, Self::Error> {
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
+        let amount_in_minor_units = item
+            .amount_converter
+            .convert(item.amount, item.router_data.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?
+            .get_amount_as_i64();
 
         // Determine UPI flow based on payment method data
         let (upi_flow, vpa) = match &item.router_data.payment_method_data {
@@ -381,7 +393,11 @@ impl TryFrom<&RazorpayV2RouterData<&RefundsData>> for RazorpayV2RefundRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: &RazorpayV2RouterData<&RefundsData>) -> Result<Self, Self::Error> {
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
+        let amount_in_minor_units = item
+            .amount_converter
+            .convert(item.amount, item.router_data.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?
+            .get_amount_as_i64();
         Ok(Self {
             amount: amount_in_minor_units,
         })
