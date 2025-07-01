@@ -28,7 +28,7 @@ impl RazorpayV2AuthType {
     pub fn generate_authorization_header(&self) -> String {
         let credentials = format!("{}:{}", self.api_key.peek(), self.api_secret.peek());
         let encoded = STANDARD.encode(credentials);
-        format!("Basic {}", encoded)
+        format!("Basic {encoded}")
     }
 }
 

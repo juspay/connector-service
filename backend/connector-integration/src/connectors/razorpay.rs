@@ -416,7 +416,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-            let url = format!("{}v1/payments/{}", base_url, payment_id);
+            let url = format!("{base_url}v1/payments/{payment_id}");
             tracing::info!("Razorpay PSync URL (payments endpoint): {}", url);
             Ok(url)
         }
