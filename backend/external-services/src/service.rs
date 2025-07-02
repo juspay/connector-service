@@ -29,7 +29,23 @@ use serde_json::Value;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
-pub async fn execute_connector_processing_step<T,F, ResourceCommonData, Req, Resp>(
+#[tracing::instrument(
+    name = "execute_connector_processing_step",
+    skip_all,
+    fields(
+        request.headers = Empty,
+        request.body = Empty,
+        request.url = Empty,
+        request.method = Empty,
+        response.body = Empty,
+        response.headers = Empty,
+        response.error_message = Empty,
+        response.status_code = Empty,
+        message_ = "Golden Log Line (outgoing)",
+        latency = Empty,
+    )
+)]
+pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
