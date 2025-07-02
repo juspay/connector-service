@@ -43,7 +43,6 @@ struct HandleOrderData {
     connector_auth_details: ConnectorAuthType,
     connector_name: String,
     service_name: String,
-    config: Config,
 }
 
 // Helper trait for payment operations
@@ -76,9 +75,10 @@ pub struct Payments {
 impl Payments {
     async fn handle_order_creation(
         &self,
-        data: HandleOrderData,
-        payment_flow_data: &mut PaymentFlowData,
-        payload: PaymentServiceAuthorizeRequest,
+        config: &Config,                         // Infra state
+        data: HandleOrderData,                   // L2 mirco state
+        payment_flow_data: &mut PaymentFlowData, // L2 macro state
+        payload: PaymentServiceAuthorizeRequest, // Api types
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -113,7 +113,7 @@ impl Payments {
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &data.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
@@ -136,6 +136,7 @@ impl Payments {
     }
     async fn handle_order_creation_for_setup_mandate(
         &self,
+        config: &Config,
         data: HandleOrderData,
         payment_flow_data: &mut PaymentFlowData,
         payload: &PaymentServiceRegisterRequest,
@@ -173,7 +174,7 @@ impl Payments {
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &data.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
@@ -328,12 +329,12 @@ impl PaymentService for Payments {
 
                 if should_do_order_create {
                     self.handle_order_creation(
+                        &config,
                         HandleOrderData {
                             connector_data: connector_data.clone(),
                             connector_auth_details: connector_auth_details.clone(),
                             connector_name: connector.to_string(),
                             service_name: service_name.clone(),
-                            config: config.clone(),
                         },
                         &mut payment_flow_data,
                         payload.clone(),
@@ -725,12 +726,12 @@ impl PaymentService for Payments {
 
                 if should_do_order_create {
                     self.handle_order_creation_for_setup_mandate(
+                        &config,
                         HandleOrderData {
                             connector_data: connector_data.clone(),
                             connector_auth_details: connector_auth_details.clone(),
                             connector_name: connector.to_string(),
                             service_name: service_name.clone(),
-                            config: config.clone(),
                         },
                         &mut payment_flow_data,
                         &payload,
