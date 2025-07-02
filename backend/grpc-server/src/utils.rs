@@ -1,8 +1,8 @@
 use serde_json::Value;
 use std::str::FromStr;
 
-use crate::error::IntoGrpcStatus;
 use crate::configs::Config;
+use crate::error::IntoGrpcStatus;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
@@ -298,8 +298,6 @@ where
     T: serde::Serialize + std::fmt::Debug,
 {
     let current_span = tracing::Span::current();
-    // let duration = start_time.elapsed().as_millis();
-    //     current_span.record("response_time", duration);
 
     match &result {
         Ok(response) => {
@@ -308,10 +306,10 @@ where
             let res_ref = response.get_ref();
 
             // Try converting to JSON Value
-            if let Ok(serde_json::Value::Object(map)) = serde_json::to_value(res_ref) {
+            if let Ok(Value::Object(map)) = serde_json::to_value(res_ref) {
                 if let Some(status_val) = map.get("status") {
                     let status_str = match status_val {
-                        serde_json::Value::String(s) => s.clone(),
+                        Value::String(s) => s.clone(),
                         _ => status_val.to_string(), // fallback for non-string status
                     };
                     let status_str = common_enums::AttemptStatus::try_from(status_str)
@@ -373,15 +371,23 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
-            let config = match request.extensions().get::<Config>(){
-            Some(config) => config.clone(),
-            None => {
-                return Err(tonic::Status::internal(
-                    "Configuration not found in request extensions",
-                ))
-            }
-            };
-
+            let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
+            let current_span = tracing::Span::current();
+            let start_time = tokio::time::Instant::now();
+            $crate::utils::log_before_initialization(&request, &service_name);
+            let result = Box::pin(async{
+            let config = match request.extensions().get::<Config>() {
+                    Some(config) => config.clone(),
+                    None => {
+                        return Err(tonic::Status::internal(
+                            "Configuration not found in request extensions",
+                        ))
+                    }
+                };
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();

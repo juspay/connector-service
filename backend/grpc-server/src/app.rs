@@ -1,5 +1,5 @@
 use crate::config_overrides::RequestExtensionsLayer;
-use crate::{configs, error::ConfigurationError, logger, metrics, utils};
+use crate::{configs, error::ConfigurationError, logger, utils};
 use axum::http;
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
