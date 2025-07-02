@@ -158,3 +158,12 @@ pub enum CryptoError {
     #[error("Invalid IV length")]
     InvalidIvLength,
 }
+
+/// Integrity check errors.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct IntegrityCheckError {
+    /// Field names for which integrity check failed!
+    pub field_names: String,
+    /// Connector transaction reference id
+    pub connector_transaction_id: Option<String>,
+}

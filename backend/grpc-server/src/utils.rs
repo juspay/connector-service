@@ -1,6 +1,7 @@
 use serde_json::Value;
 use std::str::FromStr;
 
+use crate::error::IntoGrpcStatus;
 use crate::configs::Config;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
@@ -99,15 +100,8 @@ pub fn tenant_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<String, ApplicationErrorResponse> {
     parse_metadata(metadata, consts::X_TENANT_ID)
-        .map(|inner| inner.to_string())
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_TENANT_ID".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing tenant ID in request metadata: {e}"),
-                error_object: None,
-            }))
-        })
+        .map(|s| s.to_string())
+        .or_else(|_| Ok("DefaultTenantId".to_string()))
 }
 
 pub fn auth_from_metadata(
@@ -267,6 +261,97 @@ fn parse_metadata<'a>(
         })
 }
 
+pub fn log_before_initialization<T>(request: &tonic::Request<T>, service_name: &str)
+where
+    T: serde::Serialize,
+{
+    let (connector, merchant_id, tenant_id, request_id) =
+        match connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
+            .map_err(|e| e.into_grpc_status())
+        {
+            Ok(values) => values,
+            Err(e) => {
+                tracing::error!("Failed to extract metadata: {:?}", e);
+                return;
+            }
+        };
+    let current_span = tracing::Span::current();
+    let req_body = request.get_ref();
+    let req_body_json = match serde_json::to_string(req_body) {
+        Ok(json) => json,
+        Err(e) => {
+            tracing::error!("Serialization error: {:?}", e);
+            "<serialization error>".to_string()
+        }
+    };
+    current_span.record("service_name", service_name);
+    current_span.record("request_body", req_body_json);
+    current_span.record("gateway", connector.to_string());
+    current_span.record("merchant_id", merchant_id);
+    current_span.record("tenant_id", tenant_id);
+    current_span.record("request_id", request_id);
+    tracing::info!("Golden Log Line (incoming)");
+}
+
+pub fn log_after_initialization<T>(result: &Result<tonic::Response<T>, tonic::Status>)
+where
+    T: serde::Serialize + std::fmt::Debug,
+{
+    let current_span = tracing::Span::current();
+    // let duration = start_time.elapsed().as_millis();
+    //     current_span.record("response_time", duration);
+
+    match &result {
+        Ok(response) => {
+            current_span.record("response_body", tracing::field::debug(response.get_ref()));
+
+            let res_ref = response.get_ref();
+
+            // Try converting to JSON Value
+            if let Ok(serde_json::Value::Object(map)) = serde_json::to_value(res_ref) {
+                if let Some(status_val) = map.get("status") {
+                    let status_str = match status_val {
+                        serde_json::Value::String(s) => s.clone(),
+                        _ => status_val.to_string(), // fallback for non-string status
+                    };
+                    let status_str = common_enums::AttemptStatus::try_from(status_str)
+                        .unwrap_or(common_enums::AttemptStatus::Unknown)
+                        .to_string();
+                    current_span.record("flow_specific_fields.status", status_str);
+                }
+            } else {
+                tracing::warn!("Could not serialize response to JSON to extract status");
+            }
+        }
+        Err(status) => {
+            current_span.record("error_message", status.message());
+            current_span.record("status_code", status.code().to_string());
+        }
+    }
+    tracing::info!("Golden Log Line (incoming)");
+}
+
+pub async fn grpc_logging_wrapper<T, F, Fut, R>(
+    request: tonic::Request<T>,
+    service_name: &str,
+    handler: F,
+) -> Result<tonic::Response<R>, tonic::Status>
+where
+    T: serde::Serialize + std::fmt::Debug + Send + 'static,
+    F: FnOnce(tonic::Request<T>) -> Fut + Send,
+    Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
+    R: serde::Serialize + std::fmt::Debug,
+{
+    let current_span = tracing::Span::current();
+    log_before_initialization(&request, service_name);
+    let start_time = tokio::time::Instant::now();
+    let result = handler(request).await;
+    let duration = start_time.elapsed().as_millis();
+    current_span.record("response_time", duration);
+    log_after_initialization(&result);
+    result
+}
+
 #[macro_export]
 macro_rules! implement_connector_operation {
     (
@@ -288,8 +373,6 @@ macro_rules! implement_connector_operation {
             request: tonic::Request<$request_type>,
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
-            // let config = $crate::utils::config_from_metadata(request.metadata(), self.config.clone())
-            //     .into_grpc_status()?;
             let config = match request.extensions().get::<Config>(){
             Some(config) => config.clone(),
             None => {
@@ -298,6 +381,7 @@ macro_rules! implement_connector_operation {
                 ))
             }
             };
+
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
@@ -342,6 +426,8 @@ macro_rules! implement_connector_operation {
                 connector_integration,
                 router_data,
                 $all_keys_required,
+                &connector.to_string(),
+                &service_name,
             )
             .await
             .switch()
@@ -350,8 +436,12 @@ macro_rules! implement_connector_operation {
             // Generate response
             let final_response = $generate_response_fn(response_result)
                 .into_grpc_status()?;
-
             Ok(tonic::Response::new(final_response))
-        }
-    };
+        }).await;
+        let duration = start_time.elapsed().as_millis();
+        current_span.record("response_time", duration);
+        $crate::utils::log_after_initialization(&result);
+        result
+    }
+}
 }

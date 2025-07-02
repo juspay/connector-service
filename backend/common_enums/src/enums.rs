@@ -901,6 +901,15 @@ impl PaymentMethodType {
     }
 }
 
+/// Connector accepted currency unit as either "Base" or "Minor"
+#[derive(Debug)]
+pub enum CurrencyUnit {
+    /// Base currency unit
+    Base,
+    /// Minor currency unit
+    Minor,
+}
+
 #[derive(
     Clone,
     Copy,
@@ -975,6 +984,41 @@ pub enum AttemptStatus {
     ConfirmationAwaited,
     DeviceDataCollectionPending,
     IntegrityFailure,
+    Unknown,
+}
+
+impl TryFrom<String> for AttemptStatus {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Ok(match value.as_str() {
+            "0" => AttemptStatus::Started,
+            "1" => AttemptStatus::AuthenticationFailed,
+            "2" => AttemptStatus::RouterDeclined,
+            "3" => AttemptStatus::AuthenticationPending,
+            "4" => AttemptStatus::AuthenticationSuccessful,
+            "5" => AttemptStatus::Authorized,
+            "6" => AttemptStatus::AuthorizationFailed,
+            "7" => AttemptStatus::Charged,
+            "8" => AttemptStatus::Authorizing,
+            "9" => AttemptStatus::CodInitiated,
+            "10" => AttemptStatus::Voided,
+            "11" => AttemptStatus::VoidInitiated,
+            "12" => AttemptStatus::CaptureInitiated,
+            "13" => AttemptStatus::CaptureFailed,
+            "14" => AttemptStatus::VoidFailed,
+            "15" => AttemptStatus::AutoRefunded,
+            "16" => AttemptStatus::PartialCharged,
+            "17" => AttemptStatus::PartialChargedAndChargeable,
+            "18" => AttemptStatus::Unresolved,
+            "19" => AttemptStatus::Pending,
+            "20" => AttemptStatus::Failure,
+            "21" => AttemptStatus::PaymentMethodAwaited,
+            "22" => AttemptStatus::ConfirmationAwaited,
+            "23" => AttemptStatus::DeviceDataCollectionPending,
+            _ => AttemptStatus::Unknown,
+        })
+    }
 }
 
 impl AttemptStatus {

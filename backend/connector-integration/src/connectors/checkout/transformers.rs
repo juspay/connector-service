@@ -9,13 +9,13 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::{self, ConnectorError},
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
 use error_stack::report;
 use hyperswitch_masking::Secret;
-use interfaces::errors::{self, ConnectorError};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;

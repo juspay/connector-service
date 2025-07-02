@@ -8,11 +8,11 @@ mod tests {
     use domain_types::{
         payment_method_data::{Card, PaymentMethodData},
         router_request_types::BrowserInformation,
+        router_response_types::Response,
     };
     use interfaces::{
         connector_integration_v2::ConnectorIntegrationV2,
         connector_types::{BoxedConnector, ConnectorServiceTrait},
-        types::Response,
     };
     use serde_json::{json, to_value};
 
@@ -39,11 +39,11 @@ mod tests {
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
+            router_response_types::Response,
         };
         use interfaces::{
             connector_integration_v2::ConnectorIntegrationV2,
             connector_types::{BoxedConnector, ConnectorServiceTrait},
-            types::Response,
         };
         use serde_json::{json, to_value, Value};
 
@@ -131,6 +131,7 @@ mod tests {
                     capture_method: None,
                     router_return_url: None,
                     webhook_url: None,
+                    integrity_object: None,
                     complete_authorize_url: None,
                     mandate_id: None,
                     setup_future_usage: None,
@@ -296,6 +297,7 @@ mod tests {
                     mandate_id: None,
                     setup_future_usage: None,
                     off_session: None,
+                    integrity_object: None,
                     browser_info: None,
                     order_category: None,
                     session_token: None,
@@ -402,6 +404,7 @@ mod tests {
                     customer_name: None,
                     currency: Currency::USD,
                     confirm: true,
+                    integrity_object: None,
                     statement_descriptor_suffix: None,
                     statement_descriptor: None,
                     capture_method: None,
@@ -544,6 +547,7 @@ mod tests {
                     capture_method: None,
                     router_return_url: None,
                     webhook_url: None,
+                    integrity_object: None,
                     complete_authorize_url: None,
                     mandate_id: None,
                     setup_future_usage: None,
@@ -878,6 +882,7 @@ mod tests {
                 minor_amount: MinorUnit::new(1000),
                 merchant_order_reference_id: None,
                 shipping_cost: None,
+                integrity_object: None,
                 merchant_account_id: None,
                 merchant_config_currency: None,
                 all_keys_required: None,
@@ -1048,6 +1053,7 @@ mod tests {
                 minor_amount: MinorUnit::new(1000),
                 merchant_order_reference_id: None,
                 shipping_cost: None,
+                integrity_object: None,
                 merchant_account_id: None,
                 merchant_config_currency: None,
                 all_keys_required: None,
@@ -1160,6 +1166,7 @@ mod tests {
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(1000),
                     currency: Currency::USD,
+                    integrity_object: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1252,6 +1259,7 @@ mod tests {
                 request: PaymentCreateOrderData {
                     amount: MinorUnit::new(0),
                     currency: Currency::default(),
+                    integrity_object: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1385,6 +1393,7 @@ mod tests {
                     customer_id: None,
                     request_incremental_authorization: false,
                     metadata: None,
+                    integrity_object: None,
                     minor_amount: MinorUnit::new(1000),
                     merchant_order_reference_id: None,
                     shipping_cost: None,
@@ -1485,6 +1494,7 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
+                integrity_object: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1601,6 +1611,7 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
+                integrity_object: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1706,6 +1717,7 @@ mod tests {
             request: PaymentCreateOrderData {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
+                integrity_object: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),

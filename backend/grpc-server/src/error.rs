@@ -1,5 +1,5 @@
+use domain_types::errors::ConnectorError;
 use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse};
-use interfaces::errors::ConnectorError;
 use tonic::Status;
 
 use crate::logger;
@@ -132,6 +132,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ConnectorError {
             | Self::CurrencyNotSupported { .. }
             | Self::NoConnectorWalletDetails
             | Self::MissingConnectorMandateMetadata
+            | Self::IntegrityCheckFailed { .. }
             | Self::InvalidConnectorConfig { .. } => {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "BAD_REQUEST".to_string(),
@@ -211,6 +212,7 @@ impl ErrorSwitch<ApplicationErrorResponse> for ApiClientError {
             | Self::InternalServerErrorReceived
             | Self::BadGatewayReceived
             | Self::ServiceUnavailableReceived
+            | Self::UrlParsingFailed
             | Self::UnexpectedServerResponse => {
                 ApplicationErrorResponse::InternalServerError(ApiError {
                     sub_code: "INTERNAL_SERVER_ERROR".to_string(),

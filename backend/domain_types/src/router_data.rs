@@ -6,6 +6,11 @@ use common_utils::ext_traits::ValueExt;
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use std::collections::HashMap;
+
+use crate::utils::missing_field_err;
+
+pub type Error = error_stack::Report<crate::errors::ConnectorError>;
+
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(tag = "auth_type")]
 pub enum ConnectorAuthType {
@@ -193,6 +198,26 @@ pub struct ApplePayPredecryptData {
     pub payment_data: ApplePayCryptogramData,
 }
 
+impl ApplePayPredecryptData {
+    pub fn get_four_digit_expiry_year(&self) -> Result<Secret<String>, Error> {
+        Ok(Secret::new(format!(
+            "20{}",
+            self.application_expiration_date
+                .get(0..2)
+                .ok_or(crate::errors::ConnectorError::RequestEncodingFailed)?
+        )))
+    }
+
+    pub fn get_expiry_month(&self) -> Result<Secret<String>, Error> {
+        Ok(Secret::new(
+            self.application_expiration_date
+                .get(2..4)
+                .ok_or(crate::errors::ConnectorError::RequestEncodingFailed)?
+                .to_owned(),
+        ))
+    }
+}
+
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GooglePayDecryptedData {
@@ -293,4 +318,15 @@ pub struct RecurringMandatePaymentData {
     pub original_payment_authorized_amount: Option<i64>,
     pub original_payment_authorized_currency: Option<common_enums::enums::Currency>,
     pub mandate_metadata: Option<common_utils::pii::SecretSerdeValue>,
+}
+
+impl RecurringMandatePaymentData {
+    pub fn get_original_payment_amount(&self) -> Result<i64, Error> {
+        self.original_payment_authorized_amount
+            .ok_or_else(missing_field_err("original_payment_authorized_amount"))
+    }
+    pub fn get_original_payment_currency(&self) -> Result<common_enums::Currency, Error> {
+        self.original_payment_authorized_currency
+            .ok_or_else(missing_field_err("original_payment_authorized_currency"))
+    }
 }
