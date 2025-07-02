@@ -3,11 +3,6 @@ name: Docker Build and Push to GHCR
 on:
   workflow_dispatch:
 
-  push:
-    tags:
-      - 'v*'  
-      - '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9].[0-9]*'  # Matches YYYY.MM.DD.MICRO format
-
 jobs:
   build-and-push-dockerfile:
     permissions:
@@ -48,9 +43,12 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # Use the tag name directly
             VERSION="${{ github.ref_name }}"
+          elif [[ "${{ github.ref_type }}" == "branch" ]] && [[ -n "${{ github.ref_name }}" ]]; then
+            # Use the branch name with short SHA
+            VERSION="${{ github.ref_name }}-${SHORT_SHA}"
           else
-            # Default to commit SHA
-            VERSION="${SHORT_SHA}"
+            # Default to commit SHA if not a tag or branch
+            VERSION="commit-${SHORT_SHA}"
           fi
 
           echo "Using version: $VERSION"
