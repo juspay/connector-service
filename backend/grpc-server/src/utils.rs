@@ -166,7 +166,7 @@ fn parse_metadata<'a>(
         })
 }
 
-pub fn log_before_initalization<T>(request: &tonic::Request<T>, service_name: &str)
+pub fn log_before_initialization<T>(request: &tonic::Request<T>, service_name: &str)
 where
     T: serde::Serialize,
 {
@@ -248,7 +248,7 @@ where
     R: serde::Serialize + std::fmt::Debug,
 {
     let current_span = tracing::Span::current();
-    log_before_initalization(&request, service_name);
+    log_before_initialization(&request, service_name);
     let start_time = tokio::time::Instant::now();
     let result = handler(request).await;
     let duration = start_time.elapsed().as_millis();
@@ -284,7 +284,7 @@ macro_rules! implement_connector_operation {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
             let current_span = tracing::Span::current();
-            $crate::utils::log_before_initalization(&request, service_name.as_str());
+            $crate::utils::log_before_initialization(&request, service_name.as_str());
             let start_time = tokio::time::Instant::now();
             let result = Box::pin(async{
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
