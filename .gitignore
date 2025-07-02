@@ -409,3 +409,11 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+
+# Test credential security - prevent accidental commits of secrets
+.env.gpg.key
+.gpg.passphrase
+test-credentials.json
+*.credentials
+.test-env
+# Note: test-credentials.json.gpg is intentionally NOT ignored (safe to commit when encrypted)

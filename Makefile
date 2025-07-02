@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test ci help proto-format proto-generate proto-build proto-lint proto-clean
+.PHONY: all fmt check clippy test ci help proto-format proto-generate proto-build proto-lint proto-clean manage-creds test-setup
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -29,10 +29,30 @@ clippy:
 	@echo "▶ cargo-hack clippy…"
 	cargo hack clippy --each-feature --no-dev-deps $(CLIPPY_EXTRA)
 
-## Run cargo-hack tests on each feature
 test:
-	@echo "▶ cargo-hack test…"
-	cargo hack test --each-feature
+	@echo "▶ Running comprehensive test suite..."
+	@if [ -f "test-credentials.json.gpg" ]; then \
+		if [ -n "$$GPG_PASSPHRASE" ] || [ -f ".env.gpg.key" ]; then \
+			echo "🔐 Credentials detected - running all tests with encrypted credentials"; \
+			./scripts/decrypt-and-test.sh; \
+		else \
+			echo "❌ Error: test-credentials.json.gpg file exists but no GPG passphrase available"; \
+			echo "   This repository is configured for credential-based testing"; \
+			echo "   Please set GPG_PASSPHRASE environment variable or create .env.gpg.key file"; \
+			echo "   Contact your team lead to get the passphrase"; \
+			exit 1; \
+		fi; \
+	else \
+		if [ -n "$$GPG_PASSPHRASE" ] || [ -f ".env.gpg.key" ]; then \
+			echo "❌ Error: GPG passphrase is available but test-credentials.json.gpg file is missing"; \
+			echo "   Please ensure the encrypted credentials file is committed to the repository"; \
+			echo "   Or remove/unset the passphrase to run tests without credentials"; \
+			exit 1; \
+		else \
+			echo "❌ Error: GPG passphrase and test-credentials.json.gpg file is missing"; \
+			exit 1; \
+		fi; \
+	fi
 
 ## CI-friendly invocation:
 ##    make ci
@@ -68,6 +88,24 @@ proto-clean:
 	@echo "Cleaning generated files..."
 	rm -rf gen
 
+
+## Manage test credentials
+manage-creds:
+	@echo "▶ Credential management help:"
+	@echo "  Add new:    ./scripts/manage-credentials.sh add <connector> <cred-file>"
+	@echo "  Update:     ./scripts/manage-credentials.sh update <connector> <cred-file>"
+	@echo "  Delete:     ./scripts/manage-credentials.sh delete <connector>"
+	@echo "  List:       ./scripts/manage-credentials.sh list"
+	@echo "  Verify:     ./scripts/manage-credentials.sh verify"
+
+## First-time test setup for developers
+test-setup:
+	@echo "▶ Test setup instructions:"
+	@echo "1. Get the GPG passphrase from your team lead"
+	@echo "2. Create passphrase file: echo 'your_passphrase' > .env.gpg.key"
+	@echo "3. Run tests: make test"
+	@echo "4. For credential management: make manage-creds"
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -79,6 +117,13 @@ help:
 	@echo "  clippy   Run cargo-hack clippy (no dev-deps)"
 	@echo "  test     Run cargo-hack test"
 	@echo "  ci       Same as '''all''' but with CI=true (treat warnings as errors)"
+	@echo
+	@echo "Test Targets:"
+	@echo "  test             Run comprehensive test suite (auto-detects credentials)"
+	@echo "  test-setup       Show first-time setup instructions"
+	@echo
+	@echo "Credential Management:"
+	@echo "  manage-creds     Show credential management commands"
 	@echo
 	@echo "Proto Targets:"
 	@echo "  proto-format     Format proto files"

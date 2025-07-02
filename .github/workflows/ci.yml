@@ -69,3 +69,49 @@ jobs:
       - name: Check formatting
         shell: bash
         run: cargo +nightly fmt --all --check
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: [check, formatting]  # Run tests only after other checks pass
+
+    env:
+      RUSTFLAGS: "-D warnings"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cargo-hack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+
+      - name: Install additional dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - uses: Swatinem/rust-cache@v2.7.8
+
+      - name: Run test suite
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "🚀 Running comprehensive test suite"
+          make test
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f test-credentials.json
