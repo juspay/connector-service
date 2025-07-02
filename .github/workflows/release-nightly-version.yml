@@ -15,4 +15,4 @@ jobs:
     name: Create a nightly tag
     uses: juspay/hyperswitch/.github/workflows/release-nightly-version-reusable.yml@main
     secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
+      token: ${{ secrets.CONNECTOR_SERVICE_CI_PAT }}
