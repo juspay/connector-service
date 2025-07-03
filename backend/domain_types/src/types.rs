@@ -19,16 +19,16 @@ use utoipa::ToSchema;
 use crate::mandates::MandateData;
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
@@ -951,6 +951,62 @@ impl ForeignTryFrom<ResponseId> for grpc_api_types::payments::Identifier {
     }
 }
 
+pub fn generate_create_order_response(
+    router_data_v2: RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >,
+) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let transaction_response = router_data_v2.response;
+    let status = router_data_v2.resource_common_data.status;
+    let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+    
+    let response = match transaction_response {
+        Ok(_response) => {
+            // For successful order creation, return basic success response
+            PaymentServiceAuthorizeResponse {
+                transaction_id: None,
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                incremental_authorization_allowed: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                raw_connector_response: None,
+            }
+        }
+        Err(err) => {
+            let status = err
+                .attempt_status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .unwrap_or_default();
+            PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(
+                        grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
+                    ),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: err.connector_transaction_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }
+                }),
+                incremental_authorization_allowed: None,
+                status: status as i32,
+                error_message: Some(err.message),
+                error_code: Some(err.code),
+                raw_connector_response: err.raw_connector_response,
+            }
+        }
+    };
+    Ok(response)
+}
+
 pub fn generate_payment_authorize_response(
     router_data_v2: RouterDataV2<
         Authorize,
@@ -1037,6 +1093,10 @@ pub fn generate_payment_authorize_response(
             }))?,
         },
         Err(err) => {
+            let status = err
+                .attempt_status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .unwrap_or_default();
             PaymentServiceAuthorizeResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
@@ -1051,7 +1111,7 @@ pub fn generate_payment_authorize_response(
                     }
                 }),
                 incremental_authorization_allowed: None,
-                status: err.status_code as i32,
+                status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
