@@ -26,8 +26,8 @@ use crate::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
@@ -962,7 +962,7 @@ pub fn generate_create_order_response(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-    
+
     let response = match transaction_response {
         Ok(_response) => {
             // For successful order creation, return basic success response

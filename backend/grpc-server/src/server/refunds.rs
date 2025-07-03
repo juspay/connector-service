@@ -1,11 +1,5 @@
 use std::sync::Arc;
 
-use crate::implement_connector_operation;
-use crate::{
-    configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
-};
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -28,9 +22,8 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata},
+    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
-
 // Helper trait for refund operations
 trait RefundOperationsInternal {
     async fn internal_get(
