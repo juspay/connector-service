@@ -1205,13 +1205,10 @@ pub struct RazorpayWebCollectRequest {
     pub method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vpa: Option<String>,
-    #[serde(
-        rename = "_[notes][txn_uuid]_",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "[notes][txn_uuid]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_txn_uuid_93_: Option<String>,
     #[serde(
-        rename = "_[notes][transaction_id]_",
+        rename = "[notes][transaction_id]",
         skip_serializing_if = "Option::is_none"
     )]
     pub __notes_91_transaction_id_93_: Option<String>,
@@ -1223,66 +1220,54 @@ pub struct RazorpayWebCollectRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow: Option<String>,
-    #[serde(rename = "_[notes][cust_id]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[notes][cust_id]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_cust_id_93_: Option<String>,
-    #[serde(
-        rename = "_[notes][cust_name]_",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "[notes][cust_name]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_cust_name_93_: Option<String>,
-    #[serde(rename = "_[upi][flow]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[upi][flow]", skip_serializing_if = "Option::is_none")]
     pub __upi_91_flow_93_: Option<String>,
-    #[serde(rename = "_[upi][type]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[upi][type]", skip_serializing_if = "Option::is_none")]
     pub __upi_91_type_93_: Option<String>,
-    #[serde(rename = "_[upi][end_date]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[upi][end_date]", skip_serializing_if = "Option::is_none")]
     pub __upi_91_end_date_93_: Option<i64>,
-    #[serde(rename = "_[upi][vpa]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[upi][vpa]", skip_serializing_if = "Option::is_none")]
     pub __upi_91_vpa_93_: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recurring: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub customer_id: Option<String>,
-    #[serde(
-        rename = "_[upi][expiry_time]_",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "[upi][expiry_time]", skip_serializing_if = "Option::is_none")]
     pub __upi_91_expiry_time_93_: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fee: Option<i64>,
-    #[serde(
-        rename = "_[notes][BookingID]_",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "[notes][BookingID]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_booking_id_93: Option<String>,
-    #[serde(rename = "_[notes][PNR]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[notes][PNR]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_pnr_93: Option<String>,
-    #[serde(
-        rename = "_[notes][PaymentID]_",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "[notes][PaymentID]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_payment_id_93: Option<String>,
-    #[serde(rename = "_[notes][lob]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[notes][lob]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_lob_93_: Option<String>,
     #[serde(
-        rename = "_[notes][credit_line_id]_",
+        rename = "[notes][credit_line_id]",
         skip_serializing_if = "Option::is_none"
     )]
     pub __notes_91_credit_line_id_93_: Option<String>,
-    #[serde(rename = "_[notes][loan_id]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[notes][loan_id]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_loan_id_93_: Option<String>,
     #[serde(
-        rename = "_[notes][transaction_type]_",
+        rename = "[notes][transaction_type]",
         skip_serializing_if = "Option::is_none"
     )]
     pub __notes_91_transaction_type_93_: Option<String>,
     #[serde(
-        rename = "_[notes][loan_product_code]_",
+        rename = "[notes][loan_product_code]",
         skip_serializing_if = "Option::is_none"
     )]
     pub __notes_91_loan_product_code_93_: Option<String>,
-    #[serde(rename = "_[notes][pg_flow]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[notes][pg_flow]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_pg_flow_93_: Option<String>,
-    #[serde(rename = "_[notes][TID]_", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "[notes][TID]", skip_serializing_if = "Option::is_none")]
     pub __notes_91_tid_93: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub account_id: Option<String>,
@@ -1389,7 +1374,9 @@ impl
             },
             vpa: vpa.clone(),
             __notes_91_txn_uuid_93_: metadata_map.get("__notes_91_txn_uuid_93_").cloned(),
-            __notes_91_transaction_id_93_: metadata_map.get("__notes_91_transaction_id_93_").cloned(),
+            __notes_91_transaction_id_93_: metadata_map
+                .get("__notes_91_transaction_id_93_")
+                .cloned(),
             callback_url: item
                 .router_data
                 .request
@@ -1433,10 +1420,16 @@ impl
             __notes_91_pnr_93: metadata_map.get("__notes_91_pnr_93").cloned(),
             __notes_91_payment_id_93: metadata_map.get("__notes_91_payment_id_93").cloned(),
             __notes_91_lob_93_: metadata_map.get("__notes_91_lob_93_").cloned(),
-            __notes_91_credit_line_id_93_: metadata_map.get("__notes_91_credit_line_id_93_").cloned(),
+            __notes_91_credit_line_id_93_: metadata_map
+                .get("__notes_91_credit_line_id_93_")
+                .cloned(),
             __notes_91_loan_id_93_: metadata_map.get("__notes_91_loan_id_93_").cloned(),
-            __notes_91_transaction_type_93_: metadata_map.get("__notes_91_transaction_type_93_").cloned(),
-            __notes_91_loan_product_code_93_: metadata_map.get("__notes_91_loan_product_code_93_").cloned(),
+            __notes_91_transaction_type_93_: metadata_map
+                .get("__notes_91_transaction_type_93_")
+                .cloned(),
+            __notes_91_loan_product_code_93_: metadata_map
+                .get("__notes_91_loan_product_code_93_")
+                .cloned(),
             __notes_91_pg_flow_93_: metadata_map.get("__notes_91_pg_flow_93_").cloned(),
             __notes_91_tid_93: metadata_map.get("__notes_91_tid_93").cloned(),
             account_id: None,
