@@ -614,6 +614,11 @@ impl PaymentFlowData {
             .and_then(|billing_details| billing_details.address.as_ref())
             .and_then(|billing_address| billing_address.get_optional_full_name())
     }
+
+    pub fn set_order_reference_id(mut self, reference_id: String) -> Self {
+        self.reference_id = Some(reference_id);
+        self
+    }
 }
 
 impl RawConnectorResponse for PaymentFlowData {
