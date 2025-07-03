@@ -428,13 +428,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             }
         };
 
-        // Debug logging to trace reference_id
         let reference_id = data.resource_common_data.reference_id.clone();
-        info!(
-            "RazorpayV2 Authorization Response - reference_id: {:?}",
-            reference_id
-        );
-
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
             redirection_data: Box::new(redirection_data),

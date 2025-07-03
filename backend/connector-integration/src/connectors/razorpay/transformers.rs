@@ -1327,8 +1327,12 @@ impl
                 let vpa = collect_data
                     .vpa_id
                     .as_ref()
-                    .map(|vpa| vpa.peek().to_string());
-                ("collect", vpa)
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "vpa_id",
+                    })?
+                    .peek()
+                    .to_string();
+                ("collect", Some(vpa))
             }
             PaymentMethodData::Upi(UpiData::UpiIntent(_)) => ("intent", None),
             _ => ("collect", None), // Default fallback

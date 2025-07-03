@@ -305,8 +305,12 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
                     let vpa_string = collect_data
                         .vpa_id
                         .as_ref()
-                        .map(|vpa| vpa.peek().to_string());
-                    (Some(UpiFlow::Collect), vpa_string)
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id",
+                        })?
+                        .peek()
+                        .to_string();
+                    (Some(UpiFlow::Collect), Some(vpa_string))
                 }
                 UpiData::UpiIntent(_) => (Some(UpiFlow::Intent), None),
             },
