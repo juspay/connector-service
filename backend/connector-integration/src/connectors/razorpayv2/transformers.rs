@@ -109,13 +109,7 @@ pub struct RazorpayV2CreateOrderRequest {
     pub notes: Option<RazorpayV2Notes>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct RazorpayV2Notes {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub txn_uuid: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub merchant_order_id: Option<String>,
-}
+pub type RazorpayV2Notes = serde_json::Value;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RazorpayV2CreateOrderResponse {
@@ -284,7 +278,7 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
                 })?
                 .clone(),
             payment_capture: None,
-            notes: None,
+            notes: item.router_data.metadata.clone(),
         })
     }
 }
@@ -355,7 +349,7 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
                 .unwrap_or_else(|| "9999999999".to_string()),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
-            notes: None,
+            notes: item.router_data.metadata.clone(),
             callback_url: item
                 .router_data
                 .router_return_url

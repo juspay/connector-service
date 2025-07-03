@@ -935,6 +935,7 @@ pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
+    pub metadata: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone)]

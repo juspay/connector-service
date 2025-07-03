@@ -106,6 +106,11 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(payload.minor_amount),
             currency,
             integrity_object: None,
+            metadata: if payload.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
+            },
         };
 
         let order_router_data = RouterDataV2::<
@@ -197,6 +202,11 @@ impl Payments {
             amount: common_utils::types::MinorUnit::new(0),
             currency,
             integrity_object: None,
+            metadata: if payload.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
+            },
         };
 
         let order_router_data = RouterDataV2::<
