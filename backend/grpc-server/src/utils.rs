@@ -143,55 +143,58 @@ pub fn auth_from_metadata(
 }
 
 pub fn config_from_metadata(
-    config_override: String,
+    config_override: Option<String>,
     config: Config,
 ) -> CustomResult<Config, ApplicationErrorResponse> {
-    if !config_override.is_empty() {
-        let override_value = serde_json::from_str(&config_override).map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "CANNOT_CONVERT_TO_JSON".into(),
-                error_identifier: 400,
-                error_message: format!("Cannot convert override config to JSON: {e}"),
-                error_object: None,
-            }))
-        })?;
-        let base_value = serde_json::to_value(&config).map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "CANNOT_SERIALIZE_TO_JSON".into(),
-                error_identifier: 400,
-                error_message: format!("Cannot serialize base config to JSON: {e}"),
-                error_object: None,
-            }))
-        })?;
-        tracing::info!(
-            "Override config: {}",
-            serde_json::to_string_pretty(&override_value)
-                .unwrap_or_else(|_| "Invalid JSON".to_string())
-        );
-        tracing::info!(
-            "Base config: {}",
-            serde_json::to_string_pretty(&base_value)
-                .unwrap_or_else(|_| "Invalid JSON".to_string())
-        );
-        let merged = merge_configs(&override_value, &base_value);
+    match config_override {
+        None => Ok(config),
+        Some(config_override) => {
+            let override_value = serde_json::from_str(&config_override).map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "CANNOT_CONVERT_TO_JSON".into(),
+                    error_identifier: 400,
+                    error_message: format!("Cannot convert override config to JSON: {e}"),
+                    error_object: None,
+                }))
+            })?;
+            let base_value = serde_json::to_value(&config).map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "CANNOT_SERIALIZE_TO_JSON".into(),
+                    error_identifier: 400,
+                    error_message: format!("Cannot serialize base config to JSON: {e}"),
+                    error_object: None,
+                }))
+            })?;
+            tracing::info!(
+                "Override config: {}",
+                serde_json::to_string_pretty(&override_value)
+                    .unwrap_or_else(|_| "Invalid JSON".to_string())
+            );
+            tracing::info!(
+                "Base config: {}",
+                serde_json::to_string_pretty(&base_value)
+                    .unwrap_or_else(|_| "Invalid JSON".to_string())
+            );
+            let merged = merge_configs(&override_value, &base_value);
 
-        tracing::info!(
-            "Merged config: {}",
-            serde_json::to_string_pretty(&merged).unwrap_or_else(|_| "Invalid JSON".to_string())
-        );
-        return serde_json::from_value(merged).map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "CANNOT_DESERIALIZE_JSON".into(),
-                error_identifier: 400,
-                error_message: format!("Cannot deserialize merged config: {e}"),
-                error_object: None,
-            }))
-        });
+            tracing::info!(
+                "Merged config: {}",
+                serde_json::to_string_pretty(&merged)
+                    .unwrap_or_else(|_| "Invalid JSON".to_string())
+            );
+            serde_json::from_value(merged).map_err(|e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "CANNOT_DESERIALIZE_JSON".into(),
+                    error_identifier: 400,
+                    error_message: format!("Cannot deserialize merged config: {e}"),
+                    error_object: None,
+                }))
+            })
+        }
     }
-    Ok(config)
 }
 
-fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
+pub fn merge_configs(override_val: &Value, base_val: &Value) -> Value {
     match (base_val, override_val) {
         (Value::Object(base_map), Value::Object(override_map)) => {
             let mut merged = base_map.clone();
@@ -350,6 +353,26 @@ where
     result
 }
 
+pub fn get_config_from_request<T>(
+    request: &tonic::Request<T>,
+) -> CustomResult<Config, ApplicationErrorResponse>
+where
+    T: serde::Serialize,
+{
+    request
+        .extensions()
+        .get::<Config>()
+        .cloned()
+        .ok_or_else(|| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CONFIG_NOT_FOUND".to_string(),
+                error_identifier: 400,
+                error_message: "Configuration not found in request extensions".to_string(),
+                error_object: None,
+            }))
+        })
+}
+
 #[macro_export]
 macro_rules! implement_connector_operation {
     (
@@ -380,14 +403,8 @@ macro_rules! implement_connector_operation {
             let start_time = tokio::time::Instant::now();
             $crate::utils::log_before_initialization(&request, &service_name);
             let result = Box::pin(async{
-            let config = match request.extensions().get::<Config>() {
-                    Some(config) => config.clone(),
-                    None => {
-                        return Err(tonic::Status::internal(
-                            "Configuration not found in request extensions",
-                        ))
-                    }
-                };
+            let config = $crate::utils::get_config_from_request(&request)
+                    .map_err(|e| e.into_grpc_status())?;
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();

@@ -2,7 +2,9 @@ use crate::implement_connector_operation;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    utils::{
+        auth_from_metadata, connector_from_metadata, get_config_from_request, grpc_logging_wrapper,
+    },
 };
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -294,14 +296,7 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let config = match request.extensions().get::<Config>() {
-                    Some(config) => config.clone(),
-                    None => {
-                        return Err(tonic::Status::internal(
-                            "Configuration not found in request extensions",
-                        ))
-                    }
-                };
+                let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
@@ -691,14 +686,7 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let config = match request.extensions().get::<Config>() {
-                    Some(config) => config.clone(),
-                    None => {
-                        return Err(tonic::Status::internal(
-                            "Configuration not found in request extensions",
-                        ))
-                    }
-                };
+                let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =

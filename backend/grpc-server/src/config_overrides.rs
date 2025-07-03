@@ -53,9 +53,7 @@ where
         let config_override = req
             .headers()
             .get("x-config-override")
-            .and_then(|h| h.to_str().ok())
-            .unwrap_or("")
-            .to_string();
+            .and_then(|h| h.to_str().map(|s| s.to_owned()).ok());
 
         let new_config = config_from_metadata(config_override, default_config.clone())
             .expect("Failed to create config from metadata");
