@@ -1171,6 +1171,7 @@ mod tests {
                     amount: MinorUnit::new(1000),
                     currency: Currency::USD,
                     integrity_object: None,
+                    metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1265,6 +1266,7 @@ mod tests {
                     amount: MinorUnit::new(0),
                     currency: Currency::default(),
                     integrity_object: None,
+                    metadata: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1502,6 +1504,7 @@ mod tests {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
                 integrity_object: None,
+                metadata: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),

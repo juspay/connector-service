@@ -1349,6 +1349,20 @@ impl
             })?
             .clone();
 
+        // Extract metadata as a HashMap
+        let metadata_map = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|metadata| metadata.as_object())
+            .map(|obj| {
+                obj.iter()
+                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                    .collect::<HashMap<String, String>>()
+            })
+            .unwrap_or_default();
+
         Ok(Self {
             currency: item.router_data.request.currency.to_string(),
             amount: amount_in_minor_units,
@@ -1374,8 +1388,8 @@ impl
                 _ => "card".to_string(), // Default to card
             },
             vpa: vpa.clone(),
-            __notes_91_txn_uuid_93_: None,
-            __notes_91_transaction_id_93_: None,
+            __notes_91_txn_uuid_93_: metadata_map.get("__notes_91_txn_uuid_93_").cloned(),
+            __notes_91_transaction_id_93_: metadata_map.get("__notes_91_transaction_id_93_").cloned(),
             callback_url: item
                 .router_data
                 .request
@@ -1401,26 +1415,30 @@ impl
                 .unwrap_or_else(|| "Mozilla/5.0".to_string()),
             description: Some("Payment via Razorpay".to_string()),
             flow: Some(flow_type.to_string()),
-            __notes_91_cust_id_93_: None,
-            __notes_91_cust_name_93_: None,
-            __upi_91_flow_93_: None,
-            __upi_91_type_93_: None,
-            __upi_91_end_date_93_: None,
-            __upi_91_vpa_93_: None,
+            __notes_91_cust_id_93_: metadata_map.get("__notes_91_cust_id_93_").cloned(),
+            __notes_91_cust_name_93_: metadata_map.get("__notes_91_cust_name_93_").cloned(),
+            __upi_91_flow_93_: metadata_map.get("__upi_91_flow_93_").cloned(),
+            __upi_91_type_93_: metadata_map.get("__upi_91_type_93_").cloned(),
+            __upi_91_end_date_93_: metadata_map
+                .get("__upi_91_end_date_93_")
+                .and_then(|v| v.parse::<i64>().ok()),
+            __upi_91_vpa_93_: metadata_map.get("__upi_91_vpa_93_").cloned(),
             recurring: None,
             customer_id: None,
-            __upi_91_expiry_time_93_: None,
+            __upi_91_expiry_time_93_: metadata_map
+                .get("__upi_91_expiry_time_93_")
+                .and_then(|v| v.parse::<i64>().ok()),
             fee: None,
-            __notes_91_booking_id_93: None,
-            __notes_91_pnr_93: None,
-            __notes_91_payment_id_93: None,
-            __notes_91_lob_93_: None,
-            __notes_91_credit_line_id_93_: None,
-            __notes_91_loan_id_93_: None,
-            __notes_91_transaction_type_93_: None,
-            __notes_91_loan_product_code_93_: None,
-            __notes_91_pg_flow_93_: None,
-            __notes_91_tid_93: None,
+            __notes_91_booking_id_93: metadata_map.get("__notes_91_booking_id_93").cloned(),
+            __notes_91_pnr_93: metadata_map.get("__notes_91_pnr_93").cloned(),
+            __notes_91_payment_id_93: metadata_map.get("__notes_91_payment_id_93").cloned(),
+            __notes_91_lob_93_: metadata_map.get("__notes_91_lob_93_").cloned(),
+            __notes_91_credit_line_id_93_: metadata_map.get("__notes_91_credit_line_id_93_").cloned(),
+            __notes_91_loan_id_93_: metadata_map.get("__notes_91_loan_id_93_").cloned(),
+            __notes_91_transaction_type_93_: metadata_map.get("__notes_91_transaction_type_93_").cloned(),
+            __notes_91_loan_product_code_93_: metadata_map.get("__notes_91_loan_product_code_93_").cloned(),
+            __notes_91_pg_flow_93_: metadata_map.get("__notes_91_pg_flow_93_").cloned(),
+            __notes_91_tid_93: metadata_map.get("__notes_91_tid_93").cloned(),
             account_id: None,
         })
     }
