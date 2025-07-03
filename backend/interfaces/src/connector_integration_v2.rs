@@ -11,6 +11,7 @@ use serde_json::json;
 use crate::{
     api::{self},
     events::connector_api_logs::ConnectorEvent,
+    verification::SourceVerification,
 };
 
 /// alias for Box of a type that implements trait ConnectorIntegrationV2
@@ -41,7 +42,10 @@ where
 
 /// The new connector integration trait with an additional ResourceCommonData generic parameter
 pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
-    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp> + Sync + api::ConnectorCommon
+    ConnectorIntegrationAnyV2<Flow, ResourceCommonData, Req, Resp>
+    + Sync
+    + api::ConnectorCommon
+    + SourceVerification<Flow, ResourceCommonData, Req, Resp>
 {
     /// returns a vec of tuple of header key and value
     fn get_headers(

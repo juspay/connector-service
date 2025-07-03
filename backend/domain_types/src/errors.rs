@@ -840,6 +840,8 @@ pub enum ConnectorError {
     NoConnectorWalletDetails,
     #[error("Failed to obtain certificate key")]
     FailedToObtainCertificateKey,
+    #[error("Failed to verify source of the response")]
+    SourceVerificationFailed,
     #[error("This step has not been implemented for: {0}")]
     NotImplemented(String),
     #[error("{message} is not supported by {connector}")]
