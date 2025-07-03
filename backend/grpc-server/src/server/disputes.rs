@@ -1,9 +1,3 @@
-use crate::implement_connector_operation;
-use crate::{
-    configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
-};
 use std::sync::Arc;
 
 use common_utils::errors::CustomResult;
@@ -39,7 +33,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata},
+    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
 
 // Helper trait for dispute operations

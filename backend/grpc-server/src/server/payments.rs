@@ -1,11 +1,5 @@
 use std::sync::Arc;
 
-use crate::implement_connector_operation;
-use crate::{
-    configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
-};
 use common_enums;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -44,12 +38,8 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{
-        auth_from_metadata, connector_from_metadata,
-        connector_merchant_id_tenant_id_request_id_from_metadata,
-    },
+    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
-
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -105,7 +95,7 @@ impl Payments {
                     network_txn_id: None,
                     response_ref_id: None,
                     incremental_authorization_allowed: None,
-                    status: grpc_api_types::payments::PaymentStatus::Failure as i32,
+                    status: grpc_api_types::payments::PaymentStatus::Failure.into(),
                     error_message: Some(format!("Currency conversion failed: {}", e)),
                     error_code: Some("CURRENCY_ERROR".to_string()),
                     raw_connector_response: None,
@@ -149,7 +139,7 @@ impl Payments {
                 network_txn_id: None,
                 response_ref_id: None,
                 incremental_authorization_allowed: None,
-                status: grpc_api_types::payments::PaymentStatus::Failure as i32,
+                status: grpc_api_types::payments::PaymentStatus::Failure.into(),
                 error_message: Some(format!("Order creation failed: {}", e)),
                 error_code: Some("ORDER_CREATION_ERROR".to_string()),
                 raw_connector_response: None,
@@ -171,7 +161,7 @@ impl Payments {
                         network_txn_id: None,
                         response_ref_id: None,
                         incremental_authorization_allowed: None,
-                        status: grpc_api_types::payments::PaymentStatus::Failure as i32,
+                        status: grpc_api_types::payments::PaymentStatus::Failure.into(),
                         error_message: Some(format!("Response generation failed: {}", e)),
                         error_code: Some("RESPONSE_ERROR".to_string()),
                         raw_connector_response: None,
