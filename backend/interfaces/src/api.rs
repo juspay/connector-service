@@ -1,5 +1,8 @@
 use common_enums::CurrencyUnit;
-use common_utils::CustomResult;
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    CustomResult,
+};
 use domain_types::{
     api::{GenericLinks, PaymentLinkAction, RedirectionFormData},
     payment_address::RedirectionResponse,
@@ -9,7 +12,6 @@ use domain_types::{
 use hyperswitch_masking;
 
 use crate::events::connector_api_logs::ConnectorEvent;
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 
 pub trait ConnectorCommon {
     /// Name of the connector (in lowercase).
@@ -59,6 +61,7 @@ pub trait ConnectorCommon {
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     }
 }
