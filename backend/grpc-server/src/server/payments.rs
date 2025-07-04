@@ -69,12 +69,12 @@ impl Payments {
     async fn handle_order_creation(
         &self,
         connector_data: ConnectorData,
-        payment_flow_data: &mut PaymentFlowData,
+        payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
-    ) -> Result<(), tonic::Status> {
+    ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -120,10 +120,7 @@ impl Payments {
         .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => {
-                payment_flow_data.reference_id = Some(order_id);
-                Ok(())
-            }
+            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
                 "Order creation error: {message}"
             ))),
@@ -132,12 +129,12 @@ impl Payments {
     async fn handle_order_creation_for_setup_mandate(
         &self,
         connector_data: ConnectorData,
-        payment_flow_data: &mut PaymentFlowData,
+        payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceRegisterRequest,
         connector_name: &str,
         service_name: &str,
-    ) -> Result<(), tonic::Status> {
+    ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -183,10 +180,7 @@ impl Payments {
         .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => {
-                payment_flow_data.reference_id = Some(order_id);
-                Ok(())
-            }
+            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
                 "Order creation error: {message}"
             ))),
@@ -310,7 +304,7 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data = PaymentFlowData::foreign_try_from((
+                let payment_flow_data = PaymentFlowData::foreign_try_from((
                     payload.clone(),
                     self.config.connectors.clone(),
                 ))
@@ -318,17 +312,23 @@ impl PaymentService for Payments {
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
-                if should_do_order_create {
+                let order_id = if should_do_order_create {
                     self.handle_order_creation(
                         connector_data.clone(),
-                        &mut payment_flow_data,
+                        &payment_flow_data,
                         connector_auth_details.clone(),
                         &payload,
                         &connector.to_string(),
                         &service_name,
                     )
-                    .await?;
-                }
+                    .await?
+                } else {
+                    payment_flow_data.reference_id.clone().ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing reference_id in the payload")
+                    })?
+                };
+
+                let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
 
                 // Create connector request data
                 let payment_authorize_data =
@@ -698,7 +698,7 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data = PaymentFlowData::foreign_try_from((
+                let payment_flow_data = PaymentFlowData::foreign_try_from((
                     payload.clone(),
                     self.config.connectors.clone(),
                 ))
@@ -706,17 +706,22 @@ impl PaymentService for Payments {
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
-                if should_do_order_create {
+                let order_id = if should_do_order_create {
                     self.handle_order_creation_for_setup_mandate(
                         connector_data.clone(),
-                        &mut payment_flow_data,
+                        &payment_flow_data,
                         connector_auth_details.clone(),
                         &payload,
                         &connector.to_string(),
                         &service_name,
                     )
-                    .await?;
-                }
+                    .await?
+                } else {
+                    payment_flow_data.reference_id.clone().ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing reference_id in the payload")
+                    })?
+                };
+                let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
 
                 let setup_mandate_request_data =
                     SetupMandateRequestData::foreign_try_from(payload.clone())
