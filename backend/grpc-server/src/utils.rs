@@ -165,23 +165,7 @@ pub fn config_from_metadata(
                     error_object: None,
                 }))
             })?;
-            tracing::info!(
-                "Override config: {}",
-                serde_json::to_string_pretty(&override_value)
-                    .unwrap_or_else(|_| "Invalid JSON".to_string())
-            );
-            tracing::info!(
-                "Base config: {}",
-                serde_json::to_string_pretty(&base_value)
-                    .unwrap_or_else(|_| "Invalid JSON".to_string())
-            );
             let merged = merge_configs(&override_value, &base_value);
-
-            tracing::info!(
-                "Merged config: {}",
-                serde_json::to_string_pretty(&merged)
-                    .unwrap_or_else(|_| "Invalid JSON".to_string())
-            );
             serde_json::from_value(merged).map_err(|e| {
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "CANNOT_DESERIALIZE_JSON".into(),
