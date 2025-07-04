@@ -42,6 +42,7 @@ pub struct Connectors {
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
+    pub authorizedotnet: ConnectorParams, // Add your connector params
 }
 
 #[derive(Clone, Deserialize, Debug, Serialize, Default)]
@@ -1909,7 +1910,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                     .transpose()? // Should be Option<serde_json::Value>, not Secret
             },
             refund_connector_metadata: {
-                value.refund_metadata.get("refund_connector_metadata").map(|json_string| {
+                value.refund_metadata.get("refund_metadata").map(|json_string| {
                     Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
                 }).transpose()?
             },
