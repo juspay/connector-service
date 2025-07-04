@@ -4,6 +4,8 @@ package ucs.v2;
 
 import "google/protobuf/empty.proto";
 
+import "validate/validate.proto";
+
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
 // ============================================================================
@@ -34,7 +36,7 @@ enum CardNetwork {
 message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
-    // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
+    WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - SUPPORTED
     // RTPPaymentMethodType rtp = 3;                        // Real-time payment methods - TODO: Not yet supported
     TokenPaymentMethodType token = 4;                    // Tokenized payment methods - SUPPORTED
     // BankTransferPaymentMethodType bank_transfer = 5;     // Bank transfer payment methods - TODO: Not yet supported
@@ -62,9 +64,8 @@ message CardPaymentMethodType {
   }
 }
 
-// Digital wallet payment methods category - TODO: Not yet supported
+// Digital wallet payment methods category - SUPPORTED
 // Includes mobile wallets and digital payment platforms
-/*
 message WalletPaymentMethodType {
   oneof wallet_type {
     AppleWallet apple_pay = 1;             // Apple Pay
@@ -79,7 +80,6 @@ message WalletPaymentMethodType {
     PazeWallet paze = 10;                  // Paze
   }
 }
-*/
 
 // Real-time payment methods category - TODO: Not yet supported
 // Includes instant payment systems and QR code-based payments
@@ -288,10 +288,9 @@ message CardRedirect {
 }
 
 // ============================================================================
-// WALLET PAYMENT METHODS - TODO: Not yet supported
+// WALLET PAYMENT METHODS - SUPPORTED
 // ============================================================================
 
-/*
 // Apple Pay - Apple's mobile payment and digital wallet service
 message AppleWallet {
   // Payment data from Apple Pay
@@ -425,7 +424,6 @@ message PazeWallet {
   // Complete response from Paze
   string complete_response = 1;
 }
-*/
 
 // ============================================================================
 // REAL-TIME PAYMENT METHODS - TODO: Not yet supported
