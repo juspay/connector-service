@@ -2,7 +2,9 @@ use crate::implement_connector_operation;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    utils::{
+        auth_from_metadata, connector_from_metadata, get_config_from_request, grpc_logging_wrapper,
+    },
 };
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -96,14 +98,7 @@ impl DisputeService for Disputes {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| async {
-            let config = match request.extensions().get::<Config>() {
-                Some(config) => config.clone(),
-                None => {
-                    return Err(tonic::Status::internal(
-                        "Configuration not found in request extensions",
-                    ))
-                }
-            };
+            let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
             let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -262,14 +257,7 @@ impl DisputeService for Disputes {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| async {
-            let config = match request.extensions().get::<Config>() {
-                Some(config) => config.clone(),
-                None => {
-                    return Err(tonic::Status::internal(
-                        "Configuration not found in request extensions",
-                    ))
-                }
-            };
+            let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
             let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
