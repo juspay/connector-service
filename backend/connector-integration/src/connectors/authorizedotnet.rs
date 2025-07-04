@@ -43,6 +43,7 @@ use interfaces::{
         SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
+    verification::SourceVerification,
 };
 
 pub(crate) mod headers {
@@ -400,6 +401,68 @@ impl
 {
 }
 impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Authorizedotnet
+{
+}
+
+// SourceVerification implementations for all flows
+impl SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl
+    SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Authorizedotnet
+{
+}
+
+impl
+    SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Authorizedotnet
 {
 }
