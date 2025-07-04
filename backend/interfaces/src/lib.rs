@@ -6,4 +6,5 @@ pub mod disputes;
 pub mod events;
 pub mod integrity;
 pub mod routing;
+pub mod verification;
 pub mod webhooks;

@@ -166,6 +166,15 @@ where
                                 );
                                 tracing::Span::current().record("response.body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
                             }
+
+                            let is_source_verified = connector.verify(&router_data, interfaces::verification::ConnectorSourceVerificationSecrets::AuthHeaders(router_data.connector_auth_type.clone()), &body.response)?;
+
+                            if !is_source_verified {
+                                return Err(error_stack::report!(
+                                    domain_types::errors::ConnectorError::SourceVerificationFailed
+                                ));
+                            }
+
                             let handle_response_result =
                                 connector.handle_response_v2(&router_data, None, body.clone());
 
