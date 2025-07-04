@@ -52,6 +52,7 @@ tokio-stream = { version = "0.1.17", features = ["net"] }
 tower = { version = "0.5.2" }
 tempfile = "3.19.1"
 hyper-util = { version = "0.1.3", features = ["tokio"] }
+rand = "0.8.5"
 
 
 [features]
