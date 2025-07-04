@@ -2,7 +2,9 @@ use crate::implement_connector_operation;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    utils::{
+        auth_from_metadata, connector_from_metadata, get_config_from_request, grpc_logging_wrapper,
+    },
 };
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -38,6 +40,13 @@ use std::sync::Arc;
 
 use tracing::info;
 
+struct HandleOrderData {
+    connector_data: ConnectorData,
+    connector_auth_details: ConnectorAuthType,
+    connector_name: String,
+    service_name: String,
+}
+
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -68,12 +77,10 @@ pub struct Payments {
 impl Payments {
     async fn handle_order_creation(
         &self,
-        connector_data: ConnectorData,
-        payment_flow_data: &mut PaymentFlowData,
-        connector_auth_details: ConnectorAuthType,
-        payload: &PaymentServiceAuthorizeRequest,
-        connector_name: &str,
-        service_name: &str,
+        config: &Config,                         // Infra state
+        data: HandleOrderData,                   // L2 mirco state
+        payment_flow_data: &mut PaymentFlowData, // L2 macro state
+        payload: PaymentServiceAuthorizeRequest, // Api types
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -82,7 +89,7 @@ impl Payments {
             PaymentFlowData,
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
-        > = connector_data.connector.get_connector_integration_v2();
+        > = data.connector_data.connector.get_connector_integration_v2();
 
         let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
@@ -101,19 +108,19 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_auth_type: data.connector_auth_details,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
-            connector_name,
-            service_name,
+            &data.connector_name,
+            &data.service_name,
         )
         .await
         .switch()
@@ -131,12 +138,10 @@ impl Payments {
     }
     async fn handle_order_creation_for_setup_mandate(
         &self,
-        connector_data: ConnectorData,
+        config: &Config,
+        data: HandleOrderData,
         payment_flow_data: &mut PaymentFlowData,
-        connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceRegisterRequest,
-        connector_name: &str,
-        service_name: &str,
     ) -> Result<(), tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -145,7 +150,7 @@ impl Payments {
             PaymentFlowData,
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
-        > = connector_data.connector.get_connector_integration_v2();
+        > = data.connector_data.connector.get_connector_integration_v2();
 
         let currency = common_enums::Currency::foreign_try_from(payload.currency())
             .map_err(|e| e.into_grpc_status())?;
@@ -164,19 +169,19 @@ impl Payments {
         > {
             flow: std::marker::PhantomData,
             resource_common_data: payment_flow_data.clone(),
-            connector_auth_type: connector_auth_details,
+            connector_auth_type: data.connector_auth_details,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
 
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
-            connector_name,
-            service_name,
+            &data.connector_name,
+            &data.service_name,
         )
         .await
         .switch()
@@ -291,6 +296,7 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
+                let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
@@ -310,22 +316,23 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data = PaymentFlowData::foreign_try_from((
-                    payload.clone(),
-                    self.config.connectors.clone(),
-                ))
-                .map_err(|e| e.into_grpc_status())?;
+                let mut payment_flow_data =
+                    PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
+                        .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 if should_do_order_create {
                     self.handle_order_creation(
-                        connector_data.clone(),
+                        &config,
+                        HandleOrderData {
+                            connector_data: connector_data.clone(),
+                            connector_auth_details: connector_auth_details.clone(),
+                            connector_name: connector.to_string(),
+                            service_name: service_name.clone(),
+                        },
                         &mut payment_flow_data,
-                        connector_auth_details.clone(),
-                        &payload,
-                        &connector.to_string(),
-                        &service_name,
+                        payload.clone(),
                     )
                     .await?;
                 }
@@ -350,7 +357,7 @@ impl PaymentService for Payments {
 
                 // Execute connector processing
                 let response = external_services::service::execute_connector_processing_step(
-                    &self.config.proxy,
+                    &config.proxy,
                     connector_integration,
                     router_data,
                     None,
@@ -679,6 +686,7 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
+                let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
@@ -698,22 +706,23 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data = PaymentFlowData::foreign_try_from((
-                    payload.clone(),
-                    self.config.connectors.clone(),
-                ))
-                .map_err(|e| e.into_grpc_status())?;
+                let mut payment_flow_data =
+                    PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
+                        .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 if should_do_order_create {
                     self.handle_order_creation_for_setup_mandate(
-                        connector_data.clone(),
+                        &config,
+                        HandleOrderData {
+                            connector_data: connector_data.clone(),
+                            connector_auth_details: connector_auth_details.clone(),
+                            connector_name: connector.to_string(),
+                            service_name: service_name.clone(),
+                        },
                         &mut payment_flow_data,
-                        connector_auth_details.clone(),
                         &payload,
-                        &connector.to_string(),
-                        &service_name,
                     )
                     .await?;
                 }
@@ -737,7 +746,7 @@ impl PaymentService for Payments {
                 };
 
                 let response = external_services::service::execute_connector_processing_step(
-                    &self.config.proxy,
+                    &config.proxy,
                     connector_integration,
                     router_data,
                     None,
