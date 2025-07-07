@@ -834,6 +834,8 @@ pub struct RazorpayOrderRequest {
     pub partial_payment: Option<bool>,
     pub first_payment_min_amount: Option<MinorUnit>,
     pub notes: Option<RazorpayNotes>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_capture: Option<bool>,
 }
 
 impl
@@ -876,6 +878,7 @@ impl
                 .clone(),
             partial_payment: None,
             first_payment_min_amount: None,
+            payment_capture: Some(true),
             notes: None,
         })
     }
