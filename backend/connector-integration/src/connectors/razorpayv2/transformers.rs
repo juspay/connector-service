@@ -31,7 +31,10 @@ impl RazorpayV2AuthType {
     pub fn generate_authorization_header(&self) -> String {
         match self {
             RazorpayV2AuthType::AuthToken(token) => format!("Bearer {}", token.peek()),
-            RazorpayV2AuthType::ApiKeySecret { api_key, api_secret } => {
+            RazorpayV2AuthType::ApiKeySecret {
+                api_key,
+                api_secret,
+            } => {
                 let credentials = format!("{}:{}", api_key.peek(), api_secret.peek());
                 let encoded = STANDARD.encode(credentials);
                 format!("Basic {encoded}")
@@ -45,9 +48,7 @@ impl TryFrom<&ConnectorAuthType> for RazorpayV2AuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => {
-                Ok(Self::AuthToken(api_key.to_owned()))
-            }
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self::AuthToken(api_key.to_owned())),
             ConnectorAuthType::SignatureKey {
                 api_key,
                 api_secret,
@@ -290,7 +291,7 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
                     field_name: "connector_request_reference_id",
                 })?
                 .clone(),
-            payment_capture: None,
+            payment_capture: Some(true),
             notes: item.router_data.metadata.clone(),
         })
     }
