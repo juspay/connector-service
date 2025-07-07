@@ -19,17 +19,24 @@ use serde_json::Value;
 // ============ Authentication Types ============
 
 #[derive(Debug)]
-pub struct RazorpayV2AuthType {
-    pub merchant_id: Secret<String>,
-    pub api_key: Secret<String>,
-    pub api_secret: Secret<String>,
+pub enum RazorpayV2AuthType {
+    AuthToken(Secret<String>),
+    ApiKeySecret {
+        api_key: Secret<String>,
+        api_secret: Secret<String>,
+    },
 }
 
 impl RazorpayV2AuthType {
     pub fn generate_authorization_header(&self) -> String {
-        let credentials = format!("{}:{}", self.api_key.peek(), self.api_secret.peek());
-        let encoded = STANDARD.encode(credentials);
-        format!("Basic {encoded}")
+        match self {
+            RazorpayV2AuthType::AuthToken(token) => format!("Bearer {}", token.peek()),
+            RazorpayV2AuthType::ApiKeySecret { api_key, api_secret } => {
+                let credentials = format!("{}:{}", api_key.peek(), api_secret.peek());
+                let encoded = STANDARD.encode(credentials);
+                format!("Basic {encoded}")
+            }
+        }
     }
 }
 
@@ -38,14 +45,20 @@ impl TryFrom<&ConnectorAuthType> for RazorpayV2AuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
+            ConnectorAuthType::HeaderKey { api_key } => {
+                Ok(Self::AuthToken(api_key.to_owned()))
+            }
             ConnectorAuthType::SignatureKey {
                 api_key,
-                key1,
                 api_secret,
-            } => Ok(Self {
-                merchant_id: key1.to_owned(),
+                ..
+            } => Ok(Self::ApiKeySecret {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
+            }),
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::ApiKeySecret {
+                api_key: api_key.to_owned(),
+                api_secret: key1.to_owned(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
