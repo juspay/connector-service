@@ -181,17 +181,24 @@ impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
     }
 }
 
-pub struct RazorpayAuthType {
-    pub merchant_id: Secret<String>,
-    pub api_key: Secret<String>,
-    pub api_secret: Secret<String>,
+pub enum RazorpayAuthType {
+    AuthToken(Secret<String>),
+    ApiKeySecret {
+        api_key: Secret<String>,
+        api_secret: Secret<String>,
+    },
 }
 
 impl RazorpayAuthType {
     pub fn generate_authorization_header(&self) -> String {
-        let credentials = format!("{}:{}", self.api_key.peek(), self.api_secret.peek());
-        let encoded = STANDARD.encode(credentials);
-        format!("Basic {encoded}")
+        match self {
+            RazorpayAuthType::AuthToken(token) => format!("Bearer {}", token.peek()),
+            RazorpayAuthType::ApiKeySecret { api_key, api_secret } => {
+                let credentials = format!("{}:{}", api_key.peek(), api_secret.peek());
+                let encoded = STANDARD.encode(credentials);
+                format!("Basic {encoded}")
+            }
+        }
     }
 }
 
@@ -199,14 +206,20 @@ impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
     type Error = domain_types::errors::ConnectorError;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
+            ConnectorAuthType::HeaderKey { api_key } => {
+                Ok(Self::AuthToken(api_key.to_owned()))
+            }
             ConnectorAuthType::SignatureKey {
                 api_key,
-                key1,
                 api_secret,
-            } => Ok(Self {
-                merchant_id: key1.to_owned(),
+                ..
+            } => Ok(Self::ApiKeySecret {
                 api_key: api_key.to_owned(),
                 api_secret: api_secret.to_owned(),
+            }),
+            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self::ApiKeySecret {
+                api_key: api_key.to_owned(),
+                api_secret: key1.to_owned(),
             }),
             _ => Err(domain_types::errors::ConnectorError::FailedToObtainAuthType),
         }
