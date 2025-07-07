@@ -171,7 +171,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
     {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
+            "application/x-www-form-urlencoded".to_string().into(),
         )];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut api_key);
@@ -205,7 +205,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             PaymentMethodData::Upi(_) => {
                 let connector_req =
                     razorpay::RazorpayWebCollectRequest::try_from(&connector_router_data)?;
-                Ok(Some(RequestContent::Json(Box::new(connector_req))))
+                Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+                    connector_req,
+                ))))
             }
             _ => {
                 let connector_req =
