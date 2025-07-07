@@ -20,6 +20,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -191,9 +192,17 @@ pub enum RazorpayAuthType {
 
 impl RazorpayAuthType {
     pub fn generate_authorization_header(&self) -> String {
+        let auth_type_name = match self {
+            RazorpayAuthType::AuthToken(_) => "AuthToken",
+            RazorpayAuthType::ApiKeySecret { .. } => "ApiKeySecret",
+        };
+        info!("Type of auth Token is {}", auth_type_name);
         match self {
             RazorpayAuthType::AuthToken(token) => format!("Bearer {}", token.peek()),
-            RazorpayAuthType::ApiKeySecret { api_key, api_secret } => {
+            RazorpayAuthType::ApiKeySecret {
+                api_key,
+                api_secret,
+            } => {
                 let credentials = format!("{}:{}", api_key.peek(), api_secret.peek());
                 let encoded = STANDARD.encode(credentials);
                 format!("Basic {encoded}")
@@ -206,9 +215,7 @@ impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
     type Error = domain_types::errors::ConnectorError;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => {
-                Ok(Self::AuthToken(api_key.to_owned()))
-            }
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self::AuthToken(api_key.to_owned())),
             ConnectorAuthType::SignatureKey {
                 api_key,
                 api_secret,
