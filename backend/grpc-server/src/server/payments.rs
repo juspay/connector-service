@@ -79,7 +79,7 @@ impl Payments {
         &self,
         config: &Config,                         // Infra state
         data: HandleOrderData,                   // L2 mirco state
-        payment_flow_data: &PaymentFlowData, // L2 macro state
+        payment_flow_data: &PaymentFlowData,     // L2 macro state
         payload: PaymentServiceAuthorizeRequest, // Api types
     ) -> Result<String, tonic::Status> {
         // Get connector integration
@@ -724,15 +724,14 @@ impl PaymentService for Payments {
                         &payment_flow_data,
                         &payload,
                     )
-                    .await?;
-                }
-                else {
+                    .await?
+                } else {
                     payment_flow_data.reference_id.clone().ok_or_else(|| {
                         tonic::Status::invalid_argument("missing reference_id in the payload")
                     })?
                 };
                 let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
-                
+
                 let setup_mandate_request_data =
                     SetupMandateRequestData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?;
