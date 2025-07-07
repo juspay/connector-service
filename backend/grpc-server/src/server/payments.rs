@@ -79,9 +79,9 @@ impl Payments {
         &self,
         config: &Config,                         // Infra state
         data: HandleOrderData,                   // L2 mirco state
-        payment_flow_data: &mut PaymentFlowData, // L2 macro state
+        payment_flow_data: &PaymentFlowData, // L2 macro state
         payload: PaymentServiceAuthorizeRequest, // Api types
-    ) -> Result<(), tonic::Status> {
+    ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -127,10 +127,7 @@ impl Payments {
         .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => {
-                payment_flow_data.reference_id = Some(order_id);
-                Ok(())
-            }
+            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
                 "Order creation error: {message}"
             ))),
@@ -140,9 +137,9 @@ impl Payments {
         &self,
         config: &Config,
         data: HandleOrderData,
-        payment_flow_data: &mut PaymentFlowData,
+        payment_flow_data: &PaymentFlowData,
         payload: &PaymentServiceRegisterRequest,
-    ) -> Result<(), tonic::Status> {
+    ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -188,10 +185,7 @@ impl Payments {
         .map_err(|e| e.into_grpc_status())?;
 
         match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => {
-                payment_flow_data.reference_id = Some(order_id);
-                Ok(())
-            }
+            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
             Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
                 "Order creation error: {message}"
             ))),
@@ -316,13 +310,13 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data =
+                let payment_flow_data =
                     PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                         .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
-                if should_do_order_create {
+                let order_id = if should_do_order_create {
                     self.handle_order_creation(
                         &config,
                         HandleOrderData {
@@ -331,11 +325,17 @@ impl PaymentService for Payments {
                             connector_name: connector.to_string(),
                             service_name: service_name.clone(),
                         },
-                        &mut payment_flow_data,
+                        &payment_flow_data,
                         payload.clone(),
                     )
-                    .await?;
-                }
+                    .await?
+                } else {
+                    payment_flow_data.reference_id.clone().ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing reference_id in the payload")
+                    })?
+                };
+
+                let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
 
                 // Create connector request data
                 let payment_authorize_data =
@@ -706,13 +706,13 @@ impl PaymentService for Payments {
                 > = connector_data.connector.get_connector_integration_v2();
 
                 // Create common request data
-                let mut payment_flow_data =
+                let payment_flow_data =
                     PaymentFlowData::foreign_try_from((payload.clone(), config.connectors.clone()))
                         .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
-                if should_do_order_create {
+                let order_id = if should_do_order_create {
                     self.handle_order_creation_for_setup_mandate(
                         &config,
                         HandleOrderData {
@@ -721,12 +721,18 @@ impl PaymentService for Payments {
                             connector_name: connector.to_string(),
                             service_name: service_name.clone(),
                         },
-                        &mut payment_flow_data,
+                        &payment_flow_data,
                         &payload,
                     )
                     .await?;
                 }
-
+                else {
+                    payment_flow_data.reference_id.clone().ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing reference_id in the payload")
+                    })?
+                };
+                let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
+                
                 let setup_mandate_request_data =
                     SetupMandateRequestData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?;
