@@ -35,28 +35,44 @@ pub struct TonicRequestExtensionsMiddleware<S> {
 
 impl<S> Service<Request<Body>> for TonicRequestExtensionsMiddleware<S>
 where
-    S: Service<Request<Body>, Response = Response<Body>> + Send + 'static,
+    S: Service<Request<Body>, Response = Response<Body>, Error = tonic::Status> + Send + 'static,
     S::Future: Send + 'static,
 {
     type Response = S::Response;
-    type Error = S::Error;
+    type Error = tonic::Status;
     type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
+        self.inner.poll_ready(cx).map_err(|e| e)
     }
 
-    #[allow(clippy::expect_used)]
     fn call(&mut self, mut req: Request<Body>) -> Self::Future {
-        let default_config = Config::new().expect("Failed to load default config");
+        // Try to create the default config
+        let default_config = match Config::new() {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                let err =
+                    tonic::Status::internal(format!("Failed to create default config: {e:?}"));
+                let fut = async move { Err(err) };
+                return Box::pin(fut);
+            }
+        };
         // Extract x-config-override header
         let config_override = req
             .headers()
             .get("x-config-override")
             .and_then(|h| h.to_str().map(|s| s.to_owned()).ok());
 
-        let new_config = config_from_metadata(config_override, default_config.clone())
-            .expect("Failed to create config from metadata");
+        let new_config = match config_from_metadata(config_override, default_config.clone()) {
+            Ok(cfg) => cfg,
+            Err(e) => {
+                let err = tonic::Status::internal(format!(
+                    "Failed to create config from metadata: {e:?}"
+                ));
+                let fut = async move { Err(err) };
+                return Box::pin(fut);
+            }
+        };
 
         req.extensions_mut().insert(new_config);
         let future = self.inner.call(req);
