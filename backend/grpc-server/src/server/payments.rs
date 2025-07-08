@@ -16,9 +16,8 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
-        generate_payment_capture_response,
-        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
-        generate_setup_mandate_response,
+        generate_payment_capture_response, generate_payment_sync_response,
+        generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
@@ -77,7 +76,7 @@ impl Payments {
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
-    ) -> Result<(), PaymentServiceAuthorizeResponse> {
+    ) -> Result<String, PaymentServiceAuthorizeResponse> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -153,25 +152,18 @@ impl Payments {
         )?;
 
         match response.response {
-            Ok(PaymentCreateOrderResponse { order_id, .. }) => {
-                tracing::info!("Order created successfully with order_id: {}", order_id);
-                payment_flow_data.reference_id = Some(order_id.clone());
-                tracing::info!("Set reference_id to: {:?}", payment_flow_data.reference_id);
-                Ok(())
-            }
-            Err(e) => {
-                Err(PaymentServiceAuthorizeResponse {
-                    transaction_id: None,
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                    error_message: Some(e.message.clone()),
-                    error_code: Some(e.code.clone()),
-                    raw_connector_response: e.raw_connector_response.clone(),
-                })
-            }
+            Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
+            Err(e) => Err(PaymentServiceAuthorizeResponse {
+                transaction_id: None,
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                incremental_authorization_allowed: None,
+                status: grpc_api_types::payments::PaymentStatus::Failure.into(),
+                error_message: Some(e.message.clone()),
+                error_code: Some(e.code.clone()),
+                raw_connector_response: e.raw_connector_response.clone(),
+            }),
         }
     }
     async fn handle_order_creation_for_setup_mandate(
@@ -365,21 +357,33 @@ impl PaymentService for Payments {
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
-                if should_do_order_create {
-                    if let Err(authorize_response) = self
+                let payment_flow_data = if should_do_order_create {
+                    let resp = self
                         .handle_order_creation(
-                            connector_data.clone(),
-                            &mut payment_flow_data,
+                            connector_data,
+                            &payment_flow_data,
                             connector_auth_details.clone(),
                             &payload,
                             &connector.to_string(),
                             &service_name,
                         )
-                        .await
-                    {
-                        return Ok(tonic::Response::new(authorize_response));
+                        .await;
+
+                    match resp {
+                        Ok(order_id) => {
+                            tracing::info!(
+                                "Order created successfully with order_id: {}",
+                                order_id
+                            );
+                            payment_flow_data.set_order_reference_id(order_id)
+                        }
+                        Err(authorize_response) => {
+                            return Ok(tonic::Response::new(authorize_response));
+                        }
                     }
-                }
+                } else {
+                    payment_flow_data
+                };
 
                 // Create connector request data
                 let payment_authorize_data =
