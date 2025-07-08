@@ -1,6 +1,6 @@
 use std::{future::Future, net, sync::Arc};
 
-use axum::http;
+use axum::{body::Body, extract::Request, http, middleware::Next, response::Response};
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
@@ -18,6 +18,42 @@ use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
 use crate::{configs, error::ConfigurationError, logger, utils};
+
+async fn log_raw_request(req: Request, next: Next) -> Response {
+    tracing::info!("🔥 RAW REQUEST MIDDLEWARE TRIGGERED 🔥");
+    
+    let method = req.method().clone();
+    let uri = req.uri().clone();
+    let headers = req.headers().clone();
+    
+    // Extract request body for logging
+    let (parts, body) = req.into_parts();
+    let body_bytes = match axum::body::to_bytes(body, usize::MAX).await {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            tracing::error!("Failed to read request body for logging: {e}");
+            return Response::builder()
+                .status(400)
+                .body(Body::from("Failed to read request body"))
+                .unwrap();
+        }
+    };
+    
+    // Log the raw request
+    tracing::info!(
+        method = %method,
+        uri = %uri,
+        headers = ?headers,
+        body = %String::from_utf8_lossy(&body_bytes),
+        "Raw HTTP request received"
+    );
+    
+    // Reconstruct the request for the handler
+    let req = Request::from_parts(parts, Body::from(body_bytes));
+    
+    // Call the next middleware/handler
+    next.run(req).await
+}
 
 /// # Panics
 ///
@@ -120,7 +156,7 @@ impl Service {
         shutdown_signal: impl Future<Output = ()> + Send + 'static,
     ) -> Result<(), ConfigurationError> {
         let logging_layer = tower_trace::TraceLayer::new_for_http()
-            .make_span_with(|request: &axum::extract::Request<_>| {
+            .make_span_with(|request: &Request<_>| {
                 utils::record_fields_from_header(request)
             })
             .on_request(tower_trace::DefaultOnRequest::new().level(tracing::Level::INFO))
@@ -145,13 +181,14 @@ impl Service {
         );
 
         let router = axum::Router::new()
-            .layer(logging_layer)
-            .layer(request_id_layer)
-            .layer(propagate_request_id_layer)
             .route("/health", axum::routing::get(|| async { "health is good" }))
             .merge(payment_service_handler(self.payments_service))
             .merge(refund_service_handler(self.refunds_service))
-            .merge(dispute_service_handler(self.disputes_service));
+            .merge(dispute_service_handler(self.disputes_service))
+            .layer(axum::middleware::from_fn(log_raw_request))
+            .layer(logging_layer)
+            .layer(request_id_layer)
+            .layer(propagate_request_id_layer);
 
         let listener = tokio::net::TcpListener::bind(socket).await?;
 
