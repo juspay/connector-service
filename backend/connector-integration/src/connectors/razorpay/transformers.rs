@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use base64::{engine::general_purpose::STANDARD, Engine};
 use cards::CardNumber;
 use common_enums::{self, AttemptStatus, CardNetwork};
@@ -20,7 +18,9 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tracing::info;
+use uuid;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -853,7 +853,10 @@ pub struct RazorpayOrderRequest {
     pub __token_91_frequency_93_: Option<String>,
     #[serde(rename = "bank_account[name]", skip_serializing_if = "Option::is_none")]
     pub __bank_account_91_name_93_: Option<String>,
-    #[serde(rename = "bank_account[account_number]", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "bank_account[account_number]",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub __bank_account_91_account_number_93_: Option<String>,
     #[serde(rename = "bank_account[ifsc]", skip_serializing_if = "Option::is_none")]
     pub __bank_account_91_ifsc_93_: Option<String>,
@@ -923,15 +926,23 @@ impl
             first_payment_min_amount: None,
             payment_capture: Some(true),
             method: metadata_map.get("method").cloned(),
-            discount: metadata_map.get("discount").and_then(|v| v.parse::<i64>().ok()),
+            discount: metadata_map
+                .get("discount")
+                .and_then(|v| v.parse::<i64>().ok()),
             offer_id: metadata_map.get("offer_id").cloned(),
             customer_id: metadata_map.get("customer_id").cloned(),
-            __token_91_expire_at_93_: metadata_map.get("__token_91_expire_at_93_").and_then(|v| v.parse::<i64>().ok()),
-            __token_91_max_amount_93_: metadata_map.get("__token_91_max_amount_93_").and_then(|v| v.parse::<i64>().ok()),
+            __token_91_expire_at_93_: metadata_map
+                .get("__token_91_expire_at_93_")
+                .and_then(|v| v.parse::<i64>().ok()),
+            __token_91_max_amount_93_: metadata_map
+                .get("__token_91_max_amount_93_")
+                .and_then(|v| v.parse::<i64>().ok()),
             __token_91_auth_type_93_: metadata_map.get("__token_91_auth_type_93_").cloned(),
             __token_91_frequency_93_: metadata_map.get("__token_91_frequency_93_").cloned(),
             __bank_account_91_name_93_: metadata_map.get("__bank_account_91_name_93_").cloned(),
-            __bank_account_91_account_number_93_: metadata_map.get("__bank_account_91_account_number_93_").cloned(),
+            __bank_account_91_account_number_93_: metadata_map
+                .get("__bank_account_91_account_number_93_")
+                .cloned(),
             __bank_account_91_ifsc_93_: metadata_map.get("__bank_account_91_ifsc_93_").cloned(),
             account_id: metadata_map.get("account_id").cloned(),
             phonepe_switch_context: metadata_map.get("phonepe_switch_context").cloned(),
