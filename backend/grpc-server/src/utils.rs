@@ -2,7 +2,7 @@ use serde_json::Value;
 use std::str::FromStr;
 
 use crate::configs::Config;
-use crate::error::IntoGrpcStatus;
+use crate::error::ResultExtGrpc;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
@@ -248,20 +248,24 @@ fn parse_metadata<'a>(
         })
 }
 
-pub fn log_before_initialization<T>(request: &tonic::Request<T>, service_name: &str)
+pub fn log_before_initialization<T>(
+    request: &tonic::Request<T>,
+    service_name: &str,
+) -> CustomResult<(), ApplicationErrorResponse>
 where
     T: serde::Serialize,
 {
     let (connector, merchant_id, tenant_id, request_id) =
-        match connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata())
-            .map_err(|e| e.into_grpc_status())
-        {
-            Ok(values) => values,
-            Err(e) => {
-                tracing::error!("Failed to extract metadata: {:?}", e);
-                return;
-            }
-        };
+        connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).map_err(
+            |e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_FIELD".to_string(),
+                    error_identifier: 400,
+                    error_message: format!("Missing Field x-merchant-id {e}"),
+                    error_object: None,
+                }))
+            },
+        )?;
     let current_span = tracing::Span::current();
     let req_body = request.get_ref();
     let req_body_json = match serde_json::to_string(req_body) {
@@ -278,6 +282,7 @@ where
     current_span.record("tenant_id", tenant_id);
     current_span.record("request_id", request_id);
     tracing::info!("Golden Log Line (incoming)");
+    Ok(())
 }
 
 pub fn log_after_initialization<T>(result: &Result<tonic::Response<T>, tonic::Status>)
@@ -295,13 +300,17 @@ where
             // Try converting to JSON Value
             if let Ok(Value::Object(map)) = serde_json::to_value(res_ref) {
                 if let Some(status_val) = map.get("status") {
-                    let status_str = match status_val {
-                        Value::String(s) => s.clone(),
-                        _ => status_val.to_string(), // fallback for non-string status
+                    let status_num_opt = status_val.as_number();
+                    let status_u32_opt: Option<u32> = status_num_opt
+                        .and_then(|n| n.as_u64())
+                        .and_then(|n| u32::try_from(n).ok());
+                    let status_str = if let Some(s) = status_u32_opt {
+                        common_enums::AttemptStatus::try_from(s)
+                            .unwrap_or(common_enums::AttemptStatus::Unknown)
+                            .to_string()
+                    } else {
+                        common_enums::AttemptStatus::Unknown.to_string()
                     };
-                    let status_str = common_enums::AttemptStatus::try_from(status_str)
-                        .unwrap_or(common_enums::AttemptStatus::Unknown)
-                        .to_string();
                     current_span.record("flow_specific_fields.status", status_str);
                 }
             } else {
@@ -328,7 +337,7 @@ where
     R: serde::Serialize + std::fmt::Debug,
 {
     let current_span = tracing::Span::current();
-    log_before_initialization(&request, service_name);
+    log_before_initialization(&request, service_name).into_grpc_status()?;
     let start_time = tokio::time::Instant::now();
     let result = handler(request).await;
     let duration = start_time.elapsed().as_millis();
@@ -384,8 +393,8 @@ macro_rules! implement_connector_operation {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
             let current_span = tracing::Span::current();
+            $crate::utils::log_before_initialization(&request, service_name.as_str()).into_grpc_status()?;
             let start_time = tokio::time::Instant::now();
-            $crate::utils::log_before_initialization(&request, &service_name);
             let result = Box::pin(async{
             let config = $crate::utils::get_config_from_request(&request)
                     .map_err(|e| e.into_grpc_status())?;
