@@ -1,9 +1,10 @@
-use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::ext_traits::{OptionExt, ValueExt};
-use common_utils::{consts, pii::Email};
-use domain_types::errors::ConnectorError;
+use common_utils::{
+    consts,
+    ext_traits::{OptionExt, ValueExt},
+    pii::Email,
+};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
@@ -11,18 +12,23 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
+    errors::ConnectorError,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+
+use crate::types::ResponseRouterData;
 // Alias to make the transition easier
 type HsInterfacesConnectorError = ConnectorError;
-use super::AuthorizedotnetRouterData;
+use std::str::FromStr;
+
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret, StrongSecret};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::str::FromStr;
+
+use super::AuthorizedotnetRouterData;
 
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
