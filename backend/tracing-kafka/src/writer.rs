@@ -25,9 +25,25 @@ impl std::fmt::Debug for KafkaWriter {
 
 impl KafkaWriter {
     /// Creates a new KafkaWriter with the specified brokers and topic.
-    pub fn new(brokers: Vec<String>, topic: String) -> Result<Self, KafkaWriterError> {
-        let producer = ClientConfig::new()
-            .set("bootstrap.servers", brokers.join(","))
+    /// Optionally accepts batch_size and linger_ms for custom configuration.
+    pub fn new(
+        brokers: Vec<String>,
+        topic: String,
+        batch_size: Option<usize>,
+        linger_ms: Option<u64>,
+    ) -> Result<Self, KafkaWriterError> {
+        let mut config = ClientConfig::new();
+        config.set("bootstrap.servers", brokers.join(","));
+
+        // Only set custom values if provided, otherwise use Kafka defaults
+        if let Some(size) = batch_size {
+            config.set("batch.size", size.to_string());
+        }
+        if let Some(ms) = linger_ms {
+            config.set("linger.ms", ms.to_string());
+        }
+
+        let producer = config
             .create::<ThreadedProducer<DefaultProducerContext>>()
             .map_err(KafkaWriterError::ProducerCreation)?;
 
@@ -41,12 +57,12 @@ impl KafkaWriter {
 impl Write for KafkaWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         // Convert bytes to string for Kafka message
-        let message = std::str::from_utf8(buf)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        let message =
+            std::str::from_utf8(buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         // Send to Kafka (fire and forget for simplicity)
         let record: BaseRecord<'_, (), str> = BaseRecord::to(&self.topic).payload(message);
-        
+
         match self.producer.send(record) {
             Ok(_) => Ok(buf.len()),
             Err((kafka_error, _)) => Err(io::Error::new(
@@ -59,8 +75,12 @@ impl Write for KafkaWriter {
     fn flush(&mut self) -> io::Result<()> {
         // Flush the producer to ensure messages are sent
         self.producer
-            .flush(rdkafka::util::Timeout::After(std::time::Duration::from_secs(1)))
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Kafka flush failed: {}", e)))
+            .flush(rdkafka::util::Timeout::After(
+                std::time::Duration::from_secs(1),
+            ))
+            .map_err(|e: rdkafka::error::KafkaError| {
+                io::Error::new(io::ErrorKind::Other, format!("Kafka flush failed: {}", e))
+            })
     }
 }
 

@@ -98,11 +98,12 @@ pub fn setup(
                         )
                     });
 
-            let kafka_layer = match KafkaLayer::with_config(
-                kafka_config.brokers.clone(),
-                kafka_config.topic.clone(),
-                static_top_level_fields,
-            ) {
+            let brokers: Vec<&str> = kafka_config.brokers.iter().map(|s| s.as_str()).collect();
+            let kafka_layer = match KafkaLayer::<tracing_subscriber::Registry>::builder()
+                .brokers(&brokers)
+                .topic(&kafka_config.topic)
+                .static_fields(static_top_level_fields.clone())
+                .build() {
                 Ok(layer) => Some(layer.with_filter(
                     tracing_subscriber::EnvFilter::builder()
                         .with_default_directive(kafka_config.level.into_level().into())

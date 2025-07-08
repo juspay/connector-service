@@ -5,7 +5,6 @@ use std::collections::{HashMap, HashSet};
 use log_utils::{
     AdditionalFieldsPlacement, JsonFormattingLayer, JsonFormattingLayerConfig, LoggerError,
 };
-use serde_json::Value;
 use tracing::Subscriber;
 use tracing_subscriber::Layer;
 
@@ -21,19 +20,17 @@ impl<S> KafkaLayer<S>
 where
     S: Subscriber,
 {
-    /// Creates a new KafkaLayer with basic configuration.
-    pub fn new(brokers: Vec<String>, topic: String) -> Result<Self, KafkaLayerError> {
-        Self::with_config(brokers, topic, HashMap::new())
+    /// Creates a new builder for configuring a KafkaLayer.
+    pub fn builder() -> crate::KafkaLayerBuilder {
+        crate::KafkaLayerBuilder::new()
     }
 
-    /// Creates a new KafkaLayer with custom static fields.
-    pub fn with_config(
-        brokers: Vec<String>,
-        topic: String,
-        static_fields: HashMap<String, Value>,
+    /// Creates a new KafkaLayer from a pre-configured KafkaWriter.
+    /// This is primarily used internally by the builder.
+    pub(crate) fn from_writer(
+        kafka_writer: KafkaWriter,
+        static_fields: HashMap<String, serde_json::Value>,
     ) -> Result<Self, KafkaLayerError> {
-        let kafka_writer: KafkaWriter = KafkaWriter::new(brokers, topic)?;
-
         let config = JsonFormattingLayerConfig {
             static_top_level_fields: static_fields,
             top_level_keys: HashSet::new(),
@@ -52,37 +49,13 @@ where
             _phantom: std::marker::PhantomData,
         })
     }
-
-    /// Creates a new KafkaLayer with full configuration control.
-    pub fn with_full_config(
-        brokers: Vec<String>,
-        topic: String,
-        config: JsonFormattingLayerConfig,
-    ) -> Result<Self, KafkaLayerError> {
-        let kafka_writer = KafkaWriter::new(brokers, topic)?;
-
-        let inner: JsonFormattingLayer<KafkaWriter, serde_json::ser::CompactFormatter> = JsonFormattingLayer::new(
-            config,
-            kafka_writer,
-            serde_json::ser::CompactFormatter,
-        )?;
-
-        Ok(Self {
-            inner,
-            _phantom: std::marker::PhantomData,
-        })
-    }
 }
 
 impl<S> Layer<S> for KafkaLayer<S>
 where
     S: Subscriber + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,
 {
-    fn on_event(
-        &self,
-        event: &tracing::Event<'_>,
-        ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
+    fn on_event(&self, event: &tracing::Event<'_>, ctx: tracing_subscriber::layer::Context<'_, S>) {
         self.inner.on_event(event, ctx);
     }
 
@@ -116,4 +89,10 @@ pub enum KafkaLayerError {
 
     #[error("Logger configuration error: {0}")]
     Logger(#[from] LoggerError),
+
+    #[error("Missing brokers configuration")]
+    MissingBrokers,
+
+    #[error("Missing topic configuration")]
+    MissingTopic,
 }
