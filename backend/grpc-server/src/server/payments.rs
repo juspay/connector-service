@@ -16,7 +16,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
-        generate_create_order_response, generate_payment_capture_response,
+        generate_payment_capture_response,
         generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
         generate_setup_mandate_response,
     },
@@ -136,20 +136,21 @@ impl Payments {
             service_name,
         )
         .await
-        .switch()
-        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            PaymentServiceAuthorizeResponse {
-                transaction_id: None,
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                incremental_authorization_allowed: None,
-                status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                error_message: Some(format!("Order creation failed: {}", e)),
-                error_code: Some("ORDER_CREATION_ERROR".to_string()),
-                raw_connector_response: None,
-            }
-        })?;
+        .map_err(
+            |e: error_stack::Report<domain_types::errors::ConnectorError>| {
+                PaymentServiceAuthorizeResponse {
+                    transaction_id: None,
+                    redirection_data: None,
+                    network_txn_id: None,
+                    response_ref_id: None,
+                    incremental_authorization_allowed: None,
+                    status: grpc_api_types::payments::PaymentStatus::Failure.into(),
+                    error_message: Some(format!("Order creation failed: {}", e)),
+                    error_code: Some("ORDER_CREATION_ERROR".to_string()),
+                    raw_connector_response: None,
+                }
+            },
+        )?;
 
         match response.response {
             Ok(PaymentCreateOrderResponse { order_id, .. }) => {
@@ -158,22 +159,18 @@ impl Payments {
                 tracing::info!("Set reference_id to: {:?}", payment_flow_data.reference_id);
                 Ok(())
             }
-            Err(_) => {
-                let authorize_response = generate_create_order_response(response).map_err(|e| {
-                    PaymentServiceAuthorizeResponse {
-                        transaction_id: None,
-                        redirection_data: None,
-                        network_txn_id: None,
-                        response_ref_id: None,
-                        incremental_authorization_allowed: None,
-                        status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                        error_message: Some(format!("Response generation failed: {}", e)),
-                        error_code: Some("RESPONSE_ERROR".to_string()),
-                        raw_connector_response: None,
-                    }
-                })?;
-
-                Err(authorize_response)
+            Err(e) => {
+                Err(PaymentServiceAuthorizeResponse {
+                    transaction_id: None,
+                    redirection_data: None,
+                    network_txn_id: None,
+                    response_ref_id: None,
+                    incremental_authorization_allowed: None,
+                    status: grpc_api_types::payments::PaymentStatus::Failure.into(),
+                    error_message: Some(e.message.clone()),
+                    error_code: Some(e.code.clone()),
+                    raw_connector_response: e.raw_connector_response.clone(),
+                })
             }
         }
     }

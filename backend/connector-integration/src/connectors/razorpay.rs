@@ -126,7 +126,7 @@ impl ConnectorCommon for Razorpay {
 
         let (code, message, reason) = match response {
             razorpay::RazorpayErrorResponse::StandardError { error } => {
-                (error.code, error.description, Some(error.reason))
+                (error.code, error.description, error.reason)
             }
             razorpay::RazorpayErrorResponse::SimpleError { message } => {
                 // For simple error messages like "no Route matched with those values"
@@ -528,7 +528,7 @@ impl
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let mut header = vec![(
             headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
+            "application/x-www-form-urlencoded".to_string().into(),
         )];
         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
         header.append(&mut api_key);
@@ -562,7 +562,9 @@ impl
         let connector_router_data =
             razorpay::RazorpayRouterData::try_from((req.request.amount, req))?;
         let connector_req = razorpay::RazorpayOrderRequest::try_from(&connector_router_data)?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
+        Ok(Some(RequestContent::FormUrlEncoded(Box::new(
+            connector_req,
+        ))))
     }
 
     fn handle_response_v2(

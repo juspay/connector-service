@@ -202,8 +202,8 @@ where
                                 ])
                                 .inc();
                             let error = match body.status_code {
-                                500..=511 => connector.get_5xx_error_response(body, None)?,
-                                _ => connector.get_error_response_v2(body, None)?,
+                                500..=511 => connector.get_5xx_error_response(body.clone(), None)?,
+                                _ => connector.get_error_response_v2(body.clone(), None)?,
                             };
                             tracing::Span::current().record(
                                 "response.error_message",
@@ -213,6 +213,13 @@ where
                                 "response.status_code",
                                 tracing::field::display(error.status_code),
                             );
+                            // Set raw connector response for error cases too
+                            if all_keys_required.unwrap_or(true) {
+                                let raw_response_string =
+                                    String::from_utf8(body.response.to_vec()).ok();
+                                router_data.resource_common_data
+                                    .set_raw_connector_response(raw_response_string);
+                            }
                             router_data.response = Err(error);
                             router_data
                         }
