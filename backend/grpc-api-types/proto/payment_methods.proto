@@ -35,16 +35,17 @@ message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
     // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
-    // RTPPaymentMethodType rtp = 3;                        // Real-time payment methods - TODO: Not yet supported
-    TokenPaymentMethodType token = 4;                    // Tokenized payment methods - SUPPORTED
-    // BankTransferPaymentMethodType bank_transfer = 5;     // Bank transfer payment methods - TODO: Not yet supported
-    // OnlineBankingPaymentMethodType online_banking = 6;   // Online banking payment methods - TODO: Not yet supported
-    // BNPLPaymentMethodType bnpl = 7;                      // Buy now, pay later payment methods - TODO: Not yet supported
-    // MobilePaymentMethodType mobile_payment = 8;          // Mobile payment methods - TODO: Not yet supported
-    // CryptoCurrencyPaymentMethodType crypto = 9;          // Cryptocurrency payment methods - TODO: Not yet supported
-    // CashVoucherPaymentMethodType cash_voucher = 10;      // Cash and voucher payment methods - TODO: Not yet supported
-    // DirectDebitPaymentMethodType direct_debit = 11;      // Direct debit payment methods - TODO: Not yet supported
-    // OtherPaymentMethodType other = 12;                   // Other payment methods - TODO: Not yet supported
+    UpiCollect upi_collect = 3;                          // UPI Collect payment method - SUPPORTED
+    UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
+    TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
+    // BankTransferPaymentMethodType bank_transfer = 6;     // Bank transfer payment methods - TODO: Not yet supported
+    // OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - TODO: Not yet supported
+    // BNPLPaymentMethodType bnpl = 8;                      // Buy now, pay later payment methods - TODO: Not yet supported
+    // MobilePaymentMethodType mobile_payment = 9;          // Mobile payment methods - TODO: Not yet supported
+    // CryptoCurrencyPaymentMethodType crypto = 10;         // Cryptocurrency payment methods - TODO: Not yet supported
+    // CashVoucherPaymentMethodType cash_voucher = 11;      // Cash and voucher payment methods - TODO: Not yet supported
+    // DirectDebitPaymentMethodType direct_debit = 12;      // Direct debit payment methods - TODO: Not yet supported
+    // OtherPaymentMethodType other = 13;                   // Other payment methods - TODO: Not yet supported
   }
 }
 
@@ -61,6 +62,9 @@ message CardPaymentMethodType {
     CardRedirect card_redirect = 3;        // Card payment via redirect flow
   }
 }
+
+// UPI payment methods are now directly included in PaymentMethod oneof
+// No wrapper message needed - UpiCollect and UpiIntent are direct variants
 
 // Digital wallet payment methods category - TODO: Not yet supported
 // Includes mobile wallets and digital payment platforms
@@ -428,22 +432,13 @@ message PazeWallet {
 */
 
 // ============================================================================
-// REAL-TIME PAYMENT METHODS - TODO: Not yet supported
+// REAL-TIME PAYMENT METHODS
 // ============================================================================
 
-/*
-
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
-message UPI {
-  oneof upi_type {
-    UpiCollect collect = 1;
-    UpiIntent intent = 2;
-  }
-}
-
 message UpiCollect {
   // Virtual Payment Address
-  optional string vpa_id = 1 [(validate.rules).string = {min_len: 1}];
+  optional string vpa_id = 1;
 }
 
 message UpiIntent {
@@ -451,15 +446,15 @@ message UpiIntent {
 }
 
 // PIX - Brazilian instant payment ecosystem
-message PIX {
+message PixPayment {
   // Unique key for PIX transfer
   optional string pix_key = 1;
   
   // CPF (Brazilian tax identification number)
-  optional string cpf = 2 [(validate.rules).string = {min_len: 11, max_len: 11, pattern: "^[0-9]{11}$"}];
+  optional string cpf = 2;
   
   // CNPJ (Brazilian company tax identification number)
-  optional string cnpj = 3 [(validate.rules).string = {min_len: 14, max_len: 14, pattern: "^[0-9]{14}$"}];
+  optional string cnpj = 3;
   
   // Source bank account ID
   optional string source_bank_account_id = 4;
@@ -477,7 +472,6 @@ message PromptPay {
 message VietQR {
   // Fields will be added as needed for VietQR integration
 }
-*/
 
 // ============================================================================
 // BANK TRANSFER PAYMENT METHODS - TODO: Not yet supported

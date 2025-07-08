@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
 use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
 use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
@@ -19,6 +18,8 @@ use domain_types::{
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
+
+use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
 
 pub trait ConnectorServiceTrait:
     ConnectorCommon

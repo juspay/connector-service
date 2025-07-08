@@ -1,14 +1,5 @@
 pub mod transformers;
 
-use self::transformers::{
-    AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
-    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
-    AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse,
-    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse, AuthorizedotnetVoidRequest,
-    AuthorizedotnetVoidResponse,
-};
-use super::macros;
-use crate::{types::ResponseRouterData, with_response_body};
 use common_utils::{
     consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
 };
@@ -24,13 +15,11 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
+    errors::{self, ConnectorError},
     router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
-    types::Connectors,
-};
-use domain_types::{
-    errors::{self, ConnectorError},
     router_response_types::Response,
+    types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
@@ -45,6 +34,16 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
 };
+
+use self::transformers::{
+    AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
+    AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
+    AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse,
+    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse, AuthorizedotnetVoidRequest,
+    AuthorizedotnetVoidResponse,
+};
+use super::macros;
+use crate::{types::ResponseRouterData, with_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -110,6 +109,7 @@ impl ConnectorCommon for Authorizedotnet {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     }
 

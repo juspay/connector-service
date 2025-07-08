@@ -1,4 +1,5 @@
-use crate::{configs, error::ConfigurationError, logger, utils};
+use std::{future::Future, net, sync::Arc};
+
 use axum::http;
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
@@ -9,13 +10,14 @@ use grpc_api_types::{
         payment_service_server, refund_service_handler, refund_service_server,
     },
 };
-use std::{future::Future, net, sync::Arc};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
 };
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
+
+use crate::{configs, error::ConfigurationError, logger, utils};
 
 /// # Panics
 ///
@@ -203,7 +205,7 @@ impl Service {
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
-                self.payments_service,
+                self.payments_service.clone(),
             ))
             .add_service(refund_service_server::RefundServiceServer::new(
                 self.refunds_service,

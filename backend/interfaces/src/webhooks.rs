@@ -1,10 +1,8 @@
 use common_utils::{crypto, ext_traits::ValueExt, CustomResult};
 use domain_types::connector_types::ConnectorWebhookSecrets;
 use error_stack::ResultExt;
-use hyperswitch_masking::ExposeInterface;
-use hyperswitch_masking::Secret;
-use serde::Deserialize;
-use serde::Serialize;
+use hyperswitch_masking::{ExposeInterface, Secret};
+use serde::{Deserialize, Serialize};
 
 use crate::api::{ApplicationResponse, ConnectorCommon};
 

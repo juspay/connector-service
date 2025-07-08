@@ -1,29 +1,26 @@
 #[cfg(test)]
 mod tests {
     pub mod authorize {
-        use crate::connectors::Adyen;
-        use crate::types::ConnectorData;
-        use common_utils::pii::Email;
-        use common_utils::request::RequestContent;
-        use common_utils::types::MinorUnit;
-        use domain_types::connector_flow::Authorize;
-        use domain_types::connector_types::{
-            ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        };
-        use domain_types::types::ConnectorParams;
-        use domain_types::types::Connectors;
+        use std::{borrow::Cow, marker::PhantomData, str::FromStr};
+
+        use common_utils::{pii::Email, request::RequestContent, types::MinorUnit};
         use domain_types::{
+            connector_flow::Authorize,
+            connector_types::{
+                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            },
             payment_method_data::PaymentMethodData,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
+            types::{ConnectorParams, Connectors},
         };
         use hyperswitch_masking::Secret;
-        use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-        use interfaces::connector_types::BoxedConnector;
+        use interfaces::{
+            connector_integration_v2::BoxedConnectorIntegrationV2, connector_types::BoxedConnector,
+        };
         use serde_json::json;
-        use std::borrow::Cow;
-        use std::marker::PhantomData;
-        use std::str::FromStr;
+
+        use crate::{connectors::Adyen, types::ConnectorData};
         #[test]
         fn test_build_request_valid() {
             let api_key = "test_adyen_api_key".to_string(); // Hardcoded dummy value

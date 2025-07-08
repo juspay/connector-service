@@ -1,6 +1,8 @@
 use common_enums::enums;
 use common_utils::{
-    consts::NO_ERROR_CODE, consts::NO_ERROR_MESSAGE, errors::CustomResult, types::MinorUnit,
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
@@ -474,6 +476,7 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             let connector_meta =
@@ -784,6 +787,7 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             // Always include the connector metadata in the response

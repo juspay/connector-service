@@ -5,6 +5,12 @@
 use grpc_server::{app, configs};
 mod common;
 
+use std::{
+    collections::HashMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -16,8 +22,6 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::{collections::HashMap, env};
 use tonic::{transport::Channel, Request};
 
 // Constants for Elavon connector

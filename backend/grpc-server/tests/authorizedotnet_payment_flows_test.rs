@@ -7,22 +7,25 @@
 use grpc_server::{app, configs};
 mod common;
 
-use grpc_api_types::payments::{
-    card_payment_method_type, identifier::IdType, payment_method, Address, AuthenticationType,
-    CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2, Currency, Identifier,
-    PaymentAddress, PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-    PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest,
-    RefundStatus,
+use std::{
+    collections::HashMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
 };
+
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
-    payments::payment_service_client::PaymentServiceClient,
+    payments::{
+        card_payment_method_type, identifier::IdType, payment_method,
+        payment_service_client::PaymentServiceClient, Address, AuthenticationType, CaptureMethod,
+        CardDetails, CardPaymentMethodType, CountryAlpha2, Currency, Identifier, PaymentAddress,
+        PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus,
+        RefundServiceGetRequest, RefundStatus,
+    },
 };
 use rand::{distributions::Alphanumeric, Rng};
-use std::collections::HashMap;
-use std::env;
-use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
 
 // Function to generate random name
