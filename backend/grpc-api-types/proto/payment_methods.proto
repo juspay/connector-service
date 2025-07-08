@@ -35,7 +35,7 @@ message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
     // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
-    // RTPPaymentMethodType rtp = 3;                        // Real-time payment methods - TODO: Not yet supported
+    RTPPaymentMethodType rtp = 3;                        // Real-time payment methods - SUPPORTED (UPI)
     TokenPaymentMethodType token = 4;                    // Tokenized payment methods - SUPPORTED
     // BankTransferPaymentMethodType bank_transfer = 5;     // Bank transfer payment methods - TODO: Not yet supported
     // OnlineBankingPaymentMethodType online_banking = 6;   // Online banking payment methods - TODO: Not yet supported
@@ -81,19 +81,16 @@ message WalletPaymentMethodType {
 }
 */
 
-// Real-time payment methods category - TODO: Not yet supported
+// Real-time payment methods category - SUPPORTED (UPI only)
 // Includes instant payment systems and QR code-based payments
-/*
 message RTPPaymentMethodType {
   oneof rtp_type {
-    UPI upi_collect = 1;                   // UPI Collect - Indian real-time payment system (collect flow)
-    UPI upi_intent = 2;                    // UPI Intent - Indian real-time payment system (intent flow)
-    PIX pix = 3;                           // PIX - Brazilian instant payment system
-    PromptPay prompt_pay = 4;              // PromptPay - Thai QR code payment system
-    VietQR viet_qr = 5;                    // VietQR - Vietnamese QR code payment system
+    UPI upi = 1;                           // UPI - Indian real-time payment system
+    // PIX pix = 2;                        // PIX - Brazilian instant payment system - TODO: Not yet supported
+    // PromptPay prompt_pay = 3;           // PromptPay - Thai QR code payment system - TODO: Not yet supported
+    // VietQR viet_qr = 4;                 // VietQR - Vietnamese QR code payment system - TODO: Not yet supported
   }
 }
-*/
 
 // Bank transfer payment methods category - TODO: Not yet supported
 // Includes various bank transfer systems across different regions
@@ -431,25 +428,32 @@ message PazeWallet {
 // REAL-TIME PAYMENT METHODS - TODO: Not yet supported
 // ============================================================================
 
-/*
-
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
 message UPI {
   oneof upi_type {
     UpiCollect collect = 1;
     UpiIntent intent = 2;
+    UpiQr qr = 3;
   }
 }
 
 message UpiCollect {
   // Virtual Payment Address
-  optional string vpa_id = 1 [(validate.rules).string = {min_len: 1}];
+  optional string vpa_id = 1;
 }
 
 message UpiIntent {
-  // No additional fields required for UPI Intent
+  // Target UPI app for intent flow (e.g., "GPAY", "PHONEPE", "PAYTM")
+  optional string app_name = 1;
+  // Device OS for intent flow (e.g., "ANDROID", "IOS")
+  optional string device_os = 2;
 }
 
+message UpiQr {
+  // No additional fields required for UPI QR
+}
+
+/*
 // PIX - Brazilian instant payment ecosystem
 message PIX {
   // Unique key for PIX transfer

@@ -20,3 +20,6 @@ pub mod macros;
 
 pub mod checkout;
 pub use self::checkout::Checkout;
+
+pub mod phonepe;
+pub use self::phonepe::Phonepe;

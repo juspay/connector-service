@@ -42,6 +42,7 @@ pub struct Connectors {
     pub elavon: ConnectorParams, // Add your connector params
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
+    pub phonepe: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -208,6 +209,48 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         card_cvc: None,
                     }),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::Rtp(rtp_type) => {
+                    match rtp_type.rtp_type {
+                        Some(grpc_api_types::payments::rtp_payment_method_type::RtpType::Upi(upi)) => {
+                            match upi.upi_type {
+                                Some(grpc_api_types::payments::upi::UpiType::Collect(collect)) => Ok(
+                                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiCollect(
+                                        crate::payment_method_data::UpiCollectData {
+                                            vpa_id: collect.vpa_id.map(|vpa| {
+                                                hyperswitch_masking::Secret::new(vpa)
+                                            }),
+                                        }
+                                    ))
+                                ),
+                                Some(grpc_api_types::payments::upi::UpiType::Intent(intent)) => Ok(
+                                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiIntent(
+                                        crate::payment_method_data::UpiIntentData {
+                                            app_name: intent.app_name,
+                                            device_os: intent.device_os,
+                                        }
+                                    ))
+                                ),
+                                Some(grpc_api_types::payments::upi::UpiType::Qr(_qr)) => Ok(
+                                    PaymentMethodData::Upi(crate::payment_method_data::UpiData::UpiQr(
+                                        crate::payment_method_data::UpiQrData {}
+                                    ))
+                                ),
+                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_UPI_TYPE".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "UPI type is required".to_owned(),
+                                    error_object: None,
+                                })))
+                            }
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_RTP_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "RTP type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                },
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -381,6 +424,21 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
+// Helper function to derive PaymentMethodType from PaymentMethodData
+fn derive_payment_method_type(payment_method_data: &PaymentMethodData) -> Option<common_enums::PaymentMethodType> {
+    match payment_method_data {
+        PaymentMethodData::Card(_) => Some(common_enums::PaymentMethodType::Credit), // Default to Credit for cards
+        PaymentMethodData::CardToken(_) => Some(common_enums::PaymentMethodType::Credit),
+        PaymentMethodData::Upi(upi_data) => match upi_data {
+            crate::payment_method_data::UpiData::UpiCollect(_) => Some(common_enums::PaymentMethodType::UpiCollect),
+            crate::payment_method_data::UpiData::UpiIntent(_) => Some(common_enums::PaymentMethodType::UpiIntent),
+            crate::payment_method_data::UpiData::UpiQr(_) => Some(common_enums::PaymentMethodType::UpiQr),
+        },
+        // Add other payment method types as needed
+        _ => None,
+    }
+}
+
 impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
     type Error = ApplicationErrorResponse;
 
@@ -400,24 +458,29 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             None => None,
         };
 
+        let payment_method_data = PaymentMethodData::foreign_try_from(
+            value.payment_method.clone().ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Payment method data is required".to_owned(),
+                    error_object: None,
+                })
+            })?,
+        )?;
+
+        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+        let minor_amount = common_utils::types::MinorUnit::new(value.minor_amount);
+
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
-            payment_method_data: PaymentMethodData::foreign_try_from(
-                value.payment_method.clone().ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
-                })?,
-            )?,
+            payment_method_data: payment_method_data.clone(),
             amount: value.amount,
-            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            currency,
             confirm: true,
-            webhook_url: value.webhook_url,
+            webhook_url: value.webhook_url.clone(),
             browser_info: value.browser_info.map(|info| {
                 crate::router_request_types::BrowserInformation {
                     color_depth: None,
@@ -436,8 +499,8 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                     accept_language: info.accept_language,
                 }
             }),
-            payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
-            minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            payment_method_type: derive_payment_method_type(&payment_method_data),
+            minor_amount,
             email,
             customer_name: None,
             statement_descriptor_suffix: None,
@@ -470,7 +533,10 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             order_tax_amount: None,
             shipping_cost: None,
             merchant_account_id: None,
-            integrity_object: None,
+            integrity_object: Some(crate::router_request_types::AuthoriseIntegrityObject {
+                amount: minor_amount,
+                currency,
+            }),
             merchant_config_currency: None,
             all_keys_required: None, // Field not available in new proto structure
         })
@@ -1075,6 +1141,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Token(_)),
             } => Ok(Self::Wallet),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Rtp(_)),
+            } => Ok(Self::RealTimePayment),
             _ => Ok(Self::Card), // Default fallback
         }
     }
