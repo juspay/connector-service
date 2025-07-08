@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use base64::{engine::general_purpose::STANDARD, Engine};
 use cards::CardNumber;
 use common_enums::{self, AttemptStatus, CardNetwork};
@@ -18,9 +20,7 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use tracing::info;
-use uuid;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
