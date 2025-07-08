@@ -801,7 +801,7 @@ message Address {
   optional string city = 6;
   optional string state = 7;
   optional string zip_code = 8;
-  optional CountryAlpha2 country_alpha2_code = 9;
+  //optional CountryAlpha2 country_alpha2_code = 9;
 
   // Contact Information
   optional string email = 10;
