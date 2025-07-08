@@ -4,6 +4,9 @@ use std::collections::{HashMap, HashSet};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
+#[cfg(feature = "kafka")]
+use tracing_kafka::KafkaLayer;
+
 /// Contains guards necessary for logging
 #[derive(Debug)]
 pub struct TelemetryGuard {
@@ -60,7 +63,7 @@ pub fn setup(
     };
 
     let logger_config = log_utils::LoggerConfig {
-        static_top_level_fields,
+        static_top_level_fields: static_top_level_fields.clone(),
         top_level_keys: HashSet::new(),
         persistent_keys: HashSet::new(),
         log_span_lifecycles: true,
@@ -77,6 +80,46 @@ pub fn setup(
     subscriber_layers.push(logging_components.storage_layer.boxed());
     if let Some(console_layer) = logging_components.console_log_layer {
         subscriber_layers.push(console_layer);
+    }
+
+    // Add Kafka layer if configured
+    #[cfg(feature = "kafka")]
+    if let Some(kafka_config) = &config.kafka {
+        if kafka_config.enabled {
+            let kafka_filter_directive =
+                kafka_config
+                    .filtering_directive
+                    .clone()
+                    .unwrap_or_else(|| {
+                        get_envfilter_directive(
+                            tracing::Level::WARN,
+                            kafka_config.level.into_level(),
+                            crates_to_filter.as_ref(),
+                        )
+                    });
+
+            let kafka_layer = match KafkaLayer::with_config(
+                kafka_config.brokers.clone(),
+                kafka_config.topic.clone(),
+                static_top_level_fields,
+            ) {
+                Ok(layer) => Some(layer.with_filter(
+                    tracing_subscriber::EnvFilter::builder()
+                        .with_default_directive(kafka_config.level.into_level().into())
+                        .parse_lossy(kafka_filter_directive),
+                )),
+                Err(e) => {
+                    tracing::warn!("Failed to enable Kafka logging: {}", e);
+                    // Continue without Kafka - non-blocking
+                    None
+                }
+            };
+
+            if let Some(layer) = kafka_layer {
+                subscriber_layers.push(layer.boxed());
+                tracing::info!("Kafka logging enabled for topic: {}", kafka_config.topic);
+            }
+        }
     }
 
     tracing_subscriber::registry()

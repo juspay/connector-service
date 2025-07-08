@@ -4,7 +4,6 @@ use grpc_server::{self, app, configs, logger};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     #[allow(clippy::expect_used)]
     let config = configs::Config::new().expect("Failed while parsing config");
-
     let _guard = logger::setup(
         &config.log,
         grpc_server::service_name!(),

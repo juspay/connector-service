@@ -9,6 +9,9 @@ use serde::Deserialize;
 pub struct Log {
     /// Logging to a console.
     pub console: LogConsole,
+    /// Logging to Kafka (optional).
+    #[serde(default)]
+    pub kafka: Option<LogKafka>,
 }
 
 /// Logging to a console.
@@ -58,4 +61,19 @@ pub enum LogFormat {
     /// JSON based structured logging
     #[default]
     Json,
+}
+
+/// Logging to Kafka.
+#[derive(Debug, Deserialize, Clone)]
+pub struct LogKafka {
+    /// Whether Kafka logging is enabled.
+    pub enabled: bool,
+    /// Minimum log level for Kafka logging.
+    pub level: Level,
+    /// Directive which sets the log level for one or more crates/modules.
+    pub filtering_directive: Option<String>,
+    /// Kafka broker addresses.
+    pub brokers: Vec<String>,
+    /// Topic name for logs.
+    pub topic: String,
 }
