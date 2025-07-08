@@ -2,15 +2,11 @@ pub mod adyen;
 
 pub mod razorpay;
 
-pub mod razorpayv2;
-pub use self::razorpayv2::RazorpayV2;
-
-pub mod razorpayv2;
-pub use self::razorpayv2::RazorpayV2;
 pub mod authorizedotnet;
 pub mod fiserv;
+pub mod razorpayv2;
 
-pub use self::{adyen::Adyen, fiserv::Fiserv, razorpay::Razorpay};
+pub use self::{adyen::Adyen, fiserv::Fiserv, razorpay::Razorpay, razorpayv2::RazorpayV2};
 
 pub use self::authorizedotnet::Authorizedotnet;
 

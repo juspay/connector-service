@@ -1076,6 +1076,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             })
         });
 
@@ -1172,6 +1173,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 };
 
                 // Update router data with status and error response
@@ -1259,6 +1261,7 @@ fn create_error_response(
         network_decline_code: None,
         network_advice_code: None,
         network_error_message: None,
+        raw_connector_response: None,
     }
 }
 
@@ -1620,6 +1623,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 };
 
                 // Update router data with error response
