@@ -95,7 +95,7 @@ impl Payments {
                     response_ref_id: None,
                     incremental_authorization_allowed: None,
                     status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                    error_message: Some(format!("Currency conversion failed: {}", e)),
+                    error_message: Some(format!("Currency conversion failed: {e}")),
                     error_code: Some("CURRENCY_ERROR".to_string()),
                     raw_connector_response: None,
                 }
@@ -144,7 +144,7 @@ impl Payments {
                     response_ref_id: None,
                     incremental_authorization_allowed: None,
                     status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                    error_message: Some(format!("Order creation failed: {}", e)),
+                    error_message: Some(format!("Order creation failed: {e}")),
                     error_code: Some("ORDER_CREATION_ERROR".to_string()),
                     raw_connector_response: None,
                 }
@@ -431,7 +431,7 @@ impl PaymentService for Payments {
                             response: Err(ErrorResponse {
                                 status_code: 400, // Default status code
                                 code: "CONNECTOR_ERROR".to_string(),
-                                message: format!("{}", error_report),
+                                message: format!("{error_report}"),
                                 reason: None,
                                 attempt_status: Some(common_enums::AttemptStatus::Failure),
                                 connector_transaction_id: None,
