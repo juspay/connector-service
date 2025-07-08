@@ -811,9 +811,9 @@ pub enum RazorpayErrorResponse {
 pub struct RazorpayError {
     pub code: String,
     pub description: String,
-    pub source: String,
-    pub step: String,
-    pub reason: String,
+    pub source: Option<String>,
+    pub step: Option<String>,
+    pub reason: Option<String>,
     pub metadata: Option<Metadata>,
 }
 
@@ -833,9 +833,38 @@ pub struct RazorpayOrderRequest {
     pub receipt: String,
     pub partial_payment: Option<bool>,
     pub first_payment_min_amount: Option<MinorUnit>,
-    pub notes: Option<RazorpayNotes>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_capture: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discount: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offer_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub customer_id: Option<String>,
+    #[serde(rename = "token[expire_at]", skip_serializing_if = "Option::is_none")]
+    pub __token_91_expire_at_93_: Option<i64>,
+    #[serde(rename = "token[max_amount]", skip_serializing_if = "Option::is_none")]
+    pub __token_91_max_amount_93_: Option<i64>,
+    #[serde(rename = "token[auth_type]", skip_serializing_if = "Option::is_none")]
+    pub __token_91_auth_type_93_: Option<String>,
+    #[serde(rename = "token[frequency]", skip_serializing_if = "Option::is_none")]
+    pub __token_91_frequency_93_: Option<String>,
+    #[serde(rename = "bank_account[name]", skip_serializing_if = "Option::is_none")]
+    pub __bank_account_91_name_93_: Option<String>,
+    #[serde(rename = "bank_account[account_number]", skip_serializing_if = "Option::is_none")]
+    pub __bank_account_91_account_number_93_: Option<String>,
+    #[serde(rename = "bank_account[ifsc]", skip_serializing_if = "Option::is_none")]
+    pub __bank_account_91_ifsc_93_: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phonepe_switch_context: Option<String>,
+    #[serde(rename = "notes[crm1]", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_crm1_93_: Option<String>,
+    #[serde(rename = "notes[crm2]", skip_serializing_if = "Option::is_none")]
+    pub __notes_91_crm2_93_: Option<String>,
 }
 
 impl
@@ -868,6 +897,20 @@ impl
             .amount_converter
             .convert(item.amount, request_data.currency)
             .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+        // Extract metadata as a HashMap
+        let metadata_map = item
+            .router_data
+            .request
+            .metadata
+            .as_ref()
+            .and_then(|metadata| metadata.as_object())
+            .map(|obj| {
+                obj.iter()
+                    .map(|(k, v)| (k.clone(), v.as_str().unwrap_or_default().to_string()))
+                    .collect::<HashMap<String, String>>()
+            })
+            .unwrap_or_default();
+
         Ok(RazorpayOrderRequest {
             amount: converted_amount,
             currency: request_data.currency.to_string(),
@@ -879,7 +922,21 @@ impl
             partial_payment: None,
             first_payment_min_amount: None,
             payment_capture: Some(true),
-            notes: None,
+            method: metadata_map.get("method").cloned(),
+            discount: metadata_map.get("discount").and_then(|v| v.parse::<i64>().ok()),
+            offer_id: metadata_map.get("offer_id").cloned(),
+            customer_id: metadata_map.get("customer_id").cloned(),
+            __token_91_expire_at_93_: metadata_map.get("__token_91_expire_at_93_").and_then(|v| v.parse::<i64>().ok()),
+            __token_91_max_amount_93_: metadata_map.get("__token_91_max_amount_93_").and_then(|v| v.parse::<i64>().ok()),
+            __token_91_auth_type_93_: metadata_map.get("__token_91_auth_type_93_").cloned(),
+            __token_91_frequency_93_: metadata_map.get("__token_91_frequency_93_").cloned(),
+            __bank_account_91_name_93_: metadata_map.get("__bank_account_91_name_93_").cloned(),
+            __bank_account_91_account_number_93_: metadata_map.get("__bank_account_91_account_number_93_").cloned(),
+            __bank_account_91_ifsc_93_: metadata_map.get("__bank_account_91_ifsc_93_").cloned(),
+            account_id: metadata_map.get("account_id").cloned(),
+            phonepe_switch_context: metadata_map.get("phonepe_switch_context").cloned(),
+            __notes_91_crm1_93_: metadata_map.get("__notes_91_crm1_93_").cloned(),
+            __notes_91_crm2_93_: metadata_map.get("__notes_91_crm2_93_").cloned(),
         })
     }
 }
