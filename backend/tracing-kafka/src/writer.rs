@@ -65,10 +65,9 @@ impl Write for KafkaWriter {
 
         match self.producer.send(record) {
             Ok(_) => Ok(buf.len()),
-            Err((kafka_error, _)) => Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("Failed to send to Kafka: {}", kafka_error),
-            )),
+            Err((kafka_error, _)) => Err(io::Error::other(format!(
+                "Failed to send to Kafka: {kafka_error}"
+            ))),
         }
     }
 
@@ -79,7 +78,7 @@ impl Write for KafkaWriter {
                 std::time::Duration::from_secs(1),
             ))
             .map_err(|e: rdkafka::error::KafkaError| {
-                io::Error::new(io::ErrorKind::Other, format!("Kafka flush failed: {}", e))
+                io::Error::other(format!("Kafka flush failed: {e}"))
             })
     }
 }

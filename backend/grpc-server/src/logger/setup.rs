@@ -87,28 +87,28 @@ pub fn setup(
     if let Some(kafka_config) = &config.kafka {
         if kafka_config.enabled {
             let kafka_filter_directive =
-                kafka_config
-                    .filtering_directive
-                    .clone()
-                    .unwrap_or_else(|| {
-                        get_envfilter_directive(
-                            tracing::Level::WARN,
-                            kafka_config.level.into_level(),
-                            crates_to_filter.as_ref(),
-                        )
-                    });
+                kafka_config.filtering_directive.clone().unwrap_or_else(|| {
+                    get_envfilter_directive(
+                        tracing::Level::WARN,
+                        kafka_config.level.into_level(),
+                        crates_to_filter.as_ref(),
+                    )
+                });
 
             let brokers: Vec<&str> = kafka_config.brokers.iter().map(|s| s.as_str()).collect();
             let kafka_layer = match KafkaLayer::<tracing_subscriber::Registry>::builder()
                 .brokers(&brokers)
                 .topic(&kafka_config.topic)
                 .static_fields(static_top_level_fields.clone())
-                .build() {
-                Ok(layer) => Some(layer.with_filter(
-                    tracing_subscriber::EnvFilter::builder()
-                        .with_default_directive(kafka_config.level.into_level().into())
-                        .parse_lossy(kafka_filter_directive),
-                )),
+                .build()
+            {
+                Ok(layer) => Some(
+                    layer.with_filter(
+                        tracing_subscriber::EnvFilter::builder()
+                            .with_default_directive(kafka_config.level.into_level().into())
+                            .parse_lossy(kafka_filter_directive),
+                    ),
+                ),
                 Err(e) => {
                     tracing::warn!("Failed to enable Kafka logging: {}", e);
                     // Continue without Kafka - non-blocking

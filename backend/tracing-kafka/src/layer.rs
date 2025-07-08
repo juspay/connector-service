@@ -38,11 +38,8 @@ where
             additional_fields_placement: AdditionalFieldsPlacement::TopLevel,
         };
 
-        let inner = JsonFormattingLayer::new(
-            config,
-            kafka_writer,
-            serde_json::ser::CompactFormatter,
-        )?;
+        let inner =
+            JsonFormattingLayer::new(config, kafka_writer, serde_json::ser::CompactFormatter)?;
 
         Ok(Self {
             inner,
