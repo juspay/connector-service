@@ -23,6 +23,11 @@ pub enum ApiEventsType {
         payment_id: GlobalPaymentId,
     },
 
+    // Adding a simple variant that accepts a string for testing dapr integration
+    SimplePayment {
+        payment_id: String,
+    },
+
     Refund {
         payment_id: Option<GlobalPaymentId>,
         refund_id: GlobalRefundId,
