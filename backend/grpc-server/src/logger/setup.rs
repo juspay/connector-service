@@ -96,12 +96,23 @@ pub fn setup(
                 });
 
             let brokers: Vec<&str> = kafka_config.brokers.iter().map(|s| s.as_str()).collect();
-            let kafka_layer = match KafkaLayer::<tracing_subscriber::Registry>::builder()
+            let mut builder = KafkaLayer::<tracing_subscriber::Registry>::builder()
                 .brokers(&brokers)
                 .topic(&kafka_config.topic)
-                .static_fields(static_top_level_fields.clone())
-                .build()
-            {
+                .static_fields(static_top_level_fields.clone());
+
+            // Add batch_size if configured
+            if let Some(batch_size) = kafka_config.batch_size {
+                builder = builder.batch_size(batch_size);
+            }
+
+            // Add flush_interval if configured
+            if let Some(flush_interval_ms) = kafka_config.flush_interval_ms {
+                builder =
+                    builder.flush_interval(std::time::Duration::from_millis(flush_interval_ms));
+            }
+
+            let kafka_layer = match builder.build() {
                 Ok(layer) => Some(
                     layer.with_filter(
                         tracing_subscriber::EnvFilter::builder()

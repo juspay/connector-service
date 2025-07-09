@@ -3,47 +3,21 @@
 //! This crate provides a simple way to send tracing logs to Kafka while maintaining
 //! consistent JSON formatting through the log_utils infrastructure.
 //!
-//! # Example
-//!
-//! ```rust
-//! use std::time::Duration;
+//! # Examples
+//! ```no_run
 //! use tracing_kafka::KafkaLayer;
 //! use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 //!
-//! // Basic usage with builder pattern
 //! let kafka_layer = KafkaLayer::builder()
 //!     .brokers(&["localhost:9092"])
 //!     .topic("application-logs")
 //!     .build()
 //!     .expect("Failed to create Kafka layer");
 //!
-//! // With optional configuration
-//! let kafka_layer = KafkaLayer::builder()
-//!     .brokers(&["localhost:9092"])
-//!     .topic("application-logs")
-//!     .batch_size(500)
-//!     .flush_interval(Duration::from_secs(5))
-//!     .build()
-//!     .expect("Failed to create Kafka layer");
-//!
-//! // Set up tracing with both console and Kafka logging
 //! tracing_subscriber::registry()
-//!     .with(tracing_subscriber::fmt::layer()) // Console logging
-//!     .with(kafka_layer)                      // Kafka logging
+//!     .with(kafka_layer)
 //!     .init();
-//!
-//! // All tracing calls will be sent to both console and Kafka
-//! tracing::info!("Application started successfully");
-//! tracing::error!(error = %err, "Failed to process request");
 //! ```
-//!
-//! # Features
-//!
-//! - **Consistent JSON format**: Uses log_utils::JsonFormattingLayer for standardized formatting
-//! - **Simple API**: Easy to configure with just brokers and topic name
-//! - **Builder pattern**: Flexible configuration through a clean builder API
-//! - **Non-blocking**: Kafka failures won't block the application
-//! - **Configurable**: Support for batch size and flush interval configuration
 
 mod layer;
 mod writer;

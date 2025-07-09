@@ -76,4 +76,10 @@ pub struct LogKafka {
     pub brokers: Vec<String>,
     /// Topic name for logs.
     pub topic: String,
+    /// Batch size for Kafka messages (optional, defaults to Kafka default).
+    #[serde(default)]
+    pub batch_size: Option<usize>,
+    /// Flush interval in milliseconds (optional, defaults to Kafka default).
+    #[serde(default)]
+    pub flush_interval_ms: Option<u64>,
 }
