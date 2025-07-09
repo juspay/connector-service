@@ -357,9 +357,9 @@ where
         .get::<Config>()
         .cloned()
         .ok_or_else(|| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+            Report::new(ApplicationErrorResponse::InternalServerError(ApiError {
                 sub_code: "CONFIG_NOT_FOUND".to_string(),
-                error_identifier: 400,
+                error_identifier: 500,
                 error_message: "Configuration not found in request extensions".to_string(),
                 error_object: None,
             }))
