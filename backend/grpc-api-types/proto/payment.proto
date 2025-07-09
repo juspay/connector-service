@@ -421,6 +421,7 @@ enum Connector {
   XENDIT = 88;
   ZEN = 89;
   ZSL = 90;
+  PHONEPE = 91;
 }
 
 // Payment method types.
