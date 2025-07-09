@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use common_utils::{errors::CustomResult, crypto::{Sha256, GenerateDigest}};
+use hyperswitch_masking::ExposeInterface;
 use domain_types::{
     connector_types::ResponseId,
     errors,
@@ -13,13 +14,14 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{Secret, PeekInterface};
 use common_enums::AttemptStatus;
 use base64::{Engine, engine::general_purpose::STANDARD};
+use tracing::info;
 
 // Authentication structure for PhonePe
 #[derive(Debug, Clone)]
 pub struct PhonepeAuthType {
     pub merchant_id: Secret<String>,
     pub api_key: Secret<String>,
-    pub key_index: Option<String>,
+    pub key_index: Secret<String>,
 }
 
 impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
@@ -27,15 +29,10 @@ impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
 
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            ConnectorAuthType::HeaderKey { api_key } => Ok(Self {
-                merchant_id: api_key.clone(),
-                api_key: api_key.clone(), 
-                key_index: Some("1".to_string()),
-            }),
-            ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
+            ConnectorAuthType::SignatureKey { api_key, key1, api_secret } => Ok(Self {
                 merchant_id: api_key.clone(),
                 api_key: key1.clone(),
-                key_index: Some("1".to_string()),
+                key_index: api_secret.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
         }
@@ -65,7 +62,7 @@ pub struct PhonepePaymentRequest {
 
 #[derive(Debug, Serialize)]
 pub struct PaymentInstrument {
-    #[serde(rename = "_type")]
+    #[serde(rename = "type")]
     pub instrument_type: String,
     #[serde(rename = "targetApp", skip_serializing_if = "Option::is_none")]
     pub target_app: Option<String>,
@@ -97,12 +94,16 @@ pub struct PhonepePaymentData {
     pub merchant_transaction_id: String,
     #[serde(rename = "transactionId")]
     pub transaction_id: String,
-    pub amount: i64,
-    pub state: String,
-    #[serde(rename = "responseCode")]
-    pub response_code: String,
-    #[serde(rename = "paymentInstrument")]
+    #[serde(default)]
+    pub amount: Option<i64>,
+    #[serde(default)]
+    pub state: Option<String>,
+    #[serde(rename = "responseCode", default)]
+    pub response_code: Option<String>,
+    #[serde(rename = "paymentInstrument", default)]
     pub payment_instrument: Option<ResponsePaymentInstrument>,
+    #[serde(rename = "instrumentResponse", default)]
+    pub instrument_response: Option<InstrumentResponse>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -112,10 +113,16 @@ pub struct ResponsePaymentInstrument {
     pub utr: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InstrumentResponse {
+    #[serde(rename = "type")]
+    pub instrument_type: String,
+}
+
 // Error response structure
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PhonepeErrorResponse {
-    pub success: bool,
+    pub success: Option<bool>,
     pub code: Option<String>,
     pub message: Option<String>,
     pub data: Option<PhonepeErrorData>,
@@ -158,7 +165,7 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, Pa
         let auth = PhonepeAuthType::try_from(&item.connector_auth_type)?;
         
         // Get connector instance to access amount_converter
-        let connector = crate::connectors::phonepe::Phonepe::new();
+        let _connector = crate::connectors::phonepe::Phonepe::new();
         
         // PhonePe expects amount in minor units (paise) - direct integer conversion
         // Based on analysis: amount = getMoney txn ord (returns integer paise)
@@ -241,7 +248,7 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, Pa
             .or_else(|| item.request.router_return_url.clone())
             .unwrap_or_else(|| format!("https://api.hyperswitch.io/phonepe/webhook/{}", item.resource_common_data.payment_id));
 
-        Ok(Self {
+        let requestpp = Self {
             merchant_id: auth.merchant_id,
             merchant_transaction_id: item.resource_common_data.payment_id.clone(),
             merchant_user_id: item.request.customer_id
@@ -253,11 +260,16 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, Pa
             mobile_number: None, // TODO: Extract from customer data if available
             payment_instrument,
             device_context,
-        })
+        };
+
+        info!("PhonePe payment request created: {:?}", requestpp);
+
+        Ok(requestpp)
     }
 }
 
 // Security helper functions based on PhonePe analysis
+
 
 impl PhonepePaymentRequest {
     // Generate X-VERIFY header based on PhonePe V2 API requirements
@@ -271,18 +283,36 @@ impl PhonepePaymentRequest {
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         
         let encoded_payload = STANDARD.encode(json_payload);
+
+        let checksum_string = format!(
+                "{}{}{}",
+                encoded_payload,
+                api_path,
+                auth.api_key.peek()
+            );
+
+            tracing::info!(
+                "PhonePe checksum string: {}{}{}",
+                encoded_payload,
+                api_path,
+                auth.api_key.peek()
+            );
+
+            let hasher = Sha256;
+            let hash_result = hasher.generate_digest(checksum_string.as_bytes())
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            
+            // Convert to hex string
+            let hash = hash_result.iter().map(|b| format!("{:02x}", b)).collect::<String>();
+
+            tracing::info!("PhonePe checksum hash: {}", hash);
+
+            let checksum = format!("{}###{}", hash, auth.key_index.clone().expose());
+            tracing::info!("PhonePe checksum: {}", checksum);
+            Ok(checksum)
         
-        // Generate checksum: SHA256(base64_payload + api_path + secret_key) + ## + key_index
-        let combined_string = format!("{}{}{}", encoded_payload, api_path, auth.api_key.peek());
-        let hasher = Sha256;
-        let hash = hasher.generate_digest(combined_string.as_bytes())
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        
-        let key_index = auth.key_index.as_deref().unwrap_or("1");
-        let hash_hex = hash.iter().map(|b| format!("{:02x}", b)).collect::<String>();
-        let verify_header = format!("{}###{}", hash_hex, key_index);
-        
-        Ok(verify_header)
+
+
     }
 
     // Encode request as base64 JSON for PhonePe API
@@ -303,10 +333,10 @@ impl TryFrom<PhonepePaymentResponse> for PaymentsResponseData {
             errors::ConnectorError::ResponseDeserializationFailed
         })?;
 
-        let _status = match data.state.as_str() {
-            "COMPLETED" => AttemptStatus::Charged,
-            "PENDING" => AttemptStatus::Pending,
-            "FAILED" => AttemptStatus::Failure,
+        let _status = match data.state.as_deref() {
+            Some("COMPLETED") => AttemptStatus::Charged,
+            Some("PENDING") => AttemptStatus::Pending,
+            Some("FAILED") => AttemptStatus::Failure,
             _ => AttemptStatus::Pending,
         };
 
@@ -348,10 +378,10 @@ impl ForeignTryFrom<(
     ) -> Result<Self, Self::Error> {
         let status = if response.success {
             if let Some(data) = &response.data {
-                match data.state.as_str() {
-                    "COMPLETED" => AttemptStatus::Charged,
-                    "PENDING" => AttemptStatus::Pending,
-                    "FAILED" => AttemptStatus::Failure,
+                match data.state.as_deref() {
+                    Some("COMPLETED") => AttemptStatus::Charged,
+                    Some("PENDING") => AttemptStatus::Pending,
+                    Some("FAILED") => AttemptStatus::Failure,
                     _ => AttemptStatus::Pending,
                 }
             } else {

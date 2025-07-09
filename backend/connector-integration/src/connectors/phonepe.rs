@@ -1,4 +1,4 @@
-pub mod test;
+// pub mod test;
 pub mod transformers;
 
 use common_enums::{AttemptStatus, PaymentMethodType};
@@ -101,6 +101,7 @@ impl ConnectorCommon for Phonepe {
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        print!("Phonepe build_error_response: {:?}", res.response);
         let response: phonepe::PhonepeErrorResponse = res
             .response
             .parse_struct("PhonepeErrorResponse")
@@ -205,7 +206,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         // Generate PhonePe request for X-VERIFY header generation
         let phonepe_req = phonepe::PhonepePaymentRequest::try_from(req)?;
         let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
-        let verify_header = phonepe_req.generate_verify_header(&auth, "/apis/hermes/pg/v1/pay")?;
+        let verify_header = phonepe_req.generate_verify_header(&auth, "/pg/v1/pay")?;
         
         let headers = vec![
             (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
@@ -220,7 +221,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok(format!(
-            "{}/apis/hermes/pg/v1/pay",
+            "{}/pg/v1/pay",
             req.resource_common_data.connectors.phonepe.base_url
         ))
     }
