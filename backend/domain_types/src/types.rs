@@ -1015,6 +1015,7 @@ pub fn generate_payment_authorize_response(
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
+    let order_id = router_data_v2.resource_common_data.reference_id;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
     let response = match transaction_response {
         Ok(response) => match response {
@@ -1103,10 +1104,8 @@ pub fn generate_payment_authorize_response(
                 }),
                 redirection_data: None,
                 network_txn_id: None,
-                response_ref_id: err.connector_transaction_id.map(|id| {
-                    grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                    }
+                response_ref_id: order_id.map(|id| grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                 }),
                 incremental_authorization_allowed: None,
                 status: status as i32,
