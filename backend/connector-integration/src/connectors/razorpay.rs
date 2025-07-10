@@ -14,7 +14,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
@@ -23,7 +23,8 @@ use domain_types::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
         SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors,
@@ -69,6 +70,7 @@ impl connector_types::ValidationTrait for Razorpay {
     }
 }
 
+impl connector_types::PaymentSessionToken for Razorpay {}
 impl connector_types::ConnectorServiceTrait for Razorpay {}
 impl connector_types::PaymentAuthorizeV2 for Razorpay {}
 impl connector_types::PaymentSyncV2 for Razorpay {}
@@ -1096,3 +1098,15 @@ impl ConnectorSpecifications for Razorpay {
         Some(&RAZORPAY_SUPPORTED_PAYMENT_METHODS)
     }
 }
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Razorpay
+{
+}
+
+impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for Razorpay {}
