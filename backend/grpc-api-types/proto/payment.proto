@@ -402,6 +402,7 @@ enum Connector {
   PAYTM = 93;
   PHONEPE = 91;
   CASHFREE = 92;
+  PAYTM = 93;
 }
 
 // Payment method types.

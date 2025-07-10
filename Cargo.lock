@@ -721,6 +721,18 @@ dependencies = [
 [[package]]
 name = "cbc"
 version = "0.1.2"
+<<<<<<< HEAD
+=======
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26b52a9543ae338f279b96b0b9fed9c8093744685043739079ce85cd58f289a6"
+dependencies = [
+ "cipher",
+]
+
+[[package]]
+name = "cc"
+version = "1.2.29"
+>>>>>>> 7c6a58a (paytm-intent-and-collect-impl)
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26b52a9543ae338f279b96b0b9fed9c8093744685043739079ce85cd58f289a6"
 dependencies = [
@@ -902,7 +914,10 @@ dependencies = [
  "encoding_rs",
  "error-stack 0.4.1",
  "hex",
+<<<<<<< HEAD
  "image",
+=======
+>>>>>>> 7c6a58a (paytm-intent-and-collect-impl)
  "interfaces",
  "masking",
  "paste",
