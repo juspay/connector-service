@@ -8,7 +8,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
@@ -16,7 +16,7 @@ use domain_types::{
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -55,6 +55,7 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
+impl connector_types::PaymentSessionToken for Fiserv {}
 impl connector_types::ConnectorServiceTrait for Fiserv {}
 impl connector_types::PaymentAuthorizeV2 for Fiserv {}
 impl connector_types::PaymentSyncV2 for Fiserv {}
@@ -581,6 +582,18 @@ impl
 {
 }
 
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiserv
+{
+}
+
 impl ConnectorSpecifications for Fiserv {}
 
 // We already have an implementation for ValidationTrait above
+
+impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for Fiserv {}

@@ -21,3 +21,6 @@ pub mod macros;
 
 pub mod checkout;
 pub use self::checkout::Checkout;
+
+pub mod paytm;
+pub use self::paytm::Paytm;

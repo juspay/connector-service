@@ -5,13 +5,7 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse
     },
     payment_method_data::PaymentMethodData,
     router_data::ConnectorAuthType,
@@ -27,6 +21,7 @@ pub trait ConnectorServiceTrait:
     + PaymentAuthorizeV2
     + PaymentSyncV2
     + PaymentOrderCreate
+    + PaymentSessionToken
     + PaymentVoidV2
     + IncomingWebhook
     + RefundV2
@@ -50,6 +45,11 @@ pub trait ValidationTrait {
     fn should_do_order_create(&self) -> bool {
         false
     }
+
+    fn should_do_session_token(&self) -> bool {
+        false
+    }
+
 }
 
 pub trait PaymentOrderCreate:
@@ -58,6 +58,16 @@ pub trait PaymentOrderCreate:
     PaymentFlowData,
     PaymentCreateOrderData,
     PaymentCreateOrderResponse,
+>
+{
+}
+
+pub trait PaymentSessionToken:
+    ConnectorIntegrationV2<
+    connector_flow::CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData,
 >
 {
 }
