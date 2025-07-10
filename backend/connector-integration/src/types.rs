@@ -38,6 +38,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Cashfree => Box::new(Cashfree::new()),
             ConnectorEnum::Fiuu => Box::new(Fiuu::new()),
             ConnectorEnum::Payu => Box::new(Payu::new()),
+            ConnectorEnum::Paytm => Box::new(Paytm::new()),
             ConnectorEnum::Cashtocode => Box::new(Cashtocode::new()),
             ConnectorEnum::Novalnet => Box::new(Novalnet::new()),
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),

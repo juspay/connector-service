@@ -35,8 +35,8 @@ use crate::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
@@ -64,6 +64,7 @@ pub struct Connectors {
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
+    pub paytm: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
 }
@@ -3192,6 +3193,29 @@ pub fn generate_defend_dispute_response(
     }
 }
 
+pub fn generate_session_token_response(
+    router_data_v2: RouterDataV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let session_token_response = router_data_v2.response;
+
+    match session_token_response {
+        Ok(response) => Ok(response.session_token),
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "SESSION_TOKEN_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Session token creation failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
 #[derive(Debug, Clone, ToSchema, Serialize)]
 pub struct CardSpecificFeatures {
     /// Indicates whether three_ds card payments are supported
@@ -3642,5 +3666,22 @@ pub fn generate_repeat_payment_response(
                 },
             )
         }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for SessionTokenRequestData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            currency,
+        })
     }
 }
