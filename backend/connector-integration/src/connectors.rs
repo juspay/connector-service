@@ -34,5 +34,8 @@ pub use self::fiuu::Fiuu;
 pub mod payu;
 pub use self::payu::Payu;
 
+pub mod paytm;
+pub use self::paytm::Paytm;
+
 pub mod cashtocode;
 pub use self::cashtocode::Cashtocode;

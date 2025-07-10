@@ -5,8 +5,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -28,8 +28,8 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
         AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
-        PaymentCapture, PaymentOrderCreate, PaymentSyncV2, PaymentVoidV2, RefundSyncV2, RefundV2,
-        RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+        PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2, PaymentVoidV2,
+        RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
@@ -52,6 +52,7 @@ pub(crate) mod headers {
 }
 
 // Implement all required traits for ConnectorServiceTrait
+impl PaymentSessionToken for Authorizedotnet {}
 impl ConnectorServiceTrait for Authorizedotnet {}
 impl ValidationTrait for Authorizedotnet {}
 impl IncomingWebhook for Authorizedotnet {}
@@ -534,5 +535,25 @@ impl SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, Dis
 
 impl SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Authorizedotnet
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Authorizedotnet
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Authorizedotnet
 {
 }

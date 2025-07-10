@@ -9,13 +9,14 @@ use common_utils::errors::IntegrityCheckError;
 use domain_types::connector_types::{
     AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentVoidData,
     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
-    RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
+    RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::router_request_types::{
     AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
     CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
     PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-    RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+    RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
+    SubmitEvidenceIntegrityObject,
 };
 
 // ========================================================================
@@ -119,6 +120,7 @@ impl_check_integrity!(PaymentsCaptureData);
 impl_check_integrity!(AcceptDisputeData);
 impl_check_integrity!(DisputeDefendData);
 impl_check_integrity!(RefundSyncData);
+impl_check_integrity!(SessionTokenRequestData);
 impl_check_integrity!(SubmitEvidenceData);
 impl_check_integrity!(RepeatPaymentData);
 
