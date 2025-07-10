@@ -987,35 +987,35 @@ pub enum AttemptStatus {
     Unknown,
 }
 
-impl TryFrom<String> for AttemptStatus {
+impl TryFrom<u32> for AttemptStatus {
     type Error = String;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Ok(match value.as_str() {
-            "0" => AttemptStatus::Started,
-            "1" => AttemptStatus::AuthenticationFailed,
-            "2" => AttemptStatus::RouterDeclined,
-            "3" => AttemptStatus::AuthenticationPending,
-            "4" => AttemptStatus::AuthenticationSuccessful,
-            "5" => AttemptStatus::Authorized,
-            "6" => AttemptStatus::AuthorizationFailed,
-            "7" => AttemptStatus::Charged,
-            "8" => AttemptStatus::Authorizing,
-            "9" => AttemptStatus::CodInitiated,
-            "10" => AttemptStatus::Voided,
-            "11" => AttemptStatus::VoidInitiated,
-            "12" => AttemptStatus::CaptureInitiated,
-            "13" => AttemptStatus::CaptureFailed,
-            "14" => AttemptStatus::VoidFailed,
-            "15" => AttemptStatus::AutoRefunded,
-            "16" => AttemptStatus::PartialCharged,
-            "17" => AttemptStatus::PartialChargedAndChargeable,
-            "18" => AttemptStatus::Unresolved,
-            "19" => AttemptStatus::Pending,
-            "20" => AttemptStatus::Failure,
-            "21" => AttemptStatus::PaymentMethodAwaited,
-            "22" => AttemptStatus::ConfirmationAwaited,
-            "23" => AttemptStatus::DeviceDataCollectionPending,
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            1 => AttemptStatus::Started,
+            2 => AttemptStatus::AuthenticationFailed,
+            3 => AttemptStatus::RouterDeclined,
+            4 => AttemptStatus::AuthenticationPending,
+            5 => AttemptStatus::AuthenticationSuccessful,
+            6 => AttemptStatus::Authorized,
+            7 => AttemptStatus::AuthorizationFailed,
+            8 => AttemptStatus::Charged,
+            9 => AttemptStatus::Authorizing,
+            10 => AttemptStatus::CodInitiated,
+            11 => AttemptStatus::Voided,
+            12 => AttemptStatus::VoidInitiated,
+            13 => AttemptStatus::CaptureInitiated,
+            14 => AttemptStatus::CaptureFailed,
+            15 => AttemptStatus::VoidFailed,
+            16 => AttemptStatus::AutoRefunded,
+            17 => AttemptStatus::PartialCharged,
+            18 => AttemptStatus::PartialChargedAndChargeable,
+            19 => AttemptStatus::Unresolved,
+            20 => AttemptStatus::Pending,
+            21 => AttemptStatus::Failure,
+            22 => AttemptStatus::PaymentMethodAwaited,
+            23 => AttemptStatus::ConfirmationAwaited,
+            24 => AttemptStatus::DeviceDataCollectionPending,
             _ => AttemptStatus::Unknown,
         })
     }
