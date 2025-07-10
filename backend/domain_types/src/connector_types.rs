@@ -617,8 +617,10 @@ impl PaymentFlowData {
             .and_then(|billing_address| billing_address.get_optional_full_name())
     }
 
-    pub fn set_order_reference_id(mut self, reference_id: String) -> Self {
-        self.reference_id = Some(reference_id);
+    pub fn set_order_reference_id(mut self, reference_id: Option<String>) -> Self {
+        if let Some(id) = reference_id {
+            self.reference_id = Some(id);
+        }
         self
     }
 }
