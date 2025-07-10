@@ -3,14 +3,15 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, CreateSessionToken, CreateSessionToken, FlowName, PSync,
+        Refund, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SessionTokenRequestData, SessionTokenRequestData, SessionTokenResponseData,
+        SessionTokenResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -158,6 +159,25 @@ impl Payments {
                 payment_session_data.session_token
             );
             payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
+        } else {
+            payment_flow_data
+        };
+
+        let should_do_session_token = connector_data.connector.should_do_session_token();
+
+        let payment_flow_data = if should_do_session_token {
+            let mut flow_data = payment_flow_data;
+            self.handle_session_token(
+                connector_data.clone(),
+                &mut flow_data,
+                connector_auth_details.clone(),
+                &payload,
+                &connector.to_string(),
+                &service_name,
+            )
+            .await
+            .map_err(|e| e)?;
+            flow_data
         } else {
             payment_flow_data
         };
@@ -528,6 +548,75 @@ impl Payments {
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
                 None,
             )),
+        }
+    }
+
+    async fn handle_session_token<T>(
+        &self,
+        connector_data: ConnectorData,
+        payment_flow_data: &mut PaymentFlowData,
+        connector_auth_details: ConnectorAuthType,
+        payload: &T,
+        connector_name: &str,
+        service_name: &str,
+    ) -> Result<(), tonic::Status>
+    where
+        T: Clone,
+        SessionTokenRequestData: ForeignTryFrom<T, Error = ApplicationErrorResponse>,
+    {
+        // Get connector integration
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            CreateSessionToken,
+            PaymentFlowData,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        // Create session token request data using try_from_foreign
+        let session_token_request_data = SessionTokenRequestData::foreign_try_from(payload.clone())
+            .map_err(|e| {
+                tonic::Status::invalid_argument(format!("Invalid session token request data: {e}"))
+            })?;
+
+        let session_token_router_data = RouterDataV2::<
+            CreateSessionToken,
+            PaymentFlowData,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details,
+            request: session_token_request_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        // Execute connector processing
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            session_token_router_data,
+            None,
+            connector_name,
+            service_name,
+        )
+        .await
+        .switch()
+        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+            tonic::Status::internal(format!("Session token creation failed: {e}"))
+        })?;
+
+        match response.response {
+            Ok(SessionTokenResponseData { session_token, .. }) => {
+                tracing::info!("Session token created successfully: {}", session_token);
+                payment_flow_data.session_token = Some(session_token);
+                Ok(())
+            }
+            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
+                "Session token creation error: {}",
+                message
+            ))),
         }
     }
 }

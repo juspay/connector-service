@@ -15,9 +15,9 @@ use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSe
 use domain_types::{
     connector_flow::{
         Accept, Accept, Authorize, Authorize, Capture, Capture, CreateOrder, CreateOrder,
-        CreateSessionToken, CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, RSync,
-        RSync, Refund, Refund, SetupMandate, SetupMandate, SubmitEvidence, SubmitEvidence, Void,
-        Void,
+        CreateSessionToken, CreateSessionToken, CreateSessionToken, DefendDispute, DefendDispute,
+        PSync, PSync, RSync, RSync, Refund, Refund, SetupMandate, SetupMandate, SubmitEvidence,
+        SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
@@ -25,8 +25,9 @@ use domain_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
+        SessionTokenRequestData, SessionTokenRequestData, SessionTokenResponseData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -435,6 +436,16 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for Adyen<T>
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Adyen
 {
 }
 
