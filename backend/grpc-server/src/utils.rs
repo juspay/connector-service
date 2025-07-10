@@ -220,13 +220,17 @@ where
             // Try converting to JSON Value
             if let Ok(serde_json::Value::Object(map)) = serde_json::to_value(res_ref) {
                 if let Some(status_val) = map.get("status") {
-                    let status_str = match status_val {
-                        serde_json::Value::String(s) => s.clone(),
-                        _ => status_val.to_string(), // fallback for non-string status
+                    let status_num_opt = status_val.as_number();
+                    let status_u32_opt: Option<u32> = status_num_opt
+                        .and_then(|n| n.as_u64())
+                        .and_then(|n| u32::try_from(n).ok());
+                    let status_str = if let Some(s) = status_u32_opt {
+                        common_enums::AttemptStatus::try_from(s)
+                            .unwrap_or(common_enums::AttemptStatus::Unknown)
+                            .to_string()
+                    } else {
+                        common_enums::AttemptStatus::Unknown.to_string()
                     };
-                    let status_str = common_enums::AttemptStatus::try_from(status_str)
-                        .unwrap_or(common_enums::AttemptStatus::Unknown)
-                        .to_string();
                     current_span.record("flow_specific_fields.status", status_str);
                 }
             } else {
