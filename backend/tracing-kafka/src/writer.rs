@@ -74,8 +74,14 @@ impl Write for KafkaWriter {
         let message =
             std::str::from_utf8(buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        // Create Kafka record
-        let record: BaseRecord<'_, (), str> = BaseRecord::to(&self.topic).payload(message);
+        // Create Kafka record with timestamp
+        let record: BaseRecord<'_, (), str> =
+            BaseRecord::to(&self.topic).payload(message).timestamp(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis() as i64)
+                    .unwrap_or(0),
+            );
 
         match self.producer.send(record) {
             Ok(_) => {
