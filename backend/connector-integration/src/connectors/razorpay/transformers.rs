@@ -302,7 +302,7 @@ impl
         &Card,
     )> for RazorpayPaymentRequest
 {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         value: (
@@ -318,7 +318,10 @@ impl
         ),
     ) -> Result<Self, Self::Error> {
         let (item, _card_data) = value;
-        let amount = item.amount;
+        let amount = item
+            .amount_converter
+            .convert(item.amount, item.router_data.request.currency)
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         let currency = item.router_data.request.currency.to_string();
 
         let billing = item
@@ -418,7 +421,7 @@ impl
         >,
     > for RazorpayPaymentRequest
 {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RazorpayRouterData<
@@ -429,7 +432,7 @@ impl
             PaymentMethodData::Card(card) => RazorpayPaymentRequest::try_from((item, card)),
             _ => Err(domain_types::errors::ConnectorError::NotImplemented(
                 "Only card payments are supported".into(),
-            )),
+            ).into()),
         }
     }
 }
