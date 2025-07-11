@@ -618,8 +618,8 @@ impl PaymentFlowData {
     }
 
     pub fn set_order_reference_id(mut self, reference_id: Option<String>) -> Self {
-        if let Some(id) = reference_id {
-            self.reference_id = Some(id);
+        if reference_id.is_some() && self.reference_id.is_none() {
+            self.reference_id = reference_id;
         }
         self
     }
