@@ -16,11 +16,13 @@ pub mod constants {
     pub const PAYMENT_MODE_UPI: &str = "UPI";
     pub const UPI_CHANNEL_UPIPUSH: &str = "UPIPUSH";
     pub const PAYMENT_FLOW_NONE: &str = "NONE";
-    pub const AUTH_MODE_DEBIT_PIN: &str = "DEBIT_PIN";
+    pub const AUTH_MODE_DEBIT_PIN: &str = "pin";
+    pub const AUTH_MODE_OTP: &str = "otp";
     
     // Response codes
     pub const SUCCESS_CODE: &str = "0000";
     pub const DUPLICATE_CODE: &str = "0002";
+    pub const QR_SUCCESS_CODE: &str = "QR_0001";
     
     // Default values
     pub const DEFAULT_CUSTOMER_ID: &str = "guest";
@@ -58,6 +60,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use ring::{digest, rand::{SecureRandom, SystemRandom}};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 
 #[derive(Debug, Clone)]
@@ -92,6 +95,7 @@ impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
 pub enum UpiFlowType {
     Intent,
     Collect,
+    // QrCode,
 }
 
 pub fn determine_upi_flow(
@@ -111,7 +115,10 @@ pub fn determine_upi_flow(
                 },
                 UpiData::UpiIntent(_) => {
                     Ok(UpiFlowType::Intent)
-                }
+                },
+                // UpiData::UpiQr(_) => {
+                //     Ok(UpiFlowType::QrCode)
+                // }
             }
         },
         _ => {
@@ -693,10 +700,9 @@ impl TryFrom<&domain_types::router_data_v2::RouterDataV2<
         let phone = item.resource_common_data.get_optional_billing_phone_number().map(|p| p.peek().to_string());
         let first_name = item.resource_common_data.get_optional_billing_first_name().map(|name| name.peek().to_string());
         let last_name = item.resource_common_data.get_optional_billing_last_name().map(|name| name.peek().to_string());
-        
         // Extract session token from previous session token response
-        let session_token = item.request.session_token
-            .as_ref()
+        let session_token = item.resource_common_data.get_session_token()
+            .ok()
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "session_token",
             })?
@@ -741,7 +747,7 @@ impl PaytmProcessTxnRequest {
             mid: auth.merchant_id.peek().to_string(),
             order_id: item.payment_id.clone(),
             request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
-            payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
+            payment_mode: "UPI_INTENT".to_string(), // UPI Intent flow
             payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
         };
         
@@ -774,11 +780,12 @@ impl PaytmNativeProcessTxnRequest {
             order_id: item.payment_id.clone(),
             payment_mode: constants::PAYMENT_MODE_UPI.to_string(),
             payer_account: Some(vpa),
-            channel_code: None, // Gateway code if needed
+            channel_code: Some("collect".to_string()), // Gateway code if needed
             channel_id: auth.channel_id.clone(),
             txn_token: item.session_token.clone(),
-            auth_mode: Some(constants::AUTH_MODE_DEBIT_PIN.to_string()),
+            auth_mode: None,
         };
+
         
         Ok(Self { head, body })
     }
@@ -786,5 +793,105 @@ impl PaytmNativeProcessTxnRequest {
 
 // Note: Use PaytmNativeProcessTxnRequest::try_from_with_auth for production code
 // This implementation is deprecated and should not be used
+
+// UPI QR Code Flow Request/Response Structures
+
+// #[derive(Debug, Serialize)]
+// pub struct PaytmQRRequest {
+//     pub head: PaytmRequestHeader,
+//     pub body: PaytmQRRequestPayload,
+// }
+
+// #[derive(Debug, Serialize)]
+// pub struct PaytmQRRequestPayload {
+//     pub mid: String,                                    // Merchant ID
+//     #[serde(rename = "businessType")]
+//     pub business_type: String,                          // "UPI_QR_CODE"
+//     #[serde(rename = "orderId")]
+//     pub order_id: String,                               // Transaction reference
+//     pub amount: String,                                 // Amount as string
+//     #[serde(rename = "posId")]
+//     pub pos_id: String,                                 // POS identifier
+//     #[serde(rename = "imageRequired")]
+//     pub image_required: Option<bool>,                   // QR image generation flag
+// }
+
+// impl PaytmQRRequest {
+//     pub fn try_from_with_auth(
+//         item: &PaytmAuthorizeRouterData,
+//         auth: &PaytmAuthType,
+//     ) -> CustomResult<Self, errors::ConnectorError> {
+//         let unix_timestamp = SystemTime::now()
+//             .duration_since(UNIX_EPOCH)
+//             .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?
+//             .as_secs()
+//             .to_string();
+
+//         let body = PaytmQRRequestPayload {
+//             mid: auth.merchant_id.peek().clone(),
+//             business_type: "UPI_QR_CODE".to_string(),
+//             order_id: item.payment_id.clone(),
+//             amount: item.amount.to_string(),
+//             pos_id: format!("POS_{}", item.payment_id), // Generate POS ID from payment ID
+//             image_required: Some(true), // Request QR image
+//         };
+
+//         let body_json = serde_json::to_string(&body)
+//             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        
+//         let signature = generate_paytm_signature(&body_json, auth.merchant_key.peek())?;
+        
+//         let head = PaytmRequestHeader {
+//             client_id: None, // PayTM QR doesn't require client_id
+//             version: constants::API_VERSION.to_string(),
+//             request_timestamp: unix_timestamp,
+//             channel_id: auth.channel_id.clone(),
+//             signature,
+//         };
+
+//         Ok(Self { head, body })
+//     }
+// }
+
+// #[derive(Debug, Deserialize, Serialize)]
+// pub struct PaytmQRResponse {
+//     pub head: PaytmRespHead,
+//     pub body: PaytmQRRespBodyTypes,
+// }
+
+// #[derive(Debug, Deserialize, Serialize)]
+// #[serde(untagged)]
+// pub enum PaytmQRRespBodyTypes {
+//     SuccessBody(PaytmQRResponsePayload),
+//     FailureBody(PaytmQRErrorResponse),
+// }
+
+// #[derive(Debug, Deserialize, Serialize)]
+// pub struct PaytmQRResponsePayload {
+//     #[serde(rename = "qrCodeId")]
+//     pub qr_code_id: String,                             // QR code identifier
+//     #[serde(rename = "qrData")]
+//     pub qr_data: String,                                // QR code data string
+//     pub image: Option<String>,                          // Base64 encoded QR image
+//     #[serde(rename = "resultInfo")]
+//     pub result_info: PaytmResultInfo,               // Result information
+// }
+
+// #[derive(Debug, Deserialize, Serialize)]
+// pub struct PaytmQRErrorResponse {
+//     #[serde(rename = "resultInfo")]
+//     pub result_info: PaytmResultInfo,
+//     #[serde(rename = "errorCode")]
+//     pub error_code: Option<String>,
+//     #[serde(rename = "errorMessage")]
+//     pub error_message: Option<String>,
+// }
+
+// // QR-specific success code constant
+// impl PaytmQRResponsePayload {
+//     pub fn is_successful(&self) -> bool {
+//         self.result_info.result_code == constants::QR_SUCCESS_CODE
+//     }
+// }
 
 // Response transformation implementations completed - all structs properly defined
