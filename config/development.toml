@@ -3,6 +3,14 @@ enabled = true
 level = "TRACE"
 log_format = "default"
 
+[log.kafka]
+enabled = true
+level = "info"
+filtering_directive = "info"
+brokers = ["localhost:9092"]
+topic = "connector-service-logs"
+
+
 [server]
 host = "127.0.0.1"
 port = 8000
