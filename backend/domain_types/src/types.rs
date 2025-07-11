@@ -279,6 +279,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         })))
                     }
                 },
+                // grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
+                //     Ok(PaymentMethodData::Upi(
+                //         crate::payment_method_data::UpiData::UpiQr(
+                //             crate::payment_method_data::UpiQrData {},
+                //         ),
+                //     ))
+                // }
+                _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Unsupported payment method".to_owned(),
+                    error_object: None,
+                }))),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
