@@ -192,6 +192,13 @@ pub fn get_header_key_value<'a>(
     get_header_field(headers.get(key))
 }
 
+pub fn get_http_header<'a>(
+    key: &str,
+    headers: &'a http::HeaderMap,
+) -> CustomResult<&'a str, errors::ConnectorError> {
+    get_header_field(headers.get(key))
+}
+
 fn get_header_field(
     field: Option<&http::HeaderValue>,
 ) -> CustomResult<&str, errors::ConnectorError> {

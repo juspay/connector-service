@@ -29,7 +29,7 @@ impl<F, FCD, Req, Resp> FlowTypes for &RouterDataV2<F, FCD, Req, Resp> {
 }
 
 pub trait GetFormData {
-    fn get_form_data(&self) -> reqwest::multipart::Form;
+    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError>;
 }
 
 pub struct NoRequestBody;
@@ -132,7 +132,8 @@ macro_rules! expand_fn_get_request_body {
                     router_data: req.clone(),
                 };
                 let request = bridge.request_body(input_data)?;
-                let form_data = <$curl_req as GetFormData>::get_form_data(&request);
+                let form_data = <$curl_req as GetFormData>::get_form_data(&request)
+                .change_context(errors::ConnectorError::ParsingFailed)?;
                 Ok(Some(macro_types::RequestContent::FormData(form_data)))
             }
         }
@@ -395,6 +396,57 @@ macro_rules! macro_connector_implementation {
                 $request,
                 $response,
                 false
+            );
+        }
+    };
+
+    // Version skip_handle_response: true
+    (
+        connector_default_implementations: [$($function_name: ident), *],
+        connector: $connector: ty,
+        $(curl_request: $content_type:ident($curl_req: ty),)?
+        curl_response:$curl_res: ty,
+        flow_name:$flow: ident,
+        resource_common_data:$resource_common_data: ty,
+        flow_request:$request: ty,
+        flow_response:$response: ty,
+        http_method: $http_method_type:ident,
+        skip_handle_response: true,
+        other_functions: {
+            $($function_def: tt)*
+        }
+    ) => {
+        impl
+            ConnectorIntegrationV2<
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+            > for $connector
+        {
+            fn get_http_method(&self) -> common_utils::request::Method {
+                common_utils::request::Method::$http_method_type
+            }
+            $($function_def)*
+            $(
+                macros::expand_default_functions!(
+                    function: $function_name,
+                    flow_name:$flow,
+                    resource_common_data:$resource_common_data,
+                    flow_request:$request,
+                    flow_response:$response,
+                );
+            )*
+            macros::expand_fn_get_request_body!(
+                $connector,
+                $($curl_req,)?
+                $($content_type,)?
+                $curl_res,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response
+
             );
         }
     };
