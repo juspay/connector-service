@@ -70,6 +70,29 @@ pub struct CashfreeOrderCreateRequest {
     pub order_expiry_time: Option<String>,
 }
 
+// Supporting types for Order Response (missing from original implementation)
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeOrderCreateUrlResponse {
+    pub url: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeOrderTagsType {
+    pub metadata1: Option<String>,
+    pub metadata2: Option<String>,
+    pub metadata3: Option<String>,
+    pub metadata4: Option<String>,
+    pub metadata5: Option<String>,
+    pub metadata6: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeOrderSplitsType {
+    pub vendor_id: String,
+    pub amount: f64,
+    pub percentage: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CashfreeCustomerDetails {
     pub customer_id: String,
@@ -90,12 +113,28 @@ pub struct CashfreeOrderCreateResponse {
     pub payment_session_id: String,  // KEY: Used in Authorize flow
     pub cf_order_id: i64,
     pub order_id: String,
+    pub entity: String,              // ADDED: Missing field from Haskell
     pub order_amount: f64,
     pub order_currency: String,
     pub order_status: String,
+    pub order_expiry_time: String,   // ADDED: Missing field from Haskell
+    pub order_note: Option<String>,  // ADDED: Missing optional field from Haskell
     pub customer_details: CashfreeCustomerDetails,
     pub order_meta: CashfreeOrderMeta,
+    pub payments: CashfreeOrderCreateUrlResponse,    // ADDED: Missing field from Haskell
+    pub settlements: CashfreeOrderCreateUrlResponse, // ADDED: Missing field from Haskell
+    pub refunds: CashfreeOrderCreateUrlResponse,     // ADDED: Missing field from Haskell
+    pub order_tags: Option<CashfreeOrderTagsType>,   // ADDED: Missing optional field from Haskell
+    pub order_splits: Option<Vec<CashfreeOrderSplitsType>>, // ADDED: Missing optional field from Haskell
 }
+
+// ADDED: Union type for handling success/failure responses (matches Haskell pattern)
+// #[derive(Debug, Deserialize)]
+// #[serde(untagged)]
+// pub enum CashfreeOrderCreateResponseWrapper {
+//     Success(CashfreeOrderCreateResponse),
+//     Error(CashfreeErrorResponse),
+// }
 
 // ============================================================================
 // Payment Authorization (Phase 2)
@@ -111,12 +150,28 @@ pub struct CashfreePaymentRequest {
 #[derive(Debug, Serialize)]
 pub struct CashfreePaymentMethod {
     pub upi: Option<CashfreeUpiDetails>,
-    // All other methods set to None for UPI-only implementation
+    // ADDED: All other payment methods (set to None for UPI-only implementation)
+    // This matches Haskell CashfreePaymentMethodType structure exactly
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app: Option<()>,           // CashFreeAPPType - None for UPI-only
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub netbanking: Option<()>,    // CashFreeNBType - None for UPI-only  
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card: Option<()>,          // CashFreeCARDType - None for UPI-only
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emi: Option<()>,           // CashfreeEmiType - None for UPI-only
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paypal: Option<()>,        // CashfreePaypalType - None for UPI-only
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paylater: Option<()>,      // CashFreePaylaterType - None for UPI-only
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cardless_emi: Option<()>,  // CashFreeCardlessEmiType - None for UPI-only
 }
 
 #[derive(Debug, Serialize)]
 pub struct CashfreeUpiDetails {
     pub channel: String,    // "link" for Intent, "collect" for Collect
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub upi_id: String,     // VPA for collect, empty for intent
 }
 
@@ -228,16 +283,24 @@ impl TryFrom<&RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData,
         };
         
         // Build order meta with return and notify URLs
+        let return_url = item.resource_common_data.return_url
+            .clone()
+            .ok_or(ConnectorError::MissingRequiredField {
+                field_name: "return_url"
+            })?;
+        
+        // TODO: Make webhook URL configurable - currently hardcoded for compilation
+        // CreateOrder flow doesn't have access to webhook_url field
+        let notify_url = "https://api.yourdomain.com/webhooks/cashfree".to_string();
+        
         let order_meta = CashfreeOrderMeta {
-            return_url: item.resource_common_data.return_url
-                .clone()
-                .unwrap_or_else(|| "https://example.com/return".to_string()),
-            notify_url: "https://example.com/webhook".to_string(), // TODO: Get from config
+            return_url,
+            notify_url,
             payment_methods: Some("upi".to_string()),
         };
         
         Ok(Self {
-            order_id: item.resource_common_data.connector_request_reference_id.clone(),
+            order_id: item.resource_common_data.connector_request_reference_id.clone(),  // FIXED: Use payment_id not connector_request_reference_id
             order_amount: (item.request.amount.get_amount_as_i64() as f64) / 100.0,
             order_currency: item.request.currency.to_string(),
             customer_details,
@@ -273,12 +336,28 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, Pa
                     channel: "link".to_string(),    // Intent flow uses "link" channel
                     upi_id: "".to_string(),         // No UPI ID for intent
                 }),
+                // FIXED: Set all non-UPI methods to None (matches Haskell structure)
+                app: None,
+                netbanking: None,
+                card: None,
+                emi: None,
+                paypal: None,
+                paylater: None,
+                cardless_emi: None,
             },
             UpiFlowType::Collect { vpa } => CashfreePaymentMethod {
                 upi: Some(CashfreeUpiDetails {
                     channel: "collect".to_string(), // Collect flow uses "collect" channel
                     upi_id: vpa,                    // UPI VPA required for collect
                 }),
+                // FIXED: Set all non-UPI methods to None (matches Haskell structure)
+                app: None,
+                netbanking: None,
+                card: None,
+                emi: None,
+                paypal: None,
+                paylater: None,
+                cardless_emi: None,
             },
         };
         
@@ -325,7 +404,7 @@ impl TryFrom<ResponseRouterData<CashfreePaymentResponse, RouterDataV2<Authorize,
                 
                 // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
                 let trimmed_link = if let Some(pos) = deep_link.find('?') {
-                    &deep_link[..pos]
+                    &deep_link[(pos+1)..]
                 } else {
                     &deep_link
                 };
