@@ -12,5 +12,4 @@ pub struct RouterDataV2<Flow, ResourceCommonData, FlowSpecificRequest, FlowSpeci
     pub request: FlowSpecificRequest,
     /// Contains flow-specific data that the connector responds with.
     pub response: Result<FlowSpecificResponse, ErrorResponse>,
-    pub(crate) status: common_enums::AttemptStatus,
 }
