@@ -22,3 +22,6 @@ pub mod macros;
 
 pub mod checkout;
 pub use self::checkout::Checkout;
+
+pub mod fiuu;
+pub use self::fiuu::Fiuu;
