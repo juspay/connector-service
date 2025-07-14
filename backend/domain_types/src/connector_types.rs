@@ -48,6 +48,7 @@ pub enum ConnectorEnum {
     Xendit,
     Checkout,
     Authorizedotnet,
+    Payu,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -64,6 +65,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

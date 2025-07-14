@@ -1,45 +1,40 @@
 pub mod transformers;
-use common_utils::types::{AmountConvertor, StringMajorUnitForConnector};
-use error_stack::ResultExt;
-use serde::{Deserialize, Serialize};
 
-// Import all necessary framework components
+use error_stack::ResultExt;
 use domain_types::{
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        DisputeFlowData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentsCaptureData, PaymentsSyncData, PaymentVoidData, RefundFlowData,
+        RefundsData, RefundsResponseData, RefundSyncData, AcceptDisputeData,
+        DisputeResponseData, SubmitEvidenceData, SetupMandateRequestData, DisputeDefendData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse
     },
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void, CreateOrder,
     },
-};
-use domain_types::{
-    payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    types::Connectors,
 };
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
+    errors::CustomResult, types::StringMajorUnit, ext_traits::ByteSliceExt,
 };
+use common_enums::enums;
+use domain_types::errors::ConnectorError;
+use hyperswitch_masking::Maskable;
+use interfaces::{
+    api::ConnectorCommon, events::connector_api_logs::ConnectorEvent, 
+    connector_integration_v2::ConnectorIntegrationV2, connector_types,
+};
+use domain_types::router_response_types::Response;
+use common_utils::RequestContent;
 use super::macros;
+use crate::types::ResponseRouterData;
 
 use transformers::{
-    self as payu, PayuPaymentRequest, PayuPaymentResponse
+    PayuAuthType, PayuPaymentRequest, PayuPaymentResponse, PayuErrorResponse
 };
-
-// #[derive(Clone)]
-// pub struct Payu {
-//     pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = String> + Sync),
-// }
-
-// impl Payu {
-//     pub const fn new() -> &'static Self {
-//         &Self {
-//             // Based on Payu gateway analysis: uses string major units (e.g., "10.50")
-//             amount_converter: &StringMajorUnitForConnector,
-//         }
-//     }
-// }
 
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(
@@ -62,9 +57,9 @@ macros::create_all_prerequisites!(
 
 // Implement authorize flow using macro framework
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector_default_implementations: [get_error_response_v2],
     connector: Payu,
-    curl_request: Json(PayuPaymentRequest),
+    curl_request: FormUrlEncoded(PayuPaymentRequest),
     curl_response: PayuPaymentResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -75,7 +70,7 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let auth = PayuAuthType::try_from(&req.connector_auth_type)?;
             Ok(vec![
                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
@@ -86,9 +81,14 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-            connectors: &Connectors,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/payment/op/v1/user/card", self.base_url(connectors)))
+        ) -> CustomResult<String, ConnectorError> {
+            // Based on PayU analysis: uses /_payment endpoint for UPI transactions
+            let base_url = self.base_url(&req.resource_common_data.connectors);
+            Ok(format!("{}/_payment", base_url))
+        }
+
+        fn get_content_type(&self) -> &'static str {
+            "application/x-www-form-urlencoded"
         }
     }
 );
@@ -108,7 +108,7 @@ impl ConnectorCommon for Payu {
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
         let auth = PayuAuthType::try_from(auth_type)?;
         // Payu uses form-based authentication, not headers
         Ok(vec![])
@@ -118,11 +118,11 @@ impl ConnectorCommon for Payu {
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: PayuErrorResponse = res
             .response
             .parse_struct("Payu ErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
 
         Ok(ErrorResponse {
             status_code: res.status_code,
@@ -131,6 +131,9 @@ impl ConnectorCommon for Payu {
             reason: response.error_description,
             attempt_status: Some(enums::AttemptStatus::Failure),
             connector_transaction_id: response.transaction_id,
+            network_error_message: None,
+            network_advice_code: None,
+            network_decline_code: None,
         })
     }
 }
@@ -141,8 +144,8 @@ impl connector_types::PaymentAuthorizeV2 for Payu {}
 
 // **STUB IMPLEMENTATIONS**: Source Verification Framework stubs for main development
 // These will be replaced with actual implementations in Phase 10
-use crate::interfaces::verification::SourceVerification;
-use crate::types::{ConnectorSourceVerificationSecrets, crypto};
+use interfaces::verification::{SourceVerification, ConnectorSourceVerificationSecrets};
+use common_utils::crypto;
 
 impl SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> for Payu {
     fn get_secrets(&self, _secrets: ConnectorSourceVerificationSecrets) -> CustomResult<Vec<u8>, ConnectorError> {
@@ -202,6 +205,11 @@ impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, Pa
 impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
 impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
 impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
+impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
+impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
+impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData);
+impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
+impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
 // Connector integration implementations for unsupported flows (stubs)
 impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Payu {}
@@ -209,6 +217,11 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
 impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Payu {}
 impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Payu {}
 impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Payu {}
+impl ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Payu {}
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Payu {}
+impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Payu {}
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Payu {}
+impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Payu {}
 
 // Trait aliases (required for compilation)
 impl connector_types::RefundV2 for Payu {}
@@ -216,4 +229,10 @@ impl connector_types::RefundSyncV2 for Payu {}
 impl connector_types::PaymentSyncV2 for Payu {}
 impl connector_types::PaymentVoidV2 for Payu {}
 impl connector_types::PaymentCapture for Payu {}
+impl connector_types::SetupMandateV2 for Payu {}
+impl connector_types::AcceptDispute for Payu {}
+impl connector_types::SubmitEvidenceV2 for Payu {}
+impl connector_types::DisputeDefend for Payu {}
+impl connector_types::IncomingWebhook for Payu {}
+impl connector_types::PaymentOrderCreate for Payu {}
 impl connector_types::ValidationTrait for Payu {}
