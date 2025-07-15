@@ -17,4 +17,4 @@ error-stack = "0.5.0"
 tonic-build = "0.13.0"
 prost-build = "0.13.4"
 heck = "0.5.0"
-g2h = { git = "https://github.com/NishantJoshi00/g2h", branch = "fixing-response" }
+g2h = { git = "https://github.com/NishantJoshi00/g2h", branch = "fixing-response-serializing" }

@@ -1,6 +1,6 @@
 use std::{future::Future, net, sync::Arc};
 
-use axum::{body::Body, extract::Request, http, middleware::Next, response::Response};
+use axum::{extract::Request, http};
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
