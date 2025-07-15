@@ -9,6 +9,8 @@ use domain_types::{
 use crate::shared_metrics as metrics;
 use common_utils::{
     // consts::BASE64_ENGINE,
+    dapr::{create_payment_event, publish_payment_event, PaymentStage},
+    events::ApiEventsType,
     request::{Method, Request, RequestContent},
 };
 use error_stack::{report, ResultExt};
@@ -102,10 +104,75 @@ where
         };
         tracing::info!(request=?masked_request, "request of connector");
         tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
+
+        // Extract reference ID from request body for event publishing
+        let ref_id = if let Some(RequestContent::Json(payload)) = &connector_request.body {
+            // Attempt to serialize the masked payload to get a Value
+            if let Ok(json_value) = serde_json::to_value(&**payload) {
+                json_value
+                    .get("reference")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Publish TXN_INITIATED_WITH_CONNECTOR event
+        if let Some(ref_id) = ref_id {
+            // Use a dummy event type as we'll set payment_id to null
+            let event_type = ApiEventsType::SimplePayment {
+                payment_id: "dummy".to_string(),
+            };
+            let mut event = create_payment_event(
+                event_type,
+                Some(connector_name.to_string()),
+                None,
+                None,
+                None,
+                None,
+                Some("initiated".to_string()),
+                None,
+                PaymentStage::TxnInitiatedWithConnector,
+            );
+
+            // Set payment_id to null (we don't have a real payment ID yet)
+            event.payment_id = None;
+
+            // Set reference_id to our internal reference
+            event.reference_id = Some(ref_id.clone());
+
+            tokio::spawn(async move {
+                if let Err(e) = publish_payment_event(event).await {
+                    tracing::error!("Failed to publish transaction initiated event: {:?}", e);
+                } else {
+                    tracing::info!("Successfully published transaction initiated event");
+                }
+            });
+        }
+
         masked_request
     });
     let result = match connector_request {
         Some(request) => {
+            // Extract all necessary information from the request BEFORE we move it
+            let ref_id = if let Some(RequestContent::Json(payload)) = &request.body {
+                // Attempt to serialize the masked payload to get a Value
+                if let Ok(json_value) = serde_json::to_value(&**payload) {
+                    json_value
+                        .get("reference")
+                        .and_then(|v| v.as_str())
+                        .map(String::from)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            // We need to extract all needed info before moving the request
             let url = request.url.clone();
             let method = request.method;
             metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
@@ -131,6 +198,73 @@ where
                 .with_label_values(&[&method.to_string(), service_name, connector_name])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
+
+            // Store the reference ID for later use
+            let ref_id_clone = ref_id.clone();
+
+            // Publish CONNECTOR_RESPONSE_RECEIVED event
+            if let Some(ref_id) = ref_id_clone {
+                if let Ok(Ok(body)) = &response {
+                    // Extract connector transaction ID from response if available
+                    let connector_txn_id = if let Ok(json_value) =
+                        serde_json::from_slice::<serde_json::Value>(&body.response)
+                    {
+                        json_value
+                            .get("id")
+                            .and_then(|v| v.as_str())
+                            .map(String::from)
+                            .or_else(|| {
+                                json_value
+                                    .get("transaction_id")
+                                    .and_then(|v| v.as_str())
+                                    .map(String::from)
+                            })
+                    } else {
+                        None
+                    };
+
+                    // Use dummy event type, we'll set the actual values later
+                    let event_type = ApiEventsType::SimplePayment {
+                        payment_id: "dummy".to_string(),
+                    };
+                    let mut event = create_payment_event(
+                        event_type,
+                        Some(connector_name.to_string()),
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some("response_received".to_string()),
+                        None,
+                        PaymentStage::ResponseReceivedFromConnector,
+                    );
+
+                    // Set the reference_id to our internal reference ID
+                    event.reference_id = Some(ref_id.clone());
+
+                    // Set payment_id to connector transaction ID if available
+                    if let Some(txn_id) = connector_txn_id {
+                        tracing::info!(
+                            "Setting connector transaction ID in response event: {}",
+                            txn_id
+                        );
+                        event.payment_id = Some(txn_id);
+                    }
+
+                    // Use tokio::spawn to avoid blocking
+                    let connector_name = connector_name.to_string();
+                    tokio::spawn(async move {
+                        if let Err(e) = publish_payment_event(event).await {
+                            tracing::error!("Failed to publish connector response event: {:?}", e);
+                        } else {
+                            tracing::info!(
+                                "Successfully published connector response event for {}",
+                                connector_name
+                            );
+                        }
+                    });
+                }
+            }
 
             match response {
                 Ok(body) => {
