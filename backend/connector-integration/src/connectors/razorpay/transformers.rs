@@ -1551,3 +1551,85 @@ pub enum RazorpayUpiPaymentsResponse {
         error: RazorpayErrorResponse,
     },
 }
+
+// Wrapper type for UPI response transformations
+#[derive(Debug)]
+pub struct RazorpayUpiResponseData {
+    pub transaction_id: ResponseId,
+    pub redirection_data: Option<domain_types::router_response_types::RedirectForm>,
+}
+
+impl<F, Req>
+    ForeignTryFrom<(
+        RazorpayUpiPaymentsResponse,
+        RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+        u16,
+        Vec<u8>, // raw_response
+    )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
+{
+    type Error = domain_types::errors::ConnectorError;
+
+    fn foreign_try_from(
+        (upi_response, data, _status_code, raw_response): (
+            RazorpayUpiPaymentsResponse,
+            RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (transaction_id, redirection_data) = match upi_response {
+            RazorpayUpiPaymentsResponse::SuccessIntent {
+                razorpay_payment_id,
+                link,
+            } => {
+                let redirect_form =
+                    domain_types::router_response_types::RedirectForm::Uri { uri: link };
+                (
+                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
+                    Some(redirect_form),
+                )
+            }
+            RazorpayUpiPaymentsResponse::SuccessCollect {
+                razorpay_payment_id,
+            } => {
+                // For UPI Collect, there's no link, so no redirection data
+                (
+                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
+                    None,
+                )
+            }
+            RazorpayUpiPaymentsResponse::NullResponse {
+                razorpay_payment_id,
+            } => {
+                // Handle null response - likely an error condition
+                match razorpay_payment_id {
+                    Some(payment_id) => (ResponseId::ConnectorTransactionId(payment_id), None),
+                    None => {
+                        // Payment ID is null, this is likely an error
+                        return Err(domain_types::errors::ConnectorError::ResponseHandlingFailed);
+                    }
+                }
+            }
+            RazorpayUpiPaymentsResponse::Error { error: _ } => {
+                // Handle error case - this should probably return an error instead
+                return Err(domain_types::errors::ConnectorError::ResponseHandlingFailed);
+            }
+        };
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: transaction_id,
+            redirection_data: Box::new(redirection_data),
+            connector_metadata: None,
+            mandate_reference: Box::new(None),
+            network_txn_id: None,
+            connector_response_reference_id: data.resource_common_data.reference_id.clone(),
+            incremental_authorization_allowed: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+        };
+
+        Ok(RouterDataV2 {
+            response: Ok(payments_response_data),
+            ..data
+        })
+    }
+}

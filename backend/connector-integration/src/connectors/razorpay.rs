@@ -242,54 +242,18 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                         "RazorpayUpiPaymentsResponse",
                     );
 
-                let (transaction_id, redirection_data) = match upi_response_result {
+                match upi_response_result {
                     Ok(upi_response) => {
                         with_response_body!(event_builder, upi_response);
 
-                        match upi_response {
-                            razorpay::RazorpayUpiPaymentsResponse::SuccessIntent {
-                                razorpay_payment_id,
-                                link,
-                            } => {
-                                let redirect_form =
-                                    domain_types::router_response_types::RedirectForm::Uri {
-                                        uri: link,
-                                    };
-                                (
-                                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
-                                    Some(redirect_form),
-                                )
-                            }
-                            razorpay::RazorpayUpiPaymentsResponse::SuccessCollect {
-                                razorpay_payment_id,
-                            } => {
-                                // For UPI Collect, there's no link, so no redirection data
-                                (
-                                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
-                                    None,
-                                )
-                            }
-                            razorpay::RazorpayUpiPaymentsResponse::NullResponse {
-                                razorpay_payment_id,
-                            } => {
-                                // Handle null response - likely an error condition
-                                match razorpay_payment_id {
-                                    Some(payment_id) => {
-                                        (ResponseId::ConnectorTransactionId(payment_id), None)
-                                    }
-                                    None => {
-                                        // Payment ID is null, this is likely an error
-                                        return Err(
-                                            errors::ConnectorError::ResponseHandlingFailed.into()
-                                        );
-                                    }
-                                }
-                            }
-                            razorpay::RazorpayUpiPaymentsResponse::Error { error: _ } => {
-                                // Handle error case - this should probably return an error instead
-                                return Err(errors::ConnectorError::ResponseHandlingFailed.into());
-                            }
-                        }
+                        // Use the transformer for UPI response handling
+                        RouterDataV2::foreign_try_from((
+                            upi_response,
+                            data.clone(),
+                            res.status_code,
+                            res.response.to_vec(),
+                        ))
+                        .change_context(errors::ConnectorError::ResponseHandlingFailed)
                     }
                     Err(_) => {
                         // Fall back to regular payment response
@@ -301,7 +265,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                             )?;
 
                         with_response_body!(event_builder, response);
-                        return RouterDataV2::foreign_try_from((
+                        RouterDataV2::foreign_try_from((
                             response,
                             data.clone(),
                             res.status_code,
@@ -309,27 +273,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                             false,
                             data.request.payment_method_type,
                         ))
-                        .change_context(errors::ConnectorError::ResponseHandlingFailed);
+                        .change_context(errors::ConnectorError::ResponseHandlingFailed)
                     }
-                };
-
-                let payments_response_data = PaymentsResponseData::TransactionResponse {
-                    resource_id: transaction_id,
-                    redirection_data: Box::new(redirection_data),
-                    connector_metadata: None,
-                    mandate_reference: Box::new(None),
-                    network_txn_id: None,
-                    connector_response_reference_id: data.resource_common_data.reference_id.clone(),
-                    incremental_authorization_allowed: None,
-                    raw_connector_response: Some(
-                        String::from_utf8_lossy(&res.response).to_string(),
-                    ),
-                };
-
-                Ok(RouterDataV2 {
-                    response: Ok(payments_response_data),
-                    ..data.clone()
-                })
+                }
             }
             _ => {
                 // Regular payment response handling
@@ -408,7 +354,6 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         if request_ref_id != "default_reference_id" {
             // Use orders endpoint when request_ref_id is provided
             let url = format!("{base_url}v1/orders/{request_ref_id}/payments");
-            tracing::info!("Razorpay PSync URL (orders endpoint): {}", url);
             Ok(url)
         } else {
             // Extract payment ID from connector_transaction_id for standard payment sync
@@ -419,7 +364,6 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
             let url = format!("{base_url}v1/payments/{payment_id}");
-            tracing::info!("Razorpay PSync URL (payments endpoint): {}", url);
             Ok(url)
         }
     }
@@ -443,21 +387,14 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
 
         // Extract the payment response from either format
         let payment_response = match sync_response {
-            RazorpayV2SyncResponse::PaymentResponse(payment) => {
-                tracing::info!("Razorpay PSync: Direct payment response received");
-                *payment
-            }
+            RazorpayV2SyncResponse::PaymentResponse(payment) => *payment,
             RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
-                tracing::info!(
-                    "Razorpay PSync: Order payments collection received with {} items",
-                    collection.count
-                );
-
                 // Get the first (and typically only) payment from the collection
-                collection.items.into_iter().next().ok_or_else(|| {
-                    tracing::error!("Razorpay PSync: Empty payments collection received");
-                    errors::ConnectorError::ResponseHandlingFailed
-                })?
+                collection
+                    .items
+                    .into_iter()
+                    .next()
+                    .ok_or_else(|| errors::ConnectorError::ResponseHandlingFailed)?
             }
         };
 
