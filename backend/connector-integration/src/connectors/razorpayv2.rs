@@ -717,29 +717,14 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
             i.set_response_body(&response)
         }
 
-        // Map Razorpay refund status to internal status
-        use common_enums::RefundStatus;
-        let status = match response.status.as_str() {
-            "processed" => RefundStatus::Success,
-            "pending" | "created" => RefundStatus::Pending,
-            "failed" => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
-        };
-
-        let refunds_response_data = RefundsResponseData {
-            connector_refund_id: response.id,
-            refund_status: status,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-        };
-
-        Ok(domain_types::router_data_v2::RouterDataV2 {
-            response: Ok(refunds_response_data),
-            resource_common_data: RefundFlowData {
-                status,
-                ..data.resource_common_data.clone()
-            },
-            ..data.clone()
-        })
+        // Use the transformer for refund response handling
+        RouterDataV2::foreign_try_from((
+            response,
+            data.clone(),
+            res.status_code,
+            res.response.to_vec(),
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -843,29 +828,14 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
             i.set_response_body(&response)
         }
 
-        // Map Razorpay refund status to internal status
-        use common_enums::RefundStatus;
-        let status = match response.status.as_str() {
-            "processed" => RefundStatus::Success,
-            "pending" | "created" => RefundStatus::Pending,
-            "failed" => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
-        };
-
-        let refunds_response_data = RefundsResponseData {
-            connector_refund_id: response.id,
-            refund_status: status,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-        };
-
-        Ok(domain_types::router_data_v2::RouterDataV2 {
-            response: Ok(refunds_response_data),
-            resource_common_data: RefundFlowData {
-                status,
-                ..data.resource_common_data.clone()
-            },
-            ..data.clone()
-        })
+        // Use the transformer for refund response handling
+        RouterDataV2::foreign_try_from((
+            response,
+            data.clone(),
+            res.status_code,
+            res.response.to_vec(),
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(

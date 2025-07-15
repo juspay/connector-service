@@ -3,12 +3,13 @@
 use std::str::FromStr;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
+use common_enums::RefundStatus;
 use common_utils::{pii::Email, types::MinorUnit};
 use domain_types::{
-    connector_flow::Authorize,
+    connector_flow::{Authorize, RSync, Refund},
     connector_types::{
         PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        RefundsData, ResponseId,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors,
     payment_address::Address,
@@ -427,6 +428,92 @@ impl TryFrom<&RazorpayV2RouterData<&RefundsData>> for RazorpayV2RefundRequest {
 }
 
 // ============ Response Transformations ============
+
+impl
+    ForeignTryFrom<(
+        RazorpayV2RefundResponse,
+        RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        u16,
+        Vec<u8>, // raw_response
+    )> for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = domain_types::errors::ConnectorError;
+
+    fn foreign_try_from(
+        (response, data, _status_code, raw_response): (
+            RazorpayV2RefundResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        // Map Razorpay refund status to internal status
+        let status = match response.status.as_str() {
+            "processed" => RefundStatus::Success,
+            "pending" | "created" => RefundStatus::Pending,
+            "failed" => RefundStatus::Failure,
+            _ => RefundStatus::Pending,
+        };
+
+        let refunds_response_data = RefundsResponseData {
+            connector_refund_id: response.id,
+            refund_status: status,
+            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+        };
+
+        Ok(RouterDataV2 {
+            response: Ok(refunds_response_data),
+            resource_common_data: RefundFlowData {
+                status,
+                ..data.resource_common_data.clone()
+            },
+            ..data
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        RazorpayV2RefundResponse,
+        RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        u16,
+        Vec<u8>, // raw_response
+    )> for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = domain_types::errors::ConnectorError;
+
+    fn foreign_try_from(
+        (response, data, _status_code, raw_response): (
+            RazorpayV2RefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        // Map Razorpay refund status to internal status
+        let status = match response.status.as_str() {
+            "processed" => RefundStatus::Success,
+            "pending" | "created" => RefundStatus::Pending,
+            "failed" => RefundStatus::Failure,
+            _ => RefundStatus::Pending,
+        };
+
+        let refunds_response_data = RefundsResponseData {
+            connector_refund_id: response.id,
+            refund_status: status,
+            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+        };
+
+        Ok(RouterDataV2 {
+            response: Ok(refunds_response_data),
+            resource_common_data: RefundFlowData {
+                status,
+                ..data.resource_common_data.clone()
+            },
+            ..data
+        })
+    }
+}
 
 impl
     ForeignTryFrom<(
