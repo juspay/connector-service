@@ -564,47 +564,14 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
             i.set_response_body(&sync_response)
         }
 
-        // Extract the payment response from either format
-        let payment_response = match sync_response {
-            razorpayv2::RazorpayV2SyncResponse::PaymentResponse(payment) => *payment,
-            razorpayv2::RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
-                // Get the first (and typically only) payment from the collection
-                collection.items.into_iter().next().ok_or_else(|| {
-                    tracing::error!("RazorpayV2 PSync: Empty payments collection received");
-                    errors::ConnectorError::ResponseHandlingFailed
-                })?
-            }
-        };
-
-        // Map Razorpay payment status to internal status, preserving original status
-        let status = match payment_response.status.as_str() {
-            "created" => AttemptStatus::Pending,
-            "authorized" => AttemptStatus::Authorized,
-            "captured" => AttemptStatus::Charged, // This is the mapping, but we preserve original in metadata
-            "refunded" => AttemptStatus::AutoRefunded,
-            "failed" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
-        };
-
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
-            redirection_data: Box::new(None),
-            connector_metadata: None,
-            mandate_reference: Box::new(None),
-            network_txn_id: None,
-            connector_response_reference_id: payment_response.order_id,
-            incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-        };
-
-        Ok(domain_types::router_data_v2::RouterDataV2 {
-            response: Ok(payments_response_data),
-            resource_common_data: domain_types::connector_types::PaymentFlowData {
-                status,
-                ..data.resource_common_data.clone()
-            },
-            ..data.clone()
-        })
+        // Use the transformer for PSync response handling
+        RouterDataV2::foreign_try_from((
+            sync_response,
+            data.clone(),
+            res.status_code,
+            res.response.to_vec(),
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(

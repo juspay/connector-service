@@ -3,13 +3,14 @@
 use std::str::FromStr;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use common_enums::RefundStatus;
+use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{pii::Email, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, RSync, Refund},
+    connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
         PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors,
     payment_address::Address,
@@ -507,6 +508,68 @@ impl
         Ok(RouterDataV2 {
             response: Ok(refunds_response_data),
             resource_common_data: RefundFlowData {
+                status,
+                ..data.resource_common_data.clone()
+            },
+            ..data
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        RazorpayV2SyncResponse,
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        u16,
+        Vec<u8>, // raw_response
+    )> for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = domain_types::errors::ConnectorError;
+
+    fn foreign_try_from(
+        (sync_response, data, _status_code, raw_response): (
+            RazorpayV2SyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        // Extract the payment response from either format
+        let payment_response =
+            match sync_response {
+                RazorpayV2SyncResponse::PaymentResponse(payment) => *payment,
+                RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
+                    // Get the first (and typically only) payment from the collection
+                    collection.items.into_iter().next().ok_or_else(|| {
+                        domain_types::errors::ConnectorError::ResponseHandlingFailed
+                    })?
+                }
+            };
+
+        // Map Razorpay payment status to internal status, preserving original status
+        let status = match payment_response.status.as_str() {
+            "created" => AttemptStatus::Pending,
+            "authorized" => AttemptStatus::Authorized,
+            "captured" => AttemptStatus::Charged, // This is the mapping, but we preserve original in metadata
+            "refunded" => AttemptStatus::AutoRefunded,
+            "failed" => AttemptStatus::Failure,
+            _ => AttemptStatus::Pending,
+        };
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
+            redirection_data: Box::new(None),
+            connector_metadata: None,
+            mandate_reference: Box::new(None),
+            network_txn_id: None,
+            connector_response_reference_id: payment_response.order_id,
+            incremental_authorization_allowed: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+        };
+
+        Ok(RouterDataV2 {
+            response: Ok(payments_response_data),
+            resource_common_data: PaymentFlowData {
                 status,
                 ..data.resource_common_data.clone()
             },
