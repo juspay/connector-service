@@ -8,9 +8,9 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodData,
@@ -31,6 +31,9 @@ use serde_with::skip_serializing_none;
 use super::AuthorizedotnetRouterData;
 
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+
+// Constants
+const MAX_ID_LENGTH: usize = 20;
 
 // Re-export common enums for use in this file
 pub mod api_enums {
@@ -204,35 +207,39 @@ pub enum AuthorizationIndicator {
 }
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct AuthorizationIndicatorType {
-    authorization_indicator: AuthorizationIndicator,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
-enum ProfileDetails {
+pub enum ProfileDetails {
     CreateProfileDetails(CreateProfileDetails),
     CustomerProfileDetails(CustomerProfileDetails),
 }
-#[derive(Serialize, Deserialize, Debug)]
+
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateProfileDetails {
     create_profile: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct CustomerProfileDetails {
+pub struct CustomerProfileDetails {
     customer_profile_id: Secret<String>,
     payment_profile: PaymentProfileDetails,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentProfileDetails {
-    payment_profile_id: Option<String>,
+pub struct PaymentProfileDetails {
+    payment_profile_id: Secret<String>,
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AuthorizationIndicatorType {
+    authorization_indicator: AuthorizationIndicator,
+}
+
+
+
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
@@ -297,141 +304,271 @@ impl
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let card_data = match &item.router_data.request.payment_method_data {
-            PaymentMethodData::Card(card) => Ok(card),
-            _ => Err(ConnectorError::RequestEncodingFailed),
-        }?;
-
-        let expiry_month = card_data.card_exp_month.peek().clone();
-        let year = card_data.card_exp_year.peek().clone();
-        let expiry_year = if year.len() == 2 {
-            format!("20{year}")
-        } else {
-            year
-        };
-        let expiration_date = format!("{expiry_year}-{expiry_month}");
-
-        let credit_card_details = CreditCardDetails {
-            card_number: StrongSecret::new(card_data.card_number.peek().to_string()),
-            expiration_date: Secret::new(expiration_date),
-            card_code: Some(card_data.card_cvc.clone()),
-        };
-
-        let payment_details = PaymentDetails::CreditCard(credit_card_details);
-
-        let transaction_type = match item.router_data.request.capture_method {
-            Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
-            Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
-            Some(_) => {
-                return Err(error_stack::report!(ConnectorError::NotSupported {
-                    message: "Capture method not supported".to_string(),
-                    connector: "authorizedotnet",
-                }))
-            }
-        };
-
-        let order_description = item
-            .router_data
-            .resource_common_data
-            .description
-            .clone()
-            .unwrap_or_else(|| "Payment".to_string());
-
-        // Truncate invoice number to 20 characters (Authorize.Net limit)
-        let invoice_number = item
-            .router_data
-            .request
-            .merchant_order_reference_id
-            .clone()
-            .unwrap_or_else(|| item.router_data.resource_common_data.payment_id.clone());
-        let truncated_invoice_number = if invoice_number.len() > 20 {
-            invoice_number[0..20].to_string()
-        } else {
-            invoice_number
-        };
-
-        let order = Order {
-            invoice_number: truncated_invoice_number,
-            description: order_description,
-        };
-
-        // Extract user fields from metadata
-        let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
-            Some(metadata) => Some(UserFields {
-                user_field: Vec::<UserField>::foreign_try_from(metadata)?,
-            }),
-            None => None,
-        };
-
-        // Process billing address
-        let billing_address = item
-            .router_data
-            .resource_common_data
-            .address
-            .get_payment_billing();
-        let bill_to =
-            billing_address.as_ref().map(|billing| {
-                let first_name = billing.address.as_ref().and_then(|a| a.first_name.clone());
-                let last_name = billing.address.as_ref().and_then(|a| a.last_name.clone());
-
-                BillTo {
-                    first_name,
-                    last_name,
-                    address: billing.address.as_ref().and_then(|a| a.line1.clone()),
-                    city: billing.address.as_ref().and_then(|a| a.city.clone()),
-                    state: billing.address.as_ref().and_then(|a| a.state.clone()),
-                    zip: billing.address.as_ref().and_then(|a| a.zip.clone()),
-                    country: billing.address.as_ref().and_then(|a| a.country).and_then(
-                        |api_country| enums::CountryAlpha2::from_str(&api_country.to_string()).ok(),
-                    ),
-                }
-            });
-
-        let customer_id_string: String = item
-            .router_data
-            .request
-            .customer_id
-            .as_ref()
-            .map(|cid| cid.get_string_repr().to_owned())
-            .unwrap_or_else(|| "anonymous_customer".to_string());
-
-        let customer_details = CustomerDetails {
-            id: customer_id_string,
-            email: item.router_data.request.email.clone(),
-        };
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         let currency_str = item.router_data.request.currency.to_string();
         let currency = api_enums::Currency::from_str(&currency_str)
             .map_err(|_| error_stack::report!(ConnectorError::RequestEncodingFailed))?;
 
-        let merchant_authentication =
-            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
-
-        let transaction_request_auth = AuthorizedotnetTransactionRequest {
-            transaction_type,
-            amount: Some(item.router_data.request.amount.to_string().clone()),
-            currency_code: Some(currency),
-            payment: Some(payment_details),
-            profile: None,
-            order: Some(order),
-            customer: Some(customer_details),
-            bill_to,
-            user_fields,
-            processing_options: None,
-            subsequent_auth_information: None,
-            authorization_indicator_type: None,
-            ref_trans_id: None, // Not used for initial auth
+        // Check if this is a mandate transaction
+        let transaction_request = match item
+            .router_data
+            .request
+            .mandate_id
+            .clone()
+            .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
+        {
+            Some(MandateReferenceId::NetworkMandateId(network_trans_id)) => {
+                create_mandate_transaction_request(&item, network_trans_id, currency)?
+            }
+            Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ref)) => {
+                let mandate_id = connector_mandate_ref
+                    .get_connector_mandate_id()
+                    .ok_or_else(|| {
+                        error_stack::report!(ConnectorError::MissingRequiredField {
+                            field_name: "connector_mandate_id"
+                        })
+                    })?;
+                create_mandate_transaction_request(&item, mandate_id, currency)?
+            }
+            Some(MandateReferenceId::NetworkTokenWithNTI(_)) => {
+                return Err(error_stack::report!(ConnectorError::NotImplemented(
+                    "Network token with NTI not supported for authorizedotnet".to_string(),
+                )))
+            }
+            None => {
+                // Regular payment without mandate
+                create_regular_transaction_request(&item, currency)?
+            }
         };
 
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
-            transaction_request: transaction_request_auth,
+            transaction_request,
         };
 
         Ok(AuthorizedotnetPaymentsRequest {
             create_transaction_request,
         })
     }
+}
+
+// Helper function to create mandate transaction request
+fn create_mandate_transaction_request(
+    item: &AuthorizedotnetRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+    >,
+    mandate_id: String,
+    currency: api_enums::Currency,
+) -> Result<AuthorizedotnetTransactionRequest, Error> {
+    let transaction_type = match item.router_data.request.capture_method {
+        Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
+        Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
+        Some(_) => {
+            return Err(error_stack::report!(ConnectorError::NotSupported {
+                message: "Capture method not supported".to_string(),
+                connector: "authorizedotnet",
+            }))
+        }
+    };
+
+    // Parse the mandate_id to extract customer_profile_id and payment_profile_id
+    let profile = mandate_id
+        .split_once('-')
+        .map(|(customer_profile_id, payment_profile_id)| {
+            ProfileDetails::CustomerProfileDetails(CustomerProfileDetails {
+                customer_profile_id: Secret::from(customer_profile_id.to_string()),
+                payment_profile: PaymentProfileDetails {
+                    payment_profile_id: Secret::from(payment_profile_id.to_string()),
+                },
+            })
+        });
+
+    let order_description = item
+        .router_data
+        .resource_common_data
+        .description
+        .clone()
+        .unwrap_or_else(|| "Payment".to_string());
+
+    let invoice_number = item
+        .router_data
+        .resource_common_data
+        .connector_request_reference_id
+        .clone();
+    let truncated_invoice_number = if invoice_number.len() > 20 {
+        invoice_number[0..20].to_string()
+    } else {
+        invoice_number
+    };
+
+    let order = Order {
+        invoice_number: truncated_invoice_number,
+        description: order_description,
+    };
+
+    let customer_id_string = if item.router_data.resource_common_data.payment_id.len() <= MAX_ID_LENGTH {
+        item.router_data.resource_common_data.payment_id.clone()
+    } else {
+        "generated_customer".to_string()
+    };
+
+    let customer_details = CustomerDetails {
+        id: customer_id_string,
+        email: item.router_data.request.email.clone(),
+    };
+
+    Ok(AuthorizedotnetTransactionRequest {
+        transaction_type,
+        amount: Some(item.router_data.request.amount.to_string()),
+        currency_code: Some(currency),
+        payment: None, // No payment details needed for mandate transaction
+        profile,
+        order: Some(order),
+        customer: Some(customer_details),
+        bill_to: None,
+        user_fields: None,
+        processing_options: None,
+        subsequent_auth_information: None,
+        authorization_indicator_type: None,
+        ref_trans_id: None,
+    })
+}
+
+// Helper function to create regular transaction request (non-mandate)
+fn create_regular_transaction_request(
+    item: &AuthorizedotnetRouterData<
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+    >,
+    currency: api_enums::Currency,
+) -> Result<AuthorizedotnetTransactionRequest, Error> {
+    let card_data = match &item.router_data.request.payment_method_data {
+        PaymentMethodData::Card(card) => Ok(card),
+        _ => Err(ConnectorError::RequestEncodingFailed),
+    }?;
+    
+    let expiry_month = card_data.card_exp_month.peek().clone();
+    let year = card_data.card_exp_year.peek().clone();
+    let expiry_year = if year.len() == 2 {
+        format!("20{year}")
+    } else {
+        year
+    };
+    let expiration_date = format!("{expiry_year}-{expiry_month}");
+
+    let credit_card_details = CreditCardDetails {
+        card_number: StrongSecret::new(card_data.card_number.peek().to_string()),
+        expiration_date: Secret::new(expiration_date),
+        card_code: Some(card_data.card_cvc.clone()),
+    };
+
+    let payment_details = PaymentDetails::CreditCard(credit_card_details);
+
+    let transaction_type = match item.router_data.request.capture_method {
+        Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
+        Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
+        Some(_) => {
+            return Err(error_stack::report!(ConnectorError::NotSupported {
+                message: "Capture method not supported".to_string(),
+                connector: "authorizedotnet",
+            }))
+        }
+    };
+
+    let order_description = item
+        .router_data
+        .resource_common_data
+        .description
+        .clone()
+        .unwrap_or_else(|| "Payment".to_string());
+
+    // Truncate invoice number to 20 characters (Authorize.Net limit)
+    let invoice_number = item
+        .router_data
+        .request
+        .merchant_order_reference_id
+        .clone()
+        .unwrap_or_else(|| item.router_data.resource_common_data.payment_id.clone());
+    let truncated_invoice_number = if invoice_number.len() > 20 {
+        invoice_number[0..20].to_string()
+    } else {
+        invoice_number
+    };
+
+    let order = Order {
+        invoice_number: truncated_invoice_number,
+        description: order_description,
+    };
+
+    // Extract user fields from metadata
+    let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
+        Some(metadata) => Some(UserFields {
+            user_field: Vec::<UserField>::foreign_try_from(metadata)?,
+        }),
+        None => None,
+    };
+
+    // Process billing address
+    let billing_address = item
+        .router_data
+        .resource_common_data
+        .address
+        .get_payment_billing();
+    let bill_to = billing_address.as_ref().map(|billing| {
+        let first_name = billing.address.as_ref().and_then(|a| a.first_name.clone());
+        let last_name = billing.address.as_ref().and_then(|a| a.last_name.clone());
+
+        BillTo {
+            first_name,
+            last_name,
+            address: billing.address.as_ref().and_then(|a| a.line1.clone()),
+            city: billing.address.as_ref().and_then(|a| a.city.clone()),
+            state: billing.address.as_ref().and_then(|a| a.state.clone()),
+            zip: billing.address.as_ref().and_then(|a| a.zip.clone()),
+            country: billing.address.as_ref().and_then(|a| a.country).and_then(
+                |api_country| enums::CountryAlpha2::from_str(&api_country.to_string()).ok(),
+            ),
+        }
+    });
+
+    let customer_id_string: String = item
+        .router_data
+        .request
+        .customer_id
+        .as_ref()
+        .map(|cid| cid.get_string_repr().to_owned())
+        .unwrap_or_else(|| "anonymous_customer".to_string());
+
+    let customer_details = CustomerDetails {
+        id: customer_id_string,
+        email: item.router_data.request.email.clone(),
+    };
+
+    // Check if we should create a profile for future mandate usage
+    let profile = if item.router_data.request.setup_future_usage.is_some() {
+        Some(ProfileDetails::CreateProfileDetails(CreateProfileDetails {
+            create_profile: true,
+        }))
+    } else {
+        None
+    };
+
+    Ok(AuthorizedotnetTransactionRequest {
+        transaction_type,
+        amount: Some(item.router_data.request.amount.to_string()),
+        currency_code: Some(currency),
+        payment: Some(payment_details),
+        profile,
+        order: Some(order),
+        customer: Some(customer_details),
+        bill_to,
+        user_fields,
+        processing_options: None,
+        subsequent_auth_information: None,
+        authorization_indicator_type: None,
+        ref_trans_id: None,
+    })
 }
 
 #[skip_serializing_none]
@@ -1642,6 +1779,165 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                 Ok(new_router_data)
             }
         }
+    }
+}
+
+// SetupMandate (Zero Mandate) implementation
+impl
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    > for CreateCustomerProfileRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData,
+                PaymentsResponseData,
+            >,
+        >,
+    ) -> Result<Self, error_stack::Report<ConnectorError>> {
+        let ccard = match &item.router_data.request.payment_method_data {
+            PaymentMethodData::Card(card) => card,
+            _ => return Err(error_stack::report!(ConnectorError::RequestEncodingFailed)),
+        };
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+        // let validation_mode = match item.router_data.request.test_mode {
+        //     Some(true) | None => ValidationMode::TestMode,
+        //     Some(false) => ValidationMode::LiveMode,
+        // };
+        let profile = Profile {
+            merchant_customer_id: item
+                .router_data
+                .request
+                .customer_id
+                .as_ref()
+                .map(|id| id.get_string_repr().to_string()),
+            description: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            email: item
+                .router_data
+                .request
+                .email
+                .as_ref()
+                .map(|e| e.peek().clone()),
+            payment_profiles: vec![PaymentProfiles {
+                customer_type: CustomerType::Individual,
+                payment: PaymentDetails::CreditCard(CreditCardDetails {
+                    card_number: StrongSecret::new(ccard.card_number.peek().to_string()),
+                    expiration_date: Secret::new(
+                        ccard.get_expiry_date_as_yyyymm("-").peek().clone(),
+                    ),
+                    card_code: Some(ccard.card_cvc.clone()),
+                }),
+            }],
+        };
+        Ok(Self {
+            create_customer_profile_request: AuthorizedotnetZeroMandateRequest {
+                merchant_authentication,
+                profile,
+                validation_mode: ValidationMode::TestMode,
+            },
+        })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCustomerProfileResponse {
+    pub customer_profile_id: Option<String>,
+    pub customer_payment_profile_id_list: Vec<String>,
+    pub validation_direct_response_list: Option<Vec<Secret<String>>>,
+    pub messages: ResponseMessages,
+}
+
+impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
+    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        value: ResponseRouterData<CreateCustomerProfileResponse, Self>,
+    ) -> Result<Self, error_stack::Report<ConnectorError>> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        let status = if response.messages.result_code == ResultCode::Ok {
+            MandateStatus::MandateEstablished // Use MandateCreated if you have it
+        } else {
+            MandateStatus::MandateFailed
+        };
+
+        let mut new_router_data = router_data;
+        let mut resource_common_data = new_router_data.resource_common_data.clone();
+        resource_common_data.status = Status::Mandate(status);
+        new_router_data.resource_common_data = resource_common_data;
+
+        if let Some(profile_id) = response.customer_profile_id.clone() {
+            // Create composite mandate ID using customer profile ID and first payment profile ID
+            let connector_mandate_id = response
+                .customer_payment_profile_id_list
+                .first()
+                .map(|payment_profile_id| format!("{}-{}", profile_id, payment_profile_id))
+                .or(Some(profile_id.clone()));
+
+            new_router_data.response = Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(profile_id.clone()),
+                redirection_data: Box::new(None),
+                connector_metadata: None,
+                mandate_reference: Box::new(Some(
+                    domain_types::connector_types::MandateReference {
+                        connector_mandate_id,
+                        payment_method_id: None,
+                    },
+                )),
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                raw_connector_response: None,
+            });
+        } else {
+            let error_response = ErrorResponse {
+                status_code: http_code,
+                code: response
+                    .messages
+                    .message
+                    .first()
+                    .map(|m| m.code.clone())
+                    .unwrap_or_default(),
+                message: response
+                    .messages
+                    .message
+                    .first()
+                    .map(|m| m.text.clone())
+                    .unwrap_or_default(),
+                reason: None,
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                raw_connector_response: None,
+            };
+            new_router_data.response = Err(error_response);
+        }
+
+        Ok(new_router_data)
     }
 }
 
