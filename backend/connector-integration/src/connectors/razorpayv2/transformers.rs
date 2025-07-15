@@ -8,18 +8,21 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{
         PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
-        RefundsData,
+        RefundsData, ResponseId,
     },
     errors,
     payment_address::Address,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::connectors::razorpay::transformers::ForeignTryFrom;
 
 // ============ Authentication Types ============
 
@@ -419,6 +422,106 @@ impl TryFrom<&RazorpayV2RouterData<&RefundsData>> for RazorpayV2RefundRequest {
             .get_amount_as_i64();
         Ok(Self {
             amount: amount_in_minor_units,
+        })
+    }
+}
+
+// ============ Response Transformations ============
+
+impl
+    ForeignTryFrom<(
+        RazorpayV2UpiPaymentsResponse,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        u16,
+        Vec<u8>, // raw_response
+    )> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+{
+    type Error = domain_types::errors::ConnectorError;
+
+    fn foreign_try_from(
+        (upi_response, data, _status_code, raw_response): (
+            RazorpayV2UpiPaymentsResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let (transaction_id, redirection_data) = match upi_response {
+            RazorpayV2UpiPaymentsResponse::SuccessIntent {
+                razorpay_payment_id,
+                link,
+            } => {
+                let redirect_form = RedirectForm::Uri { uri: link };
+                (
+                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
+                    Some(redirect_form),
+                )
+            }
+            RazorpayV2UpiPaymentsResponse::SuccessCollect {
+                razorpay_payment_id,
+            } => {
+                // For UPI Collect, there's no link, so no redirection data
+                (
+                    ResponseId::ConnectorTransactionId(razorpay_payment_id),
+                    None,
+                )
+            }
+            RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
+                // Handle error case - this should probably return an error instead
+                return Err(domain_types::errors::ConnectorError::ResponseHandlingFailed);
+            }
+        };
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: transaction_id,
+            redirection_data: Box::new(redirection_data),
+            connector_metadata: None,
+            mandate_reference: Box::new(None),
+            network_txn_id: None,
+            connector_response_reference_id: data.resource_common_data.reference_id.clone(),
+            incremental_authorization_allowed: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+        };
+
+        Ok(RouterDataV2 {
+            response: Ok(payments_response_data),
+            ..data
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        RazorpayV2PaymentsResponse,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        u16,
+        Vec<u8>, // raw_response
+    )> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+{
+    type Error = domain_types::errors::ConnectorError;
+
+    fn foreign_try_from(
+        (response, data, _status_code, raw_response): (
+            RazorpayV2PaymentsResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            u16,
+            Vec<u8>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response.id),
+            redirection_data: Box::new(None),
+            connector_metadata: None,
+            mandate_reference: Box::new(None),
+            network_txn_id: None,
+            connector_response_reference_id: data.resource_common_data.reference_id.clone(),
+            incremental_authorization_allowed: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+        };
+
+        Ok(RouterDataV2 {
+            response: Ok(payments_response_data),
+            ..data
         })
     }
 }

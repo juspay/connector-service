@@ -1,6 +1,5 @@
 pub mod test;
 pub mod transformers;
-
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
@@ -21,6 +20,8 @@ use domain_types::{
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
+    payment_method_data::PaymentMethodData,
+    router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
@@ -31,6 +32,8 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers as razorpayv2;
+
+use crate::connectors::razorpay::transformers::ForeignTryFrom;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -114,7 +117,7 @@ impl ConnectorCommon for RazorpayV2 {
                 (
                     "ROUTE_ERROR".to_string(),
                     message.clone(),
-                    AttemptStatus::Failure,
+                    AttemptStatus::Unknown,
                 )
             }
         };
@@ -313,7 +316,6 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
 
         // For UPI payments, use the specific UPI endpoint
-        use domain_types::payment_method_data::PaymentMethodData;
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => Ok(format!("{base_url}v1/payments/create/upi")),
             _ => Ok(format!("{base_url}v1/payments")),
@@ -379,38 +381,20 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                 "RazorpayV2UpiPaymentsResponse",
             );
 
-        let (transaction_id, redirection_data) = match upi_response_result {
+        match upi_response_result {
             Ok(upi_response) => {
                 if let Some(i) = event_builder {
                     i.set_response_body(&upi_response)
                 }
 
-                match upi_response {
-                    razorpayv2::RazorpayV2UpiPaymentsResponse::SuccessIntent {
-                        razorpay_payment_id,
-                        link,
-                    } => {
-                        let redirect_form =
-                            domain_types::router_response_types::RedirectForm::Uri { uri: link };
-                        (
-                            ResponseId::ConnectorTransactionId(razorpay_payment_id),
-                            Some(redirect_form),
-                        )
-                    }
-                    razorpayv2::RazorpayV2UpiPaymentsResponse::SuccessCollect {
-                        razorpay_payment_id,
-                    } => {
-                        // For UPI Collect, there's no link, so no redirection data
-                        (
-                            ResponseId::ConnectorTransactionId(razorpay_payment_id),
-                            None,
-                        )
-                    }
-                    razorpayv2::RazorpayV2UpiPaymentsResponse::Error { error: _ } => {
-                        // Handle error case - this should probably return an error instead
-                        return Err(errors::ConnectorError::ResponseHandlingFailed.into());
-                    }
-                }
+                // Use the transformer for UPI response handling
+                RouterDataV2::foreign_try_from((
+                    upi_response,
+                    data.clone(),
+                    res.status_code,
+                    res.response.to_vec(),
+                ))
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
             }
             Err(_) => {
                 // Fall back to regular payment response
@@ -422,26 +406,17 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                 if let Some(i) = event_builder {
                     i.set_response_body(&response)
                 }
-                (ResponseId::ConnectorTransactionId(response.id), None)
+
+                // Use the transformer for regular response handling
+                RouterDataV2::foreign_try_from((
+                    response,
+                    data.clone(),
+                    res.status_code,
+                    res.response.to_vec(),
+                ))
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
             }
-        };
-
-        let reference_id = data.resource_common_data.reference_id.clone();
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: transaction_id,
-            redirection_data: Box::new(redirection_data),
-            connector_metadata: None,
-            mandate_reference: Box::new(None),
-            network_txn_id: None,
-            connector_response_reference_id: reference_id,
-            incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-        };
-
-        Ok(domain_types::router_data_v2::RouterDataV2 {
-            response: Ok(payments_response_data),
-            ..data.clone()
-        })
+        }
     }
 
     fn get_error_response_v2(

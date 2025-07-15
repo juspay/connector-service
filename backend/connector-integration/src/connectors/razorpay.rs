@@ -185,7 +185,6 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
 
         // For UPI payments, use the specific UPI endpoint
-        use domain_types::payment_method_data::PaymentMethodData;
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => Ok(format!("{base_url}v1/payments/create/upi")),
             _ => Ok(format!("{base_url}v1/payments/create/json")),
@@ -199,8 +198,6 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let connector_router_data =
             razorpay::RazorpayRouterData::try_from((req.request.minor_amount, req))?;
 
-        // Use different request types for UPI vs other payment methods
-        use domain_types::payment_method_data::PaymentMethodData;
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => {
                 let connector_req =
@@ -232,7 +229,6 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         errors::ConnectorError,
     > {
         // Handle UPI payments differently from regular payments
-        use domain_types::payment_method_data::PaymentMethodData;
         match &data.request.payment_method_data {
             PaymentMethodData::Upi(_) => {
                 // Try to parse as UPI response first
