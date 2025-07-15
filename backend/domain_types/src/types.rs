@@ -43,6 +43,7 @@ pub struct Connectors {
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
     pub authorizedotnet: ConnectorParams, // Add your connector params
+    pub cryptopay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -189,6 +190,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         card_cvc: None,
                     }),
                 ),
+                grpc_api_types::payments::payment_method::PaymentMethod::Crypto(crypto) => {
+                    match crypto.crypto_type {
+                        Some(grpc_api_types::payments::crypto_currency_payment_method_type::CryptoType::CryptoCurrency(cryptocurrency)) =>
+                        Ok(
+                        PaymentMethodData::Crypto(crate::payment_method_data::CryptoData {
+                            pay_currency: cryptocurrency.pay_currency,
+                            network: cryptocurrency.network,
+                        })),
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "crypto_currency is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),

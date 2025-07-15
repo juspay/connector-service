@@ -1,7 +1,9 @@
 use domain_types::connector_types::ConnectorEnum;
 use interfaces::connector_types::BoxedConnector;
 
-use crate::connectors::{Adyen, Authorizedotnet, Checkout, Elavon, Fiserv, Razorpay, Xendit};
+use crate::connectors::{
+    Adyen, Authorizedotnet, Checkout, Cryptopay, Elavon, Fiserv, Razorpay, Xendit,
+};
 
 #[derive(Clone)]
 pub struct ConnectorData {
@@ -27,6 +29,7 @@ impl ConnectorData {
             ConnectorEnum::Xendit => Box::new(Xendit::new()),
             ConnectorEnum::Checkout => Box::new(Checkout::new()),
             ConnectorEnum::Authorizedotnet => Box::new(Authorizedotnet::new()),
+            ConnectorEnum::Cryptopay => Box::new(Cryptopay::new()),
         }
     }
 }
