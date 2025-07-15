@@ -801,7 +801,9 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
             city: value.city.clone(),
-            country: Some(common_enums::CountryAlpha2::IN),
+            country: Some(common_enums::CountryAlpha2::foreign_try_from(
+                value.country_alpha2_code(),
+            )?),
             line1: value.line1.map(|val| val.into()),
             line2: value.line2.map(|val| val.into()),
             line3: value.line3.map(|val| val.into()),

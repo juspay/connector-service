@@ -432,7 +432,8 @@ impl
             PaymentMethodData::Card(card) => RazorpayPaymentRequest::try_from((item, card)),
             _ => Err(domain_types::errors::ConnectorError::NotImplemented(
                 "Only card payments are supported".into(),
-            ).into()),
+            )
+            .into()),
         }
     }
 }
