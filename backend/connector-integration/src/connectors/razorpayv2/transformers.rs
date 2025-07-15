@@ -5,14 +5,19 @@ use std::str::FromStr;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_utils::{pii::Email, types::MinorUnit};
 use domain_types::{
-    connector_types::{PaymentCreateOrderData, PaymentsAuthorizeData, RefundsData},
+    connector_flow::Authorize,
+    connector_types::{
+        PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        RefundsData,
+    },
     errors,
     payment_address::Address,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
+    router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -297,17 +302,27 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
     }
 }
 
-impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2PaymentsRequest {
+impl
+    TryFrom<
+        &RazorpayV2RouterData<
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    > for RazorpayV2PaymentsRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: &RazorpayV2RouterData<&PaymentsAuthorizeData>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: &RazorpayV2RouterData<
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
         let amount_in_minor_units = item
             .amount_converter
-            .convert(item.amount, item.router_data.currency)
+            .convert(item.amount, item.router_data.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?
             .get_amount_as_i64();
 
         // Determine UPI flow based on payment method data
-        let (upi_flow, vpa) = match &item.router_data.payment_method_data {
+        let (upi_flow, vpa) = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
                 UpiData::UpiCollect(collect_data) => {
                     let vpa_string = collect_data
@@ -347,31 +362,23 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentsAuthorizeData>> for RazorpayV2Paymen
 
         Ok(Self {
             amount: amount_in_minor_units,
-            currency: item.router_data.currency.to_string(),
+            currency: item.router_data.request.currency.to_string(),
             order_id: order_id.to_string(),
             email: item
                 .router_data
-                .email
-                .clone()
-                .unwrap_or_else(|| Email::from_str("customer@example.com").unwrap()),
+                .resource_common_data
+                .get_billing_email()
+                .unwrap_or_else(|_| Email::from_str("customer@example.com").unwrap()),
             contact: item
-                .billing_address
-                .as_ref()
-                .and_then(|addr| addr.phone.as_ref())
-                .and_then(|phone| phone.number.as_ref())
-                .map(|num| num.peek().to_string())
-                .unwrap_or_else(|| "9999999999".to_string()),
+                .router_data
+                .resource_common_data
+                .get_billing_phone_number()
+                .map(|phone| phone.expose())
+                .unwrap_or_else(|_| "9999999999".to_string()),
             method: "upi".to_string(),
             description: Some("Payment via RazorpayV2".to_string()),
-            notes: item.router_data.metadata.clone(),
-            callback_url: item
-                .router_data
-                .router_return_url
-                .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "callback_url",
-                })?
-                .to_string(),
+            notes: item.router_data.request.metadata.clone(),
+            callback_url: item.router_data.request.get_router_return_url()?,
             upi: upi_details,
             customer_id: None,
             save: Some(false),

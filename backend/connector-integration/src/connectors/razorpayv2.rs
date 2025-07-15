@@ -340,7 +340,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
         let connector_router_data = razorpayv2::RazorpayV2RouterData::try_from((
             req.request.minor_amount,
-            &req.request,
+            req,
             Some(order_id),
             req.resource_common_data
                 .address

@@ -1293,10 +1293,10 @@ pub struct RazorpayWebCollectRequest {
     pub currency: String,
     pub amount: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
+    pub email: Option<Email>,
     pub order_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub contact: Option<String>,
+    pub contact: Option<Secret<String>>,
     pub method: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vpa: Option<String>,
@@ -1449,19 +1449,14 @@ impl
             email: item
                 .router_data
                 .resource_common_data
-                .address
-                .get_payment_method_billing()
-                .and_then(|addr| addr.email.as_ref())
-                .map(|email| email.peek().to_string()),
+                .get_billing_email()
+                .ok(),
             order_id: order_id.to_string(),
             contact: item
                 .router_data
                 .resource_common_data
-                .address
-                .get_payment_method_billing()
-                .and_then(|addr| addr.phone.as_ref())
-                .and_then(|phone| phone.number.as_ref())
-                .map(|num| num.peek().to_string()),
+                .get_billing_phone_number()
+                .ok(),
             method: match &item.router_data.request.payment_method_data {
                 PaymentMethodData::Upi(_) => "upi".to_string(),
                 PaymentMethodData::Card(_) => "card".to_string(),
@@ -1472,15 +1467,8 @@ impl
             __notes_91_transaction_id_93_: metadata_map
                 .get("__notes_91_transaction_id_93_")
                 .cloned(),
-            callback_url: item
-                .router_data
-                .request
-                .router_return_url
-                .as_ref()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
-                    field_name: "callback_url",
-                })?
-                .to_string(),
+            callback_url: item.router_data.request.get_router_return_url()?,
+
             ip: item
                 .router_data
                 .request
