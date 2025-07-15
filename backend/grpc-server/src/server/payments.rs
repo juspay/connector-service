@@ -375,7 +375,7 @@ impl PaymentService for Payments {
                                 "Order created successfully with order_id: {}",
                                 order_id
                             );
-                            payment_flow_data.set_order_reference_id(order_id)
+                            payment_flow_data.set_order_reference_id(Some(order_id))
                         }
                         Err(authorize_response) => {
                             return Ok(tonic::Response::new(authorize_response));
