@@ -21,3 +21,6 @@ pub mod macros;
 
 pub mod checkout;
 pub use self::checkout::Checkout;
+
+pub mod cryptopay;
+pub use self::cryptopay::Cryptopay;
