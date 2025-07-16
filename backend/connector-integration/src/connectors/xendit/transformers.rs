@@ -1,3 +1,13 @@
+use std::collections::HashMap;
+
+use cards::CardNumber;
+use common_enums::Currency;
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    pii,
+    request::Method,
+    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
@@ -5,37 +15,17 @@ use domain_types::{
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
-};
-
-use crate::connectors::xendit::XenditRouterData;
-use crate::types::ResponseRouterData;
-use common_utils::{
-    pii,
-    request::Method,
-    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
-};
-use error_stack::ResultExt;
-
-use domain_types::{
+    errors::{self, ConnectorError},
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
-
-use std::collections::HashMap;
-
-use domain_types::errors::{self, ConnectorError};
-
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-
-use common_enums::Currency;
-
-use cards::CardNumber;
-
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use crate::{connectors::xendit::XenditRouterData, types::ResponseRouterData};
 
 pub trait ForeignTryFrom<F>: Sized {
     type Error;
@@ -385,6 +375,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -467,6 +458,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
+                        raw_connector_response: None,
                     })
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -578,6 +570,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
