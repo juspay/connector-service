@@ -615,6 +615,10 @@ impl
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::Authorizing,
+                ..data.resource_common_data
+            },
             ..data
         })
     }
@@ -651,6 +655,10 @@ impl
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::Authorizing,
+                ..data.resource_common_data
+            },
             ..data
         })
     }

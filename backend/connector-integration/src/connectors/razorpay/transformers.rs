@@ -1594,6 +1594,10 @@ impl<F, Req>
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
+            resource_common_data: PaymentFlowData {
+                status: AttemptStatus::Authorizing,
+                ..data.resource_common_data
+            },
             ..data
         })
     }
