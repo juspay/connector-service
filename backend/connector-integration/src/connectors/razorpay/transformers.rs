@@ -167,8 +167,6 @@ pub enum PaymentMethodType {
 pub struct RazorpayRouterData<T> {
     pub amount: MinorUnit,
     pub router_data: T,
-    pub amount_converter:
-        &'static (dyn common_utils::types::AmountConvertor<Output = MinorUnit> + Sync),
 }
 
 impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
@@ -177,7 +175,6 @@ impl<T> TryFrom<(MinorUnit, T)> for RazorpayRouterData<T> {
         Ok(Self {
             amount,
             router_data: item,
-            amount_converter: &common_utils::types::MinorUnitForConnector,
         })
     }
 }
@@ -318,10 +315,7 @@ impl
         ),
     ) -> Result<Self, Self::Error> {
         let (item, _card_data) = value;
-        let amount = item
-            .amount_converter
-            .convert(item.amount, item.router_data.request.currency)
-            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+        let amount = item.amount;
         let currency = item.router_data.request.currency.to_string();
 
         let billing = item
@@ -537,12 +531,8 @@ impl
             &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let converted_amount = item
-            .amount_converter
-            .convert(item.amount, item.router_data.request.currency)
-            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
-            amount: converted_amount,
+            amount: item.amount,
         })
     }
 }
@@ -900,10 +890,7 @@ impl
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
 
-        let converted_amount = item
-            .amount_converter
-            .convert(item.amount, request_data.currency)
-            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+        let converted_amount = item.amount;
         // Extract metadata as a HashMap
         let metadata_map = item
             .router_data
@@ -1237,12 +1224,8 @@ impl
     ) -> Result<Self, Self::Error> {
         let request_data = &item.router_data.request;
 
-        let converted_amount = item
-            .amount_converter
-            .convert(item.amount, request_data.currency)
-            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         Ok(RazorpayCaptureRequest {
-            amount: converted_amount,
+            amount: item.amount,
             currency: request_data.currency.to_string(),
         })
     }
@@ -1395,11 +1378,7 @@ impl
         use domain_types::payment_method_data::{PaymentMethodData, UpiData};
         use hyperswitch_masking::PeekInterface;
 
-        let amount_in_minor_units = item
-            .amount_converter
-            .convert(item.amount, item.router_data.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?
-            .get_amount_as_i64();
+        let amount_in_minor_units = item.amount.get_amount_as_i64();
 
         // Determine flow type and extract VPA based on UPI payment method
         let (flow_type, vpa) = match &item.router_data.request.payment_method_data {

@@ -339,9 +339,12 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                 field_name: "reference_id",
             })?
             .clone();
-
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.minor_amount, req.request.currency)
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
         let connector_router_data = razorpayv2::RazorpayV2RouterData::try_from((
-            req.request.minor_amount,
+            converted_amount,
             req,
             Some(order_id),
             req.resource_common_data

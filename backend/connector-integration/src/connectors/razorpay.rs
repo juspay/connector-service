@@ -195,8 +195,12 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         &self,
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.minor_amount, req.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let connector_router_data =
-            razorpay::RazorpayRouterData::try_from((req.request.minor_amount, req))?;
+            razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
 
         match &req.request.payment_method_data {
             PaymentMethodData::Upi(_) => {
@@ -381,48 +385,14 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
 
         with_response_body!(event_builder, sync_response);
 
-        // Extract the payment response from either format
-        let payment_response = match sync_response {
-            RazorpayV2SyncResponse::PaymentResponse(payment) => *payment,
-            RazorpayV2SyncResponse::OrderPaymentsCollection(collection) => {
-                // Get the first (and typically only) payment from the collection
-                collection
-                    .items
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| errors::ConnectorError::ResponseHandlingFailed)?
-            }
-        };
-
-        // Map Razorpay payment status to internal status, preserving original status
-        let status = match payment_response.status.as_str() {
-            "created" => AttemptStatus::Pending,
-            "authorized" => AttemptStatus::Authorized,
-            "captured" => AttemptStatus::Charged, // This is the mapping, but we preserve original in metadata
-            "refunded" => AttemptStatus::AutoRefunded,
-            "failed" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
-        };
-
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
-            redirection_data: Box::new(None),
-            connector_metadata: None,
-            mandate_reference: Box::new(None),
-            network_txn_id: None,
-            connector_response_reference_id: payment_response.order_id,
-            incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-        };
-
-        Ok(RouterDataV2 {
-            response: Ok(payments_response_data),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..data.resource_common_data.clone()
-            },
-            ..data.clone()
-        })
+        // Use the transformer for PSync response handling
+        RouterDataV2::foreign_try_from((
+            sync_response,
+            data.clone(),
+            res.status_code,
+            res.response.to_vec(),
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -492,8 +462,12 @@ impl
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.amount, req.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let connector_router_data =
-            razorpay::RazorpayRouterData::try_from((req.request.amount, req))?;
+            razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
         let connector_req = razorpay::RazorpayOrderRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::FormUrlEncoded(Box::new(
             connector_req,
@@ -733,8 +707,11 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let refund_router_data =
-            razorpay::RazorpayRouterData::try_from((req.request.minor_refund_amount, req))?;
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.minor_refund_amount, req.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let refund_router_data = razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
         let connector_req = razorpay::RazorpayRefundRequest::try_from(&refund_router_data)?;
 
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
@@ -821,8 +798,12 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.minor_amount_to_capture, req.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let connector_router_data =
-            razorpay::RazorpayRouterData::try_from((req.request.minor_amount_to_capture, req))?;
+            razorpay::RazorpayRouterData::try_from((converted_amount, req))?;
         let connector_req = razorpay::RazorpayCaptureRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
