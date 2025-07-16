@@ -317,18 +317,20 @@ impl PaymentService for Payments {
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
-                    Some( self.handle_order_creation(
-                        &config,
-                        HandleOrderData {
-                            connector_data: connector_data.clone(),
-                            connector_auth_details: connector_auth_details.clone(),
-                            connector_name: connector.to_string(),
-                            service_name: service_name.clone(),
-                        },
-                        &payment_flow_data,
-                        payload.clone(),
+                    Some(
+                        self.handle_order_creation(
+                            &config,
+                            HandleOrderData {
+                                connector_data: connector_data.clone(),
+                                connector_auth_details: connector_auth_details.clone(),
+                                connector_name: connector.to_string(),
+                                service_name: service_name.clone(),
+                            },
+                            &payment_flow_data,
+                            payload.clone(),
+                        )
+                        .await?,
                     )
-                    .await?)
                 } else {
                     None
                 };
@@ -711,18 +713,20 @@ impl PaymentService for Payments {
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
-                     Some(self.handle_order_creation_for_setup_mandate(
-                        &config,
-                        HandleOrderData {
-                            connector_data: connector_data.clone(),
-                            connector_auth_details: connector_auth_details.clone(),
-                            connector_name: connector.to_string(),
-                            service_name: service_name.clone(),
-                        },
-                        &payment_flow_data,
-                        &payload,
+                    Some(
+                        self.handle_order_creation_for_setup_mandate(
+                            &config,
+                            HandleOrderData {
+                                connector_data: connector_data.clone(),
+                                connector_auth_details: connector_auth_details.clone(),
+                                connector_name: connector.to_string(),
+                                service_name: service_name.clone(),
+                            },
+                            &payment_flow_data,
+                            &payload,
+                        )
+                        .await?,
                     )
-                    .await?)
                 } else {
                     None
                 };
