@@ -1,6 +1,5 @@
 //! Types that can be used in other crates
 
-use error_stack::ResultExt;
 use std::{
     fmt::Display,
     iter::Sum,
@@ -9,13 +8,12 @@ use std::{
 };
 
 use common_enums::enums;
+use error_stack::ResultExt;
+use hyperswitch_masking::Deserialize;
 use rust_decimal::{
     prelude::{FromPrimitive, ToPrimitive},
     Decimal,
 };
-
-use hyperswitch_masking::Deserialize;
-
 use semver::Version;
 use serde::Serialize;
 use time::PrimitiveDateTime;

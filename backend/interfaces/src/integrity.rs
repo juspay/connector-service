@@ -5,7 +5,6 @@
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
 
 use common_utils::errors::IntegrityCheckError;
-
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentVoidData,

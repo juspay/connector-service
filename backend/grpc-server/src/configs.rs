@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
+use common_utils::consts;
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
-use common_utils::consts;
 
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Config {

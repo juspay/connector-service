@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::num::ParseFloatError;
+
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// The three-letter ISO 4217 currency code (e.g., "USD", "EUR") for the payment amount. This field is mandatory for creating a payment.

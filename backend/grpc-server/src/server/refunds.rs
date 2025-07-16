@@ -1,16 +1,12 @@
-use crate::implement_connector_operation;
-use crate::{
-    configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
-};
+use std::sync::Arc;
+
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
-use domain_types::router_data::ConnectorAuthType;
 use domain_types::{
     connector_flow::{FlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
+    router_data::ConnectorAuthType,
     types::generate_refund_sync_response,
     utils::ForeignTryFrom,
 };
@@ -21,8 +17,13 @@ use grpc_api_types::payments::{
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
-use std::sync::Arc;
 
+use crate::{
+    configs::Config,
+    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
+    implement_connector_operation,
+    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+};
 // Helper trait for refund operations
 trait RefundOperationsInternal {
     async fn internal_get(

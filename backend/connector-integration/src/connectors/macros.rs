@@ -1,11 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::types;
-use common_utils::errors::CustomResult;
-use common_utils::ext_traits::BytesExt;
-use domain_types::errors;
-use domain_types::router_data_v2::RouterDataV2;
+use common_utils::{errors::CustomResult, ext_traits::BytesExt};
+use domain_types::{errors, router_data_v2::RouterDataV2};
 use error_stack::ResultExt;
+
+use crate::types;
 
 pub trait FlowTypes {
     type Flow;
@@ -543,25 +542,27 @@ macro_rules! create_all_prerequisites {
 pub(crate) use create_all_prerequisites;
 macro_rules! expand_imports {
     () => {
+        use std::marker::PhantomData;
+
         #[allow(unused_imports)]
         use crate::connectors::macros::{
             Bridge, BridgeRequestResponse, FlowTypes, GetFormData, NoRequestBody,
             NoRequestBodyTemplating,
         };
-        use std::marker::PhantomData;
         #[allow(unused_imports)]
         mod macro_types {
-            pub(super) use crate::types::*;
             // pub(super) use domain_models::{
             //     AuthenticationInitiation, Confirmation, PostAuthenticationSync, PreAuthentication,
             // };
             pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
-            pub(super) use domain_types::errors::ConnectorError;
-            pub(super) use domain_types::router_data::ErrorResponse;
-            pub(super) use domain_types::router_data_v2::RouterDataV2;
-            pub(super) use domain_types::router_response_types::Response;
+            pub(super) use domain_types::{
+                errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
+                router_response_types::Response,
+            };
             pub(super) use hyperswitch_masking::Maskable;
             pub(super) use interfaces::events::connector_api_logs::ConnectorEvent;
+
+            pub(super) use crate::types::*;
         }
     };
 }
