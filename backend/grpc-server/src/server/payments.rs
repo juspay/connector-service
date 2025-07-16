@@ -317,7 +317,7 @@ impl PaymentService for Payments {
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
-                    self.handle_order_creation(
+                    Some( self.handle_order_creation(
                         &config,
                         HandleOrderData {
                             connector_data: connector_data.clone(),
@@ -328,11 +328,9 @@ impl PaymentService for Payments {
                         &payment_flow_data,
                         payload.clone(),
                     )
-                    .await?
+                    .await?)
                 } else {
-                    payment_flow_data.reference_id.clone().ok_or_else(|| {
-                        tonic::Status::invalid_argument("missing reference_id in the payload")
-                    })?
+                    None
                 };
 
                 let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
@@ -713,7 +711,7 @@ impl PaymentService for Payments {
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
-                    self.handle_order_creation_for_setup_mandate(
+                     Some(self.handle_order_creation_for_setup_mandate(
                         &config,
                         HandleOrderData {
                             connector_data: connector_data.clone(),
@@ -724,11 +722,9 @@ impl PaymentService for Payments {
                         &payment_flow_data,
                         &payload,
                     )
-                    .await?
+                    .await?)
                 } else {
-                    payment_flow_data.reference_id.clone().ok_or_else(|| {
-                        tonic::Status::invalid_argument("missing reference_id in the payload")
-                    })?
+                    None
                 };
                 let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
 
