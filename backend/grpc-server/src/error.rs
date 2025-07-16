@@ -1,4 +1,5 @@
 use domain_types::errors::{ApiClientError, ApiError, ApplicationErrorResponse, ConnectorError};
+use grpc_api_types::payments::PaymentServiceAuthorizeResponse;
 use tonic::Status;
 
 use crate::logger;
@@ -269,6 +270,46 @@ impl IntoGrpcStatus for error_stack::Report<ApplicationErrorResponse> {
             ApplicationErrorResponse::BadRequest(api_error) => {
                 Status::invalid_argument(&api_error.error_message)
             }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentAuthorizationError {
+    pub status: grpc_api_types::payments::PaymentStatus,
+    pub error_message: Option<String>,
+    pub error_code: Option<String>,
+    pub raw_connector_response: Option<String>,
+}
+
+impl PaymentAuthorizationError {
+    pub fn new(
+        status: grpc_api_types::payments::PaymentStatus,
+        error_message: Option<String>,
+        error_code: Option<String>,
+        raw_connector_response: Option<String>,
+    ) -> Self {
+        Self {
+            status,
+            error_message,
+            error_code,
+            raw_connector_response,
+        }
+    }
+}
+
+impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
+    fn from(error: PaymentAuthorizationError) -> Self {
+        Self {
+            transaction_id: None,
+            redirection_data: None,
+            network_txn_id: None,
+            response_ref_id: None,
+            incremental_authorization_allowed: None,
+            status: error.status.into(),
+            error_message: error.error_message,
+            error_code: error.error_code,
+            raw_connector_response: error.raw_connector_response,
         }
     }
 }

@@ -35,7 +35,7 @@ use tracing::info;
 
 use crate::{
     configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
+    error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
@@ -74,7 +74,7 @@ impl Payments {
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
-    ) -> Result<PaymentServiceAuthorizeResponse, PaymentServiceAuthorizeResponse> {
+    ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -90,16 +90,13 @@ impl Payments {
         // Create common request data
         let payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|_| PaymentServiceAuthorizeResponse {
-                    transaction_id: None,
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                    error_message: Some("Failed to process payment flow data".to_string()),
-                    error_code: Some("PAYMENT_FLOW_ERROR".to_string()),
-                    raw_connector_response: None,
+                .map_err(|_| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some("Failed to process payment flow data".to_string()),
+                        Some("PAYMENT_FLOW_ERROR".to_string()),
+                        None,
+                    )
                 })?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
@@ -124,16 +121,13 @@ impl Payments {
 
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
-            .map_err(|_| PaymentServiceAuthorizeResponse {
-                transaction_id: None,
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                incremental_authorization_allowed: None,
-                status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                error_message: Some("Failed to process payment authorize data".to_string()),
-                error_code: Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
-                raw_connector_response: None,
+            .map_err(|_| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process payment authorize data".to_string()),
+                    Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                    None,
+                )
             })?;
 
         // Construct router data
@@ -166,16 +160,13 @@ impl Payments {
             Ok(success_response) => domain_types::types::generate_payment_authorize_response(
                 success_response,
             )
-            .map_err(|_| PaymentServiceAuthorizeResponse {
-                transaction_id: None,
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                incremental_authorization_allowed: None,
-                status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                error_message: Some("Failed to generate authorize response".to_string()),
-                error_code: Some("RESPONSE_GENERATION_ERROR".to_string()),
-                raw_connector_response: None,
+            .map_err(|_| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to generate authorize response".to_string()),
+                    Some("RESPONSE_GENERATION_ERROR".to_string()),
+                    None,
+                )
             })?,
             Err(error_report) => {
                 // Convert error to RouterDataV2 with error response
@@ -184,19 +175,16 @@ impl Payments {
                     resource_common_data: payment_flow_data,
                     connector_auth_type: connector_auth_details,
                     request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
-                        |_| PaymentServiceAuthorizeResponse {
-                            transaction_id: None,
-                            redirection_data: None,
-                            network_txn_id: None,
-                            response_ref_id: None,
-                            incremental_authorization_allowed: None,
-                            status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                            error_message: Some(
-                                "Failed to process payment authorize data in error path"
-                                    .to_string(),
-                            ),
-                            error_code: Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
-                            raw_connector_response: None,
+                        |_| {
+                            PaymentAuthorizationError::new(
+                                grpc_api_types::payments::PaymentStatus::Pending,
+                                Some(
+                                    "Failed to process payment authorize data in error path"
+                                        .to_string(),
+                                ),
+                                Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                                None,
+                            )
                         },
                     )?,
                     response: Err(ErrorResponse {
@@ -213,16 +201,13 @@ impl Payments {
                     }),
                 };
                 domain_types::types::generate_payment_authorize_response(error_router_data)
-                    .map_err(|_| PaymentServiceAuthorizeResponse {
-                        transaction_id: None,
-                        redirection_data: None,
-                        network_txn_id: None,
-                        response_ref_id: None,
-                        incremental_authorization_allowed: None,
-                        status: grpc_api_types::payments::PaymentStatus::Failure.into(),
-                        error_message: Some(format!("Connector error: {error_report}")),
-                        error_code: Some("CONNECTOR_ERROR".to_string()),
-                        raw_connector_response: None,
+                    .map_err(|_| {
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some(format!("Connector error: {error_report}")),
+                            Some("CONNECTOR_ERROR".to_string()),
+                            None,
+                        )
                     })?
             }
         };
@@ -238,7 +223,7 @@ impl Payments {
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
-    ) -> Result<String, PaymentServiceAuthorizeResponse> {
+    ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
             '_,
@@ -250,17 +235,12 @@ impl Payments {
 
         let currency =
             common_enums::Currency::foreign_try_from(payload.currency()).map_err(|e| {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: None,
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                    error_message: Some(format!("Currency conversion failed: {e}")),
-                    error_code: Some("CURRENCY_ERROR".to_string()),
-                    raw_connector_response: None,
-                }
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Currency conversion failed: {e}")),
+                    Some("CURRENCY_ERROR".to_string()),
+                    None,
+                )
             })?;
 
         let order_create_data = PaymentCreateOrderData {
@@ -299,33 +279,23 @@ impl Payments {
         .await
         .map_err(
             |e: error_stack::Report<domain_types::errors::ConnectorError>| {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: None,
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                    error_message: Some(format!("Order creation failed: {e}")),
-                    error_code: Some("ORDER_CREATION_ERROR".to_string()),
-                    raw_connector_response: None,
-                }
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Order creation failed: {e}")),
+                    Some("ORDER_CREATION_ERROR".to_string()),
+                    None,
+                )
             },
         )?;
 
         match response.response {
             Ok(PaymentCreateOrderResponse { order_id, .. }) => Ok(order_id),
-            Err(e) => Err(PaymentServiceAuthorizeResponse {
-                transaction_id: None,
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                incremental_authorization_allowed: None,
-                status: grpc_api_types::payments::PaymentStatus::Pending.into(),
-                error_message: Some(e.message.clone()),
-                error_code: Some(e.code.clone()),
-                raw_connector_response: e.raw_connector_response.clone(),
-            }),
+            Err(e) => Err(PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(e.message.clone()),
+                Some(e.code.clone()),
+                e.raw_connector_response.clone(),
+            )),
         }
     }
     async fn handle_order_creation_for_setup_mandate(
@@ -507,7 +477,7 @@ impl PaymentService for Payments {
                 .await
                 {
                     Ok(response) => response,
-                    Err(error_response) => error_response,
+                    Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
                 };
 
                 Ok(tonic::Response::new(authorize_response))
