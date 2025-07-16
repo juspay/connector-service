@@ -60,12 +60,20 @@ pub async fn test_logging_handler(
             }
             "info" => {
                 if payload.include_fields {
+                    let timestamp = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .as_micros();
+                    let payment_id = format!("pay_{}_{}", timestamp, i);
+                    let merchant_id = format!("merchant_{}", i % 100);
+                    let latency_ms = 10 + (i % 150);
                     tracing::info!(
-                        iteration = i,
-                        test_field = "test_value",
-                        numeric_field = i * 2,
+                        payment_id,
+                        merchant_id,
+                        latency_ms,
+                        flow = "PaymentsConfirm",
                         request_id = ?request_id,
-                        "Test info log with fields"
+                        "API request completed"
                     );
                 } else {
                     tracing::info!(request_id = ?request_id, "Test info log {}", i);
