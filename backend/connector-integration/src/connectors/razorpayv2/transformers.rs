@@ -119,7 +119,7 @@ impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
 
 #[derive(Debug, Serialize)]
 pub struct RazorpayV2CreateOrderRequest {
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub currency: String,
     pub receipt: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -134,9 +134,9 @@ pub type RazorpayV2Notes = serde_json::Value;
 pub struct RazorpayV2CreateOrderResponse {
     pub id: String,
     pub entity: String,
-    pub amount: i64,
-    pub amount_paid: i64,
-    pub amount_due: i64,
+    pub amount: MinorUnit,
+    pub amount_paid: MinorUnit,
+    pub amount_due: MinorUnit,
     pub currency: String,
     pub receipt: String,
     pub status: String,
@@ -152,7 +152,7 @@ pub struct RazorpayV2CreateOrderResponse {
 
 #[derive(Debug, Serialize)]
 pub struct RazorpayV2PaymentsRequest {
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub currency: String,
     pub order_id: String,
     pub email: Email,
@@ -281,9 +281,8 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: &RazorpayV2RouterData<&PaymentCreateOrderData>) -> Result<Self, Self::Error> {
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
         Ok(Self {
-            amount: amount_in_minor_units,
+            amount: item.amount,
             currency: item.router_data.currency.to_string(),
             receipt: item
                 .order_id
@@ -311,8 +310,6 @@ impl
             &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
-
         // Determine UPI flow based on payment method data
         let (upi_flow, vpa) = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Upi(upi_data) => match upi_data {
@@ -353,7 +350,7 @@ impl
                 })?;
 
         Ok(Self {
-            amount: amount_in_minor_units,
+            amount: item.amount,
             currency: item.router_data.request.currency.to_string(),
             order_id: order_id.to_string(),
             email: item

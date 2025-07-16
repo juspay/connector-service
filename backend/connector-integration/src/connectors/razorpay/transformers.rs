@@ -459,7 +459,7 @@ pub enum RazorpayResponse {
 pub struct RazorpayPsyncResponse {
     pub id: String,
     pub entity: String,
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub base_amount: i64,
     pub currency: String,
     pub base_currency: String,
@@ -496,7 +496,7 @@ pub struct RazorpayRefundResponse {
     pub id: String,
     pub status: RazorpayRefundStatus,
     pub receipt: Option<String>,
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub currency: String,
 }
 
@@ -1274,7 +1274,7 @@ impl<F, Req>
 #[derive(Debug, Serialize)]
 pub struct RazorpayWebCollectRequest {
     pub currency: String,
-    pub amount: i64,
+    pub amount: MinorUnit,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<Email>,
     pub order_id: String,
@@ -1378,8 +1378,6 @@ impl
         use domain_types::payment_method_data::{PaymentMethodData, UpiData};
         use hyperswitch_masking::PeekInterface;
 
-        let amount_in_minor_units = item.amount.get_amount_as_i64();
-
         // Determine flow type and extract VPA based on UPI payment method
         let (flow_type, vpa) = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) => {
@@ -1424,7 +1422,7 @@ impl
 
         Ok(Self {
             currency: item.router_data.request.currency.to_string(),
-            amount: amount_in_minor_units,
+            amount: item.amount,
             email: item
                 .router_data
                 .resource_common_data
