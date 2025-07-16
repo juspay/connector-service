@@ -90,7 +90,8 @@ impl Payments {
         // Create common request data
         let payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|_| {
+                .map_err(|err| {
+                    tracing::error!("Failed to process payment flow data: {:?}", err);
                     PaymentAuthorizationError::new(
                         grpc_api_types::payments::PaymentStatus::Pending,
                         Some("Failed to process payment flow data".to_string()),
@@ -121,7 +122,8 @@ impl Payments {
 
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
-            .map_err(|_| {
+            .map_err(|err| {
+                tracing::error!("Failed to process payment authorize data: {:?}", err);
                 PaymentAuthorizationError::new(
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some("Failed to process payment authorize data".to_string()),
@@ -160,7 +162,8 @@ impl Payments {
             Ok(success_response) => domain_types::types::generate_payment_authorize_response(
                 success_response,
             )
-            .map_err(|_| {
+            .map_err(|err| {
+                tracing::error!("Failed to generate authorize response: {:?}", err);
                 PaymentAuthorizationError::new(
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some("Failed to generate authorize response".to_string()),
@@ -175,7 +178,11 @@ impl Payments {
                     resource_common_data: payment_flow_data,
                     connector_auth_type: connector_auth_details,
                     request: PaymentsAuthorizeData::foreign_try_from(payload.clone()).map_err(
-                        |_| {
+                        |err| {
+                            tracing::error!(
+                                "Failed to process payment authorize data in error path: {:?}",
+                                err
+                            );
                             PaymentAuthorizationError::new(
                                 grpc_api_types::payments::PaymentStatus::Pending,
                                 Some(
@@ -201,7 +208,11 @@ impl Payments {
                     }),
                 };
                 domain_types::types::generate_payment_authorize_response(error_router_data)
-                    .map_err(|_| {
+                    .map_err(|err| {
+                        tracing::error!(
+                            "Failed to generate authorize response for connector error: {:?}",
+                            err
+                        );
                         PaymentAuthorizationError::new(
                             grpc_api_types::payments::PaymentStatus::Pending,
                             Some(format!("Connector error: {error_report}")),
