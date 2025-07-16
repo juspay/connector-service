@@ -13,6 +13,12 @@ lazy_static! {
         "Total number of test logging requests"
     ).expect("Failed to register test_logging_requests_total");
 
+    /// Total number of log events generated at tracing level (before filtering)
+    pub static ref TRACING_EVENTS_GENERATED: IntCounter = register_int_counter!(
+        "tracing_events_generated_total",
+        "Total number of log events generated at tracing level (before filtering)"
+    ).expect("Failed to register tracing_events_generated_total");
+
     /// Test logging request duration histogram
     pub static ref TEST_LOGGING_DURATION: Histogram = register_histogram!(
         "test_logging_duration_seconds",

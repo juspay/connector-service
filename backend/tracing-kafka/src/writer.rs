@@ -1,7 +1,6 @@
 //! Kafka writer implementation for sending formatted log messages to Kafka.
 
 use std::io::{self, Write};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,12 +10,12 @@ use rdkafka::{
     producer::{BaseRecord, DefaultProducerContext, Producer, ThreadedProducer},
 };
 
-use crate::{KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT};
+use crate::{
+    KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT,
+    KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE,
+};
 
-/// Global counter for dropped logs (for monitoring during load tests)
-pub static DROPPED_LOGS: AtomicU64 = AtomicU64::new(0);
-
-/// A writer that sends log messages to Kafka.
+/// Kafka writer that implements std::io::Write for seamless integration with tracing
 #[derive(Clone)]
 pub struct KafkaWriter {
     producer: Arc<ThreadedProducer<DefaultProducerContext>>,
@@ -42,12 +41,11 @@ impl KafkaWriter {
     ) -> Result<Self, KafkaWriterError> {
         let mut config = ClientConfig::new();
         config.set("bootstrap.servers", brokers.join(","));
-
-        config.set("queue.buffering.max.messages", "10000"); // Limit queue size
-        config.set("queue.buffering.max.kbytes", "102400"); // 100MB max memory
-        config.set("socket.timeout.ms", "5000"); // 5 second socket timeout
-        config.set("message.timeout.ms", "30000"); // 30 second message timeout
-        config.set("request.timeout.ms", "10000"); // 10 second request timeout
+        // config.set("queue.buffering.max.messages", "100000"); // Limit queue size
+        // config.set("queue.buffering.max.kbytes", "1024000"); // 100MB max memory
+        // config.set("socket.timeout.ms", "5000"); // 5 second socket timeout
+        // config.set("message.timeout.ms", "30000"); // 30 second message timeout
+        // config.set("request.timeout.ms", "10000"); // 10 second request timeout
 
         // Only set custom values if provided, otherwise use Kafka defaults
         if let Some(size) = batch_size {
@@ -70,11 +68,20 @@ impl KafkaWriter {
 
 impl Write for KafkaWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        // Convert bytes to string for Kafka message
+        // Track queue depth for monitoring
+        let queue_size = self.producer.in_flight_count();
+        KAFKA_QUEUE_SIZE.set(queue_size as i64);
+
+        // Warn when approaching queue limits (90% full)
+        if queue_size > 90_000 {
+            eprintln!("[KAFKA WARNING] Queue nearly full: {}/100000", queue_size);
+        }
+
+        // Kafka expects string payloads for JSON logs
         let message =
             std::str::from_utf8(buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        // Create Kafka record with timestamp
+        // Attach timestamp for event ordering in Kafka
         let record: BaseRecord<'_, (), str> =
             BaseRecord::to(&self.topic).payload(message).timestamp(
                 std::time::SystemTime::now()
@@ -85,28 +92,41 @@ impl Write for KafkaWriter {
 
         match self.producer.send(record) {
             Ok(_) => {
-                // Increment success counter
                 KAFKA_LOGS_SENT.inc();
                 Ok(buf.len())
             }
             Err((kafka_error, _)) => {
-                // Increment dropped counter
                 KAFKA_LOGS_DROPPED.inc();
 
-                // Check if it's a queue full error
-                if let KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull) =
-                    &kafka_error
-                {
-                    // Queue is full - increment counter and drop the log
-                    DROPPED_LOGS.fetch_add(1, Ordering::Relaxed);
-                    // Return success anyway - don't want logging to fail the app
-                    Ok(buf.len())
-                } else {
-                    // For other errors, still drop but log the error type
-                    DROPPED_LOGS.fetch_add(1, Ordering::Relaxed);
-                    // Return success to prevent app failure
-                    Ok(buf.len())
+                // Track specific drop reasons for debugging
+                match &kafka_error {
+                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull) => {
+                        KAFKA_DROPS_QUEUE_FULL.inc();
+                        eprintln!("[KAFKA DROP] Reason: Queue full (size: {})", queue_size);
+                    }
+                    KafkaError::MessageProduction(
+                        rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
+                    ) => {
+                        KAFKA_DROPS_MSG_TOO_LARGE.inc();
+                        eprintln!(
+                            "[KAFKA DROP] Reason: Message too large (size: {} bytes)",
+                            buf.len()
+                        );
+                    }
+                    KafkaError::MessageProduction(
+                        rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
+                    ) => {
+                        KAFKA_DROPS_TIMEOUT.inc();
+                        eprintln!("[KAFKA DROP] Reason: Message timed out");
+                    }
+                    _ => {
+                        KAFKA_DROPS_OTHER.inc();
+                        eprintln!("[KAFKA DROP] Reason: {:?}", kafka_error);
+                    }
                 }
+
+                // Non-blocking: drop logs rather than block the app
+                Ok(buf.len())
             }
         }
     }

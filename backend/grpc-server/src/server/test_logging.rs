@@ -1,3 +1,4 @@
+use crate::metrics::TRACING_EVENTS_GENERATED;
 use axum::{http, Json};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
@@ -39,6 +40,8 @@ pub async fn test_logging_handler(
                 } else {
                     tracing::trace!(request_id = ?request_id, "Test trace log {}", i);
                 }
+                // Increment the counter for tracing level events
+                TRACING_EVENTS_GENERATED.inc();
             }
             "debug" => {
                 if payload.include_fields {
@@ -52,6 +55,8 @@ pub async fn test_logging_handler(
                 } else {
                     tracing::debug!(request_id = ?request_id, "Test debug log {}", i);
                 }
+                // Increment the counter for tracing level events
+                TRACING_EVENTS_GENERATED.inc();
             }
             "info" => {
                 if payload.include_fields {
@@ -65,6 +70,8 @@ pub async fn test_logging_handler(
                 } else {
                     tracing::info!(request_id = ?request_id, "Test info log {}", i);
                 }
+                // Increment the counter for tracing level events
+                TRACING_EVENTS_GENERATED.inc();
             }
             "warn" => {
                 if payload.include_fields {
@@ -78,6 +85,8 @@ pub async fn test_logging_handler(
                 } else {
                     tracing::warn!(request_id = ?request_id, "Test warn log {}", i);
                 }
+                // Increment the counter for tracing level events
+                TRACING_EVENTS_GENERATED.inc();
             }
             "error" => {
                 if payload.include_fields {
@@ -91,6 +100,8 @@ pub async fn test_logging_handler(
                 } else {
                     tracing::error!(request_id = ?request_id, "Test error log {}", i);
                 }
+                // Increment the counter for tracing level events
+                TRACING_EVENTS_GENERATED.inc();
             }
             _ => {
                 return Err((

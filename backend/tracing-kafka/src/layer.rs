@@ -10,7 +10,9 @@ use tracing_subscriber::Layer;
 
 use crate::writer::{KafkaWriter, KafkaWriterError};
 
-/// A tracing layer that sends formatted logs to Kafka using the same formatting as log_utils.
+/// Tracing layer that sends JSON-formatted logs to Kafka
+///
+/// Wraps log_utils' JsonFormattingLayer
 pub struct KafkaLayer<S> {
     inner: JsonFormattingLayer<KafkaWriter, serde_json::ser::CompactFormatter>,
     _phantom: std::marker::PhantomData<S>,

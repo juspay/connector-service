@@ -59,6 +59,42 @@ pub static KAFKA_QUEUE_SIZE: Lazy<IntGauge> = Lazy::new(|| {
     .expect("Failed to register kafka_producer_queue_size metric")
 });
 
+/// Logs dropped due to queue full
+pub static KAFKA_DROPS_QUEUE_FULL: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_drops_queue_full_total",
+        "Total number of logs dropped due to Kafka queue being full"
+    )
+    .expect("Failed to register kafka_drops_queue_full_total metric")
+});
+
+/// Logs dropped due to message too large
+pub static KAFKA_DROPS_MSG_TOO_LARGE: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_drops_msg_too_large_total",
+        "Total number of logs dropped due to message size exceeding limit"
+    )
+    .expect("Failed to register kafka_drops_msg_too_large_total metric")
+});
+
+/// Logs dropped due to timeout
+pub static KAFKA_DROPS_TIMEOUT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_drops_timeout_total",
+        "Total number of logs dropped due to timeout"
+    )
+    .expect("Failed to register kafka_drops_timeout_total metric")
+});
+
+/// Logs dropped due to other errors
+pub static KAFKA_DROPS_OTHER: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_drops_other_total",
+        "Total number of logs dropped due to other errors"
+    )
+    .expect("Failed to register kafka_drops_other_total metric")
+});
+
 /// Builder for creating a KafkaLayer with custom configuration.
 #[derive(Debug, Clone, Default)]
 pub struct KafkaLayerBuilder {
