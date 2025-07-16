@@ -181,7 +181,7 @@ macros::create_all_prerequisites!(
 
             let content_type = self.get_content_type().to_string();
 
-            let api = (self.get_url(req)?).replace(self.connector_base_url_payments(&req), "");
+            let api = (self.get_url(req)?).replace(self.connector_base_url_payments(req), "");
 
             let auth = cryptopay::CryptopayAuthType::try_from(&req.connector_auth_type)?;
 

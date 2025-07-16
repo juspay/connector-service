@@ -8,13 +8,11 @@ mod common;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient,
-        AuthenticationType, CaptureMethod, CryptoCurrencyPaymentMethodType, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceGetRequest,
+        crypto_currency_payment_method_type, identifier::IdType, payment_method,
+        payment_service_client::PaymentServiceClient, AuthenticationType, CaptureMethod,
+        CryptoCurrency, CryptoCurrencyPaymentMethodType, Currency, Identifier, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
         PaymentStatus,
-        crypto_currency_payment_method_type, CryptoCurrency
     },
 };
 use std::env;
@@ -47,8 +45,8 @@ const TEST_NETWORK: &str = "litecoin";
 
 fn add_cryptopay_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(CRYPTOPAY_API_KEY_ENV).expect("TEST_CRYPTOPAY_API_KEY environment variable is required");
+    let api_key = env::var(CRYPTOPAY_API_KEY_ENV)
+        .expect("TEST_CRYPTOPAY_API_KEY environment variable is required");
     let key1 = env::var(CRYPTOPAY_KEY1_ENV)
         .expect("TEST_CRYPTOPAY_KEY1_ENV environment variable is required");
 
@@ -98,13 +96,15 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Crypto(
                 CryptoCurrencyPaymentMethodType {
-                    crypto_type: Some(crypto_currency_payment_method_type::CryptoType::CryptoCurrency(
-                        CryptoCurrency {
-                            pay_currency: Some(TEST_PAY_CURRENCY.to_string()),
-                            network: Some(TEST_NETWORK.to_string()),
-                        }
-                    )),
-                }
+                    crypto_type: Some(
+                        crypto_currency_payment_method_type::CryptoType::CryptoCurrency(
+                            CryptoCurrency {
+                                pay_currency: Some(TEST_PAY_CURRENCY.to_string()),
+                                network: Some(TEST_NETWORK.to_string()),
+                            },
+                        ),
+                    ),
+                },
             )),
         }),
         return_url: Some(
