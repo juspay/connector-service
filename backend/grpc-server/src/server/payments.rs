@@ -106,7 +106,7 @@ impl Payments {
         let payment_flow_data = if should_do_order_create {
             let order_id = self
                 .handle_order_creation(
-                    connector_data,
+                    connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
                     &payload,
@@ -124,10 +124,10 @@ impl Payments {
         let should_do_session_token = connector_data.connector.should_do_session_token();
 
         let payment_flow_data = if should_do_session_token {
-            let mut flow_data = payment_flow_data;
-            self.handle_session_token(
+            // let mut flow_data = payment_flow_data;
+            let payment_session_data = self.handle_session_token(
                 connector_data.clone(),
-                &mut flow_data,
+                &payment_flow_data,
                 connector_auth_details.clone(),
                 &payload,
                 &connector.to_string(),
@@ -135,7 +135,8 @@ impl Payments {
             )
             .await
             .map_err(|e| e)?;
-            flow_data
+            tracing::info!("Session Token created successfully with session_id: {}", payment_session_data.session_token);
+            payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
         } else {
             payment_flow_data
         };
@@ -398,12 +399,12 @@ impl Payments {
     async fn handle_session_token<T>(
         &self,
         connector_data: ConnectorData,
-        payment_flow_data: &mut PaymentFlowData,
+        payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &T,
         connector_name: &str,
         service_name: &str,
-    ) -> Result<(), tonic::Status>
+    ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
         T: Clone,
         SessionTokenRequestData: ForeignTryFrom<T, Error = ApplicationErrorResponse>,
@@ -420,7 +421,12 @@ impl Payments {
         // Create session token request data using try_from_foreign
         let session_token_request_data = SessionTokenRequestData::foreign_try_from(payload.clone())
             .map_err(|e| {
-                tonic::Status::invalid_argument(format!("Invalid session token request data: {e}"))
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Session Token creation failed: {e}")),
+                    Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
+                    None,
+                )
             })?;
 
         let session_token_router_data = RouterDataV2::<
@@ -448,22 +454,28 @@ impl Payments {
         .await
         .switch()
         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
-            tonic::Status::internal(format!("Session token creation failed: {e}"))
+            PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Session Token creation failed: {e}")),
+                    Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
+                    None,
+                )
         })?;
 
         match response.response {
-            Ok(SessionTokenResponseData { session_token, .. }) => {
+            Ok(session_token_data) => {
                 tracing::info!(
                     "Session token created successfully: {}",
-                    session_token
+                    session_token_data.session_token
                 );
-                payment_flow_data.session_token = Some(session_token);
-                Ok(())
+                Ok(session_token_data)
             }
-            Err(ErrorResponse { message, .. }) => Err(tonic::Status::internal(format!(
-                "Session token creation error: {}",
-                message
-            ))),
+            Err(ErrorResponse { message, .. }) => Err(PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Session Token creation failed: {message}")),
+                    Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
+                    None,
+                ))
         }
     }
 }
