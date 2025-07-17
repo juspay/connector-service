@@ -2,12 +2,15 @@ pub mod transformers;
 
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 
+use crate::utils::xml_utils::flatten_json_structure;
+use bytes::Bytes;
+
 use serde::Deserialize;
 use serde_json::Value;
 
-use std::{any::type_name, collections::HashMap};
+use std::collections::HashMap;
 
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 use common_enums::CurrencyUnit;
 use domain_types::{
@@ -109,6 +112,55 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
+        pub fn preprocess_response_bytes(
+            &self,
+            response_bytes: Bytes,
+        ) -> Result<Bytes, errors::ConnectorError> {
+            // Use the utility function to preprocess XML response bytes
+                let response_str = String::from_utf8(response_bytes.to_vec()).map_err(|e| {
+                error!("Error in Deserializing Response Data: {:?}", e);
+                errors::ConnectorError::ResponseDeserializationFailed
+            })?;
+
+            let mut json = serde_json::Map::new();
+            let mut miscellaneous: HashMap<String, Secret<String>> = HashMap::new();
+
+            for line in response_str.lines() {
+                if let Some((key, value)) = line.split_once('=') {
+                    if key.trim().is_empty() {
+                        error!("Null or empty key encountered in response.");
+                        continue;
+                    }
+
+                    if let Some(old_value) = json.insert(key.to_string(), Value::String(value.to_string()))
+                    {
+                        warn!("Repeated key encountered: {}", key);
+                        miscellaneous.insert(key.to_string(), Secret::new(old_value.to_string()));
+                    }
+                }
+            }
+            if !miscellaneous.is_empty() {
+                let misc_value = serde_json::to_value(miscellaneous).map_err(|e| {
+                    error!("Error serializing miscellaneous data: {:?}", e);
+                    errors::ConnectorError::ResponseDeserializationFailed
+                })?;
+                json.insert("miscellaneous".to_string(), misc_value);
+            }
+                // Extract and flatten the JSON structure
+            let flattened_json = flatten_json_structure(Value::Object(json));
+
+            // Convert JSON Value to string and then to bytes
+            let json_string = serde_json::to_string(&flattened_json).map_err(|e| {
+                tracing::error!(error=?e, "Failed to convert to JSON string");
+                errors::ConnectorError::ResponseDeserializationFailed
+            })?;
+
+            tracing::info!(json=?json_string, "Flattened JSON structure");
+
+            // Return JSON as bytes
+            Ok(Bytes::from(json_string.into_bytes()))
+        }
+
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
@@ -225,79 +277,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Fiuu,
-    curl_request: FormData(FiuuPaymentSyncRequest),
-    curl_response: FiuuPaymentResponse,
-    flow_name: PSync,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsSyncData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    skip_handle_response: true,
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}RMS/API/gate-query/index.php",self.connector_base_url_payments(req)))
-        }
-        fn handle_response_v2(
-            &self,
-            data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            event_builder: Option<&mut ConnectorEvent>,
-            res: Response,
-        ) -> CustomResult<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            macro_types::ConnectorError,
-        > {
-            match res.headers {
-                Some(headers) => {
-                    let content_header = utils::get_http_header("Content-type", &headers)
-                        .attach_printable("Missing content type in headers")
-                        .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
-                    let response: fiuu::FiuuPaymentResponse = if content_header
-                        == "text/plain;charset=UTF-8"
-                    {
-                        parse_response(&res.response)
-                    } else {
-                        Err(errors::ConnectorError::ResponseDeserializationFailed)
-                            .attach_printable(format!("Expected content type to be text/plain;charset=UTF-8 , but received different content type as {content_header} in response"))?
-                    }?;
-                    with_response_body!(event_builder, response);
-
-                    RouterDataV2::try_from(ResponseRouterData {
-                        response,
-                        router_data: data.clone(),
-                        http_code: res.status_code,
-                    }).change_context(errors::ConnectorError::ResponseHandlingFailed)
-                }
-                None => {
-                    // We don't get headers for payment webhook response handling
-                    let response: fiuu::FiuuPaymentResponse = res
-                        .response
-                        .parse_struct("fiuu::FiuuPaymentResponse")
-                        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-                    with_response_body!(event_builder, response);
-
-                    RouterDataV2::try_from(ResponseRouterData {
-                        response,
-                        router_data: data.clone(),
-                        http_code: res.status_code,
-                    }).change_context(errors::ConnectorError::ResponseHandlingFailed)
-                }
-            }
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Fiuu,
     curl_request: FormData(PaymentCaptureRequest),
     curl_response: FiuuCaptureResponse,
     flow_name: Capture,
@@ -335,7 +314,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    skip_handle_response: true,
+    preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,
@@ -351,27 +330,6 @@ macros::macro_connector_implementation!(
                 "{}RMS/API/refundAPI/refund.php",
                 self.connector_base_url_payments(req)
             ))
-        }
-        fn handle_response_v2(
-            &self,
-            data: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            event_builder: Option<&mut ConnectorEvent>,
-            res: Response,
-        ) -> CustomResult<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            macro_types::ConnectorError,
-        > {
-            let response: fiuu::FiuuPaymentCancelResponse = parse_response(&res.response)?;
-
-            with_response_body!(event_builder, response);
-
-            let response_router_data = ResponseRouterData {
-                response,
-                router_data: data.clone(),
-                http_code: res.status_code,
-            };
-
-            RouterDataV2::try_from(response_router_data).change_context(errors::ConnectorError::ResponseHandlingFailed)
         }
     }
 );
@@ -434,6 +392,102 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Fiuu
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        self.build_headers(req)
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<String, errors::ConnectorError> {
+        Ok(format!(
+            "{}RMS/API/gate-query/index.php",
+            self.connector_base_url_payments(req)
+        ))
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError> {
+        let bridge = self.p_sync;
+        let input_data = FiuuRouterData {
+            connector: self.to_owned(),
+            router_data: req.clone(),
+        };
+        let request = bridge.request_body(input_data)?;
+        let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request)
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+        Ok(Some(macro_types::RequestContent::FormData(form_data)))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<
+        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        macro_types::ConnectorError,
+    > {
+        match res.headers {
+            Some(headers) => {
+                let content_header = utils::get_http_header("Content-type", &headers)
+                    .attach_printable("Missing content type in headers")
+                    .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
+                let response: fiuu::FiuuPaymentResponse = if content_header
+                    == "text/plain;charset=UTF-8"
+                {
+                    parse_response(&res.response)
+                } else {
+                    Err(errors::ConnectorError::ResponseDeserializationFailed)
+                        .attach_printable(format!("Expected content type to be text/plain;charset=UTF-8 , but received different content type as {content_header} in response"))?
+                }?;
+                with_response_body!(event_builder, response);
+
+                RouterDataV2::try_from(ResponseRouterData {
+                    response,
+                    router_data: data.clone(),
+                    http_code: res.status_code,
+                })
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            }
+            None => {
+                // We don't get headers for payment webhook response handling
+                let response: fiuu::FiuuPaymentResponse = res
+                    .response
+                    .parse_struct("fiuu::FiuuPaymentResponse")
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                with_response_body!(event_builder, response);
+
+                RouterDataV2::try_from(ResponseRouterData {
+                    response,
+                    router_data: data.clone(),
+                    http_code: res.status_code,
+                })
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+            }
+        }
+    }
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+}
 
 // Implementation for empty stubs - these will need to be properly implemented later
 impl
@@ -614,27 +668,6 @@ where
         })?;
         json.insert("miscellaneous".to_string(), misc_value);
     }
-
-    // TODO: Remove this after debugging
-    let loggable_keys = [
-        "StatCode",
-        "StatName",
-        "TranID",
-        "ErrorCode",
-        "ErrorDesc",
-        "miscellaneous",
-    ];
-    let keys: Vec<(&str, Value)> = json
-        .iter()
-        .map(|(key, value)| {
-            if loggable_keys.contains(&key.as_str()) {
-                (key.as_str(), value.to_owned())
-            } else {
-                (key.as_str(), Value::String("SECRET".to_string()))
-            }
-        })
-        .collect();
-    info!("Keys in response for type {}\n{:?}", type_name::<T>(), keys);
 
     let response: T = serde_json::from_value(Value::Object(json)).map_err(|e| {
         error!("Error in Deserializing Response Data: {:?}", e);

@@ -399,57 +399,6 @@ macro_rules! macro_connector_implementation {
             );
         }
     };
-
-    // Version skip_handle_response: true
-    (
-        connector_default_implementations: [$($function_name: ident), *],
-        connector: $connector: ty,
-        $(curl_request: $content_type:ident($curl_req: ty),)?
-        curl_response:$curl_res: ty,
-        flow_name:$flow: ident,
-        resource_common_data:$resource_common_data: ty,
-        flow_request:$request: ty,
-        flow_response:$response: ty,
-        http_method: $http_method_type:ident,
-        skip_handle_response: true,
-        other_functions: {
-            $($function_def: tt)*
-        }
-    ) => {
-        impl
-            ConnectorIntegrationV2<
-                $flow,
-                $resource_common_data,
-                $request,
-                $response,
-            > for $connector
-        {
-            fn get_http_method(&self) -> common_utils::request::Method {
-                common_utils::request::Method::$http_method_type
-            }
-            $($function_def)*
-            $(
-                macros::expand_default_functions!(
-                    function: $function_name,
-                    flow_name:$flow,
-                    resource_common_data:$resource_common_data,
-                    flow_request:$request,
-                    flow_response:$response,
-                );
-            )*
-            macros::expand_fn_get_request_body!(
-                $connector,
-                $($curl_req,)?
-                $($content_type,)?
-                $curl_res,
-                $flow,
-                $resource_common_data,
-                $request,
-                $response
-
-            );
-        }
-    };
 }
 pub(crate) use macro_connector_implementation;
 
