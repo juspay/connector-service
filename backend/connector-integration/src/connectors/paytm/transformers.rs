@@ -96,7 +96,6 @@ use ring::{
     rand::{SecureRandom, SystemRandom},
 };
 use serde::{Deserialize, Serialize};
-use tracing::info;
 
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
