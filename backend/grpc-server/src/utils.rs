@@ -1,18 +1,19 @@
 use serde_json::Value;
 use std::str::FromStr;
-
-use crate::configs::Config;
-use crate::error::ResultExtGrpc;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
 };
-use domain_types::connector_types;
-use domain_types::errors::{ApiError, ApplicationErrorResponse};
-use domain_types::router_data::ConnectorAuthType;
+use domain_types::{
+    connector_types,
+    errors::{ApiError, ApplicationErrorResponse},
+    router_data::ConnectorAuthType,
+};
 use error_stack::Report;
 use http::request::Request;
 use tonic::metadata;
+
+use crate::{configs::Config, error::ResultExtGrpc};
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {

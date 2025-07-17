@@ -1,13 +1,7 @@
-use crate::implement_connector_operation;
-use crate::{
-    configs::Config,
-    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    utils::{
-        auth_from_metadata, connector_from_metadata, get_config_from_request, grpc_logging_wrapper,
-    },
-};
+use std::sync::Arc;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
+use crate::utils::get_config_from_request;
 use domain_types::{
     connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
     connector_types::{
@@ -32,8 +26,14 @@ use grpc_api_types::payments::{
     WebhookResponseContent,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use std::sync::Arc;
 use tracing::info;
+
+use crate::{
+    configs::Config,
+    error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
+    implement_connector_operation,
+    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+};
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {

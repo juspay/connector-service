@@ -1,11 +1,10 @@
 use std::path::PathBuf;
 
+use common_utils::consts;
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
-use common_utils::consts;
 use serde::{Deserialize, Serialize};
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub server: Server,

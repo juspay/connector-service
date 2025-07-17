@@ -1,3 +1,11 @@
+use std::{str::FromStr, time::Duration};
+
+use common_utils::ext_traits::AsyncExt;
+// use base64::engine::Engine;
+use common_utils::{
+    // consts::BASE64_ENGINE,
+    request::{Method, Request, RequestContent},
+};
 use domain_types::{
     connector_types::RawConnectorResponse,
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
@@ -5,14 +13,7 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
-// use base64::engine::Engine;
-use crate::shared_metrics as metrics;
-use common_utils::{
-    // consts::BASE64_ENGINE,
-    request::{Method, Request, RequestContent},
-};
 use error_stack::{report, ResultExt};
-
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
@@ -20,12 +21,11 @@ use interfaces::{
 use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
-use serde_json::json;
-use std::{str::FromStr, time::Duration};
+use serde_json::{json, Value};
 use tracing::field::Empty;
 
-use common_utils::ext_traits::AsyncExt;
-use serde_json::Value;
+// use base64::engine::Engine;
+use crate::shared_metrics as metrics;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
@@ -70,6 +70,7 @@ where
         .as_ref()
         .map(|connector_request| connector_request.headers.clone())
         .unwrap_or_default();
+    tracing::info!(?headers, "headers of connector request");
 
     let masked_headers = headers
         .iter()
@@ -180,7 +181,7 @@ where
 
                             match handle_response_result {
                                 Ok(mut data) => {
-                                    if all_keys_required.unwrap_or(false) {
+                                    if all_keys_required.unwrap_or(true) {
                                         let raw_response_string =
                                             String::from_utf8(body.response.to_vec()).ok();
                                         data.resource_common_data
@@ -201,8 +202,10 @@ where
                                 ])
                                 .inc();
                             let error = match body.status_code {
-                                500..=511 => connector.get_5xx_error_response(body, None)?,
-                                _ => connector.get_error_response_v2(body, None)?,
+                                500..=511 => {
+                                    connector.get_5xx_error_response(body.clone(), None)?
+                                }
+                                _ => connector.get_error_response_v2(body.clone(), None)?,
                             };
                             tracing::Span::current().record(
                                 "response.error_message",
@@ -212,6 +215,14 @@ where
                                 "response.status_code",
                                 tracing::field::display(error.status_code),
                             );
+                            // Set raw connector response for error cases too
+                            if all_keys_required.unwrap_or(true) {
+                                let raw_response_string =
+                                    String::from_utf8(body.response.to_vec()).ok();
+                                router_data
+                                    .resource_common_data
+                                    .set_raw_connector_response(raw_response_string);
+                            }
                             router_data.response = Err(error);
                             router_data
                         }

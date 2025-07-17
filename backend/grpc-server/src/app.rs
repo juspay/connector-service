@@ -1,6 +1,5 @@
-use crate::config_overrides::RequestExtensionsLayer;
-use crate::{configs, error::ConfigurationError, logger, utils};
-use axum::http;
+use std::{future::Future, net, sync::Arc};
+use axum::{extract::Request, http};
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
@@ -10,13 +9,14 @@ use grpc_api_types::{
         payment_service_server, refund_service_handler, refund_service_server,
     },
 };
-use std::{future::Future, net, sync::Arc};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
 };
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
+
+use crate::{config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError, logger, utils};
 
 /// # Panics
 ///
@@ -119,9 +119,7 @@ impl Service {
         shutdown_signal: impl Future<Output = ()> + Send + 'static,
     ) -> Result<(), ConfigurationError> {
         let logging_layer = tower_trace::TraceLayer::new_for_http()
-            .make_span_with(|request: &axum::extract::Request<_>| {
-                utils::record_fields_from_header(request)
-            })
+            .make_span_with(|request: &Request<_>| utils::record_fields_from_header(request))
             .on_request(tower_trace::DefaultOnRequest::new().level(tracing::Level::INFO))
             .on_response(
                 tower_trace::DefaultOnResponse::new()
@@ -144,13 +142,13 @@ impl Service {
         );
 
         let router = axum::Router::new()
-            .layer(logging_layer)
-            .layer(request_id_layer)
-            .layer(propagate_request_id_layer)
             .route("/health", axum::routing::get(|| async { "health is good" }))
             .merge(payment_service_handler(self.payments_service))
             .merge(refund_service_handler(self.refunds_service))
-            .merge(dispute_service_handler(self.disputes_service));
+            .merge(dispute_service_handler(self.disputes_service))
+            .layer(logging_layer)
+            .layer(request_id_layer)
+            .layer(propagate_request_id_layer);
 
         let listener = tokio::net::TcpListener::bind(socket).await?;
 
@@ -206,7 +204,7 @@ impl Service {
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))
             .add_service(payment_service_server::PaymentServiceServer::new(
-                self.payments_service,
+                self.payments_service.clone(),
             ))
             .add_service(refund_service_server::RefundServiceServer::new(
                 self.refunds_service,
