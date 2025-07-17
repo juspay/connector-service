@@ -1,4 +1,3 @@
-use std::{future::Future, net, sync::Arc};
 use axum::{extract::Request, http};
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
@@ -9,6 +8,7 @@ use grpc_api_types::{
         payment_service_server, refund_service_handler, refund_service_server,
     },
 };
+use std::{future::Future, net, sync::Arc};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
@@ -16,7 +16,9 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use crate::{config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError, logger, utils};
+use crate::{
+    config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError, logger, utils,
+};
 
 /// # Panics
 ///

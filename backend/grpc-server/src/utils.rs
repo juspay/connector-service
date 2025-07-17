@@ -1,5 +1,3 @@
-use serde_json::Value;
-use std::str::FromStr;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
@@ -11,6 +9,8 @@ use domain_types::{
 };
 use error_stack::Report;
 use http::request::Request;
+use serde_json::Value;
+use std::str::FromStr;
 use tonic::metadata;
 
 use crate::{configs::Config, error::ResultExtGrpc};

@@ -1,7 +1,6 @@
-use std::sync::Arc;
+use crate::utils::get_config_from_request;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
-use crate::utils::get_config_from_request;
 use domain_types::{
     connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
     connector_types::{
@@ -26,6 +25,7 @@ use grpc_api_types::payments::{
     WebhookResponseContent,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use std::sync::Arc;
 use tracing::info;
 
 use crate::{

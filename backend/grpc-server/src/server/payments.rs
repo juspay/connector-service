@@ -1,11 +1,12 @@
-use std::sync::Arc;
-use common_enums;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata, get_config_from_request, grpc_logging_wrapper},
+    utils::{
+        auth_from_metadata, connector_from_metadata, get_config_from_request, grpc_logging_wrapper,
+    },
 };
+use common_enums;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
@@ -36,6 +37,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidResponse, RefundResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use std::sync::Arc;
 use tracing::info;
 
 struct HandleOrderData {
@@ -476,8 +478,7 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let config = get_config_from_request(&request)
-                    .map_err(|e| e.into_grpc_status())?;
+                let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
                 let connector = connector_from_metadata(request.metadata())
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
