@@ -60,7 +60,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use ring::{digest, rand::{SecureRandom, SystemRandom}};
 use serde::{Deserialize, Serialize};
-use tracing::info;
 
 
 #[derive(Debug, Clone)]

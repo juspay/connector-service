@@ -661,6 +661,12 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_session_token_id(mut self, session_token_id: Option<String>) -> Self {
+        if session_token_id.is_some() && self.session_token.is_none() {
+            self.session_token = session_token_id;
+        }
+        self
+    }
 }
 
 impl RawConnectorResponse for PaymentFlowData {
