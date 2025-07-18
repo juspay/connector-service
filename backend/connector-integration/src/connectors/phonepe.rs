@@ -10,9 +10,16 @@ use common_utils::{
     types::{AmountConvertor, MinorUnit, MinorUnitForConnector},
 };
 use domain_types::{
-    connector_flow::{Authorize, Accept, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        AcceptDisputeData, ConnectorSpecifications, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -23,11 +30,8 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
-    events::connector_api_logs::ConnectorEvent,
-    verification::SourceVerification,
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
 };
 use transformers as phonepe;
 
@@ -68,27 +72,27 @@ impl SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRespon
 {
 }
 
-impl SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
-    for Phonepe
+impl
+    SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Phonepe
 {
 }
 
-impl SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Phonepe
-{
-}
+impl SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Phonepe {}
 
-impl SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-    for Phonepe
-{
-}
+impl SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Phonepe {}
 
 impl SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Phonepe
 {
 }
 
-impl SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+impl
+    SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
     for Phonepe
 {
 }
@@ -98,13 +102,15 @@ impl SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeRespo
 {
 }
 
-impl SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Phonepe
-{
-}
+impl SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Phonepe {}
 
-impl SourceVerification<DefendDispute, DisputeFlowData, domain_types::connector_types::DisputeDefendData, DisputeResponseData>
-    for Phonepe
+impl
+    SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        domain_types::connector_types::DisputeDefendData,
+        DisputeResponseData,
+    > for Phonepe
 {
 }
 
@@ -149,7 +155,7 @@ impl ConnectorCommon for Phonepe {
     fn build_error_response(
         &self,
         res: Response,
-_event_builder: Option<&mut ConnectorEvent>,
+        _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: phonepe::PhonepePaymentsResponse = res
             .response
@@ -193,15 +199,15 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let amount = req.request.minor_amount;
         let connector_router_data = phonepe::PhonepeRouterData::try_from((amount, req))?;
         let connector_req = phonepe::PhonepePaymentsRequest::try_from(&connector_router_data)?;
-        
+
         let mut header = vec![(
             "Content-Type".to_string(),
             "application/json".to_string().into(),
         )];
-        
+
         // Add the checksum header
         header.push(("X-VERIFY".to_string(), connector_req.checksum.into()));
-        
+
         Ok(header)
     }
 
@@ -228,8 +234,13 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-_event_builder: Option<&mut ConnectorEvent>,
+        data: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
+        _event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
@@ -253,19 +264,64 @@ _event_builder: Option<&mut ConnectorEvent>,
 }
 
 // Default empty implementations for unsupported flows - the traits will use default implementations
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Phonepe {}
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Phonepe {}
+impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Phonepe
+{
+}
+impl
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Phonepe
+{
+}
+impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Phonepe
+{
+}
 impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, domain_types::connector_types::DisputeDefendData, DisputeResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Phonepe {}
+impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Phonepe
+{
+}
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Phonepe
+{
+}
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Phonepe
+{
+}
+impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Phonepe
+{
+}
+impl
+    ConnectorIntegrationV2<
+        DefendDispute,
+        DisputeFlowData,
+        domain_types::connector_types::DisputeDefendData,
+        DisputeResponseData,
+    > for Phonepe
+{
+}
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Phonepe
+{
+}
 
 impl ConnectorSpecifications for Phonepe {
-    fn get_supported_payment_methods(&self) -> Option<&'static domain_types::types::SupportedPaymentMethods> {
+    fn get_supported_payment_methods(
+        &self,
+    ) -> Option<&'static domain_types::types::SupportedPaymentMethods> {
         None // TODO: Add UPI payment methods support
     }
 
