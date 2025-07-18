@@ -5,8 +5,6 @@
 mod tests {
     use interfaces::api::ConnectorCommon;
 
-    use super::*;
-
     #[test]
     fn test_cashfree_connector_creation() {
         // Basic test to ensure connector can be created

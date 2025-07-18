@@ -938,6 +938,7 @@ pub struct PaymentCreateOrderData {
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<serde_json::Value>,
+    pub webhook_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]

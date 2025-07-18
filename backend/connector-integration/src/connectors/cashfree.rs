@@ -6,7 +6,7 @@ use common_utils::{
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     request::RequestContent,
-    types::{AmountConvertor, StringMajorUnitForConnector},
+    types::{AmountConvertor, FloatMajorUnitForConnector},
 };
 use domain_types::{
     connector_flow::{
@@ -46,7 +46,7 @@ pub(crate) mod headers {
 #[derive(Clone)]
 pub struct Cashfree {
     pub(crate) amount_converter:
-        &'static (dyn AmountConvertor<Output = common_utils::types::StringMajorUnit> + Sync),
+        &'static (dyn AmountConvertor<Output = common_utils::types::FloatMajorUnit> + Sync),
 }
 
 impl connector_types::ValidationTrait for Cashfree {
@@ -62,8 +62,8 @@ impl connector_types::PaymentOrderCreate for Cashfree {}
 impl Cashfree {
     pub const fn new() -> &'static Self {
         &Self {
-            // Cashfree V3 uses decimal string amounts (e.g., "10.50")
-            amount_converter: &StringMajorUnitForConnector,
+            // Cashfree V3 uses float amounts (e.g., 10.50)
+            amount_converter: &FloatMajorUnitForConnector,
         }
     }
 }
@@ -191,7 +191,12 @@ impl
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = cashfree::CashfreeOrderCreateRequest::try_from(req)?;
+        let converted_amount = self
+            .amount_converter
+            .convert(req.request.amount, req.request.currency)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let connector_req =
+            cashfree::CashfreeOrderCreateRequest::try_from((converted_amount, req))?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
