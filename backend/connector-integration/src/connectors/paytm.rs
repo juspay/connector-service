@@ -16,9 +16,14 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+<<<<<<< HEAD
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
+=======
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+>>>>>>> d637bc4 (clippy-fixes)
     },
     errors,
     router_data::ConnectorAuthType,
@@ -237,6 +242,7 @@ impl
 }
 
 // Stub implementations for compilation
+<<<<<<< HEAD
 // CreateSessionToken flow implementation - manual implementation for Paytm initiate transaction
 impl
     ConnectorIntegrationV2<
@@ -1063,6 +1069,8 @@ impl
 }
 
 // Stub implementations for compilation
+=======
+>>>>>>> d637bc4 (clippy-fixes)
 impl
     ConnectorIntegrationV2<
         CreateSessionToken,
@@ -1229,12 +1237,31 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let merchant_id = auth.merchant_id.peek();
         let order_id = &req.resource_common_data.connector_request_reference_id;
 
+<<<<<<< HEAD
         // Both UPI Intent and UPI Collect use the same processTransaction endpoint
         // The difference is in the request structure, not the URL
         Ok(format!(
             "{}theia/api/v1/processTransaction?mid={}&orderId={}",
             base_url, merchant_id, order_id
         ))
+=======
+        // Determine UPI flow type to route to correct endpoint
+        let upi_flow = paytm::determine_upi_flow(&req.request.payment_method_data)?;
+
+        match upi_flow {
+            paytm::UpiFlowType::Intent | paytm::UpiFlowType::Collect => {
+                // Both UPI Intent and UPI Collect use the same processTransaction endpoint
+                // The difference is in the request structure, not the URL
+                Ok(format!(
+                    "{}theia/api/v1/processTransaction?mid={}&orderId={}",
+                    base_url, merchant_id, order_id
+                ))
+            } // paytm::UpiFlowType::QrCode => {
+              //     // UPI QR uses a different endpoint for QR creation
+              //     Ok(format!("{}paymentservices/qr/create", base_url))
+              // }
+        }
+>>>>>>> d637bc4 (clippy-fixes)
     }
 
     fn get_request_body(
