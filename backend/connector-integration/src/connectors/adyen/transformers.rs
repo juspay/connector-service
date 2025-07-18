@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     ext_traits::{ByteSliceExt, OptionExt},
     request::Method,
@@ -17,25 +18,20 @@ use domain_types::{
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
-};
-use error_stack::{Report, ResultExt};
-
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-use domain_types::errors;
-use domain_types::{
+    errors,
     payment_method_data::{Card, PaymentMethodData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
-use crate::types::ResponseRouterData;
-
 use super::AdyenRouterData;
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -1202,6 +1198,7 @@ pub fn get_adyen_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     } else {
         None
@@ -1267,6 +1264,7 @@ pub fn get_redirection_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     } else {
         None
@@ -2420,6 +2418,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2622,6 +2621,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2742,6 +2742,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
                 ..router_data
             }),

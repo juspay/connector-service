@@ -1,11 +1,17 @@
 use common_enums::enums;
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
-use domain_types::errors::ConnectorError;
 use domain_types::{
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_types::{
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
+    },
+    errors::ConnectorError,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -14,17 +20,7 @@ use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::connectors::fiserv::FiservRouterData;
-use crate::types::ResponseRouterData;
-
-use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
-    connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
-    },
-};
+use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -792,6 +788,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -860,6 +857,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -926,6 +924,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -999,6 +998,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1055,6 +1055,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1120,6 +1121,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1165,6 +1167,7 @@ impl<F, Req, Res> TryFrom<ResponseRouterData<FiservErrorResponse, Self>>
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         });
 
         Ok(router_data_out)

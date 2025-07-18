@@ -1,23 +1,8 @@
 pub mod transformers;
 
-use crate::types::ResponseRouterData;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
-use error_stack::ResultExt;
-
-use common_utils::consts;
-use domain_types::errors::{self, ConnectorError};
-use domain_types::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-    router_response_types::Response,
+use common_utils::{
+    consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
 };
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
-};
-
-use super::macros;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -30,13 +15,26 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
         SetupMandateRequestData, SubmitEvidenceData,
     },
+    errors::{self, ConnectorError},
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::Connectors,
+};
+use error_stack::ResultExt;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use interfaces::{
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
     ActionResponse, CheckoutAuthorizeResponse, CheckoutErrorResponse, CheckoutPSyncResponse,
     CheckoutPaymentsRequest, CheckoutRefundSyncRequest, CheckoutSyncRequest, PaymentCaptureRequest,
     PaymentCaptureResponse, PaymentVoidRequest, PaymentVoidResponse, RefundRequest, RefundResponse,
 };
+
+use super::macros;
+use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -334,6 +332,117 @@ impl
 {
 }
 
+// SourceVerification implementations for all flows
+impl
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Checkout
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Checkout
+{
+}
+
 impl ConnectorCommon for Checkout {
     fn id(&self) -> &'static str {
         "checkout"
@@ -401,6 +510,7 @@ impl ConnectorCommon for Checkout {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }

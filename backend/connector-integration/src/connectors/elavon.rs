@@ -1,15 +1,9 @@
 pub mod transformers;
 
-use super::macros;
-use crate::types::ResponseRouterData;
-use crate::utils::preprocess_xml_response_bytes;
-use crate::with_error_response_body;
 use bytes::Bytes;
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
 };
-use domain_types::errors;
-use domain_types::router_response_types::Response;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -22,11 +16,11 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
-    types::Connectors,
-};
-use domain_types::{
+    errors,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::Response,
+    types::Connectors,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
@@ -40,6 +34,11 @@ use transformers::{
     self as elavon, ElavonCaptureResponse, ElavonPSyncResponse, ElavonPaymentsResponse,
     ElavonRSyncResponse, ElavonRefundResponse, XMLCaptureRequest, XMLElavonRequest,
     XMLPSyncRequest, XMLRSyncRequest, XMLRefundRequest,
+};
+
+use super::macros;
+use crate::{
+    types::ResponseRouterData, utils::preprocess_xml_response_bytes, with_error_response_body,
 };
 
 pub(crate) mod headers {
@@ -105,6 +104,9 @@ impl ConnectorCommon for Elavon {
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        raw_connector_response: Some(
+                            String::from_utf8_lossy(&res.response).to_string(),
+                        ),
                     }),
                     elavon::ElavonResult::Success(success_payload) => Ok(ErrorResponse {
                         status_code: res.status_code,
@@ -119,6 +121,9 @@ impl ConnectorCommon for Elavon {
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
+                        raw_connector_response: Some(
+                            String::from_utf8_lossy(&res.response).to_string(),
+                        ),
                     }),
                 }
             }
@@ -143,6 +148,9 @@ impl ConnectorCommon for Elavon {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: Some(
+                        String::from_utf8_lossy(&res.response).to_string(),
+                    ),
                 })
             }
         }
@@ -417,6 +425,117 @@ impl
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
+    > for Elavon
+{
+}
+
+// SourceVerification implementations for all flows
+impl
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
     > for Elavon
 {
 }

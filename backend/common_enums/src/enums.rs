@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::num::ParseFloatError;
+
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// The three-letter ISO 4217 currency code (e.g., "USD", "EUR") for the payment amount. This field is mandatory for creating a payment.
@@ -985,6 +986,40 @@ pub enum AttemptStatus {
     DeviceDataCollectionPending,
     IntegrityFailure,
     Unknown,
+}
+
+impl TryFrom<u32> for AttemptStatus {
+    type Error = String;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            1 => AttemptStatus::Started,
+            2 => AttemptStatus::AuthenticationFailed,
+            3 => AttemptStatus::RouterDeclined,
+            4 => AttemptStatus::AuthenticationPending,
+            5 => AttemptStatus::AuthenticationSuccessful,
+            6 => AttemptStatus::Authorized,
+            7 => AttemptStatus::AuthorizationFailed,
+            8 => AttemptStatus::Charged,
+            9 => AttemptStatus::Authorizing,
+            10 => AttemptStatus::CodInitiated,
+            11 => AttemptStatus::Voided,
+            12 => AttemptStatus::VoidInitiated,
+            13 => AttemptStatus::CaptureInitiated,
+            14 => AttemptStatus::CaptureFailed,
+            15 => AttemptStatus::VoidFailed,
+            16 => AttemptStatus::AutoRefunded,
+            17 => AttemptStatus::PartialCharged,
+            18 => AttemptStatus::PartialChargedAndChargeable,
+            19 => AttemptStatus::Unresolved,
+            20 => AttemptStatus::Pending,
+            21 => AttemptStatus::Failure,
+            22 => AttemptStatus::PaymentMethodAwaited,
+            23 => AttemptStatus::ConfirmationAwaited,
+            24 => AttemptStatus::DeviceDataCollectionPending,
+            _ => AttemptStatus::Unknown,
+        })
+    }
 }
 
 impl AttemptStatus {

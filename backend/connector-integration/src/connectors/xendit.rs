@@ -1,15 +1,14 @@
 pub mod transformers;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
-use transformers::{
-    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
-    XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
-    XenditPaymentsCaptureRequest, XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    request::RequestContent,
+    types::FloatMajorUnit,
 };
-
-use super::macros;
-use crate::types::ResponseRouterData;
-
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -22,31 +21,25 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
-    types::Connectors,
-};
-
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::FloatMajorUnit,
-};
-
-use domain_types::{
+    errors,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::Response,
+    types::Connectors,
 };
-
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-use domain_types::errors;
-use domain_types::router_response_types::Response;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+use transformers::{
+    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
+    XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
+    XenditPaymentsCaptureRequest, XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
+};
 
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-
-use crate::with_error_response_body;
-
-use base64::Engine;
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -114,6 +107,7 @@ impl ConnectorCommon for Xendit {
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -392,6 +386,117 @@ impl
         PaymentFlowData,
         SetupMandateRequestData,
         PaymentsResponseData,
+    > for Xendit
+{
+}
+
+// SourceVerification implementations for all flows
+impl
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData,
+        PaymentsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
     > for Xendit
 {
 }

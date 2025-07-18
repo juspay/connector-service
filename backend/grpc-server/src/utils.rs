@@ -4,12 +4,16 @@ use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
 };
-use domain_types::connector_types;
-use domain_types::errors::{ApiError, ApplicationErrorResponse};
-use domain_types::router_data::ConnectorAuthType;
+use domain_types::{
+    connector_types,
+    errors::{ApiError, ApplicationErrorResponse},
+    router_data::ConnectorAuthType,
+};
 use error_stack::Report;
 use http::request::Request;
 use tonic::metadata;
+
+use crate::error::ResultExtGrpc;
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {
@@ -97,15 +101,8 @@ pub fn tenant_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<String, ApplicationErrorResponse> {
     parse_metadata(metadata, consts::X_TENANT_ID)
-        .map(|inner| inner.to_string())
-        .map_err(|e| {
-            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_TENANT_ID".to_string(),
-                error_identifier: 400,
-                error_message: format!("Missing tenant ID in request metadata: {e}"),
-                error_object: None,
-            }))
-        })
+        .map(|s| s.to_string())
+        .or_else(|_| Ok("DefaultTenantId".to_string()))
 }
 
 pub fn auth_from_metadata(
@@ -172,6 +169,106 @@ fn parse_metadata<'a>(
         })
 }
 
+pub fn log_before_initialization<T>(
+    request: &tonic::Request<T>,
+    service_name: &str,
+) -> CustomResult<(), ApplicationErrorResponse>
+where
+    T: serde::Serialize,
+{
+    let (connector, merchant_id, tenant_id, request_id) =
+        connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).map_err(
+            |e| {
+                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_FIELD".to_string(),
+                    error_identifier: 400,
+                    error_message: format!("Missing Field x-merchant-id {e}"),
+                    error_object: None,
+                }))
+            },
+        )?;
+    let current_span = tracing::Span::current();
+    let req_body = request.get_ref();
+    let req_body_json = match serde_json::to_string(req_body) {
+        Ok(json) => json,
+        Err(e) => {
+            tracing::error!("Serialization error: {:?}", e);
+            "<serialization error>".to_string()
+        }
+    };
+    current_span.record("service_name", service_name);
+    current_span.record("request_body", req_body_json);
+    current_span.record("gateway", connector.to_string());
+    current_span.record("merchant_id", merchant_id);
+    current_span.record("tenant_id", tenant_id);
+    current_span.record("request_id", request_id);
+    tracing::info!("Golden Log Line (incoming)");
+    Ok(())
+}
+
+pub fn log_after_initialization<T>(result: &Result<tonic::Response<T>, tonic::Status>)
+where
+    T: serde::Serialize + std::fmt::Debug,
+{
+    let current_span = tracing::Span::current();
+    // let duration = start_time.elapsed().as_millis();
+    //     current_span.record("response_time", duration);
+
+    match &result {
+        Ok(response) => {
+            current_span.record("response_body", tracing::field::debug(response.get_ref()));
+
+            let res_ref = response.get_ref();
+
+            // Try converting to JSON Value
+            if let Ok(serde_json::Value::Object(map)) = serde_json::to_value(res_ref) {
+                if let Some(status_val) = map.get("status") {
+                    let status_num_opt = status_val.as_number();
+                    let status_u32_opt: Option<u32> = status_num_opt
+                        .and_then(|n| n.as_u64())
+                        .and_then(|n| u32::try_from(n).ok());
+                    let status_str = if let Some(s) = status_u32_opt {
+                        common_enums::AttemptStatus::try_from(s)
+                            .unwrap_or(common_enums::AttemptStatus::Unknown)
+                            .to_string()
+                    } else {
+                        common_enums::AttemptStatus::Unknown.to_string()
+                    };
+                    current_span.record("flow_specific_fields.status", status_str);
+                }
+            } else {
+                tracing::warn!("Could not serialize response to JSON to extract status");
+            }
+        }
+        Err(status) => {
+            current_span.record("error_message", status.message());
+            current_span.record("status_code", status.code().to_string());
+        }
+    }
+    tracing::info!("Golden Log Line (incoming)");
+}
+
+pub async fn grpc_logging_wrapper<T, F, Fut, R>(
+    request: tonic::Request<T>,
+    service_name: &str,
+    handler: F,
+) -> Result<tonic::Response<R>, tonic::Status>
+where
+    T: serde::Serialize + std::fmt::Debug + Send + 'static,
+    F: FnOnce(tonic::Request<T>) -> Fut + Send,
+    Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
+    R: serde::Serialize + std::fmt::Debug,
+{
+    let current_span = tracing::Span::current();
+    log_before_initialization(&request, service_name).into_grpc_status()?;
+    let start_time = tokio::time::Instant::now();
+    let result = handler(request).await;
+    let duration = start_time.elapsed().as_millis();
+    current_span.record("response_time", duration);
+    log_after_initialization(&result);
+    result
+}
+
 #[macro_export]
 macro_rules! implement_connector_operation {
     (
@@ -194,13 +291,15 @@ macro_rules! implement_connector_operation {
         ) -> Result<tonic::Response<$response_type>, tonic::Status> {
             tracing::info!(concat!($log_prefix, "_FLOW: initiated"));
             let service_name = request
-                .extensions()
-                .get::<String>()
-                .cloned()
-                .unwrap_or_else(|| "unknown_service".to_string());
-
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
+            let current_span = tracing::Span::current();
+            $crate::utils::log_before_initialization(&request, service_name.as_str()).into_grpc_status()?;
+            let start_time = tokio::time::Instant::now();
+            let result = Box::pin(async{
             let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
-
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
 
@@ -254,8 +353,12 @@ macro_rules! implement_connector_operation {
             // Generate response
             let final_response = $generate_response_fn(response_result)
                 .into_grpc_status()?;
-
             Ok(tonic::Response::new(final_response))
-        }
-    };
+        }).await;
+        let duration = start_time.elapsed().as_millis();
+        current_span.record("response_time", duration);
+        $crate::utils::log_after_initialization(&result);
+        result
+    }
+}
 }

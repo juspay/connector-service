@@ -1,5 +1,10 @@
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
 use common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::FloatMajorUnit,
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    ext_traits::BytesExt,
+    request::RequestContent,
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -13,21 +18,14 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
+    errors,
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::Connectors,
 };
 use error_stack::ResultExt;
-
-use domain_types::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-
-use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
-
-use domain_types::errors;
-use domain_types::router_response_types::Response;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
@@ -45,8 +43,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::types::ResponseRouterData;
-use crate::with_error_response_body;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 // Local headers module
 mod headers {
@@ -288,6 +285,7 @@ impl ConnectorCommon for Fiserv {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -469,6 +467,117 @@ impl
 }
 impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Fiserv
+{
+}
+
+// SourceVerification implementations for all flows
+impl
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Fiserv
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Fiserv
 {
 }
 
