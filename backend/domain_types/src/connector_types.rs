@@ -967,7 +967,6 @@ pub struct SessionTokenResponseData {
     pub session_token: String,
 }
 
-
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,
