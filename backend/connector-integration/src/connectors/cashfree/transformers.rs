@@ -31,12 +31,16 @@ impl TryFrom<&ConnectorAuthType> for CashfreeAuthType {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::BodyKey { api_key, key1 } => Ok(Self {
-                app_id: api_key.to_owned(),
-                secret_key: key1.to_owned(),
+                app_id: key1.to_owned(),
+                secret_key: api_key.to_owned(),
             }),
-            ConnectorAuthType::SignatureKey { api_key, key1, .. } => Ok(Self {
-                app_id: api_key.to_owned(),
-                secret_key: key1.to_owned(),
+            ConnectorAuthType::SignatureKey {
+                api_key: _,
+                key1,
+                api_secret,
+            } => Ok(Self {
+                app_id: key1.to_owned(),
+                secret_key: api_secret.to_owned(),
             }),
             _ => Err(report!(ConnectorError::FailedToObtainAuthType)),
         }
@@ -260,24 +264,28 @@ impl UpiFlowType {
 // ============================================================================
 
 impl
-    TryFrom<
+    TryFrom<(
+        common_utils::types::FloatMajorUnit,
         &RouterDataV2<
             CreateOrder,
             PaymentFlowData,
             PaymentCreateOrderData,
             PaymentCreateOrderResponse,
         >,
-    > for CashfreeOrderCreateRequest
+    )> for CashfreeOrderCreateRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
+        (converted_amount, item): (
+            common_utils::types::FloatMajorUnit,
+            &RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        ),
     ) -> Result<Self, Self::Error> {
         let billing = item
             .resource_common_data
@@ -312,9 +320,14 @@ impl
             },
         )?;
 
-        // TODO: Make webhook URL configurable - currently hardcoded for compilation
-        // CreateOrder flow doesn't have access to webhook_url field
-        let notify_url = "https://api.yourdomain.com/webhooks/cashfree".to_string();
+        // Get webhook URL from request - required for Cashfree V3
+        let notify_url =
+            item.request
+                .webhook_url
+                .clone()
+                .ok_or(ConnectorError::MissingRequiredField {
+                    field_name: "webhook_url",
+                })?;
 
         let order_meta = CashfreeOrderMeta {
             return_url,
@@ -327,7 +340,7 @@ impl
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(), // FIXED: Use payment_id not connector_request_reference_id
-            order_amount: (item.request.amount.get_amount_as_i64() as f64) / 100.0,
+            order_amount: converted_amount.0,
             order_currency: item.request.currency.to_string(),
             customer_details,
             order_meta,
@@ -435,13 +448,11 @@ impl
         let (status, redirection_data) = match response.channel.as_str() {
             "link" => {
                 // Intent flow - extract deep link from payload._default
-                let deep_link = response
-                    .data
-                    .payload
-                    .and_then(|p| Some(p.default_link))
-                    .ok_or(ConnectorError::MissingRequiredField {
+                let deep_link = response.data.payload.map(|p| p.default_link).ok_or(
+                    ConnectorError::MissingRequiredField {
                         field_name: "intent_link",
-                    })?;
+                    },
+                )?;
 
                 // Trim deep link at "?" as per Haskell: truncateIntentLink "?" link
                 let trimmed_link = if let Some(pos) = deep_link.find('?') {
