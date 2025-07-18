@@ -5,7 +5,8 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund, SetupMandate,
+        Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -125,16 +126,20 @@ impl Payments {
 
         let payment_flow_data = if should_do_session_token {
             // let mut flow_data = payment_flow_data;
-            let payment_session_data = self.handle_session_token(
-                connector_data.clone(),
-                &payment_flow_data,
-                connector_auth_details.clone(),
-                &payload,
-                &connector.to_string(),
-                service_name,
-            )
-            .await?;
-            tracing::info!("Session Token created successfully with session_id: {}", payment_session_data.session_token);
+            let payment_session_data = self
+                .handle_session_token(
+                    connector_data.clone(),
+                    &payment_flow_data,
+                    connector_auth_details.clone(),
+                    &payload,
+                    &connector.to_string(),
+                    service_name,
+                )
+                .await?;
+            tracing::info!(
+                "Session Token created successfully with session_id: {}",
+                payment_session_data.session_token
+            );
             payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
         } else {
             payment_flow_data
@@ -394,7 +399,7 @@ impl Payments {
             ))),
         }
     }
-    
+
     async fn handle_session_token<T>(
         &self,
         connector_data: ConnectorData,
@@ -454,11 +459,11 @@ impl Payments {
         .switch()
         .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
             PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Session Token creation failed: {e}")),
-                    Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                    None,
-                )
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Session Token creation failed: {e}")),
+                Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
+                None,
+            )
         })?;
 
         match response.response {
@@ -470,11 +475,11 @@ impl Payments {
                 Ok(session_token_data)
             }
             Err(ErrorResponse { message, .. }) => Err(PaymentAuthorizationError::new(
-                    grpc_api_types::payments::PaymentStatus::Pending,
-                    Some(format!("Session Token creation failed: {message}")),
-                    Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                    None,
-                ))
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Session Token creation failed: {message}")),
+                Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
+                None,
+            )),
         }
     }
 }
