@@ -9,14 +9,14 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, 
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, 
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData, 
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
@@ -31,8 +31,8 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent, verification,
 };
 
-use transformers as paytm;
 use paytm::constants;
+use transformers as paytm;
 
 #[derive(Clone)]
 pub struct Paytm {
@@ -51,7 +51,7 @@ impl interfaces::connector_types::ValidationTrait for Paytm {
     fn should_do_session_token(&self) -> bool {
         true // Enable CreateSessionToken flow for Paytm's initiate step
     }
-    
+
     fn should_do_order_create(&self) -> bool {
         false // Paytm doesn't require separate order creation
     }
@@ -61,34 +61,35 @@ impl ConnectorCommon for Paytm {
     fn id(&self) -> &'static str {
         "paytm"
     }
-    
+
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         common_enums::CurrencyUnit::Minor
     }
-    
+
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         &connectors.paytm.base_url
     }
-    
+
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let _auth = paytm::PaytmAuthType::try_from(auth_type)?;
-        Ok(vec![
-            (constants::CONTENT_TYPE_HEADER.to_string(), constants::CONTENT_TYPE_JSON.into()),
-        ])
+        Ok(vec![(
+            constants::CONTENT_TYPE_HEADER.to_string(),
+            constants::CONTENT_TYPE_JSON.into(),
+        )])
     }
-    
+
     fn build_error_response(
         &self,
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
-        let response: paytm::PaytmErrorResponse = res
-            .response
-            .parse_struct("PaytmErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: paytm::PaytmErrorResponse =
+            res.response
+                .parse_struct("PaytmErrorResponse")
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         if let Some(event) = event_builder {
             event.set_error_response_body(&response);
@@ -126,21 +127,105 @@ impl interfaces::connector_types::SubmitEvidenceV2 for Paytm {}
 impl interfaces::connector_types::IncomingWebhook for Paytm {}
 
 // SourceVerification implementations for all flows
-impl verification::SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> for Paytm {}
-impl verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Paytm {}
-impl verification::SourceVerification<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Paytm {}
-impl verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Paytm {}
-impl verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Paytm {}
-impl verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Paytm {}
-impl verification::SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Paytm {}
-impl verification::SourceVerification<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Paytm {}
-impl verification::SourceVerification<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Paytm {}
-impl verification::SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Paytm {}
-impl verification::SourceVerification<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for Paytm {}
-impl verification::SourceVerification<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Paytm {}
+impl
+    verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData,
+        PaymentsResponseData,
+    > for Paytm
+{
+}
+impl
+    verification::SourceVerification<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Paytm
+{
+}
+impl verification::SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Paytm
+{
+}
+impl verification::SourceVerification<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Paytm
+{
+}
+impl verification::SourceVerification<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        Accept,
+        DisputeFlowData,
+        AcceptDisputeData,
+        DisputeResponseData,
+    > for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        SubmitEvidence,
+        DisputeFlowData,
+        SubmitEvidenceData,
+        DisputeResponseData,
+    > for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        DefendDispute,
+        DisputeFlowData,
+        DisputeDefendData,
+        DisputeResponseData,
+    > for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Paytm
+{
+}
+impl
+    verification::SourceVerification<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Paytm
+{
+}
 
 // Stub implementations for compilation
-impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for Paytm {
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Paytm
+{
     fn get_headers(
         &self,
         req: &domain_types::router_data_v2::RouterDataV2<
@@ -172,7 +257,7 @@ impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenReq
         let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
         let order_id = &req.resource_common_data.connector_request_reference_id;
-        
+
         Ok(format!(
             "{}theia/api/v1/initiateTransaction?mid={}&orderId={}",
             base_url, merchant_id, order_id
@@ -191,9 +276,9 @@ impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenReq
         let connector_router_data = paytm::PaytmRouterData::try_from(req)?;
         let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
         let connector_req = paytm::PaytmInitiateTxnRequest::try_from_with_auth(
-            &connector_router_data, 
+            &connector_router_data,
             &auth,
-            self.amount_converter
+            self.amount_converter,
         )?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
@@ -228,7 +313,9 @@ impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenReq
 
         match response.body {
             paytm::PaytmResBodyTypes::SuccessBody(success_body) => {
-                if success_body.result_info.result_code == constants::SUCCESS_CODE || success_body.result_info.result_code == constants::DUPLICATE_CODE {
+                if success_body.result_info.result_code == constants::SUCCESS_CODE
+                    || success_body.result_info.result_code == constants::DUPLICATE_CODE
+                {
                     let session_response = SessionTokenResponseData {
                         session_token: success_body.txn_token.clone(),
                     };
@@ -239,7 +326,7 @@ impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenReq
                 } else {
                     Err(errors::ConnectorError::ResponseHandlingFailed.into())
                 }
-            },
+            }
             paytm::PaytmResBodyTypes::FailureBody(_) => {
                 Err(errors::ConnectorError::ResponseHandlingFailed.into())
             }
@@ -262,7 +349,9 @@ impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenReq
         self.build_error_response(res, event_builder)
     }
 }
-impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> for Paytm {
+impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    for Paytm
+{
     fn get_headers(
         &self,
         req: &domain_types::router_data_v2::RouterDataV2<
@@ -272,9 +361,10 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             PaymentsResponseData,
         >,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut headers = vec![
-            (constants::CONTENT_TYPE_HEADER.to_string(), constants::CONTENT_TYPE_JSON.to_string().into()),
-        ];
+        let mut headers = vec![(
+            constants::CONTENT_TYPE_HEADER.to_string(),
+            constants::CONTENT_TYPE_JSON.to_string().into(),
+        )];
         let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
         headers.append(&mut auth_headers);
         Ok(headers)
@@ -293,10 +383,10 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
         let merchant_id = auth.merchant_id.peek();
         let order_id = &req.resource_common_data.connector_request_reference_id;
-        
+
         // Determine UPI flow type to route to correct endpoint
         let upi_flow = paytm::determine_upi_flow(&req.request.payment_method_data)?;
-        
+
         match upi_flow {
             paytm::UpiFlowType::Intent | paytm::UpiFlowType::Collect => {
                 // Both UPI Intent and UPI Collect use the same processTransaction endpoint
@@ -305,11 +395,10 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     "{}theia/api/v1/processTransaction?mid={}&orderId={}",
                     base_url, merchant_id, order_id
                 ))
-            }
-            // paytm::UpiFlowType::QrCode => {
-            //     // UPI QR uses a different endpoint for QR creation
-            //     Ok(format!("{}paymentservices/qr/create", base_url))
-            // }
+            } // paytm::UpiFlowType::QrCode => {
+              //     // UPI QR uses a different endpoint for QR creation
+              //     Ok(format!("{}paymentservices/qr/create", base_url))
+              // }
         }
     }
 
@@ -324,19 +413,25 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
         let connector_router_data = paytm::PaytmAuthorizeRouterData::try_from(req)?;
         let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
-        
+
         // Determine UPI flow type and create appropriate request
         let upi_flow = paytm::determine_upi_flow(&req.request.payment_method_data)?;
-        
+
         match upi_flow {
             paytm::UpiFlowType::Intent => {
-                let connector_req = paytm::PaytmProcessTxnRequest::try_from_with_auth(&connector_router_data, &auth)?;
+                let connector_req = paytm::PaytmProcessTxnRequest::try_from_with_auth(
+                    &connector_router_data,
+                    &auth,
+                )?;
                 Ok(Some(RequestContent::Json(Box::new(connector_req))))
-            },
+            }
             paytm::UpiFlowType::Collect => {
-                let connector_req = paytm::PaytmNativeProcessTxnRequest::try_from_with_auth(&connector_router_data, &auth)?;
+                let connector_req = paytm::PaytmNativeProcessTxnRequest::try_from_with_auth(
+                    &connector_router_data,
+                    &auth,
+                )?;
                 Ok(Some(RequestContent::Json(Box::new(connector_req))))
-            },
+            }
             // paytm::UpiFlowType::QrCode => {
             //     let connector_req = paytm::PaytmQRRequest::try_from_with_auth(&connector_router_data, &auth)?;
             //     Ok(Some(RequestContent::Json(Box::new(connector_req))))
@@ -364,7 +459,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         errors::ConnectorError,
     > {
         let upi_flow = paytm::determine_upi_flow(&data.request.payment_method_data)?;
-        
+
         match upi_flow {
             paytm::UpiFlowType::Intent => {
                 // Parse as UPI Intent response
@@ -380,10 +475,11 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                 match response.body {
                     paytm::PaytmProcessRespBodyTypes::SuccessBody(success_resp) => {
                         if success_resp.result_info.result_code == constants::SUCCESS_CODE {
-                            let redirect_form = domain_types::router_response_types::RedirectForm::Uri {
-                                uri: success_resp.deep_link_info.deep_link.clone(),
-                            };
-                            
+                            let redirect_form =
+                                domain_types::router_response_types::RedirectForm::Uri {
+                                    uri: success_resp.deep_link_info.deep_link.clone(),
+                                };
+
                             let payments_response = PaymentsResponseData::TransactionResponse {
                                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                                     success_resp.deep_link_info.trans_id.clone()
@@ -398,19 +494,19 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                                 incremental_authorization_allowed: None,
                                 raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
                             };
-                            
+
                             let mut response_data = data.clone();
                             response_data.response = Ok(payments_response);
                             Ok(response_data)
                         } else {
                             Err(errors::ConnectorError::ResponseHandlingFailed.into())
                         }
-                    },
+                    }
                     paytm::PaytmProcessRespBodyTypes::FailureBody(_) => {
                         Err(errors::ConnectorError::ResponseHandlingFailed.into())
                     }
                 }
-            },
+            }
             paytm::UpiFlowType::Collect => {
                 // Parse as UPI Collect response
                 let response: paytm::PaytmNativeProcessTxnResponse = res
@@ -437,19 +533,19 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                                 incremental_authorization_allowed: None,
                                 raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
                             };
-                            
+
                             let mut response_data = data.clone();
                             response_data.response = Ok(payments_response);
                             Ok(response_data)
                         } else {
                             Err(errors::ConnectorError::ResponseHandlingFailed.into())
                         }
-                    },
+                    }
                     paytm::PaytmNativeProcessRespBodyTypes::FailureBody(_) => {
                         Err(errors::ConnectorError::ResponseHandlingFailed.into())
                     }
                 }
-            },
+            }
             // paytm::UpiFlowType::QrCode => {
             //     // Parse as UPI QR response
             //     let response: paytm::PaytmQRResponse = res
@@ -470,7 +566,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             //                     "qr_data": success_resp.qr_data,
             //                     "qr_image": success_resp.image
             //                 });
-                            
+
             //                 let payments_response = PaymentsResponseData::TransactionResponse {
             //                     resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
             //                         success_resp.qr_code_id.clone()
@@ -483,7 +579,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             //                     incremental_authorization_allowed: None,
             //                     raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
             //                 };
-                            
+
             //                 let mut response_data = data.clone();
             //                 response_data.response = Ok(payments_response);
             //                 Ok(response_data)
@@ -515,13 +611,48 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         self.build_error_response(res, event_builder)
     }
 }
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Paytm {}
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Paytm {}
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Paytm {}
+impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Paytm
+{
+}
+impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Paytm
+{
+}
+impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Paytm
+{
+}
 impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Paytm {}
 impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Paytm {}
-impl ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData> for Paytm {}
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Paytm {}
-impl ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Paytm {}
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Paytm {}
-impl ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Paytm {}
+impl
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData,
+        PaymentsResponseData,
+    > for Paytm
+{
+}
+impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Paytm
+{
+}
+impl
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Paytm
+{
+}
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Paytm
+{
+}
+impl
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Paytm
+{
+}
