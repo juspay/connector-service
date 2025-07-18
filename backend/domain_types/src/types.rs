@@ -28,7 +28,7 @@ use crate::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse, Status,
+        SetupMandateRequestData, Status, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
@@ -895,9 +895,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
         // For void operations, address information is typically not available or required
         // Since this is a PaymentServiceVoidRequest, we use default address values
         let address: PaymentAddress = crate::payment_address::PaymentAddress::new(
-            None, // shipping
-            None, // billing  
-            None, // payment_method_billing
+            None,        // shipping
+            None,        // billing
+            None,        // payment_method_billing
             Some(false), // should_unify_address = false for void operations
         );
         Ok(Self {
@@ -2675,12 +2675,8 @@ pub fn generate_setup_mandate_response(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = match status {
-        Status::Attempt(_attempt_status) => {
-            MandateStatus::MandateStatusUnspecified
-        }
-        Status::Mandate(mandate_status) => {
-            mandate_status
-        }
+        Status::Attempt(_attempt_status) => MandateStatus::MandateStatusUnspecified,
+        Status::Mandate(mandate_status) => mandate_status,
     };
     let response = match transaction_response {
         Ok(response) => match response {
@@ -3134,7 +3130,7 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For MIT, address is optional
-let address = crate::payment_address::PaymentAddress::default();
+        let address = crate::payment_address::PaymentAddress::default();
 
         Ok(Self {
             merchant_id: common_utils::id_type::MerchantId::default(),
