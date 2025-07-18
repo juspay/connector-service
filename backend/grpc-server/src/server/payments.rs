@@ -131,10 +131,9 @@ impl Payments {
                 connector_auth_details.clone(),
                 &payload,
                 &connector.to_string(),
-                &service_name,
+                service_name,
             )
-            .await
-            .map_err(|e| e)?;
+            .await?;
             tracing::info!("Session Token created successfully with session_id: {}", payment_session_data.session_token);
             payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
         } else {
