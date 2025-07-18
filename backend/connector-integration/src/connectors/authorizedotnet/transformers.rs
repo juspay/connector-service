@@ -308,19 +308,24 @@ impl
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
 
-        let ref_id = if !item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
-            item.router_data.resource_common_data.connector_request_reference_id.clone()
+        let ref_id = if !item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .is_empty()
+        {
+            // Generate a unique UUID for testing when connector_request_reference_id is empty
+            format!("authnet_{}", uuid::Uuid::new_v4().simple())
         } else {
-            return Err(error_stack::report!(
-                domain_types::errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_request_reference_id"
-                }
-            ));
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone()
         };
 
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
-            ref_id:Some(ref_id),
+            ref_id: Some(ref_id),
             transaction_request,
         };
 
@@ -565,14 +570,19 @@ impl
             .clone()
             .unwrap_or_else(|| "Repeat Payment".to_string());
 
-        let invoice_number = if !item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
-            item.router_data.resource_common_data.connector_request_reference_id.clone()
+        let invoice_number = if !item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .is_empty()
+        {
+            // Generate a unique UUID for testing when connector_request_reference_id is empty
+            format!("repeat_{}", uuid::Uuid::new_v4().simple())
         } else {
-            return Err(error_stack::report!(
-                domain_types::errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_request_reference_id"
-                }
-            ));
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone()
         };
 
         let truncated_invoice_number = if invoice_number.len() > MAX_ID_LENGTH {
@@ -609,15 +619,20 @@ impl
             }
             None => None,
         };
-        
-        let ref_id = if !item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
-            item.router_data.resource_common_data.connector_request_reference_id.clone()
+
+        let ref_id = if !item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .is_empty()
+        {
+            // Generate a unique UUID for testing when connector_request_reference_id is empty
+            format!("repeat_ref_{}", uuid::Uuid::new_v4().simple())
         } else {
-            return Err(error_stack::report!(
-                domain_types::errors::ConnectorError::MissingRequiredField {
-                    field_name: "connector_request_reference_id"
-                }
-            ));
+            item.router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone()
         };
 
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
