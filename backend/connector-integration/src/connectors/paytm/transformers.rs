@@ -1886,6 +1886,28 @@ impl
             .resource_common_data
             .get_optional_billing_last_name()
             .map(|name| name.peek().to_string());
+        // Extract session token from previous session token response
+        let session_token = item
+            .resource_common_data
+            .get_session_token()
+            .ok()
+            .map(|id| id.get_string_repr().to_string());
+        let email = item
+            .resource_common_data
+            .get_optional_billing_email()
+            .map(|e| e.peek().to_string());
+        let phone = item
+            .resource_common_data
+            .get_optional_billing_phone_number()
+            .map(|p| p.peek().to_string());
+        let first_name = item
+            .resource_common_data
+            .get_optional_billing_first_name()
+            .map(|name| name.peek().to_string());
+        let last_name = item
+            .resource_common_data
+            .get_optional_billing_last_name()
+            .map(|name| name.peek().to_string());
 
         // Extract session token from previous session token response
         let session_token = item
