@@ -5,15 +5,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     router_data::ErrorResponse,
@@ -29,7 +29,7 @@ use interfaces::{
     connector_types::{
         AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
         PaymentCapture, PaymentOrderCreate, PaymentSyncV2, PaymentVoidV2, RefundSyncV2, RefundV2,
-        SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+        RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
@@ -39,8 +39,10 @@ use self::transformers::{
     AuthorizedotnetAuthorizeResponse, AuthorizedotnetCaptureRequest,
     AuthorizedotnetCaptureResponse, AuthorizedotnetCreateSyncRequest, AuthorizedotnetPSyncResponse,
     AuthorizedotnetPaymentsRequest, AuthorizedotnetRSyncRequest, AuthorizedotnetRSyncResponse,
-    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse, AuthorizedotnetVoidRequest,
-    AuthorizedotnetVoidResponse,
+    AuthorizedotnetRefundRequest, AuthorizedotnetRefundResponse,
+    AuthorizedotnetRepeatPaymentRequest, AuthorizedotnetRepeatPaymentResponse,
+    AuthorizedotnetVoidRequest, AuthorizedotnetVoidResponse, CreateCustomerProfileRequest,
+    CreateCustomerProfileResponse,
 };
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
@@ -58,6 +60,7 @@ impl DisputeDefend for Authorizedotnet {}
 impl RefundSyncV2 for Authorizedotnet {}
 impl AcceptDispute for Authorizedotnet {}
 impl SetupMandateV2 for Authorizedotnet {}
+impl RepeatPaymentV2 for Authorizedotnet {}
 impl PaymentOrderCreate for Authorizedotnet {}
 impl PaymentAuthorizeV2 for Authorizedotnet {}
 impl PaymentSyncV2 for Authorizedotnet {}
@@ -157,6 +160,18 @@ macros::create_all_prerequisites!(
             request_body: AuthorizedotnetRSyncRequest,
             response_body: AuthorizedotnetRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+        ),
+        (
+            flow: SetupMandate,
+            request_body: CreateCustomerProfileRequest,
+            response_body: CreateCustomerProfileResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: AuthorizedotnetRepeatPaymentRequest,
+            response_body: AuthorizedotnetRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
         )
     ],
     amount_converters: [],
@@ -189,7 +204,12 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.authorizedotnet.base_url.to_string()
+            let base_url = &req.resource_common_data.connectors.authorizedotnet.base_url;
+            tracing::info!("Authorized.net base_url: {}", base_url);
+            if base_url.is_empty() {
+                tracing::error!("Authorized.net base_url is empty! Full connectors config: {:?}", req.resource_common_data.connectors);
+            }
+            base_url.to_string()
         }
 
         pub fn connector_base_url_refunds<F, Req, Res>(
@@ -373,6 +393,62 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(CreateCustomerProfileRequest),
+    curl_response: CreateCustomerProfileResponse,
+    flow_name: SetupMandate,
+    resource_common_data: PaymentFlowData,
+    flow_request: SetupMandateRequestData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Authorizedotnet,
+    curl_request: Json(AuthorizedotnetRepeatPaymentRequest),
+    curl_response: AuthorizedotnetRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, ConnectorError> {
+            Ok(self.connector_base_url_payments(req).to_string())
+        }
+    }
+);
+
 impl
     ConnectorIntegrationV2<
         CreateOrder,
@@ -382,15 +458,7 @@ impl
     > for Authorizedotnet
 {
 }
-impl
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData,
-        PaymentsResponseData,
-    > for Authorizedotnet
-{
-}
+
 impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Authorizedotnet
 {
@@ -448,6 +516,11 @@ impl
 
 impl
     SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+    for Authorizedotnet
+{
+}
+
+impl SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Authorizedotnet
 {
 }

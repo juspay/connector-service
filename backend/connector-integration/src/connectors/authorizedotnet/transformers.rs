@@ -1,34 +1,30 @@
+use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
-use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{
-    consts,
-    ext_traits::{OptionExt, ValueExt},
-    pii::Email,
-};
+use common_enums::{self, enums, AttemptStatus, MandateStatus, RefundStatus};
+use common_utils::ext_traits::{OptionExt, ValueExt};
+use common_utils::{consts, pii::Email};
+use domain_types::connector_types::Status;
+use domain_types::errors::ConnectorError;
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, Refund},
+    connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
         MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
+        SetupMandateRequestData,
     },
-    errors::ConnectorError,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-
-use crate::types::ResponseRouterData;
 // Alias to make the transition easier
 type HsInterfacesConnectorError = ConnectorError;
-use std::str::FromStr;
-
+use super::AuthorizedotnetRouterData;
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret, StrongSecret};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-
-use super::AuthorizedotnetRouterData;
+use std::str::FromStr;
 
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
@@ -238,9 +234,6 @@ struct AuthorizationIndicatorType {
     authorization_indicator: AuthorizationIndicator,
 }
 
-
-
-
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -280,6 +273,7 @@ pub struct TransactionSetting {
 pub struct CreateTransactionRequest {
     // Used by Authorize Flow, wraps the general transaction request
     merchant_authentication: AuthorizedotnetAuthType,
+    ref_id: Option<String>,
     transaction_request: AuthorizedotnetTransactionRequest,
 }
 
@@ -311,40 +305,22 @@ impl
         let currency = api_enums::Currency::from_str(&currency_str)
             .map_err(|_| error_stack::report!(ConnectorError::RequestEncodingFailed))?;
 
-        // Check if this is a mandate transaction
-        let transaction_request = match item
-            .router_data
-            .request
-            .mandate_id
-            .clone()
-            .and_then(|mandate_ids| mandate_ids.mandate_reference_id)
-        {
-            Some(MandateReferenceId::NetworkMandateId(network_trans_id)) => {
-                create_mandate_transaction_request(&item, network_trans_id, currency)?
-            }
-            Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ref)) => {
-                let mandate_id = connector_mandate_ref
-                    .get_connector_mandate_id()
-                    .ok_or_else(|| {
-                        error_stack::report!(ConnectorError::MissingRequiredField {
-                            field_name: "connector_mandate_id"
-                        })
-                    })?;
-                create_mandate_transaction_request(&item, mandate_id, currency)?
-            }
-            Some(MandateReferenceId::NetworkTokenWithNTI(_)) => {
-                return Err(error_stack::report!(ConnectorError::NotImplemented(
-                    "Network token with NTI not supported for authorizedotnet".to_string(),
-                )))
-            }
-            None => {
-                // Regular payment without mandate
-                create_regular_transaction_request(&item, currency)?
-            }
+        // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
+        let transaction_request = create_regular_transaction_request(&item, currency)?;
+
+        let ref_id = if !item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
+            item.router_data.resource_common_data.connector_request_reference_id.clone()
+        } else {
+            return Err(error_stack::report!(
+                domain_types::errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_request_reference_id"
+                }
+            ));
         };
 
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
+            ref_id:Some(ref_id),
             transaction_request,
         };
 
@@ -352,88 +328,6 @@ impl
             create_transaction_request,
         })
     }
-}
-
-// Helper function to create mandate transaction request
-fn create_mandate_transaction_request(
-    item: &AuthorizedotnetRouterData<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    >,
-    mandate_id: String,
-    currency: api_enums::Currency,
-) -> Result<AuthorizedotnetTransactionRequest, Error> {
-    let transaction_type = match item.router_data.request.capture_method {
-        Some(enums::CaptureMethod::Manual) => TransactionType::AuthOnlyTransaction,
-        Some(enums::CaptureMethod::Automatic) | None => TransactionType::AuthCaptureTransaction,
-        Some(_) => {
-            return Err(error_stack::report!(ConnectorError::NotSupported {
-                message: "Capture method not supported".to_string(),
-                connector: "authorizedotnet",
-            }))
-        }
-    };
-
-    // Parse the mandate_id to extract customer_profile_id and payment_profile_id
-    let profile = mandate_id
-        .split_once('-')
-        .map(|(customer_profile_id, payment_profile_id)| {
-            ProfileDetails::CustomerProfileDetails(CustomerProfileDetails {
-                customer_profile_id: Secret::from(customer_profile_id.to_string()),
-                payment_profile: PaymentProfileDetails {
-                    payment_profile_id: Secret::from(payment_profile_id.to_string()),
-                },
-            })
-        });
-
-    let order_description = item
-        .router_data
-        .resource_common_data
-        .description
-        .clone()
-        .unwrap_or_else(|| "Payment".to_string());
-
-    let invoice_number = item
-        .router_data
-        .resource_common_data
-        .connector_request_reference_id
-        .clone();
-    let truncated_invoice_number = if invoice_number.len() > 20 {
-        invoice_number[0..20].to_string()
-    } else {
-        invoice_number
-    };
-
-    let order = Order {
-        invoice_number: truncated_invoice_number,
-        description: order_description,
-    };
-
-    let customer_id_string = if item.router_data.resource_common_data.payment_id.len() <= MAX_ID_LENGTH {
-        item.router_data.resource_common_data.payment_id.clone()
-    } else {
-        "generated_customer".to_string()
-    };
-
-    let customer_details = CustomerDetails {
-        id: customer_id_string,
-        email: item.router_data.request.email.clone(),
-    };
-
-    Ok(AuthorizedotnetTransactionRequest {
-        transaction_type,
-        amount: Some(item.router_data.request.amount.to_string()),
-        currency_code: Some(currency),
-        payment: None, // No payment details needed for mandate transaction
-        profile,
-        order: Some(order),
-        customer: Some(customer_details),
-        bill_to: None,
-        user_fields: None,
-        processing_options: None,
-        subsequent_auth_information: None,
-        authorization_indicator_type: None,
-        ref_trans_id: None,
-    })
 }
 
 // Helper function to create regular transaction request (non-mandate)
@@ -447,7 +341,7 @@ fn create_regular_transaction_request(
         PaymentMethodData::Card(card) => Ok(card),
         _ => Err(ConnectorError::RequestEncodingFailed),
     }?;
-    
+
     let expiry_month = card_data.card_exp_month.peek().clone();
     let year = card_data.card_exp_year.peek().clone();
     let expiry_year = if year.len() == 2 {
@@ -526,9 +420,13 @@ fn create_regular_transaction_request(
             city: billing.address.as_ref().and_then(|a| a.city.clone()),
             state: billing.address.as_ref().and_then(|a| a.state.clone()),
             zip: billing.address.as_ref().and_then(|a| a.zip.clone()),
-            country: billing.address.as_ref().and_then(|a| a.country).and_then(
-                |api_country| enums::CountryAlpha2::from_str(&api_country.to_string()).ok(),
-            ),
+            country: billing
+                .address
+                .as_ref()
+                .and_then(|a| a.country)
+                .and_then(|api_country| {
+                    enums::CountryAlpha2::from_str(&api_country.to_string()).ok()
+                }),
         }
     });
 
@@ -569,6 +467,177 @@ fn create_regular_transaction_request(
         authorization_indicator_type: None,
         ref_trans_id: None,
     })
+}
+
+// RepeatPayment request structures
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetRepeatPaymentRequest {
+    create_transaction_request: CreateRepeatPaymentRequest,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRepeatPaymentRequest {
+    merchant_authentication: AuthorizedotnetAuthType,
+    ref_id: Option<String>,
+    transaction_request: AuthorizedotnetRepeatPaymentTransactionRequest,
+}
+
+#[skip_serializing_none]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
+    transaction_type: TransactionType,
+    amount: String,
+    currency_code: api_enums::Currency,
+    profile: ProfileDetails,
+    order: Option<Order>,
+    customer: Option<CustomerDetails>,
+    user_fields: Option<UserFields>,
+}
+
+// Implementation for RepeatPayment request conversion
+impl
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        >,
+    > for AuthorizedotnetRepeatPaymentRequest
+{
+    type Error = Error;
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        let currency_str = item.router_data.request.currency.to_string();
+        let currency = api_enums::Currency::from_str(&currency_str)
+            .map_err(|_| error_stack::report!(ConnectorError::RequestEncodingFailed))?;
+
+        // Extract mandate reference
+        let mandate_id = match &item.router_data.request.mandate_reference {
+            MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
+                .get_connector_mandate_id()
+                .ok_or_else(|| {
+                    error_stack::report!(ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id"
+                    })
+                })?,
+            MandateReferenceId::NetworkMandateId(_) => {
+                return Err(error_stack::report!(ConnectorError::NotImplemented(
+                    "Network mandate ID not supported for repeat payments in authorizedotnet"
+                        .to_string(),
+                )))
+            }
+            MandateReferenceId::NetworkTokenWithNTI(_) => {
+                return Err(error_stack::report!(ConnectorError::NotImplemented(
+                    "Network token with NTI not supported for authorizedotnet".to_string(),
+                )))
+            }
+        };
+
+        // Parse the mandate_id to extract customer_profile_id and payment_profile_id
+        let profile = mandate_id
+            .split_once('-')
+            .map(|(customer_profile_id, payment_profile_id)| {
+                ProfileDetails::CustomerProfileDetails(CustomerProfileDetails {
+                    customer_profile_id: Secret::from(customer_profile_id.to_string()),
+                    payment_profile: PaymentProfileDetails {
+                        payment_profile_id: Secret::from(payment_profile_id.to_string()),
+                    },
+                })
+            })
+            .ok_or_else(|| {
+                error_stack::report!(ConnectorError::MissingRequiredField {
+                    field_name: "valid mandate_id format (should contain '-')"
+                })
+            })?;
+
+        let order_description = item
+            .router_data
+            .resource_common_data
+            .description
+            .clone()
+            .unwrap_or_else(|| "Repeat Payment".to_string());
+
+        let invoice_number = if !item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
+            item.router_data.resource_common_data.connector_request_reference_id.clone()
+        } else {
+            return Err(error_stack::report!(
+                domain_types::errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_request_reference_id"
+                }
+            ));
+        };
+
+        let truncated_invoice_number = if invoice_number.len() > MAX_ID_LENGTH {
+            invoice_number[0..MAX_ID_LENGTH].to_string()
+        } else {
+            invoice_number
+        };
+
+        let order = Order {
+            invoice_number: truncated_invoice_number,
+            description: order_description,
+        };
+
+        let customer_id_string =
+            if item.router_data.resource_common_data.payment_id.len() <= MAX_ID_LENGTH {
+                item.router_data.resource_common_data.payment_id.clone()
+            } else {
+                "repeat_payment_customer".to_string()
+            };
+
+        let customer_details = CustomerDetails {
+            id: customer_id_string,
+            email: None, // Email not available in RepeatPaymentData
+        };
+
+        // Extract user fields from metadata
+        let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
+            Some(metadata) => {
+                let metadata_value = serde_json::to_value(metadata)
+                    .change_context(ConnectorError::RequestEncodingFailed)?;
+                Some(UserFields {
+                    user_field: Vec::<UserField>::foreign_try_from(metadata_value)?,
+                })
+            }
+            None => None,
+        };
+        
+        let ref_id = if !item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
+            item.router_data.resource_common_data.connector_request_reference_id.clone()
+        } else {
+            return Err(error_stack::report!(
+                domain_types::errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_request_reference_id"
+                }
+            ));
+        };
+
+        let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
+            transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
+            amount: item.router_data.request.amount.to_string(),
+            currency_code: currency,
+            profile,
+            order: Some(order),
+            customer: Some(customer_details),
+            user_fields,
+        };
+
+        Ok(Self {
+            create_transaction_request: CreateRepeatPaymentRequest {
+                merchant_authentication,
+                ref_id: Some(ref_id),
+                transaction_request,
+            },
+        })
+    }
 }
 
 #[skip_serializing_none]
@@ -1034,6 +1103,9 @@ pub struct AuthorizedotnetCaptureResponse(pub AuthorizedotnetPaymentsResponse);
 pub struct AuthorizedotnetVoidResponse(pub AuthorizedotnetPaymentsResponse);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AuthorizedotnetRepeatPaymentResponse(pub AuthorizedotnetPaymentsResponse);
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RefundResponse {
     response_code: AuthorizedotnetRefundStatus,
@@ -1049,6 +1121,52 @@ pub struct RefundResponse {
 pub struct AuthorizedotnetRefundResponse {
     pub transaction_response: RefundResponse,
     pub messages: ResponseMessages,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCustomerProfileRequest {
+    create_customer_profile_request: AuthorizedotnetZeroMandateRequest,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetZeroMandateRequest {
+    merchant_authentication: AuthorizedotnetAuthType,
+    profile: Profile,
+    validation_mode: ValidationMode,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Profile {
+    merchant_customer_id: Option<String>,
+    description: String,
+    email: Option<String>,
+    payment_profiles: Vec<PaymentProfiles>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PaymentProfiles {
+    customer_type: CustomerType,
+    payment: PaymentDetails,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CustomerType {
+    Individual,
+    Business,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ValidationMode {
+    // testMode performs a Luhn mod-10 check on the card number, without further validation at connector.
+    TestMode,
+    // liveMode submits a zero-dollar or one-cent transaction (depending on card type and processor support) to confirm that the card number belongs to an active credit or debit account.
+    LiveMode,
 }
 
 // PSync response wrapper - Using direct structure instead of wrapping AuthorizedotnetPaymentsResponse
@@ -1072,6 +1190,12 @@ impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetCaptureResponse {
 }
 
 impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetVoidResponse {
+    fn from(response: AuthorizedotnetPaymentsResponse) -> Self {
+        Self(response)
+    }
+}
+
+impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetRepeatPaymentResponse {
     fn from(response: AuthorizedotnetPaymentsResponse) -> Self {
         Self(response)
     }
@@ -1108,7 +1232,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
+        resource_common_data.status = Status::Attempt(status);
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1145,7 +1269,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
+        resource_common_data.status = Status::Attempt(status);
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1167,7 +1291,6 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
             router_data,
             http_code,
         } = value;
-
         // Use our helper function to convert the response
         let (status, response_result) = convert_to_payments_response_data_or_error(
             &response.0,
@@ -1182,7 +1305,45 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
+        resource_common_data.status = Status::Attempt(status);
+        new_router_data.resource_common_data = resource_common_data;
+
+        // Set the response
+        new_router_data.response = response_result;
+
+        Ok(new_router_data)
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<HsInterfacesConnectorError>;
+    fn try_from(
+        value: ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = value;
+
+        // Use our helper function to convert the response
+        // RepeatPayment is always captured immediately, so no capture_method needed
+        let (status, response_result) = convert_to_payments_response_data_or_error(
+            &response.0,
+            http_code,
+            Operation::Authorize,
+            Some(enums::CaptureMethod::Automatic),
+        )
+        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
+
+        // Create a new RouterDataV2 with updated fields
+        let mut new_router_data = router_data;
+
+        // Update the status in resource_common_data
+        let mut resource_common_data = new_router_data.resource_common_data.clone();
+        resource_common_data.status = Status::Attempt(status);
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1270,7 +1431,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
 
                 // Update the status in resource_common_data
                 let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = payment_status;
+                resource_common_data.status = Status::Attempt(payment_status);
                 new_router_data.resource_common_data = resource_common_data;
 
                 // Set the response
@@ -1322,7 +1483,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                 // Update router data with status and error response
                 let mut new_router_data = router_data;
                 let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = status;
+                resource_common_data.status = Status::Attempt(status);
                 new_router_data.resource_common_data = resource_common_data;
                 new_router_data.response = Err(error_response);
 
@@ -1893,7 +2054,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
             let connector_mandate_id = response
                 .customer_payment_profile_id_list
                 .first()
-                .map(|payment_profile_id| format!("{}-{}", profile_id, payment_profile_id))
+                .map(|payment_profile_id| format!("{profile_id}-{payment_profile_id}"))
                 .or(Some(profile_id.clone()));
 
             new_router_data.response = Ok(PaymentsResponseData::TransactionResponse {
