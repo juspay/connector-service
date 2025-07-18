@@ -31,6 +31,9 @@ pub struct SubmitEvidence;
 #[derive(Debug, Clone)]
 pub struct DefendDispute;
 
+#[derive(Debug, Clone)]
+pub struct CreateSessionToken;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -47,4 +50,5 @@ pub enum FlowName {
     CreateOrder,
     IncomingWebhook,
     Dsync,
+    CreateSessionToken,
 }
