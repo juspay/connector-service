@@ -19,8 +19,8 @@ use utoipa::ToSchema;
 use crate::mandates::MandateData;
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, CreateSessionToken,
-        DefendDispute, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
