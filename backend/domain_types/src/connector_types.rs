@@ -1020,7 +1020,6 @@ pub struct SessionTokenRequestData {
 pub struct SessionTokenResponseData {
     pub session_token: String,
 }
-
 #[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,

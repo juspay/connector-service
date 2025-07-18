@@ -1293,11 +1293,10 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     &auth,
                 )?;
                 Ok(Some(RequestContent::Json(Box::new(connector_req))))
-            }
-            // paytm::UpiFlowType::QrCode => {
-            //     let connector_req = paytm::PaytmQRRequest::try_from_with_auth(&connector_router_data, &auth)?;
-            //     Ok(Some(RequestContent::Json(Box::new(connector_req))))
-            // }
+            } // paytm::UpiFlowType::QrCode => {
+              //     let connector_req = paytm::PaytmQRRequest::try_from_with_auth(&connector_router_data, &auth)?;
+              //     Ok(Some(RequestContent::Json(Box::new(connector_req))))
+              // }
         }
     }
 
@@ -1407,53 +1406,52 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                         Err(errors::ConnectorError::ResponseHandlingFailed.into())
                     }
                 }
-            }
-            // paytm::UpiFlowType::QrCode => {
-            //     // Parse as UPI QR response
-            //     let response: paytm::PaytmQRResponse = res
-            //         .response
-            //         .parse_struct("PaytmQRResponse")
-            //         .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            } // paytm::UpiFlowType::QrCode => {
+              //     // Parse as UPI QR response
+              //     let response: paytm::PaytmQRResponse = res
+              //         .response
+              //         .parse_struct("PaytmQRResponse")
+              //         .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-            //     if let Some(event) = event_builder {
-            //         event.set_response_body(&response);
-            //     }
+              //     if let Some(event) = event_builder {
+              //         event.set_response_body(&response);
+              //     }
 
-            //     match response.body {
-            //         paytm::PaytmQRRespBodyTypes::SuccessBody(success_resp) => {
-            //             if success_resp.result_info.result_code == constants::QR_SUCCESS_CODE {
-            //                 // For QR, we return the QR data in connector metadata
-            //                 let qr_metadata = serde_json::json!({
-            //                     "qr_code_id": success_resp.qr_code_id,
-            //                     "qr_data": success_resp.qr_data,
-            //                     "qr_image": success_resp.image
-            //                 });
+              //     match response.body {
+              //         paytm::PaytmQRRespBodyTypes::SuccessBody(success_resp) => {
+              //             if success_resp.result_info.result_code == constants::QR_SUCCESS_CODE {
+              //                 // For QR, we return the QR data in connector metadata
+              //                 let qr_metadata = serde_json::json!({
+              //                     "qr_code_id": success_resp.qr_code_id,
+              //                     "qr_data": success_resp.qr_data,
+              //                     "qr_image": success_resp.image
+              //                 });
 
-            //                 let payments_response = PaymentsResponseData::TransactionResponse {
-            //                     resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-            //                         success_resp.qr_code_id.clone()
-            //                     ),
-            //                     redirection_data: Box::new(None), // No redirection for QR
-            //                     connector_metadata: Some(qr_metadata),
-            //                     mandate_reference: Box::new(None),
-            //                     network_txn_id: None,
-            //                     connector_response_reference_id: Some(success_resp.qr_code_id.clone()),
-            //                     incremental_authorization_allowed: None,
-            //                     raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-            //                 };
+              //                 let payments_response = PaymentsResponseData::TransactionResponse {
+              //                     resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
+              //                         success_resp.qr_code_id.clone()
+              //                     ),
+              //                     redirection_data: Box::new(None), // No redirection for QR
+              //                     connector_metadata: Some(qr_metadata),
+              //                     mandate_reference: Box::new(None),
+              //                     network_txn_id: None,
+              //                     connector_response_reference_id: Some(success_resp.qr_code_id.clone()),
+              //                     incremental_authorization_allowed: None,
+              //                     raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+              //                 };
 
-            //                 let mut response_data = data.clone();
-            //                 response_data.response = Ok(payments_response);
-            //                 Ok(response_data)
-            //             } else {
-            //                 Err(errors::ConnectorError::ResponseHandlingFailed.into())
-            //             }
-            //         },
-            //         paytm::PaytmQRRespBodyTypes::FailureBody(_) => {
-            //             Err(errors::ConnectorError::ResponseHandlingFailed.into())
-            //         }
-            //     }
-            // }
+              //                 let mut response_data = data.clone();
+              //                 response_data.response = Ok(payments_response);
+              //                 Ok(response_data)
+              //             } else {
+              //                 Err(errors::ConnectorError::ResponseHandlingFailed.into())
+              //             }
+              //         },
+              //         paytm::PaytmQRRespBodyTypes::FailureBody(_) => {
+              //             Err(errors::ConnectorError::ResponseHandlingFailed.into())
+              //         }
+              //     }
+              // }
         }
     }
 
