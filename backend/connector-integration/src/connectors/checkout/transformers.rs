@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, Status,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodData,
@@ -457,7 +457,7 @@ impl<F>
         let status = get_attempt_status_cap((response.status, router_data.request.capture_method));
 
         let mut router_data = router_data;
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
 
         // Check if the response indicates an error
         if status == enums::AttemptStatus::Failure {
@@ -650,7 +650,7 @@ impl<F>
             (enums::AttemptStatus::Pending, None)
         };
 
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
         router_data.resource_common_data.amount_captured = amount_captured;
 
         // Determine the resource_id to return
@@ -714,7 +714,7 @@ impl<F>
         // Get the attempt status using the From implementation
         let status = enums::AttemptStatus::from(&response);
 
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
 
         let connector_meta = serde_json::json!(CheckoutMeta {
             psync_flow: CheckoutPaymentIntent::Authorize,
@@ -769,7 +769,7 @@ impl<F>
         };
 
         let mut router_data = router_data;
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
 
         if status == enums::AttemptStatus::Failure {
             router_data.response = Err(ErrorResponse {

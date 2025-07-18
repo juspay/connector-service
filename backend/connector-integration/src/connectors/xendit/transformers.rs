@@ -13,7 +13,7 @@ use domain_types::{
     connector_types::{
         MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, Status,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodData,
@@ -413,7 +413,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -475,7 +475,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                 Ok(Self {
                     response,
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         ..router_data.resource_common_data
                     },
                     ..router_data
@@ -495,7 +495,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         ..router_data.resource_common_data
                     },
                     ..router_data
@@ -587,7 +587,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
         Ok(Self {
             response,
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             ..router_data

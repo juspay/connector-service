@@ -30,6 +30,9 @@ service PaymentService {
   // Sets up a mandate for future payments.
   rpc Register(PaymentServiceRegisterRequest) returns (PaymentServiceRegisterResponse);
 
+  // Processes a repeat payment using existing mandate (MIT - Merchant Initiated Transaction).
+  rpc RepeatEverything(PaymentServiceRepeatEverythingRequest) returns (PaymentServiceRepeatEverythingResponse);
+
   // Creates a new dispute.
   rpc Dispute(PaymentServiceDisputeRequest) returns (DisputeResponse);
 

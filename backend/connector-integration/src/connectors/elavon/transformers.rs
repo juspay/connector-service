@@ -11,7 +11,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId as DomainResponseId,
+        ResponseId as DomainResponseId, Status,
     },
     errors::{self},
     payment_address::PaymentAddress,
@@ -787,7 +787,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
         Ok(Self {
             response: payments_response_data,
             resource_common_data: PaymentFlowData {
-                status: attempt_status,
+                status: Status::Attempt(attempt_status),
                 payment_method_token,
                 ..router_data.resource_common_data
             },
@@ -1020,7 +1020,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
-                status: final_status,
+                status: Status::Attempt(final_status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1383,7 +1383,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: final_status,
+                status: Status::Attempt(final_status),
                 ..router_data.resource_common_data
             },
             ..router_data

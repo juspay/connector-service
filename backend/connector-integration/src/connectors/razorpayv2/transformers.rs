@@ -10,7 +10,7 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        ResponseId, Status,
     },
     errors,
     payment_address::Address,
@@ -550,7 +550,7 @@ impl
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..data.resource_common_data.clone()
             },
             ..data
@@ -616,7 +616,7 @@ impl
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::AuthenticationPending,
+                status: Status::Attempt(AttemptStatus::AuthenticationPending),
                 ..data.resource_common_data
             },
             ..data
@@ -656,7 +656,7 @@ impl
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::AuthenticationPending,
+                status: Status::Attempt(AttemptStatus::AuthenticationPending),
                 ..data.resource_common_data
             },
             ..data

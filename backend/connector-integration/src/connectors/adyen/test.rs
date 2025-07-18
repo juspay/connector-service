@@ -7,7 +7,7 @@ mod tests {
         use domain_types::{
             connector_flow::Authorize,
             connector_types::{
-                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+                ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, Status,
             },
             payment_method_data::PaymentMethodData,
             router_data::{ConnectorAuthType, ErrorResponse},
@@ -38,7 +38,7 @@ mod tests {
                     connector_customer: Some("conn_cust_987654".to_string()),
                     payment_id: "pay_abcdef123456".to_string(),
                     attempt_id: "attempt_123456abcdef".to_string(),
-                    status: common_enums::AttemptStatus::Pending,
+                    status: Status::Attempt(common_enums::AttemptStatus::Pending),
                     payment_method: common_enums::PaymentMethod::Card,
                     description: Some("Payment for order #12345".to_string()),
                     return_url: Some("www.google.com".to_string()),
@@ -204,7 +204,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "".to_string(),
                     attempt_id: "".to_string(),
-                    status: common_enums::AttemptStatus::Pending,
+                    status: Status::Attempt(common_enums::AttemptStatus::Pending),
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
