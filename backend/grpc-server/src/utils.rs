@@ -13,7 +13,7 @@ use error_stack::Report;
 use http::request::Request;
 use tonic::metadata;
 
-use crate::error::IntoGrpcStatus;
+use crate::error::ResultExtGrpc;
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {

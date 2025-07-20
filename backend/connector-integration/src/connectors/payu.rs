@@ -33,7 +33,7 @@ use super::macros;
 use crate::types::ResponseRouterData;
 
 use transformers::{
-    PayuAuthType, PayuPaymentRequest, PayuPaymentResponse, PayuErrorResponse
+    PayuAuthType, PayuPaymentRequest, PayuPaymentResponse
 };
 
 // Set up connector using macros with all framework integrations
@@ -57,7 +57,7 @@ macros::create_all_prerequisites!(
 
 // Implement authorize flow using macro framework
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_error_response_v2],
+    connector_default_implementations: [],
     connector: Payu,
     curl_request: FormUrlEncoded(PayuPaymentRequest),
     curl_response: PayuPaymentResponse,
@@ -71,7 +71,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let auth = PayuAuthType::try_from(&req.connector_auth_type)?;
+            let _auth = PayuAuthType::try_from(&req.connector_auth_type)?;
             Ok(vec![
                 ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
                 ("Accept".to_string(), "application/json".into()),
@@ -82,13 +82,59 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            // Based on PayU analysis: uses /_payment endpoint for UPI transactions
+            // Based on Haskell Endpoints.hs: uses /_payment endpoint for UPI transactions
+            // Test: https://test.payu.in/_payment
+            // Prod: https://secure.payu.in/_payment 
             let base_url = self.base_url(&req.resource_common_data.connectors);
             Ok(format!("{}/_payment", base_url))
         }
 
         fn get_content_type(&self) -> &'static str {
             "application/x-www-form-urlencoded"
+        }
+
+        fn get_error_response_v2(
+            &self,
+            res: Response,
+            _event_builder: Option<&mut ConnectorEvent>,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            // PayU returns error responses in the same JSON format as success responses
+            // We need to parse the response and check for error fields
+            let response: PayuPaymentResponse = res
+                .response
+                .parse_struct("PayU ErrorResponse")
+                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+
+            // Check if this is an error response
+            if response.error.is_some() {
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: response.error.unwrap_or_default(),
+                    message: response.message.unwrap_or_default(),
+                    reason: None,
+                    attempt_status: Some(enums::AttemptStatus::Failure),
+                    connector_transaction_id: response.reference_id,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    raw_connector_response: None,
+                })
+            } else {
+                // This shouldn't happen as successful responses go through normal flow
+                // But fallback to generic error
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: "UNKNOWN_ERROR".to_string(),
+                    message: "Unknown PayU error".to_string(),
+                    reason: None,
+                    attempt_status: Some(enums::AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    raw_connector_response: None,
+                })
+            }
         }
     }
 );
@@ -109,33 +155,11 @@ impl ConnectorCommon for Payu {
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        let auth = PayuAuthType::try_from(auth_type)?;
+        let _auth = PayuAuthType::try_from(auth_type)?;
         // Payu uses form-based authentication, not headers
         Ok(vec![])
     }
 
-    fn build_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        let response: PayuErrorResponse = res
-            .response
-            .parse_struct("Payu ErrorResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response.error_code.unwrap_or_default(),
-            message: response.error_message.unwrap_or_default(),
-            reason: response.error_description,
-            attempt_status: Some(enums::AttemptStatus::Failure),
-            connector_transaction_id: response.transaction_id,
-            network_error_message: None,
-            network_advice_code: None,
-            network_decline_code: None,
-        })
-    }
 }
 
 // Core service traits
