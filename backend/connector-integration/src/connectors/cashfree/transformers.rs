@@ -214,49 +214,65 @@ pub struct CashfreePayloadData {
 }
 
 // ============================================================================
-// Flow Type Determination
+// Helper Functions
 // ============================================================================
 
-#[derive(Debug, Clone)]
-pub enum UpiFlowType {
-    Intent,
-    Collect { vpa: String },
-}
+fn get_cashfree_payment_method_data(
+    payment_method_data: &PaymentMethodData,
+) -> Result<CashfreePaymentMethod, ConnectorError> {
+    match payment_method_data {
+        PaymentMethodData::Upi(upi_data) => {
+            match upi_data {
+                domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
+                    // Extract VPA for collect flow - maps to upi_id field in Cashfree
+                    let vpa = collect_data
+                        .vpa_id
+                        .as_ref()
+                        .map(|vpa| vpa.peek().to_string())
+                        .unwrap_or_default();
 
-impl UpiFlowType {
-    pub fn from_payment_method_data(
-        payment_method_data: &PaymentMethodData,
-    ) -> Result<Self, ConnectorError> {
-        match payment_method_data {
-            PaymentMethodData::Upi(upi_data) => {
-                match upi_data {
-                    domain_types::payment_method_data::UpiData::UpiCollect(collect_data) => {
-                        // Extract VPA for collect flow - maps to upi_id field in Cashfree
-                        let vpa = collect_data
-                            .vpa_id
-                            .as_ref()
-                            .map(|vpa| vpa.peek().to_string())
-                            .unwrap_or_default();
-
-                        if vpa.is_empty() {
-                            return Err(ConnectorError::MissingRequiredField {
-                                field_name: "vpa_id for UPI collect",
-                            });
-                        }
-
-                        Ok(UpiFlowType::Collect { vpa })
+                    if vpa.is_empty() {
+                        return Err(ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id for UPI collect",
+                        });
                     }
-                    domain_types::payment_method_data::UpiData::UpiIntent(_) => {
-                        // Intent flow: channel = "link", no UPI ID needed
-                        Ok(UpiFlowType::Intent)
-                    }
+
+                    Ok(CashfreePaymentMethod {
+                        upi: Some(CashfreeUpiDetails {
+                            channel: "collect".to_string(),
+                            upi_id: vpa,
+                        }),
+                        app: None,
+                        netbanking: None,
+                        card: None,
+                        emi: None,
+                        paypal: None,
+                        paylater: None,
+                        cardless_emi: None,
+                    })
+                }
+                domain_types::payment_method_data::UpiData::UpiIntent(_) => {
+                    // Intent flow: channel = "link", no UPI ID needed
+                    Ok(CashfreePaymentMethod {
+                        upi: Some(CashfreeUpiDetails {
+                            channel: "link".to_string(),
+                            upi_id: "".to_string(),
+                        }),
+                        app: None,
+                        netbanking: None,
+                        card: None,
+                        emi: None,
+                        paypal: None,
+                        paylater: None,
+                        cardless_emi: None,
+                    })
                 }
             }
-            _ => Err(ConnectorError::NotSupported {
-                message: "Only UPI payment methods are supported for Cashfree V3".to_string(),
-                connector: "Cashfree",
-            }),
         }
+        _ => Err(ConnectorError::NotSupported {
+            message: "Only UPI payment methods are supported for Cashfree V3".to_string(),
+            connector: "Cashfree",
+        }),
     }
 }
 
@@ -451,40 +467,8 @@ impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, Pa
             },
         )?;
 
-        // Determine UPI flow type
-        let upi_flow = UpiFlowType::from_payment_method_data(&item.request.payment_method_data)?;
-
-        // Build UPI payment method based on flow type (V3 spec: channel determines flow)
-        let payment_method = match upi_flow {
-            UpiFlowType::Intent => CashfreePaymentMethod {
-                upi: Some(CashfreeUpiDetails {
-                    channel: "link".to_string(), // Intent flow uses "link" channel
-                    upi_id: "".to_string(),      // No UPI ID for intent
-                }),
-                // FIXED: Set all non-UPI methods to None (matches Haskell structure)
-                app: None,
-                netbanking: None,
-                card: None,
-                emi: None,
-                paypal: None,
-                paylater: None,
-                cardless_emi: None,
-            },
-            UpiFlowType::Collect { vpa } => CashfreePaymentMethod {
-                upi: Some(CashfreeUpiDetails {
-                    channel: "collect".to_string(), // Collect flow uses "collect" channel
-                    upi_id: vpa,                    // UPI VPA required for collect
-                }),
-                // FIXED: Set all non-UPI methods to None (matches Haskell structure)
-                app: None,
-                netbanking: None,
-                card: None,
-                emi: None,
-                paypal: None,
-                paylater: None,
-                cardless_emi: None,
-            },
-        };
+        // Get Cashfree payment method data directly
+        let payment_method = get_cashfree_payment_method_data(&item.request.payment_method_data)?;
 
         Ok(Self {
             payment_session_id,
