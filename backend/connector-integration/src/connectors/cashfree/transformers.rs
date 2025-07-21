@@ -1,3 +1,4 @@
+use common_enums;
 use domain_types::{
     connector_flow::{Authorize, CreateOrder},
     connector_types::{
@@ -263,6 +264,66 @@ impl UpiFlowType {
 // Request Transformations
 // ============================================================================
 
+// TryFrom implementation for macro-generated CashfreeRouterData wrapper
+impl
+    TryFrom<
+        crate::connectors::cashfree::CashfreeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    > for CashfreeOrderCreateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        wrapper: crate::connectors::cashfree::CashfreeRouterData<
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Convert MinorUnit to FloatMajorUnit properly
+        let amount_i64 = wrapper.router_data.request.amount.get_amount_as_i64();
+        let converted_amount = common_utils::types::FloatMajorUnit(amount_i64 as f64 / 100.0);
+        Self::try_from((converted_amount, &wrapper.router_data))
+    }
+}
+
+// Keep the original TryFrom for backward compatibility
+impl
+    TryFrom<
+        &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    > for CashfreeOrderCreateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Convert MinorUnit to FloatMajorUnit properly
+        let amount_i64 = item.request.amount.get_amount_as_i64();
+        let converted_amount = common_utils::types::FloatMajorUnit(amount_i64 as f64 / 100.0);
+        Self::try_from((converted_amount, item))
+    }
+}
+
 impl
     TryFrom<(
         common_utils::types::FloatMajorUnit,
@@ -350,6 +411,26 @@ impl
     }
 }
 
+// TryFrom implementation for macro-generated CashfreeRouterData wrapper
+impl
+    TryFrom<
+        crate::connectors::cashfree::CashfreeRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    > for CashfreePaymentRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        wrapper: crate::connectors::cashfree::CashfreeRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&wrapper.router_data)
+    }
+}
+
+// Keep original TryFrom implementation for backward compatibility
 impl TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>
     for CashfreePaymentRequest
 {
@@ -423,6 +504,59 @@ impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
     fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
         Ok(Self {
             order_id: response.payment_session_id,
+        })
+    }
+}
+
+// Add the missing TryFrom implementation for macro compatibility
+impl
+    TryFrom<
+        ResponseRouterData<
+            CashfreeOrderCreateResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    >
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            CashfreeOrderCreateResponse,
+            RouterDataV2<
+                CreateOrder,
+                PaymentFlowData,
+                PaymentCreateOrderData,
+                PaymentCreateOrderResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+        let order_response = PaymentCreateOrderResponse::try_from(response)?;
+
+        // Extract order_id before moving order_response
+        let order_id = order_response.order_id.clone();
+
+        Ok(Self {
+            response: Ok(order_response),
+            resource_common_data: PaymentFlowData {
+                // Update status to indicate successful order creation
+                status: common_enums::AttemptStatus::Pending,
+                // Set reference_id to the payment_session_id for use in authorize flow
+                reference_id: Some(order_id),
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
         })
     }
 }

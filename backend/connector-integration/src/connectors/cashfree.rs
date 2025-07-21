@@ -1,13 +1,12 @@
 pub mod test;
 pub mod transformers;
 
-use common_enums::AttemptStatus;
-use common_utils::{
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    request::RequestContent,
-    types::{AmountConvertor, FloatMajorUnitForConnector},
+use cashfree::{
+    CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreePaymentRequest,
+    CashfreePaymentResponse,
 };
+use common_enums::AttemptStatus;
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -22,6 +21,7 @@ use domain_types::{
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
@@ -36,6 +36,9 @@ use interfaces::{
 };
 use transformers as cashfree;
 
+use super::macros;
+use crate::{types::ResponseRouterData, with_response_body};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const X_CLIENT_ID: &str = "X-Client-Id";
@@ -43,12 +46,117 @@ pub(crate) mod headers {
     pub(crate) const X_API_VERSION: &str = "x-api-version";
 }
 
-#[derive(Clone)]
-pub struct Cashfree {
-    pub(crate) amount_converter:
-        &'static (dyn AmountConvertor<Output = common_utils::types::FloatMajorUnit> + Sync),
-}
+// Trait implementations will be added after the macro creates the struct
 
+// Define connector prerequisites
+macros::create_all_prerequisites!(
+    connector_name: Cashfree,
+    api: [
+        (
+            flow: CreateOrder,
+            request_body: CashfreeOrderCreateRequest,
+            response_body: CashfreeOrderCreateResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>
+        ),
+        (
+            flow: Authorize,
+            request_body: CashfreePaymentRequest,
+            response_body: CashfreePaymentResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+        )
+    ],
+    amount_converters: [],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut headers = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
+            headers.append(&mut auth_headers);
+            Ok(headers)
+        }
+
+        pub fn connector_base_url<F, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> String {
+            req.resource_common_data.connectors.cashfree.base_url.to_string()
+        }
+
+        fn preprocess_response_bytes(
+            &self,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+            Ok(bytes)
+        }
+    }
+);
+
+// CreateOrder flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Cashfree,
+    curl_request: Json(CashfreeOrderCreateRequest),
+    curl_response: CashfreeOrderCreateResponse,
+    flow_name: CreateOrder,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentCreateOrderData,
+    flow_response: PaymentCreateOrderResponse,
+    http_method: Post,
+    preprocess_response: false,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            Ok(format!("{base_url}pg/orders"))
+        }
+    }
+);
+
+// Authorize flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Cashfree,
+    curl_request: Json(CashfreePaymentRequest),
+    curl_response: CashfreePaymentResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    preprocess_response: false,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            Ok(format!("{base_url}pg/orders/sessions"))
+        }
+    }
+);
+
+// Trait implementations after the macro creates the struct
 impl connector_types::ValidationTrait for Cashfree {
     fn should_do_order_create(&self) -> bool {
         true // Cashfree V3 requires order creation
@@ -58,15 +166,6 @@ impl connector_types::ValidationTrait for Cashfree {
 impl connector_types::ConnectorServiceTrait for Cashfree {}
 impl connector_types::PaymentAuthorizeV2 for Cashfree {}
 impl connector_types::PaymentOrderCreate for Cashfree {}
-
-impl Cashfree {
-    pub const fn new() -> &'static Self {
-        &Self {
-            // Cashfree V3 uses float amounts (e.g., 10.50)
-            amount_converter: &FloatMajorUnitForConnector,
-        }
-    }
-}
 
 impl ConnectorCommon for Cashfree {
     fn id(&self) -> &'static str {
@@ -113,10 +212,7 @@ impl ConnectorCommon for Cashfree {
             .parse_struct("CashfreeErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
-        if let Some(event_builder) = event_builder {
-            event_builder.set_error_response_body(&response);
-        }
-        // router_env::logger::info!(connector_response=?response);
+        with_response_body!(event_builder, response);
 
         let attempt_status = match response.code.as_str() {
             "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
@@ -137,224 +233,8 @@ impl ConnectorCommon for Cashfree {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+            raw_connector_response: None,
         })
-    }
-}
-
-// CreateOrder flow implementation
-impl
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Cashfree
-{
-    fn get_headers(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut headers = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
-        headers.append(&mut auth_headers);
-        Ok(headers)
-    }
-
-    fn get_url(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.cashfree.base_url;
-        Ok(format!("{base_url}pg/orders"))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let converted_amount = self
-            .amount_converter
-            .convert(req.request.amount, req.request.currency)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let connector_req =
-            cashfree::CashfreeOrderCreateRequest::try_from((converted_amount, req))?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &domain_types::router_data_v2::RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        domain_types::router_data_v2::RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-        errors::ConnectorError,
-    > {
-        let response: cashfree::CashfreeOrderCreateResponse = res
-            .response
-            .parse_struct("CashfreeOrderCreateResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(event_builder) = event_builder {
-            event_builder.set_response_body(&response);
-        }
-
-        let order_response = PaymentCreateOrderResponse::try_from(response)?;
-
-        Ok(domain_types::router_data_v2::RouterDataV2 {
-            response: Ok(order_response),
-            ..data.clone()
-        })
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-
-    fn get_5xx_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-}
-
-// Authorize flow implementation
-impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-    for Cashfree
-{
-    fn get_headers(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let mut headers = vec![(
-            headers::CONTENT_TYPE.to_string(),
-            "application/json".to_string().into(),
-        )];
-        let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
-        headers.append(&mut auth_headers);
-        Ok(headers)
-    }
-
-    fn get_url(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        let base_url = &req.resource_common_data.connectors.cashfree.base_url;
-        Ok(format!("{base_url}pg/orders/sessions"))
-    }
-
-    fn get_request_body(
-        &self,
-        req: &domain_types::router_data_v2::RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = cashfree::CashfreePaymentRequest::try_from(req)?;
-        Ok(Some(RequestContent::Json(Box::new(connector_req))))
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &domain_types::router_data_v2::RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        domain_types::router_data_v2::RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-        errors::ConnectorError,
-    > {
-        let response: cashfree::CashfreePaymentResponse = res
-            .response
-            .parse_struct("CashfreePaymentResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        if let Some(event_builder) = event_builder {
-            event_builder.set_response_body(&response);
-        }
-
-        use crate::types::ResponseRouterData;
-        use domain_types::router_data_v2::RouterDataV2;
-        let response_router_data = ResponseRouterData {
-            response,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        };
-
-        RouterDataV2::try_from(response_router_data)
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-
-    fn get_5xx_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        self.build_error_response(res, event_builder)
     }
 }
 
