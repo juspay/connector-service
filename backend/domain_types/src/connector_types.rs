@@ -917,9 +917,9 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data: Box<Option<crate::router_response_types::RedirectForm>>,
+        redirection_data: Option<Box<crate::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
-        mandate_reference: Box<Option<MandateReference>>,
+        mandate_reference: Option<Box<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,

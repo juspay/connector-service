@@ -1,8 +1,11 @@
 use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, MandateStatus, RefundStatus};
-use common_utils::ext_traits::{OptionExt, ValueExt};
-use common_utils::{consts, pii::Email};
+use common_utils::{
+    consts,
+    ext_traits::{OptionExt, ValueExt},
+    pii::Email,
+};
 use domain_types::connector_types::Status;
 use domain_types::errors::ConnectorError;
 use domain_types::{
@@ -308,24 +311,15 @@ impl
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
 
-        let ref_id = if !item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .is_empty()
-        {
-            // Generate a unique UUID for testing when connector_request_reference_id is empty
-            format!("authnet_{}", uuid::Uuid::new_v4().simple())
-        } else {
-            item.router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone()
-        };
+        let ref_id = if item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
+                    None
+                } else {
+                    Some(item.router_data.resource_common_data.connector_request_reference_id.to_string())
+                };
 
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
-            ref_id: Some(ref_id),
+            ref_id,
             transaction_request,
         };
 
@@ -383,16 +377,21 @@ fn create_regular_transaction_request(
         .unwrap_or_else(|| "Payment".to_string());
 
     // Truncate invoice number to 20 characters (Authorize.Net limit)
-    let invoice_number = item
+    let invoice_number = &item
         .router_data
-        .request
-        .merchant_order_reference_id
-        .clone()
-        .unwrap_or_else(|| item.router_data.resource_common_data.payment_id.clone());
+        .resource_common_data
+        .connector_request_reference_id;
+
+    if invoice_number.is_empty() {
+        return Err(error_stack::report!(ConnectorError::MissingRequiredField {
+            field_name: "connector_request_reference_id"
+        }));
+    }
+
     let truncated_invoice_number = if invoice_number.len() > 20 {
         invoice_number[0..20].to_string()
     } else {
-        invoice_number
+        invoice_number.to_string()
     };
 
     let order = Order {
@@ -570,14 +569,15 @@ impl
             .clone()
             .unwrap_or_else(|| "Repeat Payment".to_string());
 
-        let invoice_number = if !item
+        let invoice_number = if item
             .router_data
             .resource_common_data
             .connector_request_reference_id
             .is_empty()
         {
-            // Generate a unique UUID for testing when connector_request_reference_id is empty
-            format!("repeat_{}", uuid::Uuid::new_v4().simple())
+            return Err(error_stack::report!(ConnectorError::MissingRequiredField {
+                field_name: "connector_request_reference_id"
+            }));
         } else {
             item.router_data
                 .resource_common_data
@@ -620,20 +620,11 @@ impl
             None => None,
         };
 
-        let ref_id = if !item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .is_empty()
-        {
-            // Generate a unique UUID for testing when connector_request_reference_id is empty
-            format!("repeat_ref_{}", uuid::Uuid::new_v4().simple())
-        } else {
-            item.router_data
-                .resource_common_data
-                .connector_request_reference_id
-                .clone()
-        };
+        let ref_id = if item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
+                    None
+                } else {
+                    Some(item.router_data.resource_common_data.connector_request_reference_id.to_string())
+                };
 
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
@@ -648,7 +639,7 @@ impl
         Ok(Self {
             create_transaction_request: CreateRepeatPaymentRequest {
                 merchant_authentication,
-                ref_id: Some(ref_id),
+                ref_id,
                 transaction_request,
             },
         })
@@ -818,15 +809,6 @@ impl
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
 
-        // Generate a unique reference ID for the void transaction
-        let ref_id = Some(format!(
-            "void_req_{}",
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        ));
-
         // Extract transaction ID from the connector_transaction_id string
         // This transaction ID comes from the authorization response
         let transaction_id = match router_data.request.connector_transaction_id.as_str() {
@@ -839,6 +821,12 @@ impl
             }
             id => id.to_string(),
         };
+
+        let ref_id = if router_data.resource_common_data.connector_request_reference_id.is_empty() {
+                    None
+                } else {
+                    Some(router_data.resource_common_data.connector_request_reference_id.to_string())
+                };
 
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
@@ -1068,16 +1056,16 @@ impl
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
 
+        let ref_id = if item.router_data.request.refund_id.is_empty() {
+                    None
+                } else {
+                    Some(item.router_data.request.refund_id.to_string())
+                };
+
         Ok(Self {
             create_transaction_request: CreateTransactionRefundRequest {
                 merchant_authentication,
-                ref_id: Some(format!(
-                    "refund_{}",
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
-                )),
+                ref_id,
                 transaction_request,
             },
         })
@@ -1454,8 +1442,8 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     resource_id: ResponseId::ConnectorTransactionId(
                         transaction.transaction_id.clone(),
                     ),
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(None),
+                    redirection_data: None,
+                    mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
@@ -1735,9 +1723,9 @@ pub fn convert_to_payments_response_data_or_error(
         {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(trans_res.transaction_id.clone()),
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
-                mandate_reference: Box::new(None),
+                mandate_reference: None,
                 network_txn_id: trans_res
                     .network_trans_id
                     .as_ref()
@@ -1771,9 +1759,9 @@ pub fn convert_to_payments_response_data_or_error(
         None if status == AttemptStatus::Voided && operation == Operation::Void => {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
-                mandate_reference: Box::new(None),
+                mandate_reference: None,
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
@@ -2074,9 +2062,9 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
 
             new_router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(profile_id.clone()),
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
-                mandate_reference: Box::new(Some(
+                mandate_reference: Some(Box::new(
                     domain_types::connector_types::MandateReference {
                         connector_mandate_id,
                         payment_method_id: None,

@@ -1145,12 +1145,12 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
 
         let payment_void_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.payment_psp_reference),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             raw_connector_response: None,
         };
 
@@ -1219,12 +1219,12 @@ pub fn get_adyen_response(
 
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(response.psp_reference),
-        redirection_data: Box::new(None),
+        redirection_data: None,
         connector_metadata: None,
         network_txn_id,
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
-        mandate_reference: Box::new(mandate_reference),
+        mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
     };
     Ok((status, error, payments_response_data))
@@ -1291,7 +1291,7 @@ pub fn get_redirection_response(
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
-        redirection_data: Box::new(redirection_data),
+        redirection_data: redirection_data.map(Box::new),
         connector_metadata,
         network_txn_id: None,
         connector_response_reference_id: response
@@ -1299,7 +1299,7 @@ pub fn get_redirection_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
-        mandate_reference: Box::new(None),
+        mandate_reference: None,
         raw_connector_response: None,
     };
     Ok((status, error, payments_response_data))
@@ -1969,12 +1969,12 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
-                mandate_reference: Box::new(None),
+                mandate_reference: None,
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {

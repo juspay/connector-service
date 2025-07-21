@@ -1041,7 +1041,7 @@ pub fn generate_payment_authorize_response(
                     transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
                     redirection_data: redirection_data.map(
                         |form| {
-                            match form {
+                            match *form {
                                 crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
@@ -2694,7 +2694,7 @@ pub fn generate_setup_mandate_response(
                     registration_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
                     redirection_data: redirection_data.map(
                         |form| {
-                            match form {
+                            match *form {
                                 crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(

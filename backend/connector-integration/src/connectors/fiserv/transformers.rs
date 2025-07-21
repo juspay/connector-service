@@ -763,8 +763,8 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -832,8 +832,8 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -899,8 +899,8 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -973,8 +973,8 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(

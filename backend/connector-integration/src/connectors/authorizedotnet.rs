@@ -205,10 +205,6 @@ macros::create_all_prerequisites!(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
             let base_url = &req.resource_common_data.connectors.authorizedotnet.base_url;
-            tracing::info!("Authorized.net base_url: {}", base_url);
-            if base_url.is_empty() {
-                tracing::error!("Authorized.net base_url is empty! Full connectors config: {:?}", req.resource_common_data.connectors);
-            }
             base_url.to_string()
         }
 
