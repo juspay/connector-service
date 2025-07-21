@@ -207,7 +207,7 @@ impl
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
-            merchant_transaction_id: router_data.resource_common_data.payment_id.clone(),
+            merchant_transaction_id: router_data.resource_common_data.connector_request_reference_id.clone(),
             merchant_user_id: router_data
                 .resource_common_data
                 .customer_id
