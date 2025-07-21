@@ -298,6 +298,28 @@ impl<
             + Serialize,
     > ConnectorCommon for Phonepe<T>
 {
+impl connector_types::ValidationTrait for Phonepe {}
+impl connector_types::PaymentAuthorizeV2 for Phonepe {}
+
+// Default empty implementations for unsupported flows
+impl connector_types::PaymentSyncV2 for Phonepe {}
+impl connector_types::PaymentOrderCreate for Phonepe {}
+impl connector_types::PaymentVoidV2 for Phonepe {}
+impl connector_types::IncomingWebhook for Phonepe {}
+impl connector_types::RefundV2 for Phonepe {}
+impl connector_types::PaymentCapture for Phonepe {}
+impl connector_types::SetupMandateV2 for Phonepe {}
+impl connector_types::RepeatPaymentV2 for Phonepe {}
+impl connector_types::AcceptDispute for Phonepe {}
+impl connector_types::RefundSyncV2 for Phonepe {}
+impl connector_types::DisputeDefend for Phonepe {}
+impl connector_types::SubmitEvidenceV2 for Phonepe {}
+impl connector_types::PaymentSessionToken for Phonepe {}
+
+// Implement ConnectorServiceTrait by virtue of implementing all required traits
+impl connector_types::ConnectorServiceTrait for Phonepe {}
+
+impl ConnectorCommon for Phonepe {
     fn id(&self) -> &'static str {
         "phonepe"
     }
@@ -561,7 +583,24 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
+// Stub implementations for missing flows
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Phonepe
+{
+}
+
 // Apply to all flows
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
 impl_source_verification_stub!(
     Authorize,
     PaymentFlowData,
