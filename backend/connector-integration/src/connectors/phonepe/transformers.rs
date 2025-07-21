@@ -6,7 +6,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::constants;
+use crate::types::ResponseRouterData;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -40,13 +41,6 @@ impl<T> TryFrom<(MinorUnit, T)> for PhonepeRouterData<T> {
             amount_converter: &common_utils::types::MinorUnitForConnector,
         })
     }
-}
-
-pub trait ForeignTryFrom<T> {
-    type Error;
-    fn foreign_try_from(from: T) -> Result<Self, Self::Error>
-    where
-        Self: Sized;
 }
 
 // ===== REQUEST STRUCTURES =====
@@ -131,6 +125,29 @@ pub struct PhonepeInstrumentResponse {
 }
 
 // ===== REQUEST BUILDING =====
+
+// TryFrom implementation for macro-generated PhonepeRouterData wrapper
+impl
+    TryFrom<
+        crate::connectors::phonepe::PhonepeRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    > for PhonepePaymentsRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        wrapper: crate::connectors::phonepe::PhonepeRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&PhonepeRouterData {
+            amount: wrapper.router_data.request.minor_amount,
+            router_data: &wrapper.router_data,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
+        })
+    }
+}
 
 impl
     TryFrom<
@@ -244,28 +261,20 @@ impl
 
 // ===== RESPONSE HANDLING =====
 
-pub struct ResponseRouterData<Response, RouterData> {
-    pub response: Response,
-    pub data: RouterData,
-    pub http_code: u16,
-}
-
-impl<F>
+impl
     TryFrom<
         ResponseRouterData<
             PhonepePaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
-    > for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-where
-    F: Clone,
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
         item: ResponseRouterData<
             PhonepePaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
@@ -279,10 +288,8 @@ where
                             instrument_type if instrument_type == constants::UPI_INTENT => {
                                 if let Some(intent_url) = &instrument_response.intent_url {
                                     (
-                                        Some(RedirectForm::Form {
-                                            endpoint: intent_url.clone(),
-                                            method: common_utils::request::Method::Post,
-                                            form_fields: std::collections::HashMap::new(),
+                                        Some(RedirectForm::Uri {
+                                            uri: intent_url.clone(),
                                         }),
                                         None,
                                     )
@@ -313,10 +320,9 @@ where
 
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id:
-                                domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                                    data.merchant_transaction_id.clone(),
-                                ),
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                data.merchant_transaction_id.clone(),
+                            ),
                             redirection_data: Box::new(redirect_form),
                             mandate_reference: Box::new(None),
                             connector_metadata,
@@ -329,16 +335,15 @@ where
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
                         }),
-                        ..item.data
+                        ..item.router_data
                     })
                 } else {
                     // Success but no instrument response
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id:
-                                domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                                    data.merchant_transaction_id.clone(),
-                                ),
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                data.merchant_transaction_id.clone(),
+                            ),
                             redirection_data: Box::new(None),
                             mandate_reference: Box::new(None),
                             connector_metadata: None,
@@ -351,7 +356,7 @@ where
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
                         }),
-                        ..item.data
+                        ..item.router_data
                     })
                 }
             } else {
@@ -377,7 +382,7 @@ where
                         serde_json::to_string(&item.response).unwrap_or_default(),
                     ),
                 }),
-                ..item.data
+                ..item.router_data
             })
         }
     }
@@ -439,40 +444,4 @@ fn generate_phonepe_checksum(
         constants::CHECKSUM_SEPARATOR,
         key_index
     ))
-}
-
-// ===== FOREIGN TRY FROM IMPLEMENTATIONS =====
-
-impl<F, T>
-    ForeignTryFrom<(
-        ResponseRouterData<
-            PhonepePaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-        Option<&dyn AmountConvertor<Output = MinorUnit>>,
-    )> for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
-where
-    F: Clone,
-    T: Clone,
-    Self: TryFrom<
-        ResponseRouterData<
-            PhonepePaymentsResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-        Error = Error,
-    >,
-{
-    type Error = Error;
-
-    fn foreign_try_from(
-        (item, _amount_converter): (
-            ResponseRouterData<
-                PhonepePaymentsResponse,
-                RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-            >,
-            Option<&dyn AmountConvertor<Output = MinorUnit>>,
-        ),
-    ) -> Result<Self, Self::Error> {
-        Self::try_from(item)
-    }
 }
