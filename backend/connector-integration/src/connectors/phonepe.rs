@@ -232,6 +232,14 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
     fn handle_response_v2(
         &self,
         data: &RouterDataV2<

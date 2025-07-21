@@ -207,7 +207,10 @@ impl
         // Build payload
         let payload = PhonepePaymentRequestPayload {
             merchant_id: auth.merchant_id.clone(),
-            merchant_transaction_id: router_data.resource_common_data.connector_request_reference_id.clone(),
+            merchant_transaction_id: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             merchant_user_id: router_data
                 .resource_common_data
                 .customer_id
@@ -425,7 +428,7 @@ fn generate_phonepe_checksum(
         .change_context(errors::ConnectorError::RequestEncodingFailed)?;
     let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
         use std::fmt::Write;
-        write!(&mut acc, "{:02x}", byte).unwrap();
+        write!(&mut acc, "{byte:02x}").unwrap();
         acc
     });
 
