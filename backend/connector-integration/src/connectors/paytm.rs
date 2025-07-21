@@ -259,8 +259,7 @@ impl
         let order_id = &req.resource_common_data.connector_request_reference_id;
 
         Ok(format!(
-            "{}theia/api/v1/initiateTransaction?mid={}&orderId={}",
-            base_url, merchant_id, order_id
+            "{base_url}theia/api/v1/initiateTransaction?mid={merchant_id}&orderId={order_id}"
         ))
     }
 
@@ -391,10 +390,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             paytm::UpiFlowType::Intent | paytm::UpiFlowType::Collect => {
                 // Both UPI Intent and UPI Collect use the same processTransaction endpoint
                 // The difference is in the request structure, not the URL
-                Ok(format!(
-                    "{}theia/api/v1/processTransaction?mid={}&orderId={}",
-                    base_url, merchant_id, order_id
-                ))
+                Ok(format!("{base_url}theia/api/v1/processTransaction?mid={merchant_id}&orderId={order_id}"))
             } // paytm::UpiFlowType::QrCode => {
               //     // UPI QR uses a different endpoint for QR creation
               //     Ok(format!("{}paymentservices/qr/create", base_url))
