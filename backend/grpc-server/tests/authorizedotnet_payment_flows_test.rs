@@ -607,7 +607,6 @@ async fn test_payment_authorization_auto_capture() {
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        print!("Running test_payment_authorization_manual_capture...");
         // Create the payment authorization request with manual capture
         let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Manual);
 
@@ -621,7 +620,6 @@ async fn test_payment_authorization_manual_capture() {
             .await
             .expect("gRPC payment_authorize call failed")
             .into_inner();
-        println!("Authorization response: {:?}", auth_response);
 
         assert!(
             auth_response.transaction_id.is_some(),

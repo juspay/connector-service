@@ -311,11 +311,21 @@ impl
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
 
-        let ref_id = if item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
-                    None
-                } else {
-                    Some(item.router_data.resource_common_data.connector_request_reference_id.to_string())
-                };
+        let ref_id = if item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .is_empty()
+        {
+            None
+        } else {
+            Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .to_string(),
+            )
+        };
 
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
@@ -620,11 +630,21 @@ impl
             None => None,
         };
 
-        let ref_id = if item.router_data.resource_common_data.connector_request_reference_id.is_empty() {
-                    None
-                } else {
-                    Some(item.router_data.resource_common_data.connector_request_reference_id.to_string())
-                };
+        let ref_id = if item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .is_empty()
+        {
+            None
+        } else {
+            Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .to_string(),
+            )
+        };
 
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
@@ -822,11 +842,20 @@ impl
             id => id.to_string(),
         };
 
-        let ref_id = if router_data.resource_common_data.connector_request_reference_id.is_empty() {
-                    None
-                } else {
-                    Some(router_data.resource_common_data.connector_request_reference_id.to_string())
-                };
+        let ref_id = if router_data
+            .resource_common_data
+            .connector_request_reference_id
+            .is_empty()
+        {
+            None
+        } else {
+            Some(
+                router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .to_string(),
+            )
+        };
 
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
@@ -1057,10 +1086,10 @@ impl
         };
 
         let ref_id = if item.router_data.request.refund_id.is_empty() {
-                    None
-                } else {
-                    Some(item.router_data.request.refund_id.to_string())
-                };
+            None
+        } else {
+            Some(item.router_data.request.refund_id.to_string())
+        };
 
         Ok(Self {
             create_transaction_request: CreateTransactionRefundRequest {
