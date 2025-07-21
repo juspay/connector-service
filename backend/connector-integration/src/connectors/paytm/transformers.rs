@@ -452,14 +452,14 @@ pub fn generate_paytm_signature(
     let salt_b64 = general_purpose::STANDARD.encode(salt_bytes);
 
     // Step 3: Create hash input: payload + "|" + base64_salt (same logic)
-    let hash_input = format!("{}|{}", payload, salt_b64);
+    let hash_input = format!("{payload}|{salt_b64}");
 
     // Step 4: SHA-256 hash using ring (same logic, different implementation)
     let hash_digest = digest::digest(&digest::SHA256, hash_input.as_bytes());
     let sha256_hash = hex::encode(hash_digest.as_ref());
 
     // Step 5: Create checksum: sha256_hash + base64_salt (same logic)
-    let checksum = format!("{}{}", sha256_hash, salt_b64);
+    let checksum = format!("{sha256_hash}{salt_b64}");
 
     // Step 6: AES encrypt checksum with merchant key (same logic)
     let signature = aes_encrypt(&checksum, merchant_key)?;
