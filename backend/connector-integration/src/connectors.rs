@@ -24,3 +24,6 @@ pub use self::checkout::Checkout;
 
 pub mod paytm;
 pub use self::paytm::Paytm;
+
+pub mod phonepe;
+pub use self::phonepe::Phonepe;

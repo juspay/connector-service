@@ -422,6 +422,7 @@ enum Connector {
   ZEN = 89;
   ZSL = 90;
   PAYTM = 91;
+  PHONEPE = 91;
 }
 
 // Payment method types.
