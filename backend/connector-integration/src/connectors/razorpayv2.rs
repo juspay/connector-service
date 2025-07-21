@@ -9,15 +9,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodData,
@@ -452,6 +453,7 @@ impl interfaces::connector_types::AcceptDispute for RazorpayV2 {}
 impl interfaces::connector_types::RefundSyncV2 for RazorpayV2 {}
 impl interfaces::connector_types::DisputeDefend for RazorpayV2 {}
 impl interfaces::connector_types::SubmitEvidenceV2 for RazorpayV2 {}
+impl interfaces::connector_types::PaymentSessionToken for RazorpayV2 {}
 impl interfaces::connector_types::ConnectorServiceTrait for RazorpayV2 {}
 
 // Stub implementations for flows not yet implemented
@@ -948,6 +950,26 @@ impl
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
+    > for RazorpayV2
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for RazorpayV2
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
     > for RazorpayV2
 {
 }

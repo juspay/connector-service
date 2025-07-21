@@ -48,6 +48,7 @@ pub enum ConnectorEnum {
     Xendit,
     Checkout,
     Authorizedotnet,
+    Paytm,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -64,6 +65,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Paytm => Ok(Self::Paytm),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -625,6 +627,12 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_session_token_id(mut self, session_token_id: Option<String>) -> Self {
+        if session_token_id.is_some() && self.session_token.is_none() {
+            self.session_token = session_token_id;
+        }
+        self
+    }
 }
 
 impl RawConnectorResponse for PaymentFlowData {
@@ -941,6 +949,17 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenRequestData {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenResponseData {
+    pub session_token: String,
 }
 
 #[derive(Debug, Default, Clone)]
