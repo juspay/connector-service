@@ -89,10 +89,10 @@ pub struct MifinityAddress {
     city: String,
 }
 
-impl TryFrom<&MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>> for MifinityPaymentsRequest {
+impl TryFrom<MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>> for MifinityPaymentsRequest {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>,
+        item: MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
         let metadata: MifinityConnectorMetadataObject =
             utils::to_connector_meta_from_secret(item.router_data.resource_common_data.connector_meta_data.clone())
@@ -103,7 +103,8 @@ impl TryFrom<&MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, Paymen
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 WalletData::Mifinity(data) => {
                     let money = Money {
-                        amount: item.amount.clone(),
+                        amount: item.connector.amount_converter.convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                            .change_context(ConnectorError::RequestEncodingFailed)?,
                         currency: item.router_data.request.currency.to_string(),
                     };
                     let phone_details = item.router_data.resource_common_data.get_billing_phone()?;

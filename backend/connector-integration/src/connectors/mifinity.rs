@@ -1,7 +1,8 @@
 pub mod transformers;
 
+use common_enums::CurrencyUnit;
 use common_utils::{
-    consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -12,7 +13,7 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
@@ -21,19 +22,18 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use error_stack::{Report, ResultExt};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 
 use super::macros;
-use crate::{connectors::mifinity::transformers::{MifinityAuthType, MifinityErrorResponse}, types::ResponseRouterData};
+use crate::{connectors::mifinity::transformers::{MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest, MifinityPaymentsResponse, MifinityPsyncResponse}, types::ResponseRouterData};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
 impl connector_types::ConnectorServiceTrait for Mifinity {}
@@ -64,9 +64,11 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: MifinityPsyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-        ),
+        )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -313,8 +315,8 @@ impl ConnectorCommon for Mifinity {
         "mifinity"
     }
 
-    fn get_currency_unit(&self) -> api::CurrencyUnit {
-        api::CurrencyUnit::Base
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Base
     }
 
     fn common_get_content_type(&self) -> &'static str {
@@ -332,7 +334,7 @@ impl ConnectorCommon for Mifinity {
         let auth = MifinityAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
         Ok(vec![(
-            headers::KEY.to_string(),
+            "key".to_string(),
             auth.key.expose().into_masked(),
         )])
     }
@@ -345,9 +347,9 @@ impl ConnectorCommon for Mifinity {
         if res.response.is_empty() {
             Ok(ErrorResponse {
                 status_code: res.status_code,
-                code: NO_ERROR_CODE.to_string(),
-                message: NO_ERROR_MESSAGE.to_string(),
-                reason: Some(CONNECTOR_UNAUTHORIZED_ERROR.to_string()),
+                code: "No error code".to_string(),
+                message: "No error message".to_string(),
+                reason: Some("Authentication Error from the connector".to_string()),
                 attempt_status: None,
                 connector_transaction_id: None,
                 network_advice_code: None,
@@ -395,7 +397,7 @@ impl ConnectorCommon for Mifinity {
                     })
                 }
 
-                Err(error_msg) => {
+                Err(_error_msg) => {
                     event_builder.map(|event| event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
                     crate::utils::handle_json_response_deserialization_failure(res, "mifinity")
                 }
