@@ -9,14 +9,14 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund, SetupMandate,
         SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData, SessionTokenResponseData,SetupMandateRequestData,
         SubmitEvidenceData,
     },
     errors,
@@ -290,6 +290,13 @@ impl connector_types::AcceptDispute for Cashfree {}
 impl connector_types::SubmitEvidenceV2 for Cashfree {}
 impl connector_types::DisputeDefend for Cashfree {}
 impl connector_types::IncomingWebhook for Cashfree {}
+impl connector_types::PaymentSessionToken for Cashfree {}
+
+// CreateSessionToken implementation (stub)
+impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+    for Cashfree
+{
+}
 
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
@@ -390,4 +397,10 @@ impl_source_verification_stub!(
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData
+);
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
 );
