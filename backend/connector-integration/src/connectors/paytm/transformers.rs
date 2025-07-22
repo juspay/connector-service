@@ -129,41 +129,6 @@ impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum UpiFlowType {
-    Intent,
-    Collect,
-    // QrCode,
-}
-
-pub fn determine_upi_flow(
-    payment_method_data: &PaymentMethodData,
-) -> CustomResult<UpiFlowType, errors::ConnectorError> {
-    match payment_method_data {
-        PaymentMethodData::Upi(upi_data) => {
-            match upi_data {
-                UpiData::UpiCollect(collect_data) => {
-                    // If VPA is provided, it's a collect flow
-                    if collect_data.vpa_id.is_some() {
-                        Ok(UpiFlowType::Collect)
-                    } else {
-                        // If no VPA provided, default to Intent
-                        Ok(UpiFlowType::Intent)
-                    }
-                }
-                UpiData::UpiIntent(_) => Ok(UpiFlowType::Intent),
-                // UpiData::UpiQr(_) => {
-                //     Ok(UpiFlowType::QrCode)
-                // }
-            }
-        }
-        _ => {
-            // Default to Intent for non-UPI specific payment methods
-            Ok(UpiFlowType::Intent)
-        }
-    }
-}
-
 // Request structures for CreateSessionToken flow (Paytm initiate)
 
 #[derive(Debug, Serialize)]
