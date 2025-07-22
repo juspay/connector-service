@@ -27,3 +27,6 @@ pub use self::phonepe::Phonepe;
 
 pub mod cashfree;
 pub use self::cashfree::Cashfree;
+
+pub mod cashtocode;
+pub use self::cashtocode::Cashtocode;

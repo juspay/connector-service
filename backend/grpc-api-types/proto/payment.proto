@@ -462,7 +462,7 @@ enum PaymentMethodType {
   EFT = 32;
   EPS = 33;
   FPS = 34;
-  EVOUCHER = 35;
+  E_VOUCHER = 35;
   GIROPAY = 36;
   GIVEX = 37;
   GOOGLE_PAY = 38;

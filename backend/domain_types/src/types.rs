@@ -49,6 +49,7 @@ pub struct Connectors {
     pub authorizedotnet: ConnectorParams, // Add your connector params
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
+    pub cashtocode: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -212,6 +213,70 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         ),
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Reward(_reward) => {
+                    Ok(PaymentMethodData::Reward)
+                }
+            },
+            None => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Payment method data is required".to_owned(),
+                error_object: None,
+            })
+            .into()),
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentMethodType> {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentMethod,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value.payment_method {
+            Some(data) => match data {
+                grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
+                    match card_type.card_type {
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(_)) => {
+                            Ok(Some(PaymentMethodType::Credit))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(_)) => {
+                            Ok(Some(PaymentMethodType::Debit))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_)) =>
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card redirect payments are not yet supported".to_owned(),
+                                error_object: None,
+                            }))),
+                        None =>
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "Card type is required".to_owned(),
+                                error_object: None,
+                            })))
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Token(_) => {
+                    Ok(None)
+                },
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(_) => Ok(Some(PaymentMethodType::UpiCollect)),
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_) => Ok(Some(PaymentMethodType::UpiIntent)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Reward(reward) => {
+                    match reward.reward_type() {
+                        grpc_api_types::payments::RewardType::Classicreward => Ok(Some(PaymentMethodType::ClassicReward)),
+                        grpc_api_types::payments::RewardType::Evoucher => Ok(Some(PaymentMethodType::Evoucher)),
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_REWARD_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Unsupported reward type".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                },
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -426,7 +491,16 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
                 .browser_info
                 .map(crate::router_request_types::BrowserInformation::foreign_try_from)
                 .transpose()?,
-            payment_method_type: Some(common_enums::PaymentMethodType::Credit), //TODO
+            payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
+                value.payment_method.clone().ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Payment method data is required".to_owned(),
+                        error_object: None,
+                    })
+                })?,
+            )?,
             minor_amount: common_utils::types::MinorUnit::new(value.minor_amount),
             email,
             customer_name: None,
@@ -863,7 +937,17 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                     _ => None,
                 })
                 .unwrap_or_default(),
-            customer_id: None,
+            customer_id: value
+                .connector_customer_id
+                .clone()
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse Customer Id".to_owned(),
+                    error_object: None,
+                }))?,
             connector_customer: value.connector_customer_id,
             description: None,
             return_url: value.return_url.clone(),
@@ -1145,6 +1229,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_)),
             } => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Reward(_)),
+            } => Ok(Self::Reward),
             _ => Ok(Self::Card), // Default fallback
         }
     }

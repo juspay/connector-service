@@ -50,6 +50,7 @@ pub enum ConnectorEnum {
     Authorizedotnet,
     Phonepe,
     Cashfree,
+    Cashtocode,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -68,6 +69,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
+            grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
