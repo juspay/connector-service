@@ -116,7 +116,6 @@ macros::create_all_prerequisites!(
             &self,
             response_bytes: Bytes,
         ) -> Result<Bytes, errors::ConnectorError> {
-            // Use the utility function to preprocess XML response bytes
                 let response_str = String::from_utf8(response_bytes.to_vec()).map_err(|e| {
                 error!("Error in Deserializing Response Data: {:?}", e);
                 errors::ConnectorError::ResponseDeserializationFailed
@@ -226,6 +225,7 @@ impl ConnectorCommon for Fiuu {
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     }
 }
@@ -393,6 +393,7 @@ macros::macro_connector_implementation!(
     }
 );
 
+// PSync is not implemented using the macro structure because the response is parsed differently according to the header
 impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Fiuu
 {

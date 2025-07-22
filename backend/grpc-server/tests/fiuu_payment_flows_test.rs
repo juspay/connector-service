@@ -262,7 +262,7 @@ async fn test_payment_authorization_auto_capture() {
 
         assert!(
             response.status == i32::from(PaymentStatus::Charged),
-            "Payment should be in AuthenticationPending or Pending state"
+            "Payment should be in Charged state"
         );
     });
 }
@@ -288,7 +288,7 @@ async fn test_payment_authorization_manual_capture() {
         // Verify payment status
         assert!(
             auth_response.status == i32::from(PaymentStatus::Authorized),
-            "Payment should be in AuthenticationPending or Pending state"
+            "Payment should be in Authorized state"
         );
 
         // Extract the transaction ID
@@ -387,10 +387,8 @@ async fn test_refund() {
         let transaction_id = extract_transaction_id(&response);
 
         assert!(
-            response.status == i32::from(PaymentStatus::AuthenticationPending)
-                || response.status == i32::from(PaymentStatus::Pending)
-                || response.status == i32::from(PaymentStatus::Charged),
-            "Payment should be in AuthenticationPending or Pending state"
+            response.status == i32::from(PaymentStatus::Charged),
+            "Payment should be in Charged state"
         );
 
         // Wait a bit longer to ensure the payment is fully processed
@@ -412,9 +410,8 @@ async fn test_refund() {
 
         // Verify the refund response
         assert!(
-            refund_response.status == i32::from(RefundStatus::RefundSuccess)
-                || refund_response.status == i32::from(RefundStatus::RefundPending),
-            "Refund should be in RefundSuccess state"
+            refund_response.status == i32::from(RefundStatus::RefundPending),
+            "Refund should be in RefundPending state"
         );
     });
 }
@@ -442,10 +439,8 @@ async fn test_refund_sync() {
             let transaction_id = extract_transaction_id(&response);
 
             assert!(
-                response.status == i32::from(PaymentStatus::AuthenticationPending)
-                    || response.status == i32::from(PaymentStatus::Pending)
-                    || response.status == i32::from(PaymentStatus::Charged),
-                "Payment should be in AuthenticationPending or Pending state"
+                response.status == i32::from(PaymentStatus::Charged),
+                "Payment should be in Charged state"
             );
 
             // Create refund request
@@ -464,9 +459,8 @@ async fn test_refund_sync() {
 
             // Verify the refund response
             assert!(
-                refund_response.status == i32::from(RefundStatus::RefundSuccess)
-                    || refund_response.status == i32::from(RefundStatus::RefundPending),
-                "Refund should be in RefundSuccess state"
+                refund_response.status == i32::from(RefundStatus::RefundPending),
+                "Refund should be in RefundPending state"
             );
 
             let refund_id = extract_refund_id(&refund_response);
@@ -523,6 +517,9 @@ async fn test_payment_void() {
             auth_response.status == i32::from(PaymentStatus::Authorized),
             "Payment should be in AUTHORIZED state before voiding"
         );
+
+        // Wait a bit longer to ensure the payment is fully processed
+        std::thread::sleep(std::time::Duration::from_secs(12));
 
         // Create void request with a unique reference ID
         let void_request = create_payment_void_request(&transaction_id);
