@@ -38,14 +38,26 @@ impl KafkaWriter {
         topic: String,
         batch_size: Option<usize>,
         linger_ms: Option<u64>,
+        queue_buffering_max_messages: Option<usize>,
+        queue_buffering_max_kbytes: Option<usize>,
+        reconnect_backoff_min_ms: Option<u64>,
+        reconnect_backoff_max_ms: Option<u64>,
     ) -> Result<Self, KafkaWriterError> {
         let mut config = ClientConfig::new();
         config.set("bootstrap.servers", brokers.join(","));
-        // config.set("queue.buffering.max.messages", "100000"); // Limit queue size
-        // config.set("queue.buffering.max.kbytes", "1024000"); // 100MB max memory
-        // config.set("socket.timeout.ms", "5000"); // 5 second socket timeout
-        // config.set("message.timeout.ms", "30000"); // 30 second message timeout
-        // config.set("request.timeout.ms", "10000"); // 10 second request timeout
+
+        if let Some(min_backoff) = reconnect_backoff_min_ms {
+            config.set("reconnect.backoff.ms", min_backoff.to_string());
+        }
+        if let Some(max_backoff) = reconnect_backoff_max_ms {
+            config.set("reconnect.backoff.max.ms", max_backoff.to_string());
+        }
+        if let Some(max_messages) = queue_buffering_max_messages {
+            config.set("queue.buffering.max.messages", max_messages.to_string());
+        }
+        if let Some(max_kbytes) = queue_buffering_max_kbytes {
+            config.set("queue.buffering.max.kbytes", max_kbytes.to_string());
+        }
 
         // Only set custom values if provided, otherwise use Kafka defaults
         if let Some(size) = batch_size {
@@ -55,9 +67,14 @@ impl KafkaWriter {
             config.set("linger.ms", ms.to_string());
         }
 
-        let producer = config
-            .create::<ThreadedProducer<DefaultProducerContext>>()
+        let producer: ThreadedProducer<DefaultProducerContext> = config
+            .create()
             .map_err(KafkaWriterError::ProducerCreation)?;
+
+        producer
+            .client()
+            .fetch_metadata(Some(&topic), Duration::from_secs(5))
+            .map_err(KafkaWriterError::MetadataFetch)?;
 
         Ok(Self {
             producer: Arc::new(producer),
@@ -98,30 +115,23 @@ impl Write for KafkaWriter {
             Err((kafka_error, _)) => {
                 KAFKA_LOGS_DROPPED.inc();
 
-                // Track specific drop reasons for debugging
+                // Track specific drop reasons
                 match &kafka_error {
                     KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull) => {
                         KAFKA_DROPS_QUEUE_FULL.inc();
-                        eprintln!("[KAFKA DROP] Reason: Queue full (size: {})", queue_size);
                     }
                     KafkaError::MessageProduction(
                         rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
                     ) => {
                         KAFKA_DROPS_MSG_TOO_LARGE.inc();
-                        eprintln!(
-                            "[KAFKA DROP] Reason: Message too large (size: {} bytes)",
-                            buf.len()
-                        );
                     }
                     KafkaError::MessageProduction(
                         rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
                     ) => {
                         KAFKA_DROPS_TIMEOUT.inc();
-                        eprintln!("[KAFKA DROP] Reason: Message timed out");
                     }
                     _ => {
                         KAFKA_DROPS_OTHER.inc();
-                        eprintln!("[KAFKA DROP] Reason: {:?}", kafka_error);
                     }
                 }
 
@@ -143,7 +153,9 @@ impl Write for KafkaWriter {
 #[derive(Debug, thiserror::Error)]
 pub enum KafkaWriterError {
     #[error("Failed to create Kafka producer: {0}")]
-    ProducerCreation(#[from] rdkafka::error::KafkaError),
+    ProducerCreation(rdkafka::error::KafkaError),
+    #[error("Failed to fetch Kafka metadata: {0}")]
+    MetadataFetch(rdkafka::error::KafkaError),
 }
 
 /// Make KafkaWriter compatible with tracing_appender's MakeWriter trait.

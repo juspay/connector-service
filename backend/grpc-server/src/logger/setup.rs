@@ -77,10 +77,10 @@ pub fn setup(
 
     let mut subscriber_layers = Vec::new();
 
-    subscriber_layers.push(logging_components.storage_layer.boxed());
     if let Some(console_layer) = logging_components.console_log_layer {
         subscriber_layers.push(console_layer);
     }
+    subscriber_layers.push(logging_components.storage_layer.boxed());
 
     // Add Kafka layer if configured
     #[cfg(feature = "kafka")]
@@ -96,7 +96,7 @@ pub fn setup(
                 });
 
             let brokers: Vec<&str> = kafka_config.brokers.iter().map(|s| s.as_str()).collect();
-            let mut builder = KafkaLayer::<tracing_subscriber::Registry>::builder()
+            let mut builder = KafkaLayer::builder()
                 .brokers(&brokers)
                 .topic(&kafka_config.topic)
                 .static_fields(static_top_level_fields.clone());
@@ -121,7 +121,7 @@ pub fn setup(
                     ),
                 ),
                 Err(e) => {
-                    tracing::warn!("Failed to enable Kafka logging: {}", e);
+                    eprintln!("[WARN] Failed to enable Kafka logging: {}", e);
                     // Continue without Kafka - non-blocking
                     None
                 }
@@ -129,7 +129,10 @@ pub fn setup(
 
             if let Some(layer) = kafka_layer {
                 subscriber_layers.push(layer.boxed());
-                tracing::info!("Kafka logging enabled for topic: {}", kafka_config.topic);
+                eprintln!(
+                    "[INFO] Kafka logging enabled for topic: {}",
+                    kafka_config.topic
+                );
             }
         }
     }

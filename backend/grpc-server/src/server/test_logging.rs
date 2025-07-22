@@ -27,88 +27,93 @@ pub async fn test_logging_handler(
 
     // Generate logs based on the request
     for i in 0..payload.log_count {
+        let log_generation_timestamp_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        let payment_id = format!("pay_{}_{}", log_generation_timestamp_ms, i);
+        let merchant_id = format!("merchant_{}", i % 100);
+        let latency_ms = 10 + (i % 150);
+
         match payload.log_level.as_str() {
             "trace" => {
                 if payload.include_fields {
                     tracing::trace!(
-                        iteration = i,
-                        test_field = "test_value",
-                        numeric_field = i * 2,
+                        payment_id,
+                        merchant_id,
+                        latency_ms,
+                        flow = "PaymentsConfirm",
                         request_id = ?request_id,
-                        "Test trace log with fields"
+                        log_generation_timestamp_ms,
+                        "API request completed"
                     );
                 } else {
                     tracing::trace!(request_id = ?request_id, "Test trace log {}", i);
                 }
-                // Increment the counter for tracing level events
                 TRACING_EVENTS_GENERATED.inc();
             }
             "debug" => {
                 if payload.include_fields {
                     tracing::debug!(
-                        iteration = i,
-                        test_field = "test_value",
-                        numeric_field = i * 2,
+                        payment_id,
+                        merchant_id,
+                        latency_ms,
+                        flow = "PaymentsConfirm",
                         request_id = ?request_id,
-                        "Test debug log with fields"
+                        log_generation_timestamp_ms,
+                        "API request completed"
                     );
                 } else {
                     tracing::debug!(request_id = ?request_id, "Test debug log {}", i);
                 }
-                // Increment the counter for tracing level events
                 TRACING_EVENTS_GENERATED.inc();
             }
             "info" => {
                 if payload.include_fields {
-                    let timestamp = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_micros();
-                    let payment_id = format!("pay_{}_{}", timestamp, i);
-                    let merchant_id = format!("merchant_{}", i % 100);
-                    let latency_ms = 10 + (i % 150);
                     tracing::info!(
                         payment_id,
                         merchant_id,
                         latency_ms,
                         flow = "PaymentsConfirm",
                         request_id = ?request_id,
+                        log_generation_timestamp_ms,
                         "API request completed"
                     );
                 } else {
                     tracing::info!(request_id = ?request_id, "Test info log {}", i);
                 }
-                // Increment the counter for tracing level events
                 TRACING_EVENTS_GENERATED.inc();
             }
             "warn" => {
                 if payload.include_fields {
                     tracing::warn!(
-                        iteration = i,
-                        test_field = "test_value",
-                        numeric_field = i * 2,
+                        payment_id,
+                        merchant_id,
+                        latency_ms,
+                        flow = "PaymentsConfirm",
                         request_id = ?request_id,
-                        "Test warn log with fields"
+                        log_generation_timestamp_ms,
+                        "API request completed"
                     );
                 } else {
                     tracing::warn!(request_id = ?request_id, "Test warn log {}", i);
                 }
-                // Increment the counter for tracing level events
                 TRACING_EVENTS_GENERATED.inc();
             }
             "error" => {
                 if payload.include_fields {
                     tracing::error!(
-                        iteration = i,
-                        test_field = "test_value",
-                        numeric_field = i * 2,
+                        payment_id,
+                        merchant_id,
+                        latency_ms,
+                        flow = "PaymentsConfirm",
                         request_id = ?request_id,
-                        "Test error log with fields"
+                        log_generation_timestamp_ms,
+                        "API request completed"
                     );
                 } else {
                     tracing::error!(request_id = ?request_id, "Test error log {}", i);
                 }
-                // Increment the counter for tracing level events
                 TRACING_EVENTS_GENERATED.inc();
             }
             _ => {

@@ -13,15 +13,11 @@ use crate::writer::{KafkaWriter, KafkaWriterError};
 /// Tracing layer that sends JSON-formatted logs to Kafka
 ///
 /// Wraps log_utils' JsonFormattingLayer
-pub struct KafkaLayer<S> {
+pub struct KafkaLayer {
     inner: JsonFormattingLayer<KafkaWriter, serde_json::ser::CompactFormatter>,
-    _phantom: std::marker::PhantomData<S>,
 }
 
-impl<S> KafkaLayer<S>
-where
-    S: Subscriber,
-{
+impl KafkaLayer {
     /// Creates a new builder for configuring a KafkaLayer.
     pub fn builder() -> crate::KafkaLayerBuilder {
         crate::KafkaLayerBuilder::new()
@@ -43,14 +39,11 @@ where
         let inner =
             JsonFormattingLayer::new(config, kafka_writer, serde_json::ser::CompactFormatter)?;
 
-        Ok(Self {
-            inner,
-            _phantom: std::marker::PhantomData,
-        })
+        Ok(Self { inner })
     }
 }
 
-impl<S> Layer<S> for KafkaLayer<S>
+impl<S> Layer<S> for KafkaLayer
 where
     S: Subscriber + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,
 {
@@ -77,6 +70,17 @@ where
 
     fn on_close(&self, id: tracing::span::Id, ctx: tracing_subscriber::layer::Context<'_, S>) {
         self.inner.on_close(id, ctx);
+    }
+}
+
+impl KafkaLayer {
+    /// Boxes the layer, making it easier to compose with other layers.
+    pub fn boxed<S>(self) -> Box<dyn Layer<S> + Send + Sync + 'static>
+    where
+        Self: Layer<S> + Sized + Send + Sync + 'static,
+        S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
+    {
+        Box::new(self)
     }
 }
 
