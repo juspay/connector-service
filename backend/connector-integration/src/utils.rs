@@ -1,4 +1,10 @@
+pub mod xml_utils;
+use common_utils::{errors::ReportSwitchExt, ext_traits::ValueExt};
+pub use xml_utils::preprocess_xml_response_bytes;
+
 use domain_types::{connector_types::PaymentsAuthorizeData, errors};
+use hyperswitch_masking::{ExposeInterface, Secret};
+use serde_json::Value;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -43,5 +49,18 @@ pub fn missing_field_err(
     })
 }
 
-pub mod xml_utils;
-pub use xml_utils::preprocess_xml_response_bytes;
+pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {
+    format!("Selected payment method through {connector}")
+}
+
+pub(crate) fn to_connector_meta_from_secret<T>(
+    connector_meta: Option<Secret<Value>>,
+) -> Result<T, Error>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let connector_meta_secret =
+        connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
+    let json = connector_meta_secret.expose();
+    json.parse_value(std::any::type_name::<T>()).switch()
+}

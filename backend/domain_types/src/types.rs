@@ -47,6 +47,7 @@ pub struct Connectors {
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
     pub authorizedotnet: ConnectorParams, // Add your connector params
+    pub mifinity: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
