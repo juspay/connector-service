@@ -17,6 +17,7 @@ use utoipa::ToSchema;
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::mandates::MandateData;
+use crate::payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, RawCardNumber};
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -115,7 +116,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for common_enums::Car
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData {
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<DefaultPCIHolder> {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -128,14 +129,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                     match card_type.card_type {
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => {
                             let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
-                            Ok(PaymentMethodData::Card(crate::payment_method_data::Card {
-                                card_number: cards::CardNumber::from_str(&card.card_number)
+                            Ok(PaymentMethodData::Card(crate::payment_method_data::Card{
+                                card_number: RawCardNumber(cards::CardNumber::from_str(&card.card_number)
                                     .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_CARD_NUMBER".to_owned(),
                                         error_identifier: 400,
                                         error_message: "Invalid card number".to_owned(),
                                         error_object: None,
-                                    }))?,
+                                    }))?),
                                 card_exp_month: card.card_exp_month.into(),
                                 card_exp_year: card.card_exp_year.into(),
                                 card_cvc: card.card_cvc.into(),
@@ -152,13 +153,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => {
                             let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
                             Ok(PaymentMethodData::Card(crate::payment_method_data::Card {
-                                card_number: cards::CardNumber::from_str(&card.card_number)
+                                card_number: RawCardNumber(cards::CardNumber::from_str(&card.card_number)
                                     .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_CARD_NUMBER".to_owned(),
                                         error_identifier: 400,
                                         error_message: "Invalid card number".to_owned(),
                                         error_object: None,
-                                    }))?,
+                                    }))?),
                                 card_exp_month: card.card_exp_month.into(),
                                 card_exp_year: card.card_exp_year.into(),
                                 card_cvc: card.card_cvc.into(),
@@ -383,7 +384,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
-impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
+impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData<DefaultPCIHolder> {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -406,7 +407,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
-            payment_method_data: PaymentMethodData::foreign_try_from(
+            payment_method_data: PaymentMethodData::<DefaultPCIHolder>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1007,11 +1008,11 @@ pub fn generate_create_order_response(
     Ok(response)
 }
 
-pub fn generate_payment_authorize_response(
+pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         Authorize,
         PaymentFlowData,
-        PaymentsAuthorizeData,
+        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     >,
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -2478,7 +2479,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors)> for PaymentFlow
     }
 }
 
-impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
+impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<DefaultPCIHolder> {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -2628,11 +2629,11 @@ impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::Fut
     }
 }
 
-pub fn generate_setup_mandate_response(
+pub fn generate_setup_mandate_response<T:PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
 ) -> Result<PaymentServiceRegisterResponse, error_stack::Report<ApplicationErrorResponse>> {

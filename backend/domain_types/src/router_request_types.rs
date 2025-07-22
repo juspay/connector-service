@@ -7,7 +7,7 @@ use common_utils::{
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
-use crate::{payment_method_data::PaymentMethodData, utils::missing_field_err};
+use crate::{payment_method_data::{PaymentMethodData, PaymentMethodDataTypes}, utils::missing_field_err};
 
 pub type Error = error_stack::Report<crate::errors::ConnectorError>;
 
@@ -111,17 +111,17 @@ pub struct AuthenticationData {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConnectorCustomerData {
+pub struct ConnectorCustomerData<T: PaymentMethodDataTypes> {
     pub description: Option<String>,
     pub email: Option<pii::Email>,
     pub phone: Option<Secret<String>>,
     pub name: Option<Secret<String>>,
     pub preprocessing_id: Option<String>,
-    pub payment_method_data: Option<PaymentMethodData>,
+    pub payment_method_data: Option<PaymentMethodData<T>>,
     // pub split_payments: Option<SplitPaymentsRequest>,
 }
 
-impl ConnectorCustomerData {
+impl<T: PaymentMethodDataTypes> ConnectorCustomerData<T> {
     pub fn get_email(&self) -> Result<Email, Error> {
         self.email.clone().ok_or_else(missing_field_err("email"))
     }

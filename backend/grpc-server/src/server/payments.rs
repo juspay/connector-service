@@ -68,7 +68,7 @@ pub struct Payments {
 }
 
 impl Payments {
-    async fn process_authorization_internal(
+    async fn process_authorization_internal( //
         &self,
         payload: PaymentServiceAuthorizeRequest,
         connector: domain_types::connector_types::ConnectorEnum,
@@ -133,6 +133,7 @@ impl Payments {
             })?;
 
         // Construct router data
+        //
         let router_data = RouterDataV2::<
             Authorize,
             PaymentFlowData,

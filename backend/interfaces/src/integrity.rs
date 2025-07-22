@@ -11,6 +11,7 @@ use domain_types::connector_types::{
     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
     SetupMandateRequestData, SubmitEvidenceData,
 };
+use domain_types::payment_method_data::PaymentMethodDataTypes;
 use domain_types::router_request_types::{
     AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
     CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
@@ -84,7 +85,7 @@ macro_rules! impl_check_integrity {
     ($data_type:ty) => {
         impl<T, Request> CheckIntegrity<Request, T> for $data_type
         where
-            T: FlowIntegrity,
+            T: FlowIntegrity + PaymentMethodDataTypes,
             Request: GetIntegrityObject<T>,
         {
             fn check_integrity(
@@ -109,9 +110,9 @@ macro_rules! impl_check_integrity {
 }
 
 // Apply the macro to all payment flow data types
-impl_check_integrity!(PaymentsAuthorizeData);
+impl_check_integrity!(PaymentsAuthorizeData<T>);
 impl_check_integrity!(PaymentCreateOrderData);
-impl_check_integrity!(SetupMandateRequestData);
+impl_check_integrity!(SetupMandateRequestData<T>);
 impl_check_integrity!(PaymentsSyncData);
 impl_check_integrity!(PaymentVoidData);
 impl_check_integrity!(RefundsData);
@@ -125,7 +126,7 @@ impl_check_integrity!(SubmitEvidenceData);
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
 // ========================================================================
 
-impl GetIntegrityObject<AuthoriseIntegrityObject> for PaymentsAuthorizeData {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject> for PaymentsAuthorizeData<T> {
     fn get_response_integrity_object(&self) -> Option<AuthoriseIntegrityObject> {
         self.integrity_object.clone()
     }
@@ -151,7 +152,7 @@ impl GetIntegrityObject<CreateOrderIntegrityObject> for PaymentCreateOrderData {
     }
 }
 
-impl GetIntegrityObject<SetupMandateIntegrityObject> for SetupMandateRequestData {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<SetupMandateIntegrityObject> for SetupMandateRequestData<T> {
     fn get_response_integrity_object(&self) -> Option<SetupMandateIntegrityObject> {
         self.integrity_object.clone()
     }

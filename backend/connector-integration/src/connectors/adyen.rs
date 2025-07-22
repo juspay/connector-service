@@ -23,7 +23,7 @@ use domain_types::{
         WebhookDetailsResponse,
     },
     errors,
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -58,14 +58,14 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-impl connector_types::ConnectorServiceTrait for Adyen {}
-impl connector_types::PaymentAuthorizeV2 for Adyen {}
+impl <T:PaymentMethodDataTypes> connector_types::ConnectorServiceTrait<T> for Adyen {}
+impl <T:PaymentMethodDataTypes> connector_types::PaymentAuthorizeV2<T> for Adyen {}
 impl connector_types::PaymentSyncV2 for Adyen {}
 impl connector_types::PaymentVoidV2 for Adyen {}
 impl connector_types::RefundSyncV2 for Adyen {}
 impl connector_types::RefundV2 for Adyen {}
 impl connector_types::PaymentCapture for Adyen {}
-impl connector_types::SetupMandateV2 for Adyen {}
+impl <T:PaymentMethodDataTypes> connector_types::SetupMandateV2<T> for Adyen {}
 impl connector_types::AcceptDispute for Adyen {}
 impl connector_types::SubmitEvidenceV2 for Adyen {}
 impl connector_types::DisputeDefend for Adyen {}
@@ -77,7 +77,7 @@ macros::create_all_prerequisites!(
             flow: Authorize,
             request_body: AdyenPaymentRequest,
             response_body: AdyenPaymentResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
         ),
         (
             flow: PSync,
@@ -108,7 +108,7 @@ macros::create_all_prerequisites!(
             flow: SetupMandate,
             request_body: SetupMandateRequest,
             response_body: SetupMandateResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
         ),
         (
             flow: Accept,

@@ -14,13 +14,14 @@ use time::PrimitiveDateTime;
 
 use crate::{
     errors::{self, ParsingError},
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
     types::PaymentMethodDataType,
 };
 
 pub type Error = error_stack::Report<errors::ConnectorError>;
+
 
 /// Trait for converting from one foreign type to another
 pub trait ForeignTryFrom<F>: Sized {
@@ -237,10 +238,11 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
     }
 }
 
-pub fn get_card_details(
-    payment_method_data: PaymentMethodData,
+pub fn get_card_details<T>(
+    payment_method_data: PaymentMethodData<T>,
     connector_name: &'static str,
-) -> Result<Card, errors::ConnectorError> {
+) -> Result<Card<T>, errors::ConnectorError> 
+where T: PaymentMethodDataTypes {
     match payment_method_data {
         PaymentMethodData::Card(details) => Ok(details),
         _ => Err(errors::ConnectorError::NotSupported {
@@ -250,12 +252,13 @@ pub fn get_card_details(
     }
 }
 
-pub fn is_mandate_supported(
-    selected_pmd: PaymentMethodData,
+pub fn is_mandate_supported<T>(
+    selected_pmd: PaymentMethodData<T>,
     payment_method_type: Option<PaymentMethodType>,
     mandate_implemented_pmds: HashSet<PaymentMethodDataType>,
     connector: &'static str,
-) -> core::result::Result<(), Error> {
+) -> core::result::Result<(), Error> 
+where T: PaymentMethodDataTypes {
     if mandate_implemented_pmds.contains(&PaymentMethodDataType::from(selected_pmd.clone())) {
         Ok(())
     } else {
