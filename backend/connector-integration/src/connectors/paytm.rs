@@ -1332,9 +1332,16 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                 match response.body {
                     paytm::PaytmProcessRespBodyTypes::SuccessBody(success_resp) => {
                         if success_resp.result_info.result_code == constants::SUCCESS_CODE {
+                            let trimmed_link = if let Some(pos) =
+                                success_resp.deep_link_info.deep_link.find('?')
+                            {
+                                &success_resp.deep_link_info.deep_link[(pos + 1)..]
+                            } else {
+                                &success_resp.deep_link_info.deep_link
+                            };
                             let redirect_form =
                                 domain_types::router_response_types::RedirectForm::Uri {
-                                    uri: success_resp.deep_link_info.deep_link.clone(),
+                                    uri: trimmed_link.to_string(),
                                 };
 
                             let payments_response = PaymentsResponseData::TransactionResponse {

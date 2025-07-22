@@ -17,8 +17,8 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenRequestData, SessionTokenResponseData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -31,7 +31,7 @@ use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
+    connector_types::{self},
     events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
@@ -165,6 +165,7 @@ impl connector_types::ValidationTrait for Cashfree {
     }
 }
 
+impl connector_types::PaymentSessionToken for Cashfree {}
 impl connector_types::ConnectorServiceTrait for Cashfree {}
 impl connector_types::PaymentAuthorizeV2 for Cashfree {}
 impl connector_types::PaymentOrderCreate for Cashfree {}
@@ -278,6 +279,17 @@ impl
 }
 impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Cashfree
+{
+}
+
+// CreateSessionToken stub implementation
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Cashfree
 {
 }
 

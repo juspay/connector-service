@@ -2,8 +2,8 @@ use domain_types::connector_types::ConnectorEnum;
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Paytm, Paytm,
-    Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
+    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Paytm, Payu,
+    Phonepe, Razorpay, RazorpayV2, Xendit,
 };
 
 #[derive(Clone)]
