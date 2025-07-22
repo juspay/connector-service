@@ -4,7 +4,7 @@ use std::fmt::Debug;
 
 use crate::connectors::{
     Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Nexinets,
-    Novalnet, Paytm, Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
+    Novalnet, Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
 };
 
 #[derive(Clone)]

@@ -117,9 +117,9 @@ impl TryFrom<&ConnectorAuthType> for PaytmAuthType {
                 api_secret,
             } => {
                 Ok(Self {
-                    merchant_id: api_key.to_owned(), // merchant_id
-                    merchant_key: key1.to_owned(),   // signing key
-                    website: api_secret.to_owned(),  // website name
+                    merchant_id: key1.to_owned(),     // merchant_id
+                    merchant_key: api_key.to_owned(), // signing key
+                    website: api_secret.to_owned(),   // website name
                     channel_id: constants::CHANNEL_ID.to_string(),
                     client_id: None, // None as specified
                 })

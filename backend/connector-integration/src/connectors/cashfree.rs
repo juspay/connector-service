@@ -17,8 +17,8 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenRequestData, SessionTokenResponseData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -32,7 +32,7 @@ use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
+    connector_types::{self},
     events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
@@ -321,6 +321,19 @@ impl<
             + Serialize,
     > ConnectorCommon for Cashfree<T>
 {
+// Trait implementations after the macro creates the struct
+impl connector_types::ValidationTrait for Cashfree {
+    fn should_do_order_create(&self) -> bool {
+        true // Cashfree V3 requires order creation
+    }
+}
+
+impl connector_types::PaymentSessionToken for Cashfree {}
+impl connector_types::ConnectorServiceTrait for Cashfree {}
+impl connector_types::PaymentAuthorizeV2 for Cashfree {}
+impl connector_types::PaymentOrderCreate for Cashfree {}
+
+impl ConnectorCommon for Cashfree {
     fn id(&self) -> &'static str {
         "cashfree"
     }
@@ -486,6 +499,34 @@ impl<
     for Cashfree<T>
 {
 }
+impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Cashfree
+{
+}
+
+// CreateSessionToken stub implementation
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Cashfree
+{
+}
+
+// Trait implementations for all flows
+impl connector_types::PaymentSyncV2 for Cashfree {}
+impl connector_types::PaymentVoidV2 for Cashfree {}
+impl connector_types::RefundSyncV2 for Cashfree {}
+impl connector_types::RefundV2 for Cashfree {}
+impl connector_types::PaymentCapture for Cashfree {}
+impl connector_types::SetupMandateV2 for Cashfree {}
+impl connector_types::RepeatPaymentV2 for Cashfree {}
+impl connector_types::AcceptDispute for Cashfree {}
+impl connector_types::SubmitEvidenceV2 for Cashfree {}
+impl connector_types::DisputeDefend for Cashfree {}
+impl connector_types::IncomingWebhook for Cashfree {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
