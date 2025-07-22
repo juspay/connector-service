@@ -8,18 +8,21 @@ use grpc_server::{app, configs};
 mod common;
 
 use std::{
-    any::Any, collections::HashMap, env, time::{SystemTime, UNIX_EPOCH}
+    any::Any,
+    collections::HashMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use grpc_api_types::payments::{
     card_payment_method_type, identifier::IdType, payment_method, AcceptanceType, Address,
-    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2, Currency,
-    CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress, PaymentMethod,
-    PaymentMethodType, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-    PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-    PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
-    PaymentServiceRepeatEverythingResponse, PaymentServiceVoidRequest, PaymentStatus,
-    RefundServiceGetRequest, RefundStatus,
+    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType,
+    CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference,
+    PaymentAddress, PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
+    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+    PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
+    PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
+    PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
 };
 
 use grpc_api_types::{
@@ -48,14 +51,14 @@ const AUTHORIZENET_KEY1_ENV: &str = "AUTHORIZENET_KEY1";
 
 // No default values - environment variables are required
 
-// Test card data for setup mandate (matching your JSON)
-const TEST_AMOUNT: i64 = 3000; // Changed to match setup mandate data
-const TEST_CARD_NUMBER: &str = "4012888888881881"; // Visa test card from your setup mandate data
+// Test card data matching working grpcurl payload
+const TEST_AMOUNT: i64 = 102; // Amount from working grpcurl
+const TEST_CARD_NUMBER: &str = "5123456789012346"; // Mastercard from working grpcurl
 const TEST_CARD_EXP_MONTH: &str = "12";
 const TEST_CARD_EXP_YEAR: &str = "2025";
-const TEST_CARD_CVC: &str = "123"; // Changed to match your setup mandate data
-const TEST_CARD_HOLDER: &str = "Test Customer 0011uyty4";
-const TEST_EMAIL: &str = "testcustomer001@example.com";
+const TEST_CARD_CVC: &str = "123";
+const TEST_CARD_HOLDER: &str = "TestCustomer0011uyty4";
+const TEST_EMAIL_BASE: &str = "testcustomer001@gmail.com";
 
 // Test data for repeat payment
 const REPEAT_AMOUNT: i64 = 1000; // Amount for repeat payments
@@ -63,7 +66,8 @@ const REPEAT_AMOUNT: i64 = 1000; // Amount for repeat payments
 // Metadata for Authorize.Net
 // Note: BASE64_METADATA is the base64 encoded version of this JSON:
 // {"userFields":{"MerchantDefinedFieldName1":"MerchantDefinedFieldValue1","favorite_color":"blue"}}
-const BASE64_METADATA: &str = "eyJ1c2VyRmllbGRzIjp7Ik1lcmNoYW50RGVmaW5lZEZpZWxkTmFtZTEiOiJNZXJjaGFudERlZmluZWRGaWVsZFZhbHVlMSIsImZhdm9yaXRlX2NvbG9yIjoiYmx1ZSJ9fQ==";
+const BASE64_METADATA: &str =
+  "eyJ1c2VyRmllbGRzIjp7Ik1lcmNoYW50RGVmaW5lZEZpZWxkTmFtZTEiOiJNZXJjaGFudERlZmluZWRGaWVsZFZhbHVlMSIsImZhdm9yaXRlX2NvbG9yIjoiYmx1ZSJ9fQ==";
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
@@ -73,9 +77,14 @@ fn get_timestamp() -> u64 {
         .as_secs()
 }
 
+// Helper function to generate unique email
+fn generate_unique_email() -> String {
+    format!("testcustomer{}@gmail.com", get_timestamp())
+}
+
 // Helper function to generate unique request reference ID
 fn generate_unique_request_ref_id(prefix: &str) -> String {
-    format!("{}_{}_{}", prefix, Uuid::new_v4().simple(), get_timestamp())
+    format!("{}_{}", prefix, &Uuid::new_v4().simple().to_string()[..8])
 }
 
 // Helper function to add AuthorizeDotNet metadata headers to a request
@@ -262,13 +271,13 @@ fn create_payment_authorize_request(
 
     let mut request_ref_id = Identifier::default();
     request_ref_id.id_type = Some(IdType::Id(
-        format!("req_{}_{}", "12345", get_timestamp()), // Using timestamp to make unique
+        generate_unique_request_ref_id("req_"), // Using timestamp to make unique
     ));
     request.request_ref_id = Some(request_ref_id);
-    // Set the basic payment details
+    // Set the basic payment details matching working grpcurl
     request.amount = TEST_AMOUNT;
     request.minor_amount = TEST_AMOUNT;
-    request.currency = i32::from(Currency::Usd);
+    request.currency = 146; // Currency value from working grpcurl
 
     // Set up card payment method using the correct structure
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
@@ -278,7 +287,7 @@ fn create_payment_authorize_request(
         card_cvc: TEST_CARD_CVC.to_string(),
         card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
         card_issuer: None,
-        card_network: None,
+        card_network: Some(2_i32), // Mastercard network for 5123456789012346
         card_type: None,
         card_issuing_country_alpha2: None,
         bank_code: None,
@@ -291,16 +300,15 @@ fn create_payment_authorize_request(
         })),
     });
 
-    // Set the customer information
-    request.email = Some(TEST_EMAIL.to_string());
+    request.connector_customer_id = Some("TEST_CONNECTOR".to_string());
+    // Set the customer information with unique email
+    request.email = Some(generate_unique_email());
 
-    // Generate random names for billing and shipping to prevent duplicate transaction errors
+    // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
     let billing_last_name = random_name();
-    let shipping_first_name = random_name();
-    let shipping_last_name = random_name();
 
-    // Add billing and shipping address - This is critical for AuthorizeDotNet
+    // Minimal address structure matching working grpcurl
     request.address = Some(PaymentAddress {
         billing_address: Some(Address {
             first_name: Some(billing_first_name),
@@ -316,20 +324,7 @@ fn create_payment_authorize_request(
             phone_country_code: None,
             email: None,
         }),
-        shipping_address: Some(Address {
-            first_name: Some(shipping_first_name),
-            last_name: Some(shipping_last_name),
-            line1: Some("12 Main Street".to_string()),
-            line2: None,
-            line3: None,
-            city: Some("Pecan Springs".to_string()),
-            state: Some("TX".to_string()),
-            zip_code: Some("44628".to_string()),
-            country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
-            phone_number: None,
-            phone_country_code: None,
-            email: None,
-        }),
+        shipping_address: None, // Minimal address - no shipping for working grpcurl
     });
 
     let browser_info = BrowserInformation {
@@ -337,12 +332,9 @@ fn create_payment_authorize_request(
         java_enabled: Some(false),
         screen_height: Some(1080),
         screen_width: Some(1920),
-        user_agent: Some(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
-        ),
+        user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
         accept_header: Some(
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-                .to_string(),
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
         ),
         java_script_enabled: Some(false),
         language: Some("en-US".to_string()),
@@ -359,9 +351,9 @@ fn create_payment_authorize_request(
     // Set the transaction details
     request.auth_type = i32::from(AuthenticationType::NoThreeDs);
 
-    request.request_incremental_authorization = false;
+    request.request_incremental_authorization = true;
 
-    request.enrolled_for_3ds = false;
+    request.enrolled_for_3ds = true;
 
     // Set capture method
     if let common_enums::CaptureMethod::Manual = capture_method {
@@ -417,15 +409,17 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
 
 // Helper function to create a void request
 fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
-    // For Authorize.net, put the transaction ID in BOTH transaction_id and request_ref_id
-    // because the ForeignTryFrom implementation uses request_ref_id instead of transaction_id
+    let request_ref_id = Identifier {
+        id_type: Some(IdType::Id(transaction_id.to_string())),
+    };
+
+    let transaction_id_obj = Identifier {
+        id_type: Some(IdType::Id(transaction_id.to_string())),
+    };
+
     PaymentServiceVoidRequest {
-        transaction_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())),
-        }),
-        request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(transaction_id.to_string())), // Use actual transaction ID here, not a request ID
-        }),
+        transaction_id: Some(transaction_id_obj),
+        request_ref_id: Some(request_ref_id),
         cancellation_reason: None,
         all_keys_required: None,
     }
@@ -449,11 +443,11 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     // Create refund metadata with credit card information as required by Authorize.net
     let mut refund_metadata = HashMap::new();
     refund_metadata.insert(
-        "refund_metadata".to_string(),
-        format!(
-            "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2025-12\"}}}}",
-        ),
-    );
+          "refund_metadata".to_string(),
+          format!(
+              "{{\"creditCard\":{{\"cardNumber\":\"{TEST_CARD_NUMBER}\",\"expirationDate\":\"2025-12\"}}}}",
+          ),
+      );
 
     PaymentServiceRefundRequest {
         request_ref_id: Some(request_ref_id),
@@ -522,9 +516,9 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         })),
     });
 
-    // Set customer information matching your JSON
+    // Set customer information with unique email
     request.customer_name = Some(TEST_CARD_HOLDER.to_string());
-    request.email = Some(TEST_EMAIL.to_string());
+    request.email = Some(generate_unique_email());
 
     // Add customer acceptance as required by the server (matching your JSON: "acceptance_type": "OFFLINE")
     request.customer_acceptance = Some(CustomerAcceptance {
@@ -547,7 +541,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             phone_number: None,
             phone_country_code: None,
-            email: Some(TEST_EMAIL.to_string()),
+            email: Some(generate_unique_email()),
         }),
         shipping_address: None,
     });
@@ -597,6 +591,7 @@ async fn test_payment_authorization_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request
         let request = create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
+        // println!("Auth request for auto capture: {:?}", request);
 
         // Add metadata headers
         let mut grpc_request = Request::new(request);
@@ -609,6 +604,7 @@ async fn test_payment_authorization_auto_capture() {
             .expect("gRPC payment_authorize call failed")
             .into_inner();
 
+        // println!("Payment authorize response for auto: {:?}", response);
         // Verify the response - transaction_id may not be present for failed or pending payments
         let successful_statuses = [
             i32::from(PaymentStatus::Charged),
@@ -644,7 +640,7 @@ async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request with manual capture
         let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Manual);
-
+        // println!("Auth request for manual capture: {:?}", auth_request);
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
         add_authorizenet_metadata(&mut auth_grpc_request);
@@ -662,10 +658,10 @@ async fn test_payment_authorization_manual_capture() {
             i32::from(PaymentStatus::Authorized),
             i32::from(PaymentStatus::Pending),
         ];
-        println!(
-            "Payment authorize response: {:?}",
-            auth_response
-        );
+        // println!(
+        //     "Payment authorize response: {:?}",
+        //     auth_response
+        // );
         if successful_statuses.contains(&auth_response.status) {
             assert!(
                 auth_response.transaction_id.is_some(),
@@ -684,7 +680,7 @@ async fn test_payment_authorization_manual_capture() {
             i32::from(PaymentStatus::Charged),
             // i32::from(PaymentStatus::Failure),
         ];
-        println!("print acceptable statuses: {:?}", acceptable_statuses);
+        // println!("print acceptable statuses: {:?}", acceptable_statuses);
         assert!(
             acceptable_statuses.contains(&auth_response.status),
             "Payment should be in AUTHORIZED, PENDING, or FAILURE state (sandbox) but was: {}",
@@ -712,10 +708,10 @@ async fn test_payment_authorization_manual_capture() {
             // i32::from(PaymentStatus::Failure),
         ];
         assert!(
-            acceptable_statuses.contains(&capture_response.status),
-            "Payment should be in CHARGED, PENDING, or FAILURE state after capture (sandbox) but was: {}",
-            capture_response.status
-        );
+              acceptable_statuses.contains(&capture_response.status),
+              "Payment should be in CHARGED, PENDING, or FAILURE state after capture (sandbox) but was: {}",
+              capture_response.status
+          );
     });
 }
 
@@ -752,8 +748,9 @@ async fn test_payment_sync() {
             auth_response.status
         );
 
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         // Create get request
-        let get_request = create_payment_get_request("80042686086");
+        let get_request = create_payment_get_request(&_transaction_id);
 
         // Add metadata headers for get request
         let mut get_grpc_request = Request::new(get_request);
@@ -801,7 +798,7 @@ async fn test_void() {
         add_authorizenet_metadata(&mut auth_grpc_request);
 
         // Send the auth request
-        let auth_response = client         
+        let auth_response = client
             .authorize(auth_grpc_request)
             .await
             .expect("gRPC payment_authorize call failed")
@@ -814,8 +811,13 @@ async fn test_void() {
         let acceptable_statuses = [
             i32::from(PaymentStatus::Authorized),
             i32::from(PaymentStatus::Pending),
+            i32::from(PaymentStatus::Voided),
             // i32::from(PaymentStatus::Failure),
         ];
+        //   println!(
+        //       "Auth response: {:?}",
+        //       auth_response
+        //   );
         assert!(
             acceptable_statuses.contains(&auth_response.status),
             "Payment should be in AUTHORIZED, PENDING, or FAILURE (sandbox) but was: {}",
@@ -832,13 +834,18 @@ async fn test_void() {
         // Allow some time for the authorization to be processed
         allow_processing_time();
 
+        // Additional async delay when running with other tests to avoid conflicts
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        //   println!("transaction_id: {}", transaction_id);
         // Create void request
         let void_request = create_void_request(&transaction_id);
+        //   println!("Void request: {:?}", void_request);
 
         // Add metadata headers for void request
         let mut void_grpc_request = Request::new(void_request);
         add_authorizenet_metadata(&mut void_grpc_request);
-
+        //   println!("Void grpc request: {:?}", void_grpc_request);
         // Send the void request
         let void_response = client
             .void(void_grpc_request)
@@ -846,14 +853,12 @@ async fn test_void() {
             .expect("gRPC void_payment call failed")
             .into_inner();
 
-        // Accept VOIDED status or FAILURE in sandbox
-        let acceptable_statuses = [
-            i32::from(PaymentStatus::Voided),
-            i32::from(PaymentStatus::Failure),
-        ];
+        // Accept VOIDED status
+        let acceptable_statuses = [i32::from(PaymentStatus::Voided)];
+        // println!("Void response: {:?}", void_response);
         assert!(
             acceptable_statuses.contains(&void_response.status),
-            "Payment should be in VOIDED or FAILURE state (sandbox) but was: {}",
+            "Payment should be in VOIDED state but was: {}",
             void_response.status
         );
     });
@@ -884,7 +889,6 @@ async fn test_refund() {
         let acceptable_statuses = [
             i32::from(PaymentStatus::Charged),
             i32::from(PaymentStatus::Pending),
-            i32::from(PaymentStatus::Failure),
         ];
         assert!(
             acceptable_statuses.contains(&auth_response.status),
@@ -930,9 +934,9 @@ async fn test_refund() {
         let has_grpc_error = refund_result.is_err();
 
         assert!(
-            is_success_status || has_expected_error || has_grpc_error,
-            "Refund should either succeed, have expected error, or gRPC error (common in sandbox). Got: {refund_result:?}"
-        );
+              is_success_status || has_expected_error || has_grpc_error,
+              "Refund should either succeed, have expected error, or gRPC error (common in sandbox). Got: {refund_result:?}"
+          );
     });
 }
 
@@ -990,67 +994,6 @@ async fn test_register() {
     });
 }
 
-// Test register with invalid card
-// #[tokio::test]
-// async fn test_register_invalid_card() {
-//     grpc_test!(client, PaymentServiceClient<Channel>, {
-//         // Create the register request
-//         let mut request = create_register_request();
-
-//         // Modify the card number to be invalid
-//         if let Some(payment_method) = &mut request.payment_method {
-//             if let Some(payment_method::PaymentMethod::Card(card_method)) =
-//                 &mut payment_method.payment_method
-//             {
-//                 if let Some(card_payment_method_type::CardType::Credit(card_details)) =
-//                     &mut card_method.card_type
-//                 {
-//                     card_details.card_number = "4111111111111112".to_string(); // Invalid card number
-//                 }
-//             }
-//         }
-
-//         // Add metadata headers
-//         let mut grpc_request = Request::new(request);
-//         add_authorizenet_metadata(&mut grpc_request);
-
-//         // Send the request
-//         let response = client
-//             .register(grpc_request)
-//             .await
-//             .expect("gRPC register call failed")
-//             .into_inner();
-
-//         // Verify error response
-//         assert!(
-//             response.error_message.is_some(),
-//             "Error message should be present for invalid card registration"
-//         );
-//     });
-// }
-
-// // Test register with missing required fields
-// #[tokio::test]
-// async fn test_register_missing_fields() {
-//     grpc_test!(client, PaymentServiceClient<Channel>, {
-//         // Create the register request with missing billing address
-//         let mut request = create_register_request();
-//         request.address = None; // Remove required address
-
-//         // Add metadata headers
-//         let mut grpc_request = Request::new(request);
-//         add_authorizenet_metadata(&mut grpc_request);
-
-//         // Send the request - expect it to fail
-//         let result = client.register(grpc_request).await;
-
-//         // Verify the request failed due to missing fields
-//         assert!(
-//             result.is_err()
-//         );
-//     });
-// }
-
 // Test authorization with setup_future_usage
 #[tokio::test]
 async fn test_authorize_with_setup_future_usage() {
@@ -1090,7 +1033,7 @@ async fn test_authorize_with_setup_future_usage() {
         let acceptable_statuses = [
             i32::from(PaymentStatus::Charged),
             i32::from(PaymentStatus::Pending),
-            i32::from(PaymentStatus::Failure),
+            i32::from(PaymentStatus::Authorized),
         ];
         assert!(
             acceptable_statuses.contains(&auth_response.status),

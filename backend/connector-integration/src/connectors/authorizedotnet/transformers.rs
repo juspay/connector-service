@@ -1805,7 +1805,9 @@ pub enum SyncStatus {
     GeneralError,
     RefundSettledSuccessfully,
     RefundPendingSettlement,
+    #[serde(rename = "FDSPendingReview")]
     FDSPendingReview,
+    #[serde(rename = "FDSAuthorizedPendingReview")]
     FDSAuthorizedPendingReview,
 }
 
