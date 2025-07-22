@@ -12,7 +12,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::Secret;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
@@ -36,7 +36,7 @@ use crate::{
     router_data_v2::RouterDataV2,
     utils::{ForeignFrom, ForeignTryFrom},
 };
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
     pub adyen: ConnectorParams,
@@ -51,14 +51,14 @@ pub struct Connectors {
     pub cashfree: ConnectorParams,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Debug, Serialize, Default)]
 pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
 }
 
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proxy {
     pub http_url: Option<String>,
     pub https_url: Option<String>,
