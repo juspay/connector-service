@@ -173,6 +173,12 @@ impl
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
         Ok(format!("{base_url}v1/orders"))
     }
 
@@ -314,6 +320,12 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
 
         // For UPI payments, use the specific UPI endpoint
         match &req.request.payment_method_data {
@@ -500,6 +512,9 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
 
         // Check if request_ref_id is provided to determine URL pattern
         let request_ref_id = &req.resource_common_data.connector_request_reference_id;
@@ -640,6 +655,9 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
 
         // Extract refund ID from connector_refund_id
         let refund_id = &req.request.connector_refund_id;
@@ -746,6 +764,9 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
 
         // Extract payment ID from connector_transaction_id
         let payment_id = &req.request.connector_transaction_id;

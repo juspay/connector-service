@@ -239,10 +239,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
-            ))
+            let base_url = &req.resource_common_data.connectors.elavon.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(format!("{}processxml.do", base_url))
+            }
         }
     }
 );
@@ -270,10 +272,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
-            ))
+            let base_url = &req.resource_common_data.connectors.elavon.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(format!("{}processxml.do", base_url))
+            }
         }
     }
 );
@@ -311,10 +315,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
-            ))
+            let base_url = &req.resource_common_data.connectors.elavon.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(format!("{}processxml.do", base_url))
+            }
         }
     }
 );
@@ -342,10 +348,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
-            ))
+            let base_url = &req.resource_common_data.connectors.elavon.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(format!("{}processxml.do", base_url))
+            }
         }
     }
 );
@@ -373,10 +381,12 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}processxml.do",
-                req.resource_common_data.connectors.elavon.base_url
-            ))
+            let base_url = &req.resource_common_data.connectors.elavon.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(format!("{}processxml.do", base_url))
+            }
         }
     }
 );
