@@ -13,8 +13,8 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -30,7 +30,13 @@ use interfaces::{
 };
 
 use super::macros;
-use crate::{connectors::mifinity::transformers::{MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest, MifinityPaymentsResponse, MifinityPsyncResponse}, types::ResponseRouterData};
+use crate::{
+    connectors::mifinity::transformers::{
+        MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest, MifinityPaymentsResponse,
+        MifinityPsyncResponse,
+    },
+    types::ResponseRouterData,
+};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -138,32 +144,32 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_tx_id = match &req.request.connector_transaction_id {
-                domain_types::connector_types::ResponseId::ConnectorTransactionId(id) => id.clone(),
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
-            };
-            Ok(format!("{}payments/{}", self.connector_base_url_payments(req), connector_tx_id))
+            let merchant_id = &req.resource_common_data.merchant_id;
+        let payment_id = &req.resource_common_data.connector_request_reference_id;
+        Ok(format!(
+            "{}api/gateway/payment-status/payment_validation_key_{}_{}",
+            self.connector_base_url_payments(req),
+            merchant_id.get_string_repr(),
+            payment_id
+        ))
         }
     }
 );
 
-impl
-    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Mifinity
+impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Mifinity
 {
 }
 
-impl
-    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Mifinity
+impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Mifinity
 {
 }
 
-impl
-    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Mifinity
-{
-}
+impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Mifinity {}
 
-impl
-    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Mifinity
+impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Mifinity
 {
 }
 
@@ -330,13 +336,11 @@ impl ConnectorCommon for Mifinity {
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError> {
+    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
+    {
         let auth = MifinityAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        Ok(vec![(
-            "key".to_string(),
-            auth.key.expose().into_masked(),
-        )])
+        Ok(vec![("key".to_string(), auth.key.expose().into_masked())])
     }
 
     fn build_error_response(

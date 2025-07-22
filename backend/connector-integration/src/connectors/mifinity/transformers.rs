@@ -3,28 +3,25 @@ use common_utils::{
     pii::{self, Email},
     types::StringMajorUnit,
 };
-use error_stack::ResultExt;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, PaymentsSyncData, ResponseId,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, WalletData},
     router_data::ConnectorAuthType,
-    router_data_v2::RouterDataV2, router_response_types::RedirectForm,
+    router_data_v2::RouterDataV2,
+    router_response_types::RedirectForm,
 };
+use error_stack::ResultExt;
 
+use super::MifinityRouterData;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
-use super::MifinityRouterData;
 use time::Date;
 
-use crate::{
-    types::ResponseRouterData,
-    utils,
-};
+use crate::{types::ResponseRouterData, utils};
 pub mod auth_headers {
     pub const API_VERSION: &str = "api-version";
 }
@@ -89,51 +86,95 @@ pub struct MifinityAddress {
     city: String,
 }
 
-impl TryFrom<MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>> for MifinityPaymentsRequest {
+impl
+    TryFrom<
+        MifinityRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
+    > for MifinityPaymentsRequest
+{
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: MifinityRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>,
+        item: MifinityRouterData<
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        >,
     ) -> Result<Self, Self::Error> {
-        let metadata: MifinityConnectorMetadataObject =
-            utils::to_connector_meta_from_secret(item.router_data.resource_common_data.connector_meta_data.clone())
-                .change_context(ConnectorError::InvalidConnectorConfig {
-                    config: "merchant_connector_account.metadata",
-                })?;
+        let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
+            item.router_data
+                .resource_common_data
+                .connector_meta_data
+                .clone(),
+        )
+        .change_context(ConnectorError::InvalidConnectorConfig {
+            config: "merchant_connector_account.metadata",
+        })?;
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(wallet_data) => match wallet_data {
                 WalletData::Mifinity(data) => {
                     let money = Money {
-                        amount: item.connector.amount_converter.convert(item.router_data.request.minor_amount, item.router_data.request.currency)
+                        amount: item
+                            .connector
+                            .amount_converter
+                            .convert(
+                                item.router_data.request.minor_amount,
+                                item.router_data.request.currency,
+                            )
                             .change_context(ConnectorError::RequestEncodingFailed)?,
                         currency: item.router_data.request.currency.to_string(),
                     };
-                    let phone_details = item.router_data.resource_common_data.get_billing_phone()?;
+                    let phone_details =
+                        item.router_data.resource_common_data.get_billing_phone()?;
                     let client = MifinityClient {
-                        first_name: item.router_data.resource_common_data.get_billing_first_name()?,
-                        last_name: item.router_data.resource_common_data.get_billing_last_name()?,
+                        first_name: item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_first_name()?,
+                        last_name: item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_last_name()?,
                         phone: phone_details.get_number()?,
                         dialing_code: phone_details.get_country_code()?,
-                        nationality: item.router_data.resource_common_data.get_billing_country()?,
+                        nationality: item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_country()?,
                         email_address: item.router_data.resource_common_data.get_billing_email()?,
                         dob: data.date_of_birth.clone(),
                     };
                     let address = MifinityAddress {
                         address_line1: item.router_data.resource_common_data.get_billing_line1()?,
-                        country_code: item.router_data.resource_common_data.get_billing_country()?,
+                        country_code: item
+                            .router_data
+                            .resource_common_data
+                            .get_billing_country()?,
                         city: item.router_data.resource_common_data.get_billing_city()?,
                     };
                     let validation_key = format!(
                         "payment_validation_key_{}_{}",
-                        item.router_data.resource_common_data.merchant_id.get_string_repr(),
-                        item.router_data.resource_common_data.connector_request_reference_id.clone()
+                        item.router_data
+                            .resource_common_data
+                            .merchant_id
+                            .get_string_repr(),
+                        item.router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone()
                     );
-                    let client_reference = item.router_data.resource_common_data.customer_id.clone().ok_or(
-                        ConnectorError::MissingRequiredField {
+                    let client_reference = item
+                        .router_data
+                        .resource_common_data
+                        .customer_id
+                        .clone()
+                        .ok_or(ConnectorError::MissingRequiredField {
                             field_name: "client_reference",
-                        },
-                    )?;
+                        })?;
                     let destination_account_number = metadata.destination_account_number;
-                    let trace_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+                    let trace_id = item
+                        .router_data
+                        .resource_common_data
+                        .connector_request_reference_id
+                        .clone();
                     let brand_id = metadata.brand_id;
                     let language_preference = data.language_preference;
                     Ok(Self {
@@ -246,13 +287,12 @@ impl<F> TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<MifinityPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-
         let payload = item.response.payload.first();
         match payload {
             Some(payload) => {
                 let trace_id = payload.trace_id.clone();
                 let initialization_token = payload.initialization_token.clone();
-                Ok (Self {
+                Ok(Self {
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
                         redirection_data: Box::new(Some(RedirectForm::Mifinity {
@@ -272,7 +312,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
                     ..item.router_data
                 })
             }
-            None => Ok (Self {
+            None => Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::NoResponseId,
                     redirection_data: Box::new(None),
@@ -342,7 +382,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     Some(payment_response) => {
                         let transaction_reference = payment_response.transaction_reference.clone();
 
-                        Ok (Self {
+                        Ok(Self {
                             response: Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     transaction_reference,
@@ -361,7 +401,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                             },
                             ..item.router_data
                         })
-                    },
+                    }
                     None => Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::NoResponseId,
@@ -380,7 +420,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                         ..item.router_data
                     }),
                 }
-            },
+            }
             None => Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::NoResponseId,
@@ -397,7 +437,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
-            })
+            }),
         }
     }
 }
