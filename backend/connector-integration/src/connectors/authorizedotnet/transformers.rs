@@ -2005,10 +2005,10 @@ impl
         };
         let merchant_authentication =
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
-        // let validation_mode = match item.router_data.request.test_mode {
-        //     Some(true) | None => ValidationMode::TestMode,
-        //     Some(false) => ValidationMode::LiveMode,
-        // };
+        let validation_mode = match item.router_data.resource_common_data.test_mode {
+            Some(true) | None => ValidationMode::TestMode,
+            Some(false) => ValidationMode::LiveMode,
+        };
         let profile = Profile {
             merchant_customer_id: item
                 .router_data
@@ -2042,7 +2042,7 @@ impl
             create_customer_profile_request: AuthorizedotnetZeroMandateRequest {
                 merchant_authentication,
                 profile,
-                validation_mode: ValidationMode::TestMode,
+                validation_mode,
             },
         })
     }

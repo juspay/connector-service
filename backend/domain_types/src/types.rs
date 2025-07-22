@@ -2461,11 +2461,11 @@ pub fn generate_payment_capture_response(
     }
 }
 
-impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors)> for PaymentFlowData {
+impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for PaymentFlowData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors): (PaymentServiceRegisterRequest, Connectors),
+        (value, connectors, environment): (PaymentServiceRegisterRequest, Connectors, String),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match value.address {
             Some(address) => crate::payment_address::PaymentAddress::foreign_try_from(address)?,
@@ -2477,6 +2477,11 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors)> for PaymentFlow
                     error_object: None,
                 }))?
             }
+        };
+        let test_mode = match environment.as_str() {
+            common_utils::consts::CONST_DEVELOPMENT => Some(true),
+            common_utils::consts::CONST_PRODUCTION => Some(false),
+            _ => Some(true),
         };
         Ok(Self {
             merchant_id: common_utils::id_type::MerchantId::default(),
@@ -2507,7 +2512,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors)> for PaymentFlow
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -2534,7 +2539,6 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             })?),
             None => None,
         };
-
         let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
             error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
@@ -3133,7 +3137,6 @@ impl
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For MIT, address is optional
         let address = crate::payment_address::PaymentAddress::default();
-
         Ok(Self {
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "REPEAT_PAYMENT_ID".to_string(),

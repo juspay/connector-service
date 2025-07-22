@@ -831,6 +831,7 @@ impl PaymentService for Payments {
                 let payment_flow_data = PaymentFlowData::foreign_try_from((
                     payload.clone(),
                     self.config.connectors.clone(),
+                    self.config.common.environment.clone(),
                 ))
                 .map_err(|e| e.into_grpc_status())?;
 
