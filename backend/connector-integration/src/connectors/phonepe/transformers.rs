@@ -323,8 +323,8 @@ impl
                             resource_id: ResponseId::ConnectorTransactionId(
                                 data.merchant_transaction_id.clone(),
                             ),
-                            redirection_data: Box::new(redirect_form),
-                            mandate_reference: Box::new(None),
+                            redirection_data: redirect_form.map(Box::new),
+                            mandate_reference: None,
                             connector_metadata,
                             network_txn_id: None,
                             connector_response_reference_id: Some(
@@ -344,8 +344,8 @@ impl
                             resource_id: ResponseId::ConnectorTransactionId(
                                 data.merchant_transaction_id.clone(),
                             ),
-                            redirection_data: Box::new(None),
-                            mandate_reference: Box::new(None),
+                            redirection_data: None,
+                            mandate_reference: None,
                             connector_metadata: None,
                             network_txn_id: None,
                             connector_response_reference_id: Some(

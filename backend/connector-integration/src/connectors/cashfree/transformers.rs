@@ -535,7 +535,9 @@ impl
             response: Ok(order_response),
             resource_common_data: PaymentFlowData {
                 // Update status to indicate successful order creation
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 // Set reference_id to the payment_session_id for use in authorize flow
                 reference_id: Some(order_id),
                 ..item.router_data.resource_common_data
@@ -607,8 +609,8 @@ impl
                         .map(|id| id.to_string())
                         .unwrap_or_default(),
                 ),
-                redirection_data: redirection_data.unwrap_or_default(),
-                mandate_reference: Box::new(None),
+                redirection_data: redirection_data.and_then(|data| *data).map(Box::new),
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: response.cf_payment_id.map(|id| id.to_string()),
@@ -616,7 +618,7 @@ impl
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
-                status,
+                status: domain_types::connector_types::Status::Attempt(status),
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
