@@ -468,6 +468,45 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
+
+        let req_ref_id = match &request.get_ref().request_ref_id {
+            Some(ref_id) => match &ref_id.id_type {
+                Some(grpc_api_types::payments::identifier::IdType::Id(id)) => id.clone(),
+                _ => "unknown_payment_id".to_string(),
+            },
+            None => "unknown_payment_id".to_string(),
+        };
+
+        let event_type = common_utils::events::ApiEventsType::Payment {
+            payment_id: common_utils::GlobalPaymentId::try_from(std::borrow::Cow::Owned(
+                req_ref_id.clone(),
+            ))
+            .unwrap_or_else(|_| {
+                let cell_id = common_utils::CellId::default();
+                common_utils::GlobalPaymentId::generate(&cell_id)
+            }),
+        };
+
+        let event = common_utils::dapr::create_payment_event(
+            event_type,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some("request_received".to_string()),
+            None,
+            common_utils::dapr::PaymentStage::RequestReceivedForFlow,
+        );
+
+        tokio::spawn(async move {
+            if let Err(e) = common_utils::dapr::publish_payment_event(event).await {
+                tracing::error!("Failed to publish request received event: {:?}", e);
+            } else {
+                tracing::info!("Successfully published request received event");
+            }
+        });
+
         let service_name = request
             .extensions()
             .get::<String>()

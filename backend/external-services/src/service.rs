@@ -13,6 +13,13 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
+// use base64::engine::Engine;
+use crate::shared_metrics as metrics;
+use common_utils::{
+    // consts::BASE64_ENGINE,
+    dapr::{create_payment_event, publish_payment_event, PaymentStage},
+    events::ApiEventsType,
+};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -23,9 +30,6 @@ use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tracing::field::Empty;
-
-// use base64::engine::Engine;
-use crate::shared_metrics as metrics;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
@@ -103,10 +107,71 @@ where
         };
         tracing::info!(request=?masked_request, "request of connector");
         tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
+
+        let ref_id = if let Some(RequestContent::Json(payload)) = &connector_request.body {
+            if let Ok(json_value) = serde_json::to_value(&**payload) {
+                json_value
+                    .get("reference")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(ref_id) = ref_id {
+            let event_type = ApiEventsType::Payment {
+                payment_id: common_utils::GlobalPaymentId::try_from(std::borrow::Cow::Owned(
+                    "dummy".to_string(),
+                ))
+                .unwrap_or_else(|_| {
+                    let cell_id = common_utils::CellId::default();
+                    common_utils::GlobalPaymentId::generate(&cell_id)
+                }),
+            };
+            let mut event = create_payment_event(
+                event_type,
+                Some(connector_name.to_string()),
+                None,
+                None,
+                None,
+                None,
+                Some("initiated".to_string()),
+                None,
+                PaymentStage::TxnInitiatedWithConnector,
+            );
+
+            event.payment_id = None;
+            event.reference_id = Some(ref_id.clone());
+
+            tokio::spawn(async move {
+                if let Err(e) = publish_payment_event(event).await {
+                    tracing::error!("Failed to publish transaction initiated event: {:?}", e);
+                } else {
+                    tracing::info!("Successfully published transaction initiated event");
+                }
+            });
+        }
+
         masked_request
     });
     let result = match connector_request {
         Some(request) => {
+            let ref_id = if let Some(RequestContent::Json(payload)) = &request.body {
+                if let Ok(json_value) = serde_json::to_value(&**payload) {
+                    json_value
+                        .get("reference")
+                        .and_then(|v| v.as_str())
+                        .map(String::from)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             let url = request.url.clone();
             let method = request.method;
             metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
@@ -132,6 +197,72 @@ where
                 .with_label_values(&[&method.to_string(), service_name, connector_name])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
+
+            let ref_id_clone = ref_id.clone();
+
+            if let Some(ref_id) = ref_id_clone {
+                if let Ok(Ok(body)) = &response {
+                    let connector_txn_id = if let Ok(json_value) =
+                        serde_json::from_slice::<serde_json::Value>(&body.response)
+                    {
+                        json_value
+                            .get("id")
+                            .and_then(|v| v.as_str())
+                            .map(String::from)
+                            .or_else(|| {
+                                json_value
+                                    .get("transaction_id")
+                                    .and_then(|v| v.as_str())
+                                    .map(String::from)
+                            })
+                    } else {
+                        None
+                    };
+
+                    let event_type = ApiEventsType::Payment {
+                        payment_id: common_utils::GlobalPaymentId::try_from(
+                            std::borrow::Cow::Owned("dummy".to_string()),
+                        )
+                        .unwrap_or_else(|_| {
+                            let cell_id = common_utils::CellId::default();
+                            common_utils::GlobalPaymentId::generate(&cell_id)
+                        }),
+                    };
+                    let mut event = create_payment_event(
+                        event_type,
+                        Some(connector_name.to_string()),
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some("response_received".to_string()),
+                        None,
+                        PaymentStage::ResponseReceivedFromConnector,
+                    );
+
+                    event.reference_id = Some(ref_id.clone());
+
+                    if let Some(txn_id) = connector_txn_id {
+                        tracing::info!(
+                            "Setting connector transaction ID in response event: {}",
+                            txn_id
+                        );
+                        event.payment_id = Some(txn_id);
+                    }
+
+                    let connector_name = connector_name.to_string();
+                    tokio::spawn(async move {
+                        if let Err(e) = publish_payment_event(event).await {
+                            tracing::error!("Failed to publish connector response event: {:?}", e);
+                        } else {
+                            tracing::info!(
+                                "Successfully published connector response event for {}",
+                                connector_name
+                            );
+                        }
+                    });
+                }
+            }
 
             match response {
                 Ok(body) => {
