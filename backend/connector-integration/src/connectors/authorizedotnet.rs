@@ -188,15 +188,25 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.authorizedotnet.base_url.to_string()
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = &req.resource_common_data.connectors.authorizedotnet.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(base_url.to_string())
+            }
         }
 
         pub fn connector_base_url_refunds<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.authorizedotnet.base_url.to_string()
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = &req.resource_common_data.connectors.authorizedotnet.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(base_url.to_string())
+            }
         }
 
     }
@@ -226,7 +236,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_payments(req).to_string())
+            self.connector_base_url_payments(req)
         }
     }
 );
@@ -254,7 +264,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_payments(req).to_string())
+            self.connector_base_url_payments(req)
         }
     }
 );
@@ -282,7 +292,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_payments(req).to_string())
+            self.connector_base_url_payments(req)
         }
     }
 );
@@ -310,7 +320,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_payments(req).to_string())
+            self.connector_base_url_payments(req)
         }
     }
 );
@@ -339,7 +349,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_refunds(req).to_string())
+            self.connector_base_url_refunds(req)
         }
     }
 );
@@ -368,7 +378,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(self.connector_base_url_refunds(req).to_string())
+            self.connector_base_url_refunds(req)
         }
     }
 );

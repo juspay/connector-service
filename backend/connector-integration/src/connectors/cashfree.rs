@@ -83,8 +83,13 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url<F, Req, Res>(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.cashfree.base_url.to_string()
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = &req.resource_common_data.connectors.cashfree.base_url;
+            if base_url.is_empty() {
+                Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
+            } else {
+                Ok(base_url.to_string())
+            }
         }
 
         fn preprocess_response_bytes(
@@ -120,7 +125,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
+            let base_url = self.connector_base_url(req)?;
             Ok(format!("{base_url}pg/orders"))
         }
     }
@@ -150,7 +155,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
+            let base_url = self.connector_base_url(req)?;
             Ok(format!("{base_url}pg/orders/sessions"))
         }
     }
