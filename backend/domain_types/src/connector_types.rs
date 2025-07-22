@@ -49,6 +49,8 @@ pub enum ConnectorEnum {
     Checkout,
     Authorizedotnet,
     Mifinity,
+    Phonepe,
+    Cashfree,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -65,6 +67,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
+            grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -937,6 +941,7 @@ pub struct PaymentCreateOrderData {
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<serde_json::Value>,
+    pub webhook_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]

@@ -23,3 +23,8 @@ pub mod checkout;
 pub use self::checkout::Checkout;
 
 pub mod mifinity;
+pub mod phonepe;
+pub use self::phonepe::Phonepe;
+
+pub mod cashfree;
+pub use self::cashfree::Cashfree;
