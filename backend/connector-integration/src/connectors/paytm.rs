@@ -1237,6 +1237,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let order_id = &req.resource_common_data.connector_request_reference_id;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
         // Both UPI Intent and UPI Collect use the same processTransaction endpoint
         // The difference is in the request structure, not the URL
         Ok(format!(
@@ -1258,6 +1259,13 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
               // }
         }
 >>>>>>> d637bc4 (clippy-fixes)
+=======
+        // Both UPI Intent and UPI Collect use the same processTransaction endpoint
+        // The difference is in the request structure, not the URL
+        Ok(format!(
+            "{base_url}theia/api/v1/processTransaction?mid={merchant_id}&orderId={order_id}"
+        ))
+>>>>>>> 5ca1ae8 (remove-unnecessary-code)
     }
 
     fn get_request_body(
@@ -1272,27 +1280,44 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         let connector_router_data = paytm::PaytmAuthorizeRouterData::try_from(req)?;
         let auth = paytm::PaytmAuthType::try_from(&req.connector_auth_type)?;
 
-        // Determine UPI flow type and create appropriate request
-        let upi_flow = paytm::determine_upi_flow(&req.request.payment_method_data)?;
-
-        match upi_flow {
-            paytm::UpiFlowType::Intent => {
+        // Create appropriate request based on payment method data
+        match &req.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Upi(
+                domain_types::payment_method_data::UpiData::UpiCollect(collect_data),
+            ) => {
+                if collect_data.vpa_id.is_some() {
+                    // UPI Collect flow with VPA
+                    let connector_req = paytm::PaytmNativeProcessTxnRequest::try_from_with_auth(
+                        &connector_router_data,
+                        &auth,
+                    )?;
+                    Ok(Some(RequestContent::Json(Box::new(connector_req))))
+                } else {
+                    // UPI Collect without VPA - invalid
+                    Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "vpa_id",
+                    }
+                    .into())
+                }
+            }
+            domain_types::payment_method_data::PaymentMethodData::Upi(
+                domain_types::payment_method_data::UpiData::UpiIntent(_),
+            ) => {
+                // UPI Intent flow
                 let connector_req = paytm::PaytmProcessTxnRequest::try_from_with_auth(
                     &connector_router_data,
                     &auth,
                 )?;
                 Ok(Some(RequestContent::Json(Box::new(connector_req))))
             }
-            paytm::UpiFlowType::Collect => {
-                let connector_req = paytm::PaytmNativeProcessTxnRequest::try_from_with_auth(
-                    &connector_router_data,
-                    &auth,
-                )?;
-                Ok(Some(RequestContent::Json(Box::new(connector_req))))
-            } // paytm::UpiFlowType::QrCode => {
-              //     let connector_req = paytm::PaytmQRRequest::try_from_with_auth(&connector_router_data, &auth)?;
-              //     Ok(Some(RequestContent::Json(Box::new(connector_req))))
-              // }
+            _ => {
+                // Unsupported payment method for Paytm
+                Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported by Paytm connector".to_string(),
+                    connector: "Paytm",
+                }
+                .into())
+            }
         }
     }
 
@@ -1315,10 +1340,11 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         >,
         errors::ConnectorError,
     > {
-        let upi_flow = paytm::determine_upi_flow(&data.request.payment_method_data)?;
-
-        match upi_flow {
-            paytm::UpiFlowType::Intent => {
+        // Handle response based on payment method data
+        match &data.request.payment_method_data {
+            domain_types::payment_method_data::PaymentMethodData::Upi(
+                domain_types::payment_method_data::UpiData::UpiIntent(_),
+            ) => {
                 // Parse as UPI Intent response
                 let response: paytm::PaytmProcessTxnResponse = res
                     .response
@@ -1371,7 +1397,15 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     }
                 }
             }
-            paytm::UpiFlowType::Collect => {
+            domain_types::payment_method_data::PaymentMethodData::Upi(
+                domain_types::payment_method_data::UpiData::UpiCollect(collect_data),
+            ) => {
+                if collect_data.vpa_id.is_none() {
+                    return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "vpa_id",
+                    }
+                    .into());
+                }
                 // Parse as UPI Collect response
                 let response: paytm::PaytmNativeProcessTxnResponse = res
                     .response
@@ -1409,52 +1443,15 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                         Err(errors::ConnectorError::ResponseHandlingFailed.into())
                     }
                 }
-            } // paytm::UpiFlowType::QrCode => {
-              //     // Parse as UPI QR response
-              //     let response: paytm::PaytmQRResponse = res
-              //         .response
-              //         .parse_struct("PaytmQRResponse")
-              //         .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-              //     if let Some(event) = event_builder {
-              //         event.set_response_body(&response);
-              //     }
-
-              //     match response.body {
-              //         paytm::PaytmQRRespBodyTypes::SuccessBody(success_resp) => {
-              //             if success_resp.result_info.result_code == constants::QR_SUCCESS_CODE {
-              //                 // For QR, we return the QR data in connector metadata
-              //                 let qr_metadata = serde_json::json!({
-              //                     "qr_code_id": success_resp.qr_code_id,
-              //                     "qr_data": success_resp.qr_data,
-              //                     "qr_image": success_resp.image
-              //                 });
-
-              //                 let payments_response = PaymentsResponseData::TransactionResponse {
-              //                     resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-              //                         success_resp.qr_code_id.clone()
-              //                     ),
-              //                     redirection_data: Box::new(None), // No redirection for QR
-              //                     connector_metadata: Some(qr_metadata),
-              //                     mandate_reference: Box::new(None),
-              //                     network_txn_id: None,
-              //                     connector_response_reference_id: Some(success_resp.qr_code_id.clone()),
-              //                     incremental_authorization_allowed: None,
-              //                     raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
-              //                 };
-
-              //                 let mut response_data = data.clone();
-              //                 response_data.response = Ok(payments_response);
-              //                 Ok(response_data)
-              //             } else {
-              //                 Err(errors::ConnectorError::ResponseHandlingFailed.into())
-              //             }
-              //         },
-              //         paytm::PaytmQRRespBodyTypes::FailureBody(_) => {
-              //             Err(errors::ConnectorError::ResponseHandlingFailed.into())
-              //         }
-              //     }
-              // }
+            }
+            _ => {
+                // Unsupported payment method for Paytm
+                Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported by Paytm connector".to_string(),
+                    connector: "Paytm",
+                }
+                .into())
+            }
         }
     }
 
