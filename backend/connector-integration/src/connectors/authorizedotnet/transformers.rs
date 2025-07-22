@@ -311,21 +311,14 @@ impl
         // Always create regular transaction request (mandate logic moved to RepeatPayment flow)
         let transaction_request = create_regular_transaction_request(&item, currency)?;
 
-        let ref_id = if item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .is_empty()
-        {
-            None
-        } else {
-            Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .to_string(),
-            )
-        };
+        let ref_id = Some(
+            &item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id,
+        )
+        .filter(|id| !id.is_empty())
+        .cloned();
 
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
@@ -387,16 +380,18 @@ fn create_regular_transaction_request(
         .unwrap_or_else(|| "Payment".to_string());
 
     // Truncate invoice number to 20 characters (Authorize.Net limit)
-    let invoice_number = &item
-        .router_data
-        .resource_common_data
-        .connector_request_reference_id;
-
-    if invoice_number.is_empty() {
-        return Err(error_stack::report!(ConnectorError::MissingRequiredField {
+    let invoice_number = Some(
+        &item
+            .router_data
+            .resource_common_data
+            .connector_request_reference_id,
+    )
+    .filter(|id| !id.is_empty())
+    .ok_or_else(|| {
+        error_stack::report!(ConnectorError::MissingRequiredField {
             field_name: "connector_request_reference_id"
-        }));
-    }
+        })
+    })?;
 
     let truncated_invoice_number = if invoice_number.len() > 20 {
         invoice_number[0..20].to_string()
@@ -579,26 +574,23 @@ impl
             .clone()
             .unwrap_or_else(|| "Repeat Payment".to_string());
 
-        let invoice_number = if item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .is_empty()
-        {
-            return Err(error_stack::report!(ConnectorError::MissingRequiredField {
-                field_name: "connector_request_reference_id"
-            }));
-        } else {
-            item.router_data
+        let invoice_number = Some(
+            &item
+                .router_data
                 .resource_common_data
-                .connector_request_reference_id
-                .clone()
-        };
+                .connector_request_reference_id,
+        )
+        .filter(|id| !id.is_empty())
+        .ok_or_else(|| {
+            error_stack::report!(ConnectorError::MissingRequiredField {
+                field_name: "connector_request_reference_id"
+            })
+        })?;
 
-        let truncated_invoice_number = if invoice_number.len() > MAX_ID_LENGTH {
-            invoice_number[0..MAX_ID_LENGTH].to_string()
+        let truncated_invoice_number = if invoice_number.len() > 20 {
+            invoice_number[0..20].to_string()
         } else {
-            invoice_number
+            invoice_number.to_string()
         };
 
         let order = Order {
@@ -630,21 +622,14 @@ impl
             None => None,
         };
 
-        let ref_id = if item
-            .router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .is_empty()
-        {
-            None
-        } else {
-            Some(
-                item.router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .to_string(),
-            )
-        };
+        let ref_id = Some(
+            &item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id,
+        )
+        .filter(|id| !id.is_empty())
+        .cloned();
 
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
@@ -827,7 +812,7 @@ impl
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let router_data = item.router_data;
+        let router_data = &item.router_data;
 
         // Extract transaction ID from the connector_transaction_id string
         // This transaction ID comes from the authorization response
@@ -842,20 +827,14 @@ impl
             id => id.to_string(),
         };
 
-        let ref_id = if router_data
-            .resource_common_data
-            .connector_request_reference_id
-            .is_empty()
-        {
-            None
-        } else {
-            Some(
-                router_data
-                    .resource_common_data
-                    .connector_request_reference_id
-                    .to_string(),
-            )
-        };
+        let ref_id = Some(
+            &item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id,
+        )
+        .filter(|id| !id.is_empty())
+        .cloned();
 
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
