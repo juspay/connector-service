@@ -77,10 +77,10 @@ pub fn setup(
 
     let mut subscriber_layers = Vec::new();
 
+    subscriber_layers.push(logging_components.storage_layer.boxed());
     if let Some(console_layer) = logging_components.console_log_layer {
         subscriber_layers.push(console_layer);
     }
-    subscriber_layers.push(logging_components.storage_layer.boxed());
 
     // Add Kafka layer if configured
     #[cfg(feature = "kafka")]
