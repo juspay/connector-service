@@ -143,14 +143,14 @@ impl Service {
         );
 
         let router = axum::Router::new()
-            .layer(logging_layer)
-            .layer(request_id_layer)
-            .layer(propagate_request_id_layer)
             .route("/health", axum::routing::get(|| async { "health is good" }))
             .route(
                 "/test-logging",
                 axum::routing::post(crate::server::test_logging::test_logging_handler),
             )
+            .layer(logging_layer)
+            .layer(request_id_layer)
+            .layer(propagate_request_id_layer)
             .merge(payment_service_handler(self.payments_service))
             .merge(refund_service_handler(self.refunds_service))
             .merge(dispute_service_handler(self.disputes_service));
