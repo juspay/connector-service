@@ -50,6 +50,7 @@ pub struct Connectors {
     pub authorizedotnet: ConnectorParams, // Add your connector params
     pub paytm: ConnectorParams,
     pub phonepe: ConnectorParams,
+    pub cashfree: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
