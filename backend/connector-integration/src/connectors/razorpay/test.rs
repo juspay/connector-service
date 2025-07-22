@@ -1176,6 +1176,7 @@ mod tests {
                     currency: Currency::USD,
                     integrity_object: None,
                     metadata: None,
+                    webhook_url: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1273,6 +1274,7 @@ mod tests {
                     currency: Currency::default(),
                     integrity_object: None,
                     metadata: None,
+                    webhook_url: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1513,6 +1515,7 @@ mod tests {
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1633,6 +1636,7 @@ mod tests {
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1742,6 +1746,7 @@ mod tests {
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),

@@ -266,6 +266,7 @@ impl Payments {
             } else {
                 Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
             },
+            webhook_url: payload.webhook_url.clone(),
         };
 
         let order_router_data = RouterDataV2::<
@@ -342,6 +343,7 @@ impl Payments {
             } else {
                 Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
             },
+            webhook_url: payload.webhook_url.clone(),
         };
 
         let order_router_data = RouterDataV2::<
