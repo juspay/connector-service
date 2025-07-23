@@ -2468,6 +2468,7 @@ dependencies = [
  "tracing-appender",
  "tracing-attributes",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

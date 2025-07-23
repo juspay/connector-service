@@ -15,15 +15,15 @@ use tracing::{error, warn};
 use common_enums::CurrencyUnit;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
     },
     types::Connectors,
 };
@@ -67,6 +67,7 @@ impl connector_types::AcceptDispute for Fiuu {}
 impl connector_types::SubmitEvidenceV2 for Fiuu {}
 impl connector_types::DisputeDefend for Fiuu {}
 impl connector_types::IncomingWebhook for Fiuu {}
+impl connector_types::RepeatPaymentV2 for Fiuu {}
 
 macros::create_all_prerequisites!(
     connector_name: Fiuu,
@@ -631,6 +632,21 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Fiuu
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Fiuu
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Fiuu
 {
 }
 

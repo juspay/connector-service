@@ -271,6 +271,8 @@ async fn test_payment_authorization_auto_capture() {
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Add delay of 1 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         // Create the payment authorization request with manual capture
         let auth_request = create_authorize_request(CaptureMethod::Manual);
 
@@ -323,6 +325,8 @@ async fn test_payment_authorization_manual_capture() {
 #[tokio::test]
 async fn test_payment_sync_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Add delay of 2 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         // Create the payment authorization request
         let request = create_authorize_request(CaptureMethod::Automatic);
 
@@ -369,6 +373,8 @@ async fn test_payment_sync_auto_capture() {
 #[tokio::test]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Add delay of 3 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         // Create the payment authorization request
         let request = create_authorize_request(CaptureMethod::Automatic);
 
@@ -421,6 +427,8 @@ async fn test_refund() {
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
+            // Add delay of 4 seconds
+            tokio::time::sleep(std::time::Duration::from_secs(4)).await;
             // Create the payment authorization request
             let request = create_authorize_request(CaptureMethod::Automatic);
 
@@ -495,6 +503,8 @@ async fn test_refund_sync() {
 #[tokio::test]
 async fn test_payment_void() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
+        // Add delay of 5 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         // First create a payment with manual capture to void
         let auth_request = create_authorize_request(CaptureMethod::Manual);
 

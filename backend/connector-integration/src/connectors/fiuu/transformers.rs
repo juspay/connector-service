@@ -18,6 +18,7 @@ use common_utils::{
 use error_stack::ResultExt;
 
 use domain_types::{
+    connector_types::Status,
     payment_method_data::{BankRedirectData, PaymentMethodData, RealTimePaymentData, WalletData},
     router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
@@ -886,13 +887,13 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
         match response {
             FiuuPaymentsResponse::QRPaymentResponse(ref response) => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status: common_enums::AttemptStatus::AuthenticationPending,
+                    status: Status::Attempt(common_enums::AttemptStatus::AuthenticationPending),
                     ..router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(response.txn_id.clone()),
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(None),
+                    redirection_data: None,
+                    mandate_reference: None,
                     connector_metadata: get_qr_metadata(response)?,
                     network_txn_id: None,
                     connector_response_reference_id: None,
@@ -929,13 +930,15 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                     });
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
-                            status: common_enums::AttemptStatus::AuthenticationPending,
+                            status: Status::Attempt(
+                                common_enums::AttemptStatus::AuthenticationPending,
+                            ),
                             ..router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(data.txn_id),
-                            redirection_data: Box::new(redirection_data),
-                            mandate_reference: Box::new(None),
+                            redirection_data: redirection_data.map(Box::new),
+                            mandate_reference: None,
                             connector_metadata: None,
                             network_txn_id: None,
                             connector_response_reference_id: None,
@@ -992,8 +995,8 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                     } else {
                         Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(data.txn_id.clone()),
-                            redirection_data: Box::new(None),
-                            mandate_reference: Box::new(mandate_reference),
+                            redirection_data: None,
+                            mandate_reference: mandate_reference.map(Box::new),
                             connector_metadata: None,
                             network_txn_id: None,
                             connector_response_reference_id: None,
@@ -1003,7 +1006,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                     };
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
-                            status,
+                            status: Status::Attempt(status),
                             ..router_data.resource_common_data
                         },
                         response,
@@ -1045,8 +1048,8 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                         } else {
                             Ok(PaymentsResponseData::TransactionResponse {
                                 resource_id: connector_transaction_id,
-                                redirection_data: Box::new(None),
-                                mandate_reference: Box::new(None),
+                                redirection_data: None,
+                                mandate_reference: None,
                                 connector_metadata: None,
                                 network_txn_id: None,
                                 connector_response_reference_id: None,
@@ -1056,7 +1059,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                         };
                         Self {
                             resource_common_data: PaymentFlowData {
-                                status,
+                                status: Status::Attempt(status),
                                 ..router_data.resource_common_data
                             },
                             response,
@@ -1067,8 +1070,8 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                         // It is not expected to get empty response from the connnector, if we get we are not updating the payment response since we don't have any info in the authorize response.
                         let response = Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::NoResponseId,
-                            redirection_data: Box::new(None),
-                            mandate_reference: Box::new(None),
+                            redirection_data: None,
+                            mandate_reference: None,
                             connector_metadata: None,
                             network_txn_id: None,
                             connector_response_reference_id: None,
@@ -1458,8 +1461,8 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 };
                 let payments_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(txn_id.clone().to_string()),
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(None),
+                    redirection_data: None,
+                    mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: response
                         .scheme_transaction_id
@@ -1471,7 +1474,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         ..router_data.resource_common_data
                     },
                     response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -1518,8 +1521,8 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 };
                 let payments_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(txn_id.clone().to_string()),
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(mandate_reference),
+                    redirection_data: None,
+                    mandate_reference: mandate_reference.map(Box::new),
                     connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: None,
@@ -1528,7 +1531,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         ..router_data.resource_common_data
                     },
                     response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -1722,8 +1725,8 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
         };
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.tran_id.clone().to_string()),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: None,
@@ -1732,7 +1735,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -1852,8 +1855,8 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
         };
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.tran_id.clone().to_string()),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: None,
@@ -1862,7 +1865,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             response: error_response.map_or_else(|| Ok(payments_response_data), Err),
