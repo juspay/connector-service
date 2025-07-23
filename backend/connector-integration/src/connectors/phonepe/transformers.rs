@@ -370,6 +370,29 @@ impl
             // Error response - PhonePe returned success: false
             let error_message = response.message.clone();
             let error_code = response.code.clone();
+            
+            // Get merchant transaction ID from data if available for better tracking
+            let connector_transaction_id = response.data
+                .as_ref()
+                .map(|data| data.merchant_transaction_id.clone());
+
+            // Map specific PhonePe error codes to attempt status if needed
+            let attempt_status = match error_code.as_str() {
+                "INVALID_TRANSACTION_ID" => Some(common_enums::AttemptStatus::Failure),
+                "TRANSACTION_NOT_FOUND" => Some(common_enums::AttemptStatus::Failure),
+                "INVALID_REQUEST" => Some(common_enums::AttemptStatus::Failure),
+                "INTERNAL_SERVER_ERROR" => Some(common_enums::AttemptStatus::Failure),
+                "PAYMENT_PENDING" => Some(common_enums::AttemptStatus::Pending),
+                "PAYMENT_DECLINED" => Some(common_enums::AttemptStatus::Failure),
+                _ => Some(common_enums::AttemptStatus::Failure),
+            };
+
+            tracing::warn!(
+                "PhonePe payment failed - Code: {}, Message: {}, Status: {}",
+                error_code,
+                error_message,
+                item.http_code
+            );
 
             // Get merchant transaction ID from data if available for better tracking
             let connector_transaction_id = response
