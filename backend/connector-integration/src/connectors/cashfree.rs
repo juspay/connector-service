@@ -9,14 +9,15 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData, SessionTokenResponseData,SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
     errors,
@@ -286,6 +287,7 @@ impl connector_types::RefundSyncV2 for Cashfree {}
 impl connector_types::RefundV2 for Cashfree {}
 impl connector_types::PaymentCapture for Cashfree {}
 impl connector_types::SetupMandateV2 for Cashfree {}
+impl connector_types::RepeatPaymentV2 for Cashfree {}
 impl connector_types::AcceptDispute for Cashfree {}
 impl connector_types::SubmitEvidenceV2 for Cashfree {}
 impl connector_types::DisputeDefend for Cashfree {}
@@ -293,7 +295,18 @@ impl connector_types::IncomingWebhook for Cashfree {}
 impl connector_types::PaymentSessionToken for Cashfree {}
 
 // CreateSessionToken implementation (stub)
-impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Cashfree
+{
+}
+
+// Default ConnectorIntegrationV2 implementations for unsupported flows
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Cashfree
 {
 }
@@ -378,6 +391,12 @@ impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(

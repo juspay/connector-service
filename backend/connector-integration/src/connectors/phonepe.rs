@@ -10,14 +10,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -120,6 +121,7 @@ impl connector_types::IncomingWebhook for Phonepe {}
 impl connector_types::RefundV2 for Phonepe {}
 impl connector_types::PaymentCapture for Phonepe {}
 impl connector_types::SetupMandateV2 for Phonepe {}
+impl connector_types::RepeatPaymentV2 for Phonepe {}
 impl connector_types::AcceptDispute for Phonepe {}
 impl connector_types::RefundSyncV2 for Phonepe {}
 impl connector_types::DisputeDefend for Phonepe {}
@@ -214,6 +216,10 @@ impl
         SetupMandateRequestData,
         PaymentsResponseData,
     > for Phonepe
+{
+}
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Phonepe
 {
 }
 impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
@@ -352,6 +358,12 @@ impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(

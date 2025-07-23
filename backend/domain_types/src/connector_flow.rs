@@ -23,6 +23,9 @@ pub struct Capture;
 pub struct SetupMandate;
 
 #[derive(Debug, Clone)]
+pub struct RepeatPayment;
+
+#[derive(Debug, Clone)]
 pub struct Accept;
 
 #[derive(Debug, Clone)]
@@ -43,6 +46,7 @@ pub enum FlowName {
     Psync,
     Void,
     SetupMandate,
+    RepeatPayment,
     Capture,
     AcceptDispute,
     SubmitEvidence,

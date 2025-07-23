@@ -80,6 +80,7 @@ impl connector_types::RefundSyncV2 for Razorpay {}
 impl connector_types::RefundV2 for Razorpay {}
 impl connector_types::PaymentCapture for Razorpay {}
 impl connector_types::SetupMandateV2 for Razorpay {}
+impl connector_types::RepeatPaymentV2 for Razorpay {}
 impl connector_types::AcceptDispute for Razorpay {}
 impl connector_types::SubmitEvidenceV2 for Razorpay {}
 impl connector_types::DisputeDefend for Razorpay {}
@@ -1115,6 +1116,26 @@ impl
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Razorpay
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Razorpay
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
     > for Razorpay
 {
 }

@@ -182,7 +182,9 @@ where
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_FIELD".to_string(),
                     error_identifier: 400,
-                    error_message: format!("Missing Field x-merchant-id {e}"),
+                    error_message: format!(
+                        "Missing/Incorrect Field x-merchant-id or x-connector{e}"
+                    ),
                     error_object: None,
                 }))
             },

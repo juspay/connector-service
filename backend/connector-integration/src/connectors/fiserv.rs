@@ -9,15 +9,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -67,6 +67,7 @@ impl connector_types::PaymentCapture for Fiserv {}
 impl connector_types::ValidationTrait for Fiserv {}
 impl connector_types::PaymentOrderCreate for Fiserv {}
 impl connector_types::SetupMandateV2 for Fiserv {}
+impl connector_types::RepeatPaymentV2 for Fiserv {}
 impl connector_types::AcceptDispute for Fiserv {}
 impl connector_types::SubmitEvidenceV2 for Fiserv {}
 impl connector_types::DisputeDefend for Fiserv {}
@@ -593,9 +594,24 @@ impl
 {
 }
 
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Fiserv
+{
+}
+
 impl ConnectorSpecifications for Fiserv {}
 
 // We already have an implementation for ValidationTrait above
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Fiserv
+{
+}
 
 impl
     ConnectorIntegrationV2<

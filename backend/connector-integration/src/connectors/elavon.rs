@@ -7,14 +7,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -56,6 +57,7 @@ impl connector_types::PaymentSessionToken for Elavon {}
 impl connector_types::ValidationTrait for Elavon {}
 impl connector_types::PaymentCapture for Elavon {}
 impl connector_types::SetupMandateV2 for Elavon {}
+impl connector_types::RepeatPaymentV2 for Elavon {}
 impl connector_types::AcceptDispute for Elavon {}
 impl connector_types::SubmitEvidenceV2 for Elavon {}
 impl connector_types::DisputeDefend for Elavon {}
@@ -542,7 +544,7 @@ impl
 }
 
 impl
-    connector_integration_v2::ConnectorIntegrationV2<
+    interfaces::verification::SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
@@ -550,9 +552,23 @@ impl
     > for Elavon
 {
 }
-
 impl
     interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Elavon
+{
+}
+
+impl
+    ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,

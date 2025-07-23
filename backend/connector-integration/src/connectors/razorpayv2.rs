@@ -10,14 +10,14 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
     errors,
@@ -449,6 +449,7 @@ impl interfaces::connector_types::IncomingWebhook for RazorpayV2 {}
 impl interfaces::connector_types::RefundV2 for RazorpayV2 {}
 impl interfaces::connector_types::PaymentCapture for RazorpayV2 {}
 impl interfaces::connector_types::SetupMandateV2 for RazorpayV2 {}
+impl interfaces::connector_types::RepeatPaymentV2 for RazorpayV2 {}
 impl interfaces::connector_types::AcceptDispute for RazorpayV2 {}
 impl interfaces::connector_types::RefundSyncV2 for RazorpayV2 {}
 impl interfaces::connector_types::DisputeDefend for RazorpayV2 {}
@@ -459,6 +460,16 @@ impl interfaces::connector_types::ConnectorServiceTrait for RazorpayV2 {}
 // Stub implementations for flows not yet implemented
 impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for RazorpayV2
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for RazorpayV2
 {
 }
 
@@ -965,11 +976,16 @@ impl
 }
 
 impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
+        RepeatPaymentData,
+        PaymentsResponseData,
     > for RazorpayV2
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for RazorpayV2
 {
 }

@@ -10,14 +10,15 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     router_data::ConnectorAuthType,
@@ -118,6 +119,7 @@ impl interfaces::connector_types::PaymentSyncV2 for Paytm {}
 impl interfaces::connector_types::PaymentOrderCreate for Paytm {}
 impl interfaces::connector_types::RefundV2 for Paytm {}
 impl interfaces::connector_types::RefundSyncV2 for Paytm {}
+impl interfaces::connector_types::RepeatPaymentV2 for Paytm {}
 impl interfaces::connector_types::PaymentCapture for Paytm {}
 impl interfaces::connector_types::PaymentVoidV2 for Paytm {}
 impl interfaces::connector_types::SetupMandateV2 for Paytm {}
@@ -479,9 +481,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                                     success_resp.deep_link_info.trans_id.clone()
                                 ),
-                                redirection_data: Box::new(Some(redirect_form)),
+                                redirection_data: Some(Box::new(redirect_form)),
                                 connector_metadata: None,
-                                mandate_reference: Box::new(None),
+                                mandate_reference: None,
                                 network_txn_id: None,
                                 connector_response_reference_id: Some(
                                     success_resp.deep_link_info.cashier_request_id.clone()
@@ -520,9 +522,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                                 resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
                                     success_resp.trans_id.clone()
                                 ),
-                                redirection_data: Box::new(None), // No redirection for UPI Collect
+                                redirection_data: None, // No redirection for UPI Collect
                                 connector_metadata: None,
-                                mandate_reference: Box::new(None),
+                                mandate_reference: None,
                                 network_txn_id: None,
                                 connector_response_reference_id: Some(success_resp.order_id.clone()),
                                 incremental_authorization_allowed: None,
@@ -647,6 +649,21 @@ impl
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
+    > for Paytm
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Paytm
+{
+}
+
+impl
+    verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
     > for Paytm
 {
 }
