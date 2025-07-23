@@ -320,6 +320,7 @@ impl
         .filter(|id| !id.is_empty())
         .cloned();
 
+        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
         let create_transaction_request = CreateTransactionRequest {
             merchant_authentication,
             ref_id,
@@ -631,6 +632,8 @@ impl
         .filter(|id| !id.is_empty())
         .cloned();
 
+        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
+
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
             amount: item.router_data.request.amount.to_string(),
@@ -835,6 +838,8 @@ impl
         )
         .filter(|id| !id.is_empty())
         .cloned();
+
+        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
 
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
@@ -1064,11 +1069,10 @@ impl
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
 
-        let ref_id = if item.router_data.request.refund_id.is_empty() {
-            None
-        } else {
-            Some(item.router_data.request.refund_id.to_string())
-        };
+        let ref_id = Some(&item.router_data.request.refund_id)
+            .filter(|id| !id.is_empty())
+            .cloned();
+        let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
 
         Ok(Self {
             create_transaction_request: CreateTransactionRefundRequest {
@@ -2119,4 +2123,14 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetErrorResponse {
     pub messages: ResponseMessages,
+}
+
+fn get_the_truncate_id(id: Option<String>, max_length: usize) -> Option<String> {
+    id.map(|s| {
+        if s.len() > max_length {
+            s[..max_length].to_string()
+        } else {
+            s
+        }
+    })
 }
