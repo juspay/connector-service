@@ -17,6 +17,34 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
 
+// PayU Status enum to handle both integer and string status values
+#[derive(Debug, Serialize, Clone)]
+pub enum PayuStatusValue {
+    IntStatus(i32),       // 1 for UPI Intent success
+    StringStatus(String), // "success" for UPI Collect success
+}
+
+// Custom deserializer for PayU status field that can be either int or string
+fn deserialize_payu_status<'de, D>(deserializer: D) -> Result<Option<PayuStatusValue>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde_json::Value;
+    let value: Option<Value> = Option::deserialize(deserializer)?;
+
+    match value {
+        Some(Value::Number(n)) => {
+            if let Some(i) = n.as_i64() {
+                Ok(Some(PayuStatusValue::IntStatus(i as i32)))
+            } else {
+                Ok(None)
+            }
+        }
+        Some(Value::String(s)) => Ok(Some(PayuStatusValue::StringStatus(s))),
+        _ => Ok(None),
+    }
+}
+
 // Authentication structure based on Payu analysis
 #[derive(Debug, Clone)]
 pub struct PayuAuthType {
@@ -126,8 +154,9 @@ pub struct PayuPaymentRequest {
 // Response structure based on actual PayU API response
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PayuPaymentResponse {
-    // Success response fields
-    pub status: Option<i32>,   // Status code (1 for success)
+    // Success response fields - PayU can return status as either int or string
+    #[serde(deserialize_with = "deserialize_payu_status")]
+    pub status: Option<PayuStatusValue>, // Status can be 1 (int) or "success" (string)
     pub token: Option<String>, // PayU token
     #[serde(alias = "referenceId")]
     pub reference_id: Option<String>, // PayU reference ID
@@ -171,9 +200,15 @@ pub struct PayuPaymentResponse {
     pub intent_sdk_combine_verify_and_pay_button: Option<String>,
 
     // Error response fields (actual PayU format)
-    pub result: Option<serde_json::Value>, // PayU result field (null for errors)
-    pub error: Option<String>,             // Error code like "EX158"
-    pub message: Option<String>,           // Error message
+    pub result: Option<PayuResult>, // PayU result field (null for errors)
+    pub error: Option<String>,      // Error code like "EX158"
+    pub message: Option<String>,    // Error message
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuResult {
+    pub status: String,   // UPI Collect Status
+    pub mihpayid: String, // ID
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -433,22 +468,20 @@ fn determine_upi_flow(
             match upi_data {
                 UpiData::UpiCollect(collect_data) => {
                     if let Some(vpa) = &collect_data.vpa_id {
-                        // UPI Collect flow - based on working test script
-                        // pg=UPI, bankcode=INTENT, VPA required, txn_s2s_flow="2"
+                        // UPI Collect flow - based on Haskell implementation
+                        // For UPI Collect: pg=UPI, no specific bankcode (unless TPV), VPA required
+                        // The key is that VPA must be populated for sourceObject == "UPI_COLLECT"
                         Ok((
                             Some("UPI".to_string()),
-                            Some("COLLECT".to_string()),
+                            Some("UPI".to_string()),
                             Some(vpa.peek().to_string()),
-                            "2".to_string(),
+                            "2".to_string(), // UPI Collect typically uses S2S flow "2"
                         ))
                     } else {
-                        // UPI Intent flow fallback
-                        Ok((
-                            Some("UPI".to_string()),
-                            Some("COLLECT".to_string()),
-                            None,
-                            "2".to_string(),
-                        ))
+                        // Missing VPA for UPI Collect - this should be an error
+                        Err(ConnectorError::MissingRequiredField {
+                            field_name: "vpa_id",
+                        })
                     }
                 }
                 UpiData::UpiIntent(_) => {
@@ -470,6 +503,14 @@ fn determine_upi_flow(
             connector: "PayU",
         }),
     }
+}
+
+pub fn is_upi_collect_flow(request: &PaymentsAuthorizeData) -> bool {
+    // Check if the payment method is UPI Collect
+    matches!(
+        request.payment_method_data,
+        PaymentMethodData::Upi(UpiData::UpiCollect(_))
+    )
 }
 
 // Hash generation based on Haskell PayU implementation (makePayuTxnHash)
@@ -576,7 +617,7 @@ impl
         }
 
         // Extract reference ID for transaction tracking (success case)
-        let transaction_id = response
+        let upi_transaction_id = response
             .reference_id
             .or_else(|| response.txn_id.clone())
             .or_else(|| response.token.clone())
@@ -597,20 +638,43 @@ impl
             currency: item.router_data.request.currency,
         });
 
-        // This is a success response
-        let status = if response.status == Some(1) {
-            // Success response - PayU returns status=1 for successful UPI intent generation
-            AttemptStatus::AuthenticationPending // UPI Intent requires user action in UPI app
-        } else {
-            // Unknown status
-            AttemptStatus::Failure
-        };
+        // This is a success response - determine type based on response format
+        let (status, transaction_id, redirection_data) = match &response.status {
+            Some(PayuStatusValue::IntStatus(1)) => {
+                // UPI Intent success - PayU returns status=1 for successful UPI intent generation
+                let redirection_data = response.intent_uri_data.map(|intent_data| {
+                    // PayU returns UPI intent parameters that need to be formatted as UPI URI
+                    Box::new(RedirectForm::Uri { uri: intent_data })
+                });
 
-        // Build successful response with UPI intent URI
-        let redirection_data = response.intent_uri_data.map(|intent_data| {
-            // PayU returns UPI intent parameters that need to be formatted as UPI URI
-            Box::new(RedirectForm::Uri { uri: intent_data })
-        });
+                (
+                    AttemptStatus::AuthenticationPending,
+                    upi_transaction_id.clone(),
+                    redirection_data,
+                )
+            }
+            Some(PayuStatusValue::StringStatus(s)) if s == "success" => {
+                // UPI Collect success - PayU returns status="success" with result object
+                let (status, transaction_id) = response
+                    .result
+                    .map(|result| {
+                        if result.status == "pending" {
+                            (
+                                AttemptStatus::AuthenticationPending,
+                                result.mihpayid.clone(),
+                            )
+                        } else {
+                            (AttemptStatus::Failure, result.mihpayid.clone())
+                        }
+                    })
+                    .unwrap_or((AttemptStatus::Failure, "".to_owned()));
+                (status, transaction_id, None)
+            }
+            _ => {
+                // Unknown success status
+                (AttemptStatus::Failure, upi_transaction_id.clone(), None)
+            }
+        };
 
         let payment_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),

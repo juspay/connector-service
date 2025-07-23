@@ -1,11 +1,13 @@
 pub mod transformers;
 
 use super::macros;
+use super::xendit::BASE64_ENGINE;
 use crate::types::ResponseRouterData;
+use base64::Engine;
 use common_enums::enums;
 use common_utils::RequestContent;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
-use domain_types::errors::ConnectorError;
+use domain_types::errors::{self, ConnectorError};
 use domain_types::router_response_types::Response;
 use domain_types::{
     connector_flow::{
@@ -30,7 +32,7 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 
-use transformers::{PayuAuthType, PayuPaymentRequest, PayuPaymentResponse};
+use transformers::{is_upi_collect_flow, PayuAuthType, PayuPaymentRequest, PayuPaymentResponse};
 
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(
@@ -48,6 +50,21 @@ macros::create_all_prerequisites!(
     ],
     member_functions: {
         // Payu-specific helper functions will be added here
+        fn preprocess_response_bytes<F, FCD, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, PaymentsAuthorizeData, Res>,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, ConnectorError> {
+            if is_upi_collect_flow(&req.request) {
+                // For UPI collect flows, we need to return base64 decoded response
+                let decoded_value = BASE64_ENGINE.decode(bytes)
+                    .change_context(ConnectorError::ResponseDeserializationFailed)?;
+                Ok(decoded_value.into())
+            } else {
+                // For other flows, we can use the response itself
+                Ok(bytes)
+            }
+        }
     }
 );
 
@@ -62,6 +79,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     other_functions: {
         fn get_headers(
             &self,
