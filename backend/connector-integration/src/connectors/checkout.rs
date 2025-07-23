@@ -5,15 +5,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -50,6 +50,7 @@ impl connector_types::RefundV2 for Checkout {}
 impl connector_types::PaymentCapture for Checkout {}
 impl connector_types::ValidationTrait for Checkout {}
 impl connector_types::SetupMandateV2 for Checkout {}
+impl connector_types::RepeatPaymentV2 for Checkout {}
 impl connector_types::AcceptDispute for Checkout {}
 impl connector_types::SubmitEvidenceV2 for Checkout {}
 impl connector_types::DisputeDefend for Checkout {}
@@ -513,4 +514,19 @@ impl ConnectorCommon for Checkout {
             raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Checkout
+{
 }

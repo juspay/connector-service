@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, Status,
     },
     errors,
     payment_method_data::{Card, PaymentMethodData},
@@ -741,7 +741,7 @@ impl<F, Req>
                     resource_id: ResponseId::ConnectorTransactionId(
                         payment_response.razorpay_payment_id.clone(),
                     ),
-                    redirection_data: Box::new(Some(RedirectForm::Form {
+                    redirection_data: Some(Box::new(RedirectForm::Form {
                         endpoint: redirect_url,
                         method: Method::Get,
                         form_fields,
@@ -750,7 +750,7 @@ impl<F, Req>
                     network_txn_id: None,
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
+                    mandate_reference: None,
                     raw_connector_response: None,
                 };
                 let error = None;
@@ -758,7 +758,7 @@ impl<F, Req>
                 Ok(Self {
                     response: error.map_or_else(|| Ok(payment_response_data), Err),
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         ..data.resource_common_data
                     },
                     ..data
@@ -769,12 +769,12 @@ impl<F, Req>
                     get_psync_razorpay_payment_status(is_manual_capture, psync_response.status);
                 let psync_response_data = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(psync_response.id),
-                    redirection_data: Box::new(None),
+                    redirection_data: None,
                     connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
+                    mandate_reference: None,
                     raw_connector_response: None,
                 };
                 let error = None;
@@ -782,7 +782,7 @@ impl<F, Req>
                 Ok(Self {
                     response: error.map_or_else(|| Ok(psync_response_data), Err),
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         ..data.resource_common_data
                     },
                     ..data
@@ -1252,16 +1252,16 @@ impl<F, Req>
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id),
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
-                mandate_reference: Box::new(None),
+                mandate_reference: None,
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..data.resource_common_data
             },
             ..data
@@ -1583,9 +1583,9 @@ impl<F, Req>
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
-            redirection_data: Box::new(redirection_data),
+            redirection_data: redirection_data.map(Box::new),
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
@@ -1595,7 +1595,7 @@ impl<F, Req>
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::AuthenticationPending,
+                status: Status::Attempt(AttemptStatus::AuthenticationPending),
                 ..data.resource_common_data
             },
             ..data

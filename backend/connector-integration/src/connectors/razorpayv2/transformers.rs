@@ -10,7 +10,7 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        ResponseId, Status,
     },
     errors,
     payment_address::Address,
@@ -538,9 +538,9 @@ impl
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
@@ -550,7 +550,7 @@ impl
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..data.resource_common_data.clone()
             },
             ..data
@@ -604,9 +604,9 @@ impl
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
-            redirection_data: Box::new(redirection_data),
+            redirection_data: redirection_data.map(Box::new),
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
@@ -616,7 +616,7 @@ impl
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::AuthenticationPending,
+                status: Status::Attempt(AttemptStatus::AuthenticationPending),
                 ..data.resource_common_data
             },
             ..data
@@ -644,9 +644,9 @@ impl
     ) -> Result<Self, Self::Error> {
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.id),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
@@ -656,7 +656,7 @@ impl
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::AuthenticationPending,
+                status: Status::Attempt(AttemptStatus::AuthenticationPending),
                 ..data.resource_common_data
             },
             ..data
