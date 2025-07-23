@@ -24,6 +24,29 @@ pub mod constants {
     pub const DUPLICATE_CODE: &str = "0002";
     pub const QR_SUCCESS_CODE: &str = "QR_0001";
 
+    // PSync specific constants
+    pub const TXN_SUCCESS_CODE: &str = "01";
+    pub const TXN_FAILURE_CODE: &str = "227";
+    pub const WALLET_INSUFFICIENT_CODE: &str = "235";
+    pub const INVALID_UPI_CODE: &str = "295";
+    pub const NO_RECORD_FOUND_CODE: &str = "331";
+    pub const INVALID_ORDER_ID_CODE: &str = "334";
+    pub const INVALID_MID_CODE: &str = "335";
+    pub const PENDING_CODE: &str = "400";
+    pub const BANK_DECLINED_CODE: &str = "401";
+    pub const PENDING_BANK_CONFIRM_CODE: &str = "402";
+    pub const SERVER_DOWN_CODE: &str = "501";
+    pub const TXN_FAILED_CODE: &str = "810";
+    pub const ACCOUNT_BLOCKED_CODE: &str = "843";
+    pub const MOBILE_CHANGED_CODE: &str = "820";
+    pub const MANDATE_GAP_CODE: &str = "267";
+
+    // Transaction types for PSync
+    pub const TXN_TYPE_PREAUTH: &str = "PREAUTH";
+    pub const TXN_TYPE_CAPTURE: &str = "CAPTURE";
+    pub const TXN_TYPE_RELEASE: &str = "RELEASE";
+    pub const TXN_TYPE_WITHDRAW: &str = "WITHDRAW";
+
     // Default values
     pub const DEFAULT_CUSTOMER_ID: &str = "guest";
     pub const DEFAULT_CALLBACK_URL: &str = "https://default-callback.com";
@@ -52,15 +75,18 @@ use cbc::{
     cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
     Encryptor,
 };
-use common_enums::Currency;
+use common_enums::{AttemptStatus, Currency};
 use common_utils::{
     errors::CustomResult,
     types::{AmountConvertor, MinorUnit, StringMajorUnit},
 };
 use domain_types::{
+    connector_flow::PSync,
+    connector_types::{PaymentFlowData, PaymentsResponseData, PaymentsSyncData},
     errors,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
+    router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -146,13 +172,11 @@ pub struct PaytmInitiateTxnRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PaytmRequestHeader {
-    #[serde(rename = "clientId")]
     pub client_id: Option<String>, // None
-    pub version: String, // "v2"
-    #[serde(rename = "requestTimestamp")]
+    pub version: String,           // "v2"
     pub request_timestamp: String,
-    #[serde(rename = "channelId")]
     pub channel_id: String, // "WEB"
     pub signature: String,
 }
@@ -970,5 +994,126 @@ impl PaytmNativeProcessTxnRequest {
 //         self.result_info.result_code == constants::QR_SUCCESS_CODE
 //     }
 // }
+
+// PSync (Payment Sync) flow request structures
+
+#[derive(Debug, Serialize)]
+pub struct PaytmTransactionStatusRequest {
+    pub head: PaytmRequestHeader,
+    pub body: PaytmTransactionStatusReqBody,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaytmTransactionStatusReqBody {
+    pub mid: String,      // Merchant ID
+    pub order_id: String, // Order ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub txn_type: Option<String>, // PREAUTH, CAPTURE, RELEASE, WITHDRAW
+}
+
+// PSync (Payment Sync) flow response structures
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmTransactionStatusResponse {
+    pub head: PaytmRespHead,
+    pub body: PaytmTransactionStatusRespBodyTypes,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum PaytmTransactionStatusRespBodyTypes {
+    SuccessBody(PaytmTransactionStatusRespBody),
+    FailureBody(PaytmErrorBody),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaytmTransactionStatusRespBody {
+    pub result_info: PaytmResultInfo,
+    pub txn_id: Option<String>,
+    pub bank_txn_id: Option<String>,
+    pub order_id: Option<String>,
+}
+
+// Helper struct for PSync RouterData transformation
+#[derive(Debug, Clone)]
+pub struct PaytmSyncRouterData {
+    pub payment_id: String,
+    pub connector_transaction_id: Option<String>,
+    pub txn_type: Option<String>,
+}
+
+// Request transformation for PSync flow
+impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for PaytmSyncRouterData
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(
+        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_id: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            connector_transaction_id: item
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .ok(),
+            txn_type: None, // Can be enhanced later to support specific transaction types
+        })
+    }
+}
+
+// Request body transformation for PayTM transaction status
+impl PaytmTransactionStatusRequest {
+    pub fn try_from_with_auth(
+        item: &PaytmSyncRouterData,
+        auth: &PaytmAuthType,
+    ) -> CustomResult<Self, errors::ConnectorError> {
+        let body = PaytmTransactionStatusReqBody {
+            mid: auth.merchant_id.peek().to_string(),
+            order_id: item.payment_id.clone(),
+            txn_type: item.txn_type.clone(),
+        };
+
+        // Create header with actual signature
+        let head = create_paytm_header(&body, auth)?;
+
+        Ok(Self { head, body })
+    }
+}
+
+// Status mapping function for Paytm result codes
+pub fn map_paytm_status_to_attempt_status(result_code: &str) -> AttemptStatus {
+    match result_code {
+        // Success
+        constants::TXN_SUCCESS_CODE => AttemptStatus::Charged,
+
+        // Failure cases
+        constants::TXN_FAILURE_CODE
+        | constants::WALLET_INSUFFICIENT_CODE
+        | constants::INVALID_UPI_CODE
+        | constants::BANK_DECLINED_CODE
+        | constants::TXN_FAILED_CODE
+        | constants::ACCOUNT_BLOCKED_CODE
+        | constants::MOBILE_CHANGED_CODE
+        | constants::MANDATE_GAP_CODE
+        | constants::INVALID_ORDER_ID_CODE
+        | constants::INVALID_MID_CODE
+        | constants::SERVER_DOWN_CODE => AttemptStatus::Failure,
+
+        // Pending cases
+        constants::PENDING_CODE
+        | constants::PENDING_BANK_CONFIRM_CODE
+        | constants::NO_RECORD_FOUND_CODE => AttemptStatus::Pending,
+
+        // Default to failure for unknown codes
+        _ => AttemptStatus::Failure,
+    }
+}
 
 // Response transformation implementations completed - all structs properly defined
