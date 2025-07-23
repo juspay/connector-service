@@ -20,6 +20,7 @@ use grpc_api_types::{
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
+use uuid::Uuid;
 
 // Helper function to get current timestamp
 fn get_timestamp() -> u64 {
@@ -27,6 +28,11 @@ fn get_timestamp() -> u64 {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs()
+}
+
+// Helper function to generate a unique ID using UUID
+fn generate_unique_id(prefix: &str) -> String {
+    format!("{}_{}", prefix, Uuid::new_v4())
 }
 
 // Constants for Fiuu connector
@@ -137,7 +143,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("fiuu_test_{}", get_timestamp()))),
+            id_type: Some(IdType::Id(generate_unique_id("fiuu_test"))),
         }),
         enrolled_for_3ds: false,
         request_incremental_authorization: false,
@@ -154,7 +160,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("fiuu_sync_{}", get_timestamp()))),
+            id_type: Some(IdType::Id(generate_unique_id("fiuu_sync"))),
         }),
     }
 }
@@ -181,7 +187,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         cancellation_reason: None,
         request_ref_id: Some(Identifier {
-            id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
+            id_type: Some(IdType::Id(generate_unique_id("fiuu_void"))),
         }),
         all_keys_required: None,
     }
@@ -190,7 +196,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
     PaymentServiceRefundRequest {
-        refund_id: format!("refund_{}", get_timestamp()),
+        refund_id: format!("refund_{}", generate_unique_id("test")),
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -271,8 +277,6 @@ async fn test_payment_authorization_auto_capture() {
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 1 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         // Create the payment authorization request with manual capture
         let auth_request = create_authorize_request(CaptureMethod::Manual);
 
@@ -325,8 +329,6 @@ async fn test_payment_authorization_manual_capture() {
 #[tokio::test]
 async fn test_payment_sync_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 2 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         // Create the payment authorization request
         let request = create_authorize_request(CaptureMethod::Automatic);
 
@@ -373,8 +375,6 @@ async fn test_payment_sync_auto_capture() {
 #[tokio::test]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 3 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         // Create the payment authorization request
         let request = create_authorize_request(CaptureMethod::Automatic);
 
@@ -427,8 +427,6 @@ async fn test_refund() {
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
-            // Add delay of 4 seconds
-            tokio::time::sleep(std::time::Duration::from_secs(4)).await;
             // Create the payment authorization request
             let request = create_authorize_request(CaptureMethod::Automatic);
 
@@ -503,8 +501,6 @@ async fn test_refund_sync() {
 #[tokio::test]
 async fn test_payment_void() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-        // Add delay of 5 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         // First create a payment with manual capture to void
         let auth_request = create_authorize_request(CaptureMethod::Manual);
 
