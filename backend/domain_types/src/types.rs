@@ -214,13 +214,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         ),
                     ))
                 }
-                // grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
-                //     Ok(PaymentMethodData::Upi(
-                //         crate::payment_method_data::UpiData::UpiQr(
-                //             crate::payment_method_data::UpiQrData {},
-                //         ),
-                //     ))
-                // }
                 _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                     error_identifier: 400,
