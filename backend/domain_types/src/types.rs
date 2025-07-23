@@ -51,6 +51,7 @@ pub struct Connectors {
     pub paytm: ConnectorParams,
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
+    pub fiuu: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
