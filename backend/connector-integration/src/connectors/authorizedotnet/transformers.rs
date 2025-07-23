@@ -1433,6 +1433,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
                 connector_refund_id: transaction_response.transaction_id.clone(),
                 refund_status,
                 raw_connector_response,
+                status_code: Some(http_code),
             }),
         };
 
@@ -1484,6 +1485,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
                     raw_connector_response,
+                    status_code: Some(http_code),
                 });
 
                 Ok(new_router_data)
@@ -1770,6 +1772,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response: raw_connector_response.clone(),
+                status_code: Some(http_status_code),
             })
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
@@ -1805,6 +1808,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response: raw_connector_response.clone(),
+                status_code: Some(http_status_code),
             })
         }
         None => {
@@ -1950,6 +1954,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                     connector_refund_id: transaction.transaction_id,
                     refund_status,
                     raw_connector_response,
+                    status_code: Some(http_code),
                 });
 
                 Ok(new_router_data)
@@ -2127,6 +2132,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response,
+                status_code: Some(http_code),
             });
         } else {
             let error_response = ErrorResponse {

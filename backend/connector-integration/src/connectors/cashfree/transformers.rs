@@ -614,6 +614,7 @@ impl
                 connector_response_reference_id: response.cf_payment_id.map(|id| id.to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: Some(item.http_code),
             }),
             resource_common_data: PaymentFlowData {
                 status,

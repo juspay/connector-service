@@ -1,4 +1,5 @@
 use base64::Engine;
+use common_enums;
 use common_utils::{
     crypto::{self, GenerateDigest},
     ext_traits::Encode,
@@ -334,6 +335,7 @@ impl
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
+                            status_code: Some(item.http_code),
                         }),
                         ..item.router_data
                     })
@@ -355,6 +357,7 @@ impl
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
+                            status_code: Some(item.http_code),
                         }),
                         ..item.router_data
                     })
@@ -363,18 +366,41 @@ impl
                 Err(errors::ConnectorError::ResponseDeserializationFailed.into())
             }
         } else {
-            // Error response
+            // Error response - PhonePe returned success: false
             let error_message = response.message.clone();
             let error_code = response.code.clone();
+            
+            // Get merchant transaction ID from data if available for better tracking
+            let connector_transaction_id = response.data
+                .as_ref()
+                .map(|data| data.merchant_transaction_id.clone());
+
+            // Map specific PhonePe error codes to attempt status if needed
+            let attempt_status = match error_code.as_str() {
+                "INVALID_TRANSACTION_ID" => Some(common_enums::AttemptStatus::Failure),
+                "TRANSACTION_NOT_FOUND" => Some(common_enums::AttemptStatus::Failure),
+                "INVALID_REQUEST" => Some(common_enums::AttemptStatus::Failure),
+                "INTERNAL_SERVER_ERROR" => Some(common_enums::AttemptStatus::Failure),
+                "PAYMENT_PENDING" => Some(common_enums::AttemptStatus::Pending),
+                "PAYMENT_DECLINED" => Some(common_enums::AttemptStatus::Failure),
+                _ => Some(common_enums::AttemptStatus::Failure),
+            };
+
+            tracing::warn!(
+                "PhonePe payment failed - Code: {}, Message: {}, Status: {}",
+                error_code,
+                error_message,
+                item.http_code
+            );
 
             Ok(Self {
                 response: Err(domain_types::router_data::ErrorResponse {
                     code: error_code,
-                    message: error_message,
-                    reason: None,
+                    message: error_message.clone(),
+                    reason: Some(error_message),
                     status_code: item.http_code,
-                    attempt_status: None,
-                    connector_transaction_id: None,
+                    attempt_status,
+                    connector_transaction_id,
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
