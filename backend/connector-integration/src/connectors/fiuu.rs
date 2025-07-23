@@ -7,15 +7,16 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::ErrorResponse,
@@ -46,6 +47,7 @@ use crate::{
     with_response_body,
 };
 
+impl connector_types::PaymentSessionToken for Fiuu {}
 impl connector_types::ConnectorServiceTrait for Fiuu {}
 impl connector_types::PaymentAuthorizeV2 for Fiuu {}
 impl connector_types::PaymentSyncV2 for Fiuu {}
@@ -517,6 +519,17 @@ impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, D
 {
 }
 
+// CreateSessionToken stub implementation
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiuu
+{
+}
+
 // SourceVerification implementations for all flows
 impl
     interfaces::verification::SourceVerification<
@@ -624,6 +637,16 @@ impl
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
+    > for Fiuu
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
     > for Fiuu
 {
 }
