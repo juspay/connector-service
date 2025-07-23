@@ -79,7 +79,7 @@ pub fn preprocess_xml_response_bytes(xml_data: Bytes) -> Result<Bytes, errors::C
 }
 
 /// Flattens a nested JSON structure, extracting values from "$text" fields
-fn flatten_json_structure(json_value: Value) -> Value {
+pub fn flatten_json_structure(json_value: Value) -> Value {
     let mut flattened = Map::new();
 
     // Extract txn object if present

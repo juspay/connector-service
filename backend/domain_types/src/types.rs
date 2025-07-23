@@ -49,6 +49,7 @@ pub struct Connectors {
     pub authorizedotnet: ConnectorParams, // Add your connector params
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
+    pub fiuu: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
