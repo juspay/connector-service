@@ -8,8 +8,10 @@ use common_utils::{
     types::{AmountConvertor, MinorUnit},
 };
 use domain_types::{
-    connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    connector_flow::{Authorize, PSync},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+    },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::ConnectorAuthType,
@@ -89,7 +91,25 @@ struct PhonepePaymentInstrument {
     vpa: Option<Secret<String>>,
 }
 
+// ===== SYNC REQUEST STRUCTURES =====
+
+#[derive(Debug, Serialize)]
+pub struct PhonepeSyncRequest {
+    #[serde(skip)]
+    pub merchant_transaction_id: String,
+    #[serde(skip)]
+    pub checksum: String,
+}
+
 // ===== RESPONSE STRUCTURES =====
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeErrorResponse {
+    pub success: bool,
+    pub code: String,
+    #[serde(default = "default_error_message")]
+    pub message: String,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PhonepePaymentsResponse {
@@ -97,6 +117,20 @@ pub struct PhonepePaymentsResponse {
     pub code: String,
     pub message: String,
     pub data: Option<PhonepeResponseData>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeSyncResponse {
+    pub success: bool,
+    pub code: String,
+    #[serde(default = "default_error_message")]
+    pub message: String,
+    #[serde(default)]
+    pub data: Option<PhonepeSyncResponseData>,
+}
+
+fn default_error_message() -> String {
+    "Payment sync failed".to_string()
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -124,6 +158,27 @@ pub struct PhonepeInstrumentResponse {
     intent_url: Option<String>,
     #[serde(rename = "qrData", skip_serializing_if = "Option::is_none")]
     qr_data: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PhonepeSyncResponseData {
+    #[serde(rename = "merchantId", skip_serializing_if = "Option::is_none")]
+    merchant_id: Option<String>,
+    #[serde(
+        rename = "merchantTransactionId",
+        skip_serializing_if = "Option::is_none"
+    )]
+    merchant_transaction_id: Option<String>,
+    #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
+    transaction_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    amount: Option<MinorUnit>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    state: Option<String>,
+    #[serde(rename = "responseCode", skip_serializing_if = "Option::is_none")]
+    response_code: Option<String>,
+    #[serde(rename = "paymentInstrument", skip_serializing_if = "Option::is_none")]
+    payment_instrument: Option<serde_json::Value>,
 }
 
 // ===== REQUEST BUILDING =====
@@ -523,4 +578,220 @@ fn generate_phonepe_checksum(
         constants::CHECKSUM_SEPARATOR,
         key_index
     ))
+}
+
+// ===== SYNC REQUEST BUILDING =====
+
+impl
+    TryFrom<
+        crate::connectors::phonepe::PhonepeRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for PhonepeSyncRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        wrapper: crate::connectors::phonepe::PhonepeRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Self::try_from(&PhonepeRouterData {
+            amount: wrapper.router_data.request.amount,
+            router_data: &wrapper.router_data,
+            amount_converter: &common_utils::types::MinorUnitForConnector,
+        })
+    }
+}
+
+impl
+    TryFrom<
+        &PhonepeRouterData<
+            &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for PhonepeSyncRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: &PhonepeRouterData<
+            &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = item.router_data;
+        let auth: PhonepeAuthType = (&router_data.connector_auth_type).try_into()?;
+
+        let merchant_transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+        // Generate checksum for status API
+        let api_path = format!(
+            "/{}/{}/{}",
+            constants::API_STATUS_ENDPOINT,
+            auth.merchant_id.peek(),
+            merchant_transaction_id
+        );
+        let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            merchant_transaction_id,
+            checksum,
+        })
+    }
+}
+
+// ===== SYNC RESPONSE HANDLING =====
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            PhonepeSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        item: ResponseRouterData<
+            PhonepeSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = &item.response;
+
+        if response.success {
+            if let Some(data) = &response.data {
+                // Check if we have required fields for a successful transaction
+                if let (Some(merchant_transaction_id), Some(transaction_id)) =
+                    (&data.merchant_transaction_id, &data.transaction_id)
+                {
+                    // Map PhonePe response codes to payment statuses based on documentation
+                    let status = match response.code.as_str() {
+                        "PAYMENT_SUCCESS" => common_enums::AttemptStatus::Charged,
+                        "PAYMENT_PENDING" => common_enums::AttemptStatus::Pending,
+                        "PAYMENT_ERROR" | "PAYMENT_DECLINED" | "TIMED_OUT" => {
+                            common_enums::AttemptStatus::Failure
+                        }
+                        "BAD_REQUEST" | "AUTHORIZATION_FAILED" | "TRANSACTION_NOT_FOUND" => {
+                            common_enums::AttemptStatus::Failure
+                        }
+                        "INTERNAL_SERVER_ERROR" => common_enums::AttemptStatus::Pending, // Requires retry per docs
+                        _ => common_enums::AttemptStatus::Pending, // Default to pending for unknown codes
+                    };
+
+                    Ok(Self {
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                merchant_transaction_id.clone(),
+                            ),
+                            redirection_data: Box::new(None),
+                            mandate_reference: Box::new(None),
+                            connector_metadata: None,
+                            network_txn_id: Some(transaction_id.clone()),
+                            connector_response_reference_id: Some(merchant_transaction_id.clone()),
+                            incremental_authorization_allowed: None,
+                            raw_connector_response: Some(
+                                serde_json::to_string(&item.response).unwrap_or_default(),
+                            ),
+                        }),
+                        resource_common_data: PaymentFlowData {
+                            status,
+                            ..item.router_data.resource_common_data
+                        },
+                        ..item.router_data
+                    })
+                } else {
+                    // Data object exists but missing required fields - treat as error
+                    Ok(Self {
+                        response: Err(domain_types::router_data::ErrorResponse {
+                            code: response.code.clone(),
+                            message: response.message.clone(),
+                            reason: None,
+                            status_code: item.http_code,
+                            attempt_status: Some(common_enums::AttemptStatus::Failure),
+                            connector_transaction_id: None,
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                            raw_connector_response: Some(
+                                serde_json::to_string(&item.response).unwrap_or_default(),
+                            ),
+                        }),
+                        ..item.router_data
+                    })
+                }
+            } else {
+                Err(errors::ConnectorError::ResponseDeserializationFailed.into())
+            }
+        } else {
+            // Error response from sync API - handle specific PhonePe error codes
+            let error_message = response.message.clone();
+            let error_code = response.code.clone();
+
+            // Map PhonePe error codes to attempt status
+            let attempt_status = get_phonepe_error_status(&error_code);
+
+            Ok(Self {
+                response: Err(domain_types::router_data::ErrorResponse {
+                    code: error_code,
+                    message: error_message,
+                    reason: None,
+                    status_code: item.http_code,
+                    attempt_status,
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                    raw_connector_response: Some(
+                        serde_json::to_string(&item.response).unwrap_or_default(),
+                    ),
+                }),
+                ..item.router_data
+            })
+        }
+    }
+}
+
+fn generate_phonepe_sync_checksum(
+    api_path: &str,
+    salt_key: &Secret<String>,
+    key_index: &str,
+) -> Result<String, Error> {
+    // PhonePe sync checksum algorithm: SHA256(apiPath + saltKey) + "###" + keyIndex
+    let checksum_input = format!("{}{}", api_path, salt_key.peek());
+
+    let sha256 = crypto::Sha256;
+    let hash_bytes = sha256
+        .generate_digest(checksum_input.as_bytes())
+        .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+    let hash = hash_bytes.iter().fold(String::new(), |mut acc, byte| {
+        use std::fmt::Write;
+        write!(&mut acc, "{byte:02x}").unwrap();
+        acc
+    });
+
+    // Format: hash###keyIndex
+    Ok(format!(
+        "{}{}{}",
+        hash,
+        constants::CHECKSUM_SEPARATOR,
+        key_index
+    ))
+}
+
+pub fn get_phonepe_error_status(error_code: &str) -> Option<common_enums::AttemptStatus> {
+    match error_code {
+        "TRANSACTION_NOT_FOUND" => Some(common_enums::AttemptStatus::Failure),
+        "401" => Some(common_enums::AttemptStatus::AuthenticationFailed),
+        "400" | "BAD_REQUEST" => Some(common_enums::AttemptStatus::Failure),
+        "PAYMENT_ERROR" | "PAYMENT_DECLINED" | "TIMED_OUT" => {
+            Some(common_enums::AttemptStatus::Failure)
+        }
+        "AUTHORIZATION_FAILED" => Some(common_enums::AttemptStatus::AuthenticationFailed),
+        _ => None,
+    }
 }
