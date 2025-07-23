@@ -688,8 +688,8 @@ impl
                             resource_id: ResponseId::ConnectorTransactionId(
                                 merchant_transaction_id.clone(),
                             ),
-                            redirection_data: Box::new(None),
-                            mandate_reference: Box::new(None),
+                            redirection_data: None,
+                            mandate_reference: None,
                             connector_metadata: None,
                             network_txn_id: Some(transaction_id.clone()),
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
@@ -699,7 +699,7 @@ impl
                             ),
                         }),
                         resource_common_data: PaymentFlowData {
-                            status,
+                            status: domain_types::connector_types::Status::Attempt(status),
                             ..item.router_data.resource_common_data
                         },
                         ..item.router_data
