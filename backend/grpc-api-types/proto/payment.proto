@@ -1429,7 +1429,6 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
-  optional bool all_keys_required = 9; // Indicates if all keys are required
 }
 
 // Response message for repeat payment operation.
