@@ -2,6 +2,7 @@
 
 // ===== API ENDPOINTS =====
 pub const API_PAY_ENDPOINT: &str = "pg/v1/pay";
+pub const API_STATUS_ENDPOINT: &str = "pg/v1/status";
 
 // ===== UPI INSTRUMENT TYPES =====
 pub const UPI_INTENT: &str = "UPI_INTENT";
