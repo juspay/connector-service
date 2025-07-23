@@ -231,7 +231,6 @@ impl ConnectorCommon for Phonepe {
             let attempt_status = phonepe::get_phonepe_error_status(&error_response.code);
             (error_response.message, error_response.code, attempt_status)
         } else {
-            // Handle raw responses or unparseable responses
             let raw_response = String::from_utf8_lossy(&res.response);
             (
                 "Unknown PhonePe error".to_string(),
