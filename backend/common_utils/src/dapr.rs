@@ -290,9 +290,7 @@ pub fn create_event_data(event_data: ConnectorEventData) -> EulerAuditEvent {
     let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
     let request_time = now.to_rfc3339();
 
-    let hostname = std::env::var("HOSTNAME")
-        .or_else(|_| std::env::var("COMPUTERNAME"))
-        .unwrap_or_else(|_| "connector-service".to_string());
+    let hostname = "connector-service".to_string();
 
     let message_number = "1".to_string();
     let api_tag = event_data.flow_name.to_api_tag();

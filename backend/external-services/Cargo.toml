@@ -4,9 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dapr = "0.12.0"
-anyhow = "1.0"
-
 error-stack = "0.4.1"
 serde = {version = "1.0.189" ,features = ["derive"]}
 thiserror = "1.0.49"
