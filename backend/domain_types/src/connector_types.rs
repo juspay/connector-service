@@ -1032,6 +1032,7 @@ pub struct RefundFlowData {
     pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
+    pub connector_request_reference_id: String,
     pub raw_connector_response: Option<String>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
@@ -1397,6 +1398,7 @@ pub struct DisputeFlowData {
     pub connector_dispute_id: String,
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
+    pub connector_request_reference_id: String,
     pub raw_connector_response: Option<String>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
