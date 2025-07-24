@@ -300,12 +300,19 @@ impl<
         // For UPI Intent, add device context with proper OS detection
         let device_context = match &router_data.request.payment_method_data {
             PaymentMethodData::Upi(UpiData::UpiIntent(_)) => {
-                let device_os = router_data
+                let device_os = match router_data
                     .request
                     .browser_info
                     .as_ref()
                     .and_then(|info| info.os_type.clone())
-                    .unwrap_or_else(|| constants::DEFAULT_DEVICE_OS.to_string());
+                    .unwrap_or_else(|| constants::DEFAULT_DEVICE_OS.to_string())
+                    .to_uppercase()
+                    .as_str()
+                {
+                    "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
+                    "ANDROID" => "ANDROID".to_string(),
+                    _ => "ANDROID".to_string(), // Default to ANDROID for unknown OS
+                };
 
                 Some(PhonepeDeviceContext {
                     device_os: Some(device_os),
