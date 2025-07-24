@@ -13,6 +13,9 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
+// use base64::engine::Engine;
+use crate::shared_metrics as metrics;
+use common_utils::dapr::{emit_event, EventStage};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -23,9 +26,6 @@ use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tracing::field::Empty;
-
-// use base64::engine::Engine;
-use crate::shared_metrics as metrics;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
@@ -52,6 +52,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     all_keys_required: Option<bool>,
     connector_name: &str,
     service_name: &str,
+    flow_name: common_utils::dapr::FlowName,
 ) -> CustomResult<
     RouterDataV2<F, ResourceCommonData, Req, Resp>,
     domain_types::errors::ConnectorError,
@@ -103,10 +104,24 @@ where
         };
         tracing::info!(request=?masked_request, "request of connector");
         tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
+
         masked_request
     });
     let result = match connector_request {
         Some(request) => {
+            let ref_id = if let Some(RequestContent::Json(payload)) = &request.body {
+                if let Ok(json_value) = serde_json::to_value(&**payload) {
+                    json_value
+                        .get("reference")
+                        .and_then(|v| v.as_str())
+                        .map(String::from)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
             let url = request.url.clone();
             let method = request.method;
             metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
@@ -132,6 +147,209 @@ where
                 .with_label_values(&[&method.to_string(), service_name, connector_name])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
+
+            let ref_id_clone = ref_id.clone();
+
+            if let Some(ref_id) = ref_id_clone {
+                match &response {
+                    Ok(Ok(body)) => {
+                        let connector_txn_id = if let Ok(json_value) =
+                            serde_json::from_slice::<serde_json::Value>(&body.response)
+                        {
+                            json_value
+                                .get("id")
+                                .and_then(|v| v.as_str())
+                                .map(String::from)
+                                .or_else(|| {
+                                    json_value
+                                        .get("transaction_id")
+                                        .and_then(|v| v.as_str())
+                                        .map(String::from)
+                                })
+                        } else {
+                            None
+                        };
+
+                        let res_body =
+                            serde_json::from_slice::<serde_json::Value>(&body.response).ok();
+
+                        let res_headers = body.headers.as_ref().map(|headers| {
+                            serde_json::Value::Object(headers.iter().fold(
+                                serde_json::Map::new(),
+                                |mut acc, (left, right)| {
+                                    if let Ok(x) = right.to_str() {
+                                        acc.insert(
+                                            left.as_str().to_string(),
+                                            serde_json::Value::String(x.to_string()),
+                                        );
+                                    }
+                                    acc
+                                },
+                            ))
+                        });
+
+                        let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
+                        let status_code = body.status_code;
+
+                        // Emit success response event
+                        let connector_name_clone = connector_name.to_string();
+                        let url_clone = url.clone();
+                        let flow_name_clone = flow_name;
+                        let ref_id_for_event = format!("req_{ref_id}");
+                        let final_connector_txn_id = connector_txn_id.or(Some(ref_id.clone()));
+
+                        tokio::spawn(async move {
+                            let result = emit_event(
+                                flow_name_clone,
+                                &connector_name_clone,
+                                EventStage::ResponseReceived,
+                                &url_clone,
+                                Some(ref_id_for_event),
+                                final_connector_txn_id,
+                                None,
+                                res_body,
+                                None,
+                                res_headers,
+                                Some(latency),
+                                Some(status_code),
+                                None,
+                                None,
+                            )
+                            .await;
+
+                            match result {
+                                Ok(_) => tracing::info!(
+                                    "Successfully published outgoing response event for {}",
+                                    connector_name_clone
+                                ),
+                                Err(e) => tracing::error!(
+                                    "Failed to publish outgoing response event: {:?}",
+                                    e
+                                ),
+                            }
+                        });
+                    }
+                    Ok(Err(error_body)) => {
+                        let error_res_body =
+                            serde_json::from_slice::<serde_json::Value>(&error_body.response).ok();
+
+                        let res_headers = error_body.headers.as_ref().map(|headers| {
+                            serde_json::Value::Object(headers.iter().fold(
+                                serde_json::Map::new(),
+                                |mut acc, (left, right)| {
+                                    if let Ok(x) = right.to_str() {
+                                        acc.insert(
+                                            left.as_str().to_string(),
+                                            serde_json::Value::String(x.to_string()),
+                                        );
+                                    }
+                                    acc
+                                },
+                            ))
+                        });
+
+                        let latency = external_service_elapsed as u64 * 1000;
+                        let status_code = error_body.status_code;
+
+                        let error_code = if let Some(json_body) = &error_res_body {
+                            json_body
+                                .get("error_code")
+                                .or_else(|| json_body.get("code"))
+                                .and_then(|v| v.as_str())
+                                .map(String::from)
+                        } else {
+                            None
+                        };
+
+                        let error_reason = if let Some(json_body) = &error_res_body {
+                            json_body
+                                .get("message")
+                                .or_else(|| json_body.get("error_message"))
+                                .and_then(|v| v.as_str())
+                                .map(String::from)
+                        } else {
+                            None
+                        };
+
+                        // Emit error response event
+                        let connector_name_clone = connector_name.to_string();
+                        let url_clone = url.clone();
+                        let flow_name_clone = flow_name;
+                        let ref_id_for_event = format!("req_{ref_id}");
+                        let ref_id_clone = ref_id.clone();
+
+                        tokio::spawn(async move {
+                            let result = emit_event(
+                                flow_name_clone,
+                                &connector_name_clone,
+                                EventStage::Error,
+                                &url_clone,
+                                Some(ref_id_for_event),
+                                Some(ref_id_clone),
+                                None,
+                                error_res_body,
+                                None,
+                                res_headers,
+                                Some(latency),
+                                Some(status_code),
+                                error_code,
+                                error_reason,
+                            )
+                            .await;
+
+                            match result {
+                                Ok(_) => tracing::info!(
+                                    "Successfully published outgoing error response event for {}",
+                                    connector_name_clone
+                                ),
+                                Err(e) => tracing::error!(
+                                    "Failed to publish outgoing error response event: {:?}",
+                                    e
+                                ),
+                            }
+                        });
+                    }
+                    Err(_) => {
+                        // Emit network error event
+                        let connector_name_clone = connector_name.to_string();
+                        let url_clone = url.clone();
+                        let flow_name_clone = flow_name;
+                        let ref_id_for_event = format!("req_{ref_id}");
+                        let ref_id_clone = ref_id.clone();
+
+                        tokio::spawn(async move {
+                            let result = emit_event(
+                                flow_name_clone,
+                                &connector_name_clone,
+                                EventStage::Error,
+                                &url_clone,
+                                Some(ref_id_for_event),
+                                Some(ref_id_clone),
+                                None,
+                                None,
+                                None,
+                                None,
+                                None,
+                                None,
+                                Some("NETWORK_ERROR".to_string()),
+                                Some("Failed to get response from connector".to_string()),
+                            )
+                            .await;
+
+                            match result {
+                                Ok(_) => tracing::info!(
+                                    "Successfully published outgoing network error event for {}",
+                                    connector_name_clone
+                                ),
+                                Err(e) => tracing::error!(
+                                    "Failed to publish outgoing network error event: {:?}",
+                                    e
+                                ),
+                            }
+                        });
+                    }
+                }
+            }
 
             match response {
                 Ok(body) => {
