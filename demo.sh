@@ -201,7 +201,7 @@ echo -e "${YELLOW}Using payment ID: $PAYMENT_ID${NC}"
 
 RESPONSE=$(grpcurl -plaintext \
   -H "x-tenant-id: test_tenant" \
-  -H "x-request-id: req_$(date +%s)" \
+  -H "x-request-id: $(date +%s)" \
   -H "x-connector: checkout" \
   -H "x-merchant-id: test_merchant" \
   -H "x-auth: signature-key" \
@@ -301,7 +301,7 @@ echo -e "${YELLOW}Using refund ID: $REFUND_ID${NC}"
 
 REFUND_RESPONSE=$(grpcurl -plaintext \
   -H "x-tenant-id: test_tenant" \
-  -H "x-request-id: refund_req_$(date +%s)" \
+  -H "x-request-id: refund_$(date +%s)" \
   -H "x-connector: checkout" \
   -H "x-merchant-id: test_merchant" \
   -H "x-auth: signature-key" \

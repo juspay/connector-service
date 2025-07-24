@@ -1614,7 +1614,7 @@ impl
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (_value, connectors): (
+        (value, connectors): (
             grpc_api_types::payments::RefundServiceGetRequest,
             Connectors,
         ),
@@ -1623,6 +1623,14 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
             raw_connector_response: None,
         })
     }
@@ -1646,6 +1654,14 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
             raw_connector_response: None,
         })
     }
@@ -1712,6 +1728,14 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
             connectors,
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
             raw_connector_response: None,
         })
     }
@@ -1780,6 +1804,14 @@ impl
             connectors,
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
             raw_connector_response: None,
         })
     }
@@ -2784,6 +2816,14 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
             connectors,
             connector_dispute_id: value.dispute_id,
             defense_reason_code: Some(value.reason_code.unwrap_or_default()),
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
             raw_connector_response: None,
         })
     }
