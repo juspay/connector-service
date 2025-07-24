@@ -8,15 +8,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -55,6 +56,7 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
+impl connector_types::PaymentSessionToken for Fiserv {}
 impl connector_types::ConnectorServiceTrait for Fiserv {}
 impl connector_types::PaymentAuthorizeV2 for Fiserv {}
 impl connector_types::PaymentSyncV2 for Fiserv {}
@@ -582,9 +584,15 @@ impl
 {
 }
 
-impl ConnectorSpecifications for Fiserv {}
-
-// We already have an implementation for ValidationTrait above
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiserv
+{
+}
 
 impl
     interfaces::verification::SourceVerification<
@@ -596,7 +604,21 @@ impl
 {
 }
 
+impl ConnectorSpecifications for Fiserv {}
+
+// We already have an implementation for ValidationTrait above
+
 impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Fiserv
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiserv
 {
 }
