@@ -1239,6 +1239,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
             http_code,
             Operation::Authorize,
             router_data.request.capture_method,
+            router_data
+                .resource_common_data
+                .raw_connector_response
+                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1276,6 +1280,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
             http_code,
             Operation::Capture,
             None,
+            router_data
+                .resource_common_data
+                .raw_connector_response
+                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1312,6 +1320,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
             http_code,
             Operation::Void,
             None,
+            router_data
+                .resource_common_data
+                .raw_connector_response
+                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1350,6 +1362,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
             http_code,
             Operation::Authorize,
             Some(enums::CaptureMethod::Automatic),
+            router_data
+                .resource_common_data
+                .raw_connector_response
+                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1383,6 +1399,10 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
 
         let transaction_response = &response.transaction_response;
         let refund_status = enums::RefundStatus::from(transaction_response.response_code.clone());
+        let raw_connector_response = router_data
+            .resource_common_data
+            .raw_connector_response
+            .clone();
 
         let error = transaction_response.errors.clone().and_then(|errors| {
             errors.first().map(|error| ErrorResponse {
@@ -1395,7 +1415,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
+                raw_connector_response: raw_connector_response.clone(),
             })
         });
 
@@ -1413,7 +1433,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
             None => Ok(RefundsResponseData {
                 connector_refund_id: transaction_response.transaction_id.clone(),
                 refund_status,
-                raw_connector_response: None,
+                raw_connector_response,
             }),
         };
 
@@ -1437,6 +1457,10 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
 
         // No need to transform the response since we're using the direct structure
         // Use the clean approach with the From trait implementation
+        let raw_connector_response = router_data
+            .resource_common_data
+            .raw_connector_response
+            .clone();
         match response.transaction {
             Some(transaction) => {
                 let payment_status = AttemptStatus::from(transaction.transaction_status);
@@ -1460,7 +1484,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
-                    raw_connector_response: None,
+                    raw_connector_response,
                 });
 
                 Ok(new_router_data)
@@ -1492,7 +1516,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
+                    raw_connector_response: raw_connector_response.clone(),
                 };
 
                 // Update router data with status and error response
@@ -1569,6 +1593,7 @@ fn create_error_response(
     error_message: String,
     status: AttemptStatus,
     connector_transaction_id: Option<String>,
+    raw_connector_response: Option<String>,
 ) -> ErrorResponse {
     ErrorResponse {
         status_code: http_status_code,
@@ -1580,7 +1605,7 @@ fn create_error_response(
         network_decline_code: None,
         network_advice_code: None,
         network_error_message: None,
-        raw_connector_response: None,
+        raw_connector_response,
     }
 }
 
@@ -1716,6 +1741,7 @@ pub fn convert_to_payments_response_data_or_error(
     http_status_code: u16,
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
+    raw_connector_response: Option<String>,
 ) -> Result<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), HsInterfacesConnectorError>
 {
     let status = get_hs_status(response, http_status_code, operation, capture_method);
@@ -1744,7 +1770,7 @@ pub fn convert_to_payments_response_data_or_error(
                     .map(|s| s.peek().clone()),
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                raw_connector_response: raw_connector_response.clone(),
             })
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
@@ -1756,6 +1782,7 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 Some(trans_res.transaction_id.clone()),
+                raw_connector_response.clone(),
             ))
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) => {
@@ -1766,6 +1793,7 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 None,
+                raw_connector_response.clone(),
             ))
         }
         None if status == AttemptStatus::Voided && operation == Operation::Void => {
@@ -1777,7 +1805,7 @@ pub fn convert_to_payments_response_data_or_error(
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                raw_connector_response: raw_connector_response.clone(),
             })
         }
         None => {
@@ -1788,6 +1816,7 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 None,
+                raw_connector_response.clone(),
             ))
         }
     };
@@ -1904,6 +1933,10 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
         match response.transaction {
             Some(transaction) => {
                 let refund_status = enums::RefundStatus::from(transaction.transaction_status);
+                let raw_connector_response = router_data
+                    .resource_common_data
+                    .raw_connector_response
+                    .clone();
 
                 // Create a new RouterDataV2 with updated fields
                 let mut new_router_data = router_data;
@@ -1917,7 +1950,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                 new_router_data.response = Ok(RefundsResponseData {
                     connector_refund_id: transaction.transaction_id,
                     refund_status,
-                    raw_connector_response: None,
+                    raw_connector_response,
                 });
 
                 Ok(new_router_data)
@@ -1944,7 +1977,10 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
+                    raw_connector_response: router_data
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
                 };
 
                 // Update router data with error response
@@ -2061,6 +2097,10 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
             MandateStatus::MandateFailed
         };
 
+        let raw_connector_response = router_data
+            .resource_common_data
+            .raw_connector_response
+            .clone();
         let mut new_router_data = router_data;
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.status = Status::Mandate(status);
@@ -2087,7 +2127,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
+                raw_connector_response,
             });
         } else {
             let error_response = ErrorResponse {
@@ -2110,7 +2150,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
+                raw_connector_response: raw_connector_response.clone(),
             };
             new_router_data.response = Err(error_response);
         }
