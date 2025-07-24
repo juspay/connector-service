@@ -645,6 +645,8 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
                 let mut response_data = data.clone();
                 response_data.response = Ok(payments_response);
+                // Set status to AuthenticationPending for bank form redirect (user needs to complete authentication)
+                response_data.resource_common_data.status = domain_types::connector_types::Status::Attempt(AttemptStatus::AuthenticationPending);
                 return Ok(response_data);
             }
         }
@@ -718,6 +720,8 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
                             let mut response_data = data.clone();
                             response_data.response = Ok(payments_response);
+                            // Set status to AuthenticationPending for UPI Intent redirect (user needs to complete authentication)
+                            response_data.resource_common_data.status = domain_types::connector_types::Status::Attempt(AttemptStatus::AuthenticationPending);
                             Ok(response_data)
                         } else {
                             Err(errors::ConnectorError::ResponseHandlingFailed.into())
@@ -760,6 +764,8 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
                             let mut response_data = data.clone();
                             response_data.response = Ok(payments_response);
+                            // Set status to AuthenticationPending for UPI Intent redirect (user needs to complete authentication)
+                            response_data.resource_common_data.status = domain_types::connector_types::Status::Attempt(AttemptStatus::AuthenticationPending);
                             Ok(response_data)
                         } else {
                             Err(errors::ConnectorError::ResponseHandlingFailed.into())
