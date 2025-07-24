@@ -1,12 +1,11 @@
 use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
-use common_enums::{self, enums, AttemptStatus, MandateStatus, RefundStatus};
+use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{
     consts,
     ext_traits::{OptionExt, ValueExt},
     pii::Email,
 };
-use domain_types::connector_types::Status;
 use domain_types::errors::ConnectorError;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
@@ -1251,7 +1250,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1292,7 +1291,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1332,7 +1331,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1374,7 +1373,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1470,7 +1469,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
 
                 // Update the status in resource_common_data
                 let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = Status::Attempt(payment_status);
+                resource_common_data.status = payment_status;
                 new_router_data.resource_common_data = resource_common_data;
 
                 // Set the response
@@ -1522,7 +1521,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                 // Update router data with status and error response
                 let mut new_router_data = router_data;
                 let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = Status::Attempt(status);
+                resource_common_data.status = status;
                 new_router_data.resource_common_data = resource_common_data;
                 new_router_data.response = Err(error_response);
 
@@ -2092,9 +2091,9 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
         } = value;
 
         let status = if response.messages.result_code == ResultCode::Ok {
-            MandateStatus::MandateEstablished // Use MandateCreated if you have it
+            AttemptStatus::MandateEstablished
         } else {
-            MandateStatus::MandateFailed
+            AttemptStatus::MandateFailed
         };
 
         let raw_connector_response = router_data
@@ -2103,7 +2102,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
             .clone();
         let mut new_router_data = router_data;
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Mandate(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         if let Some(profile_id) = response.customer_profile_id.clone() {

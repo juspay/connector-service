@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, MandateStatus,
-    PaymentMethod, PaymentMethodType,
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
+    PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -211,12 +211,6 @@ impl PaymentsSyncData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Status {
-    Attempt(AttemptStatus),
-    Mandate(MandateStatus),
-}
-
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
     pub merchant_id: common_utils::id_type::MerchantId,
@@ -224,7 +218,7 @@ pub struct PaymentFlowData {
     pub connector_customer: Option<String>,
     pub payment_id: String,
     pub attempt_id: String,
-    pub status: Status,
+    pub status: AttemptStatus,
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
