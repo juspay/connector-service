@@ -198,6 +198,21 @@ pub struct PaytmInitiateTxnResponse {
     pub body: PaytmResBodyTypes,
 }
 
+// Alternative session token error response structure
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmSessionTokenErrorResponse {
+    pub head: PaytmRespHead,
+    pub body: PaytmSessionTokenErrorBody,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmSessionTokenErrorBody {
+    #[serde(rename = "extraParamsMap")]
+    pub extra_params_map: Option<serde_json::Value>,  // This field must be present (even if null) to distinguish from other types
+    #[serde(rename = "resultInfo")]
+    pub result_info: PaytmResultInfo,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum PaytmResBodyTypes {
@@ -250,6 +265,137 @@ pub struct PaytmErrorResponse {
     pub error_description: Option<String>,
     #[serde(rename = "transactionId")]
     pub transaction_id: Option<String>,
+}
+
+// Alternative error response structure for callback URL format
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmCallbackErrorResponse {
+    pub head: PaytmRespHead,
+    pub body: PaytmCallbackErrorBody,
+}
+
+// Success transaction response structure
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmSuccessTransactionResponse {
+    pub head: PaytmRespHead,
+    pub body: PaytmSuccessTransactionBody,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmSuccessTransactionBody {
+    #[serde(rename = "resultInfo")]
+    pub result_info: PaytmResultInfo,
+    #[serde(rename = "txnInfo")]
+    pub txn_info: PaytmTxnInfo,
+    #[serde(rename = "callBackUrl")]
+    pub callback_url: Option<String>,
+}
+
+// Bank form redirect response structure
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmBankFormResponse {
+    pub head: PaytmRespHead,
+    pub body: PaytmBankFormBody,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmBankFormBody {
+    #[serde(rename = "resultInfo")]
+    pub result_info: PaytmResultInfo,
+    #[serde(rename = "bankForm")]
+    pub bank_form: PaytmBankForm,
+    #[serde(rename = "riskContent")]
+    pub risk_content: Option<PaytmRiskContent>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmBankForm {
+    #[serde(rename = "pageType")]
+    pub page_type: String,
+    #[serde(rename = "isForceResendOtp")]
+    pub is_force_resend_otp: bool,
+    #[serde(rename = "redirectForm")]
+    pub redirect_form: PaytmRedirectForm,
+    #[serde(rename = "upiDirectForm")]
+    pub upi_direct_form: Option<PaytmUpiDirectForm>,
+    #[serde(rename = "displayField")]
+    pub display_field: Option<PaytmDisplayField>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmRedirectForm {
+    #[serde(rename = "actionUrl")]
+    pub action_url: String,
+    pub method: String,
+    #[serde(rename = "type")]
+    pub form_type: String,
+    pub headers: std::collections::HashMap<String, String>,
+    pub content: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmUpiDirectForm {
+    #[serde(rename = "actionUrl")]
+    pub action_url: String,
+    pub method: String,
+    #[serde(rename = "type")]
+    pub form_type: String,
+    pub headers: std::collections::HashMap<String, String>,
+    pub content: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmDisplayField {
+    #[serde(rename = "statusTimeout")]
+    pub status_timeout: String,
+    #[serde(rename = "statusInterval")]
+    pub status_interval: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmRiskContent {
+    #[serde(rename = "eventLinkId")]
+    pub event_link_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmCallbackErrorBody {
+    #[serde(rename = "resultInfo")]
+    pub result_info: PaytmResultInfo,
+    #[serde(rename = "txnInfo")]
+    pub txn_info: PaytmTxnInfo,
+    #[serde(rename = "callBackUrl")]
+    pub callback_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PaytmTxnInfo {
+    #[serde(rename = "BANKTXNID")]
+    pub bank_txn_id: Option<String>,
+    #[serde(rename = "CHECKSUMHASH")]
+    pub checksum_hash: Option<String>,
+    #[serde(rename = "CURRENCY")]
+    pub currency: Option<String>,
+    #[serde(rename = "GATEWAYNAME")]
+    pub gateway_name: Option<String>,
+    #[serde(rename = "MID")]
+    pub mid: Option<String>,
+    #[serde(rename = "ORDERID")]
+    pub order_id: Option<String>,
+    #[serde(rename = "PAYMENTMODE")]
+    pub payment_mode: Option<String>,
+    #[serde(rename = "RESPCODE")]
+    pub resp_code: Option<String>,
+    #[serde(rename = "RESPMSG")]
+    pub resp_msg: Option<String>,
+    #[serde(rename = "STATUS")]
+    pub status: Option<String>,
+    #[serde(rename = "TXNAMOUNT")]
+    pub txn_amount: Option<String>,
+    #[serde(rename = "TXNDATE")]
+    pub txn_date: Option<String>,
+    #[serde(rename = "TXNID")]
+    pub txn_id: Option<String>,
 }
 
 // Authorize flow request structures
@@ -701,7 +847,10 @@ impl PaytmInitiateTxnRequest {
             },
             enable_payment_mode: vec![PaytmEnableMethod {
                 mode: constants::PAYMENT_MODE_UPI.to_string(),
-                channels: Some(vec![constants::UPI_CHANNEL_UPIPUSH.to_string()]),
+                channels: Some(vec![
+                    constants::UPI_CHANNEL_UPIPUSH.to_string(),
+                    constants::PAYMENT_MODE_UPI.to_string(),
+                ]),
             }],
             callback_url: item
                 .return_url
@@ -1019,17 +1168,21 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     fn try_from(
         item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
+        // Use connector transaction ID if available, otherwise fall back to payment ID
+        let transaction_id = item
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .unwrap_or_else(|_| item.resource_common_data.connector_request_reference_id.clone());
+
         Ok(Self {
-            payment_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(),
+            payment_id: transaction_id,
             connector_transaction_id: item
                 .request
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .ok(),
-            txn_type: None, // Can be enhanced later to support specific transaction types
+            txn_type: None, // Set to None as per requirement
         })
     }
 }
