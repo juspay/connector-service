@@ -450,6 +450,12 @@ impl<
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         }),
+                        resource_common_data: PaymentFlowData {
+                            status: domain_types::connector_types::Status::Attempt(
+                                common_enums::AttemptStatus::AuthenticationPending,
+                            ),
+                            ..item.router_data.resource_common_data
+                        },
                         ..item.router_data
                     })
                 } else {
