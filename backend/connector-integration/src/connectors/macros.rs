@@ -28,7 +28,7 @@ impl<F, FCD, Req, Resp> FlowTypes for &RouterDataV2<F, FCD, Req, Resp> {
 }
 
 pub trait GetFormData {
-    fn get_form_data(&self) -> reqwest::multipart::Form;
+    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError>;
 }
 
 pub struct NoRequestBody;
@@ -131,7 +131,8 @@ macro_rules! expand_fn_get_request_body {
                     router_data: req.clone(),
                 };
                 let request = bridge.request_body(input_data)?;
-                let form_data = <$curl_req as GetFormData>::get_form_data(&request);
+                let form_data = <$curl_req as GetFormData>::get_form_data(&request)
+                .change_context(errors::ConnectorError::ParsingFailed)?;
                 Ok(Some(macro_types::RequestContent::FormData(form_data)))
             }
         }

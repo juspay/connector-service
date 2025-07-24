@@ -313,6 +313,7 @@ pub async fn call_connector_api(
                             .change_context(ApiClientError::UrlEncodingFailed)?;
                         client.body(body).header("Content-Type", "application/xml")
                     }
+                    Some(RequestContent::FormData(form)) => client.multipart(form),
                     _ => client,
                 }
             }
