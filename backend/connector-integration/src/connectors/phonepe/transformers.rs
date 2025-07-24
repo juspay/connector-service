@@ -398,6 +398,12 @@ impl
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
                         }),
+                        resource_common_data: PaymentFlowData {
+                            status: domain_types::connector_types::Status::Attempt(
+                                common_enums::AttemptStatus::AuthenticationPending,
+                            ),
+                            ..item.router_data.resource_common_data
+                        },
                         ..item.router_data
                     })
                 } else {
