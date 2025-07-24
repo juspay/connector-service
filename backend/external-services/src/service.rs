@@ -13,6 +13,28 @@ use domain_types::{
     router_response_types::Response,
     types::Proxy,
 };
+
+pub trait ConnectorRequestReference {
+    fn get_connector_request_reference_id(&self) -> &str;
+}
+
+impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowData {
+    fn get_connector_request_reference_id(&self) -> &str {
+        &self.connector_request_reference_id
+    }
+}
+
+impl ConnectorRequestReference for domain_types::connector_types::RefundFlowData {
+    fn get_connector_request_reference_id(&self) -> &str {
+        &self.connector_request_reference_id
+    }
+}
+
+impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowData {
+    fn get_connector_request_reference_id(&self) -> &str {
+        &self.connector_request_reference_id
+    }
+}
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
 use common_utils::dapr::{emit_event, EventStage};
@@ -62,7 +84,7 @@ where
     T: FlowIntegrity,
     Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,
     Resp: Clone + 'static + std::fmt::Debug,
-    ResourceCommonData: Clone + 'static + RawConnectorResponse + ConnectorResponseHeaders,
+    ResourceCommonData: Clone + 'static + RawConnectorResponse + ConnectorResponseHeaders + ConnectorRequestReference,
 {
     let start = tokio::time::Instant::now();
     let connector_request = connector.build_request_v2(&router_data)?;
@@ -109,18 +131,12 @@ where
     });
     let result = match connector_request {
         Some(request) => {
-            let ref_id = if let Some(RequestContent::Json(payload)) = &request.body {
-                if let Ok(json_value) = serde_json::to_value(&**payload) {
-                    json_value
-                        .get("reference")
-                        .and_then(|v| v.as_str())
-                        .map(String::from)
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
+            let ref_id = Some(
+                router_data
+                    .resource_common_data
+                    .get_connector_request_reference_id()
+                    .to_string(),
+            );
 
             let url = request.url.clone();
             let method = request.method;
@@ -153,22 +169,7 @@ where
             if let Some(ref_id) = ref_id_clone {
                 match &response {
                     Ok(Ok(body)) => {
-                        let connector_txn_id = if let Ok(json_value) =
-                            serde_json::from_slice::<serde_json::Value>(&body.response)
-                        {
-                            json_value
-                                .get("id")
-                                .and_then(|v| v.as_str())
-                                .map(String::from)
-                                .or_else(|| {
-                                    json_value
-                                        .get("transaction_id")
-                                        .and_then(|v| v.as_str())
-                                        .map(String::from)
-                                })
-                        } else {
-                            None
-                        };
+                        let connector_txn_id = Some(ref_id.clone());
 
                         let res_body =
                             serde_json::from_slice::<serde_json::Value>(&body.response).ok();
@@ -195,7 +196,7 @@ where
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
-                        let ref_id_for_event = format!("req_{ref_id}");
+                        let ref_id_for_event = ref_id.clone();
                         let final_connector_txn_id = connector_txn_id.or(Some(ref_id.clone()));
 
                         tokio::spawn(async move {
@@ -275,7 +276,7 @@ where
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
-                        let ref_id_for_event = format!("req_{ref_id}");
+                        let ref_id_for_event = ref_id.clone();
                         let ref_id_clone = ref_id.clone();
 
                         tokio::spawn(async move {
@@ -314,7 +315,7 @@ where
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
-                        let ref_id_for_event = format!("req_{ref_id}");
+                        let ref_id_for_event = ref_id.clone();
                         let ref_id_clone = ref_id.clone();
 
                         tokio::spawn(async move {
