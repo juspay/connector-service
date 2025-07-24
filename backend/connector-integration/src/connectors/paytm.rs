@@ -110,6 +110,47 @@ impl ConnectorCommon for Paytm {
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
+        // First try to parse as session token error response format
+        if let Ok(session_error_response) = res.response.parse_struct::<paytm::PaytmSessionTokenErrorResponse>("PaytmSessionTokenErrorResponse") {
+            if let Some(event) = event_builder {
+                event.set_error_response_body(&session_error_response);
+            }
+
+            return Ok(domain_types::router_data::ErrorResponse {
+                code: session_error_response.body.result_info.result_code,
+                message: session_error_response.body.result_info.result_msg,
+                reason: None,
+                status_code: res.status_code,
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: None,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+            });
+        }
+
+        // Try to parse as callback error response format
+        if let Ok(callback_response) = res.response.parse_struct::<paytm::PaytmCallbackErrorResponse>("PaytmCallbackErrorResponse") {
+            if let Some(event) = event_builder {
+                event.set_error_response_body(&callback_response);
+            }
+
+            return Ok(domain_types::router_data::ErrorResponse {
+                code: callback_response.body.txn_info.resp_code.unwrap_or(callback_response.body.result_info.result_code),
+                message: callback_response.body.txn_info.resp_msg.unwrap_or(callback_response.body.result_info.result_msg),
+                reason: None,
+                status_code: res.status_code,
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: callback_response.body.txn_info.order_id,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+            });
+        }
+
+        // Fallback to original error response format
         let response: paytm::PaytmErrorResponse =
             res.response
                 .parse_struct("PaytmErrorResponse")
@@ -316,7 +357,7 @@ impl
             SessionTokenRequestData,
             SessionTokenResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        mut event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<
@@ -327,6 +368,48 @@ impl
         >,
         errors::ConnectorError,
     > {
+        // First check if this is a session token error response (even with 200 status)
+        if let Ok(session_error_response) = res.response.parse_struct::<paytm::PaytmSessionTokenErrorResponse>("PaytmSessionTokenErrorResponse") {
+            if let Some(event) = event_builder.as_mut() {
+                event.set_response_body(&session_error_response);
+            }
+
+            // Check if it's a failure response
+            if session_error_response.body.result_info.result_status == "F" {
+                // Return error response instead of generic error
+                let error_response = domain_types::router_data::ErrorResponse {
+                    code: session_error_response.body.result_info.result_code,
+                    message: session_error_response.body.result_info.result_msg,
+                    reason: None,
+                    status_code: res.status_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                    raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+                };
+
+                let mut response_data = data.clone();
+                response_data.response = Err(error_response);
+                return Ok(response_data);
+            }
+        }
+
+        // Check if this is a callback error response (even with 200 status)
+        if let Ok(callback_response) = res.response.parse_struct::<paytm::PaytmCallbackErrorResponse>("PaytmCallbackErrorResponse") {
+            if let Some(event) = event_builder.as_mut() {
+                event.set_response_body(&callback_response);
+            }
+
+            // Check if it's a failure response
+            if callback_response.body.result_info.result_status == "F" 
+                || callback_response.body.txn_info.status.as_ref().map_or(false, |s| s == "TXN_FAILURE") {
+                return Err(errors::ConnectorError::ResponseHandlingFailed.into());
+            }
+        }
+
+        // Try to parse as regular initiate transaction response
         let response: paytm::PaytmInitiateTxnResponse = res
             .response
             .parse_struct("PaytmInitiateTxnResponse")
@@ -349,11 +432,51 @@ impl
                     response_data.response = Ok(session_response);
                     Ok(response_data)
                 } else {
-                    Err(errors::ConnectorError::ResponseHandlingFailed.into())
+                    // For success body with failure status, check result status
+                    if success_body.result_info.result_status == "F" {
+                        let error_response = domain_types::router_data::ErrorResponse {
+                            code: success_body.result_info.result_code,
+                            message: success_body.result_info.result_msg,
+                            reason: None,
+                            status_code: res.status_code,
+                            attempt_status: Some(AttemptStatus::Failure),
+                            connector_transaction_id: None,
+                            network_decline_code: None,
+                            network_advice_code: None,
+                            network_error_message: None,
+                            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+                        };
+
+                        let mut response_data = data.clone();
+                        response_data.response = Err(error_response);
+                        Ok(response_data)
+                    } else {
+                        Err(errors::ConnectorError::ResponseHandlingFailed.into())
+                    }
                 }
             }
-            paytm::PaytmResBodyTypes::FailureBody(_) => {
-                Err(errors::ConnectorError::ResponseHandlingFailed.into())
+            paytm::PaytmResBodyTypes::FailureBody(failure_body) => {
+                // Handle regular failure body
+                if failure_body.result_info.result_status == "F" {
+                    let error_response = domain_types::router_data::ErrorResponse {
+                        code: failure_body.result_info.result_code,
+                        message: failure_body.result_info.result_msg,
+                        reason: None,
+                        status_code: res.status_code,
+                        attempt_status: Some(AttemptStatus::Failure),
+                        connector_transaction_id: None,
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                        raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+                    };
+
+                    let mut response_data = data.clone();
+                    response_data.response = Err(error_response);
+                    Ok(response_data)
+                } else {
+                    Err(errors::ConnectorError::ResponseHandlingFailed.into())
+                }
             }
         }
     }
@@ -447,12 +570,114 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
             PaymentsAuthorizeData,
             PaymentsResponseData,
         >,
-        event_builder: Option<&mut ConnectorEvent>,
+        mut event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<
         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         errors::ConnectorError,
     > {
+        // Check if this is a success transaction response
+        if let Ok(success_transaction_response) = res.response.parse_struct::<paytm::PaytmSuccessTransactionResponse>("PaytmSuccessTransactionResponse") {
+            if let Some(event) = event_builder.as_mut() {
+                event.set_response_body(&success_transaction_response);
+            }
+
+            // Check if it's a successful transaction
+            if success_transaction_response.body.result_info.result_status == "S" 
+                && success_transaction_response.body.txn_info.status.as_ref().map_or(false, |s| s == "TXN_SUCCESS") {
+                
+                let payments_response = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        success_transaction_response.body.txn_info.txn_id
+                            .clone()
+                            .unwrap_or_else(|| success_transaction_response.body.txn_info.order_id.clone().unwrap_or_default())
+                    ),
+                    redirection_data: None,
+                    connector_metadata: None,
+                    mandate_reference: None,
+                    network_txn_id: success_transaction_response.body.txn_info.bank_txn_id.clone(),
+                    connector_response_reference_id: success_transaction_response.body.txn_info.order_id.clone(),
+                    incremental_authorization_allowed: None,
+                    raw_connector_response: Some(
+                        String::from_utf8_lossy(&res.response).to_string(),
+                    ),
+                };
+
+                let mut response_data = data.clone();
+                response_data.response = Ok(payments_response);
+                return Ok(response_data);
+            }
+        }
+
+        // Check if this is a bank form redirect response
+        if let Ok(bank_form_response) = res.response.parse_struct::<paytm::PaytmBankFormResponse>("PaytmBankFormResponse") {
+            if let Some(event) = event_builder.as_mut() {
+                event.set_response_body(&bank_form_response);
+            }
+
+            // Check if it's a successful response
+            if bank_form_response.body.result_info.result_status == "S" 
+                && bank_form_response.body.result_info.result_code == constants::SUCCESS_CODE {
+                
+                let redirect_form = domain_types::router_response_types::RedirectForm::Form {
+                    endpoint: bank_form_response.body.bank_form.redirect_form.action_url.clone(),
+                    method: common_utils::request::Method::Post,
+                    form_fields: bank_form_response.body.bank_form.redirect_form.content.clone(),
+                };
+
+                let payments_response = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(
+                        bank_form_response.body.bank_form.redirect_form.content
+                            .get("orderId")
+                            .cloned()
+                            .unwrap_or_else(|| data.resource_common_data.connector_request_reference_id.clone())
+                    ),
+                    redirection_data: Some(Box::new(redirect_form)),
+                    connector_metadata: None,
+                    mandate_reference: None,
+                    network_txn_id: bank_form_response.body.bank_form.redirect_form.content.get("externalSrNo").cloned(),
+                    connector_response_reference_id: bank_form_response.body.bank_form.redirect_form.content.get("orderId").cloned(),
+                    incremental_authorization_allowed: None,
+                    raw_connector_response: Some(
+                        String::from_utf8_lossy(&res.response).to_string(),
+                    ),
+                };
+
+                let mut response_data = data.clone();
+                response_data.response = Ok(payments_response);
+                return Ok(response_data);
+            }
+        }
+
+        // Check if this is a callback error response (even with 200 status)
+        if let Ok(callback_response) = res.response.parse_struct::<paytm::PaytmCallbackErrorResponse>("PaytmCallbackErrorResponse") {
+            if let Some(event) = event_builder.as_mut() {
+                event.set_response_body(&callback_response);
+            }
+
+            // Check if it's a failure response
+            if callback_response.body.result_info.result_status == "F" 
+                || callback_response.body.txn_info.status.as_ref().map_or(false, |s| s == "TXN_FAILURE") {
+                
+                let error_response = domain_types::router_data::ErrorResponse {
+                    code: callback_response.body.txn_info.resp_code.unwrap_or(callback_response.body.result_info.result_code),
+                    message: callback_response.body.txn_info.resp_msg.unwrap_or(callback_response.body.result_info.result_msg),
+                    reason: None,
+                    status_code: res.status_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: callback_response.body.txn_info.order_id,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                    raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+                };
+
+                let mut response_data = data.clone();
+                response_data.response = Err(error_response);
+                return Ok(response_data);
+            }
+        }
+
         let upi_flow = paytm::determine_upi_flow(&data.request.payment_method_data)?;
 
         match upi_flow {
@@ -587,7 +812,6 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.base_url(&req.resource_common_data.connectors);
-
         Ok(format!("{base_url}/v3/order/status"))
     }
 
@@ -624,9 +848,34 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
 
         match response.body {
             paytm::PaytmTransactionStatusRespBodyTypes::SuccessBody(success_resp) => {
-                let _attempt_status = paytm::map_paytm_status_to_attempt_status(
-                    &success_resp.result_info.result_code,
-                );
+                // Check if this is actually a failure based on result status
+                if success_resp.result_info.result_status == "TXN_FAILURE" || success_resp.result_info.result_status == "F" {
+                    // Return error response for failure status
+                    let error_response = domain_types::router_data::ErrorResponse {
+                        code: success_resp.result_info.result_code,
+                        message: success_resp.result_info.result_msg,
+                        reason: None,
+                        status_code: res.status_code,
+                        attempt_status: Some(AttemptStatus::Failure),
+                        connector_transaction_id: success_resp.order_id.clone(),
+                        network_decline_code: None,
+                        network_advice_code: None,
+                        network_error_message: None,
+                        raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+                    };
+
+                    let mut response_data = data.clone();
+                    response_data.response = Err(error_response);
+                    return Ok(response_data);
+                }
+
+                // Check for success status - must have both TXN_SUCCESS status and 01 code
+                let attempt_status = if success_resp.result_info.result_status == "TXN_SUCCESS" 
+                    && success_resp.result_info.result_code == "01" {
+                    AttemptStatus::Charged
+                } else {
+                    paytm::map_paytm_status_to_attempt_status(&success_resp.result_info.result_code)
+                };
 
                 let connector_transaction_id = success_resp
                     .txn_id
@@ -654,33 +903,27 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
 
                 let mut response_data = data.clone();
                 response_data.response = Ok(payments_response);
+                // Set the proper attempt status in PaymentFlowData
+                response_data.resource_common_data.status = domain_types::connector_types::Status::Attempt(attempt_status);
                 Ok(response_data)
             }
             paytm::PaytmTransactionStatusRespBodyTypes::FailureBody(failure_resp) => {
-                let _attempt_status = paytm::map_paytm_status_to_attempt_status(
-                    &failure_resp.result_info.result_code,
-                );
-
-                // For failure cases, we should still return the transaction response but with appropriate status
-                let payments_response = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(
-                        data.resource_common_data
-                            .connector_request_reference_id
-                            .clone(),
-                    ),
-                    redirection_data: None,
-                    connector_metadata: None,
-                    mandate_reference: None,
-                    network_txn_id: None,
-                    connector_response_reference_id: None,
-                    incremental_authorization_allowed: None,
-                    raw_connector_response: Some(
-                        String::from_utf8_lossy(&res.response).to_string(),
-                    ),
+                // Return error response for failure body
+                let error_response = domain_types::router_data::ErrorResponse {
+                    code: failure_resp.result_info.result_code,
+                    message: failure_resp.result_info.result_msg,
+                    reason: None,
+                    status_code: res.status_code,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_decline_code: None,
+                    network_advice_code: None,
+                    network_error_message: None,
+                    raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
                 };
 
                 let mut response_data = data.clone();
-                response_data.response = Ok(payments_response);
+                response_data.response = Err(error_response);
                 Ok(response_data)
             }
         }
