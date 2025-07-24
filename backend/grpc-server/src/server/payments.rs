@@ -157,6 +157,7 @@ impl Payments {
             None,
             &connector.to_string(),
             service_name,
+            common_utils::dapr::FlowName::Authorize,
         )
         .await;
 
@@ -290,6 +291,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            common_utils::dapr::FlowName::Authorize,
         )
         .await
         .map_err(
@@ -367,6 +369,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            common_utils::dapr::FlowName::SetupMandate,
         )
         .await
         .switch()
@@ -471,6 +474,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
+
         let service_name = request
             .extensions()
             .get::<String>()
@@ -879,6 +883,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    common_utils::dapr::FlowName::SetupMandate,
                 )
                 .await
                 .switch()
@@ -975,6 +980,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    common_utils::dapr::FlowName::Authorize,
                 )
                 .await
                 .switch()
