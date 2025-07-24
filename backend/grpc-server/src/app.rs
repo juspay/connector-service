@@ -1,7 +1,7 @@
 use std::{future::Future, net, sync::Arc};
 
 use axum::{extract::Request, http};
-use common_utils::consts;
+use common_utils::{consts, dapr};
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
@@ -23,6 +23,16 @@ use crate::{configs, error::ConfigurationError, logger, utils};
 ///
 /// Will panic if redis connection establishment fails or signal handling fails
 pub async fn server_builder(config: configs::Config) -> Result<(), ConfigurationError> {
+    logger::info!("Checking Dapr connectivity...");
+
+    match dapr::create_client().await {
+        Ok(_) => logger::info!("Dapr connection test successful"),
+        Err(e) => logger::warn!(
+            "Failed to connect to Dapr: {:?}. Events might not be published to Kafka.",
+            e
+        ),
+    }
+
     let server_config = config.server.clone();
     let socket_addr = net::SocketAddr::new(server_config.host.parse()?, server_config.port);
 
