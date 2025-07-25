@@ -1,32 +1,30 @@
+use std::collections::HashMap;
+
 use cards::CardNumber;
 use common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
     FutureUsage,
 };
-use common_utils::consts::NO_ERROR_CODE;
-use common_utils::types::StringMajorUnit;
-use domain_types::errors::{self};
+use common_utils::{consts::NO_ERROR_CODE, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId as DomainResponseId,
+        ResponseId as DomainResponseId, Status,
     },
-};
-use domain_types::{
+    errors::{self},
     payment_address::PaymentAddress,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
 use error_stack::{report, ResultExt};
-use hyperswitch_masking::WithoutType;
-use std::collections::HashMap;
-
-use hyperswitch_masking::{PeekInterface, Secret};
-use serde::de::{self, Deserializer};
-use serde::{Deserialize, Serialize};
+use hyperswitch_masking::{PeekInterface, Secret, WithoutType};
+use serde::{
+    de::{self, Deserializer},
+    Deserialize, Serialize,
+};
 use serde_with::skip_serializing_none;
 
 use super::ElavonRouterData;
@@ -714,6 +712,7 @@ pub fn get_elavon_attempt_status(
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         ),
     }
@@ -758,12 +757,12 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                     resource_id: DomainResponseId::ConnectorTransactionId(
                         payment_resp_struct.ssl_txn_id.clone(),
                     ),
-                    redirection_data: Box::new(None),
+                    redirection_data: None,
                     connector_metadata: None,
                     network_txn_id: payment_resp_struct.ssl_approval_code.clone(),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
+                    mandate_reference: None,
                     raw_connector_response: None,
                 })
             }
@@ -781,13 +780,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
         Ok(Self {
             response: payments_response_data,
             resource_common_data: PaymentFlowData {
-                status: attempt_status,
+                status: Status::Attempt(attempt_status),
                 payment_method_token,
                 ..router_data.resource_common_data
             },
@@ -987,7 +987,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     resource_id: DomainResponseId::ConnectorTransactionId(
                         payment_resp_struct.ssl_txn_id.clone(),
                     ),
-                    redirection_data: Box::new(None),
+                    redirection_data: None,
                     connector_metadata: Some(
                         serde_json::to_value(payment_resp_struct.clone())
                             .unwrap_or(serde_json::Value::Null),
@@ -995,7 +995,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: payment_resp_struct.ssl_approval_code.clone(),
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
+                    mandate_reference: None,
                     raw_connector_response: None,
                 })
             }
@@ -1013,13 +1013,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
         Ok(Self {
             response: response_data,
             resource_common_data: PaymentFlowData {
-                status: final_status,
+                status: Status::Attempt(final_status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1160,6 +1161,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -1369,19 +1371,19 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: DomainResponseId::ConnectorTransactionId(response.ssl_txn_id.clone()),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: Some(serde_json::json!(response)),
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             raw_connector_response: None,
         };
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: final_status,
+                status: Status::Attempt(final_status),
                 ..router_data.resource_common_data
             },
             ..router_data

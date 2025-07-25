@@ -1,42 +1,40 @@
 pub mod transformers;
 
-use crate::types::ResponseRouterData;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
-use error_stack::ResultExt;
-
-use common_utils::consts;
-use domain_types::errors::{self, ConnectorError};
-use domain_types::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-    router_response_types::Response,
+use common_utils::{
+    consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
 };
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
-};
-
-use super::macros;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
+    errors::{self, ConnectorError},
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::Connectors,
+};
+use error_stack::ResultExt;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use interfaces::{
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
     ActionResponse, CheckoutAuthorizeResponse, CheckoutErrorResponse, CheckoutPSyncResponse,
     CheckoutPaymentsRequest, CheckoutRefundSyncRequest, CheckoutSyncRequest, PaymentCaptureRequest,
     PaymentCaptureResponse, PaymentVoidRequest, PaymentVoidResponse, RefundRequest, RefundResponse,
 };
+
+use super::macros;
+use crate::types::ResponseRouterData;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -52,6 +50,7 @@ impl connector_types::RefundV2 for Checkout {}
 impl connector_types::PaymentCapture for Checkout {}
 impl connector_types::ValidationTrait for Checkout {}
 impl connector_types::SetupMandateV2 for Checkout {}
+impl connector_types::RepeatPaymentV2 for Checkout {}
 impl connector_types::AcceptDispute for Checkout {}
 impl connector_types::SubmitEvidenceV2 for Checkout {}
 impl connector_types::DisputeDefend for Checkout {}
@@ -512,6 +511,22 @@ impl ConnectorCommon for Checkout {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Checkout
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Checkout
+{
 }

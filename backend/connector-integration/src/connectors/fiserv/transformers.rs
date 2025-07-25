@@ -1,11 +1,17 @@
 use common_enums::enums;
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
 use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
 };
-use domain_types::errors::ConnectorError;
 use domain_types::{
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_types::{
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId, Status,
+    },
+    errors::ConnectorError,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -14,17 +20,7 @@ use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::connectors::fiserv::FiservRouterData;
-use crate::types::ResponseRouterData;
-
-use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
-    connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
-    },
-};
+use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -753,7 +749,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = status;
+        router_data_out.resource_common_data.status = Status::Attempt(status);
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -767,8 +763,8 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -792,6 +788,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -821,7 +818,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = status;
+        router_data_out.resource_common_data.status = Status::Attempt(status);
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -835,8 +832,8 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -860,6 +857,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -887,7 +885,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = status;
+        router_data_out.resource_common_data.status = Status::Attempt(status);
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -901,8 +899,8 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -926,6 +924,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -960,7 +959,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = status;
+        router_data_out.resource_common_data.status = Status::Attempt(status);
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -974,8 +973,8 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -999,6 +998,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1055,6 +1055,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1120,6 +1121,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             router_data_out.response = Ok(response_payload);
@@ -1165,6 +1167,7 @@ impl<F, Req, Res> TryFrom<ResponseRouterData<FiservErrorResponse, Self>>
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         });
 
         Ok(router_data_out)

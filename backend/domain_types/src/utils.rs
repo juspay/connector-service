@@ -6,8 +6,7 @@ use std::{
 use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
 use common_utils::{consts, AmountConvertor, CustomResult, MinorUnit};
-use error_stack::report;
-use error_stack::{Result, ResultExt};
+use error_stack::{report, Result, ResultExt};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -98,12 +97,13 @@ pub fn handle_json_response_deserialization_failure(
             status_code: res.status_code,
             code: consts::NO_ERROR_CODE.to_string(),
             message: consts::UNSUPPORTED_ERROR_MESSAGE.to_string(),
-            reason: Some(response_data),
+            reason: Some(response_data.clone()),
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: Some(response_data),
         }),
     }
 }
@@ -188,6 +188,13 @@ pub fn get_unimplemented_payment_method_error_message(connector: &str) -> String
 pub fn get_header_key_value<'a>(
     key: &str,
     headers: &'a actix_web::http::header::HeaderMap,
+) -> CustomResult<&'a str, errors::ConnectorError> {
+    get_header_field(headers.get(key))
+}
+
+pub fn get_http_header<'a>(
+    key: &str,
+    headers: &'a http::HeaderMap,
 ) -> CustomResult<&'a str, errors::ConnectorError> {
     get_header_field(headers.get(key))
 }

@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{self, AttemptStatus, RefundStatus};
 use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     ext_traits::{ByteSliceExt, OptionExt},
     request::Method,
@@ -15,27 +16,22 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData, Status, SubmitEvidenceData,
     },
-};
-use error_stack::{Report, ResultExt};
-
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-use domain_types::errors;
-use domain_types::{
+    errors,
     payment_method_data::{Card, PaymentMethodData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
-use crate::types::ResponseRouterData;
-
 use super::AdyenRouterData;
+use crate::types::ResponseRouterData;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub enum Currency {
@@ -1077,7 +1073,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1109,7 +1105,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPSyncResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1149,19 +1145,19 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
 
         let payment_void_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.payment_psp_reference),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             raw_connector_response: None,
         };
 
         Ok(Self {
             response: Ok(payment_void_response_data),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1202,6 +1198,7 @@ pub fn get_adyen_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     } else {
         None
@@ -1222,12 +1219,12 @@ pub fn get_adyen_response(
 
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(response.psp_reference),
-        redirection_data: Box::new(None),
+        redirection_data: None,
         connector_metadata: None,
         network_txn_id,
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
-        mandate_reference: Box::new(mandate_reference),
+        mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
     };
     Ok((status, error, payments_response_data))
@@ -1267,6 +1264,7 @@ pub fn get_redirection_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     } else {
         None
@@ -1293,7 +1291,7 @@ pub fn get_redirection_response(
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
-        redirection_data: Box::new(redirection_data),
+        redirection_data: redirection_data.map(Box::new),
         connector_metadata,
         network_txn_id: None,
         connector_response_reference_id: response
@@ -1301,7 +1299,7 @@ pub fn get_redirection_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
-        mandate_reference: Box::new(None),
+        mandate_reference: None,
         raw_connector_response: None,
     };
     Ok((status, error, payments_response_data))
@@ -1971,16 +1969,16 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
-                mandate_reference: Box::new(None),
+                mandate_reference: None,
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
-                status: AttemptStatus::Pending,
+                status: Status::Attempt(AttemptStatus::Pending),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -2176,7 +2174,7 @@ impl<F> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status,
+                status: Status::Attempt(status),
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -2420,6 +2418,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2622,6 +2621,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2742,6 +2742,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
                 ..router_data
             }),

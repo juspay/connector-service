@@ -1,17 +1,35 @@
 use std::path::PathBuf;
 
+use common_utils::consts;
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
-use common_utils::consts;
 
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Config {
+    pub common: Common,
     pub server: Server,
     pub metrics: MetricsServer,
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+}
+
+#[derive(Clone, serde::Deserialize, Debug)]
+pub struct Common {
+    pub environment: String,
+}
+
+impl Common {
+    pub fn validate(&self) -> Result<(), config::ConfigError> {
+        match self.environment.as_str() {
+            "development" | "production" => Ok(()),
+            _ => Err(config::ConfigError::Message(format!(
+                "Invalid environment '{}'. Must be 'development' or 'production'",
+                self.environment
+            ))),
+        }
+    }
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -63,10 +81,15 @@ impl Config {
             .build()?;
 
         #[allow(clippy::print_stderr)]
-        serde_path_to_error::deserialize(config).map_err(|error| {
+        let config: Self = serde_path_to_error::deserialize(config).map_err(|error| {
             eprintln!("Unable to deserialize application configuration: {error}");
             error.into_inner()
-        })
+        })?;
+
+        // Validate the environment field
+        config.common.validate()?;
+
+        Ok(config)
     }
 
     pub fn builder(

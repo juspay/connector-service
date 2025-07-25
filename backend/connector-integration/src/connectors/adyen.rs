@@ -1,7 +1,7 @@
 mod test;
 pub mod transformers;
-use crate::types::ResponseRouterData;
-use crate::with_error_response_body;
+use std::sync::LazyLock;
+
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
@@ -9,45 +9,37 @@ use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, request::RequestContent,
 };
 use domain_types::{
-    connector_types::{ConnectorSpecifications, SupportedPaymentMethodsExt},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
+        SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RequestDetails, ResponseId,
+        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        WebhookDetailsResponse,
+    },
+    errors,
+    payment_method_data::PaymentMethodData,
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::{
         self, CardSpecificFeatures, ConnectorInfo, Connectors, FeatureStatus,
         PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
         SupportedPaymentMethods,
     },
 };
-use std::sync::LazyLock;
-
-use domain_types::{
-    payment_method_data::PaymentMethodData,
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-
-use domain_types::errors;
-use domain_types::router_response_types::Response;
 use error_stack::report;
 use hyperswitch_masking::{Mask, Maskable};
-use interfaces::connector_types::{self, is_mandate_supported, ConnectorValidation};
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2,
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types::{self, is_mandate_supported, ConnectorValidation},
     events::connector_api_logs::ConnectorEvent,
-};
-
-use super::macros;
-use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
-    },
-    connector_types::{
-        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RequestDetails, ResponseId, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
-    },
 };
 use transformers::{
     self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenDefendDisputeRequest,
@@ -57,6 +49,9 @@ use transformers::{
     AdyenRefundResponse, AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse,
     SetupMandateRequest, SetupMandateResponse,
 };
+
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -71,6 +66,7 @@ impl connector_types::RefundSyncV2 for Adyen {}
 impl connector_types::RefundV2 for Adyen {}
 impl connector_types::PaymentCapture for Adyen {}
 impl connector_types::SetupMandateV2 for Adyen {}
+impl connector_types::RepeatPaymentV2 for Adyen {}
 impl connector_types::AcceptDispute for Adyen {}
 impl connector_types::SubmitEvidenceV2 for Adyen {}
 impl connector_types::DisputeDefend for Adyen {}
@@ -216,6 +212,7 @@ impl ConnectorCommon for Adyen {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -508,6 +505,7 @@ impl connector_types::IncomingWebhook for Adyen {
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
+        let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
@@ -521,6 +519,7 @@ impl connector_types::IncomingWebhook for Adyen {
             connector_response_reference_id: Some(notif.psp_reference),
             error_code: notif.reason.clone(),
             error_message: notif.reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
         })
     }
 
@@ -533,6 +532,7 @@ impl connector_types::IncomingWebhook for Adyen {
         domain_types::connector_types::RefundWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
     > {
+        let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
@@ -545,6 +545,7 @@ impl connector_types::IncomingWebhook for Adyen {
             connector_response_reference_id: Some(notif.psp_reference.clone()),
             error_code: notif.reason.clone(),
             error_message: notif.reason,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
         })
     }
 
@@ -557,6 +558,7 @@ impl connector_types::IncomingWebhook for Adyen {
         domain_types::connector_types::DisputeWebhookDetailsResponse,
         error_stack::Report<errors::ConnectorError>,
     > {
+        let request_body_copy = request.body.clone();
         let notif: AdyenNotificationRequestItemWH =
             transformers::get_webhook_object_from_body(request.body).map_err(|err| {
                 report!(errors::ConnectorError::WebhookBodyDecodingFailed)
@@ -573,6 +575,9 @@ impl connector_types::IncomingWebhook for Adyen {
                 status,
                 connector_response_reference_id: Some(notif.psp_reference.clone()),
                 dispute_message: notif.reason,
+                raw_connector_response: Some(
+                    String::from_utf8_lossy(&request_body_copy).to_string(),
+                ),
             },
         )
     }
@@ -793,4 +798,24 @@ impl ConnectorValidation for Adyen {
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Adyen
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Adyen
+{
 }

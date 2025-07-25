@@ -1,8 +1,6 @@
 use common_enums::ProductType;
-use common_utils::ext_traits::ConfigExt;
-use common_utils::{Email, MinorUnit};
-use hyperswitch_masking::PeekInterface;
-use hyperswitch_masking::{Secret, SerializableSecret};
+use common_utils::{ext_traits::ConfigExt, Email, MinorUnit};
+use hyperswitch_masking::{PeekInterface, Secret, SerializableSecret};
 
 use crate::utils::{missing_field_err, Error};
 

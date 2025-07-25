@@ -1,6 +1,37 @@
 pub mod transformers;
 
+use base64::Engine;
 use common_enums::CurrencyUnit;
+use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    request::RequestContent,
+    types::FloatMajorUnit,
+};
+use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
+    },
+    errors,
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
+    types::Connectors,
+};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use interfaces::{
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    events::connector_api_logs::ConnectorEvent,
+};
 use transformers::{
     self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
     XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
@@ -8,45 +39,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::types::ResponseRouterData;
-
-use domain_types::{
-    connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
-    },
-    connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
-    },
-    types::Connectors,
-};
-
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::FloatMajorUnit,
-};
-
-use domain_types::{
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-};
-
-use common_utils::consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE};
-use domain_types::errors;
-use domain_types::router_response_types::Response;
-use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
-};
-
-use hyperswitch_masking::{Mask, Maskable, PeekInterface};
-
-use crate::with_error_response_body;
-
-use base64::Engine;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -114,6 +107,7 @@ impl ConnectorCommon for Xendit {
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -129,6 +123,7 @@ impl connector_types::PaymentCapture for Xendit {}
 impl connector_types::ValidationTrait for Xendit {}
 impl connector_types::PaymentOrderCreate for Xendit {}
 impl connector_types::SetupMandateV2 for Xendit {}
+impl connector_types::RepeatPaymentV2 for Xendit {}
 impl connector_types::AcceptDispute for Xendit {}
 impl connector_types::SubmitEvidenceV2 for Xendit {}
 impl connector_types::DisputeDefend for Xendit {}
@@ -504,5 +499,20 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Xendit
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Xendit
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Xendit
 {
 }

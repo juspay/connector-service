@@ -3,9 +3,9 @@ mod tests {
 
     use cards::CardNumber;
     use common_enums::{AttemptStatus, AuthenticationType, PaymentMethod};
-    use domain_types::connector_types::{PaymentFlowData, PaymentsAuthorizeData};
-    use domain_types::payment_address::{Address, PhoneDetails};
     use domain_types::{
+        connector_types::{PaymentFlowData, PaymentsAuthorizeData},
+        payment_address::{Address, PhoneDetails},
         payment_method_data::{Card, PaymentMethodData},
         router_request_types::BrowserInformation,
         router_response_types::Response,
@@ -29,17 +29,14 @@ mod tests {
             id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,
         };
         use domain_types::{
-            connector_types::{PaymentFlowData, PaymentsAuthorizeData},
-            payment_address::{Address, PhoneDetails},
-            types::{ConnectorParams, Connectors},
-        };
-        use domain_types::{
-            payment_address::PaymentAddress,
+            connector_types::{PaymentFlowData, PaymentsAuthorizeData, Status},
+            payment_address::{Address, PaymentAddress, PhoneDetails},
             payment_method_data::{Card, PaymentMethodData},
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
             router_response_types::Response,
+            types::{ConnectorParams, Connectors},
         };
         use interfaces::{
             connector_integration_v2::ConnectorIntegrationV2,
@@ -61,7 +58,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -183,6 +180,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -235,7 +233,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "MISSING_EMAIL_ID".to_string(),
                     attempt_id: "MISSING_CARD_ID".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -325,6 +323,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -351,7 +350,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "INVALID_PAYMENT".to_string(),
                     attempt_id: "INVALID_ATTEMPT".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -441,6 +440,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -455,17 +455,17 @@ mod tests {
 
         #[test]
         fn test_handle_response_v2_valid_authorize_response() {
+            use std::str::FromStr;
+
             use common_enums::Currency;
-            use common_utils::pii::Email;
-            use common_utils::{id_type::MerchantId, types::MinorUnit};
-            use domain_types::connector_types::PaymentFlowData;
-            use domain_types::types::{ConnectorParams, Connectors};
+            use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};
             use domain_types::{
+                connector_types::PaymentFlowData,
                 payment_address::PaymentAddress,
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
+                types::{ConnectorParams, Connectors},
             };
-            use std::str::FromStr;
             let connector: BoxedConnector = Box::new(Razorpay::new());
             let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
@@ -477,7 +477,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -599,6 +599,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -624,15 +625,17 @@ mod tests {
 
             assert!(matches!(
                 result.resource_common_data.status,
-                AttemptStatus::AuthenticationPending
+                domain_types::connector_types::Status::Attempt(
+                    AttemptStatus::AuthenticationPending
+                )
             ));
         }
 
         #[test]
         fn test_handle_authorize_error_response() {
-            use domain_types::connector_flow::Authorize;
-            use domain_types::connector_types::{
-                PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            use domain_types::{
+                connector_flow::Authorize,
+                connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
             };
 
             let http_response = Response {
@@ -678,9 +681,9 @@ mod tests {
 
         #[test]
         fn test_handle_authorize_missing_required_fields() {
-            use domain_types::connector_flow::Authorize;
-            use domain_types::connector_types::{
-                PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+            use domain_types::{
+                connector_flow::Authorize,
+                connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
             };
 
             let http_response = Response {
@@ -715,9 +718,9 @@ mod tests {
 
     #[test]
     fn test_handle_authorize_invalid_error_fields() {
-        use domain_types::connector_flow::Authorize;
-        use domain_types::connector_types::{
-            PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        use domain_types::{
+            connector_flow::Authorize,
+            connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData},
         };
 
         let http_response = Response {
@@ -754,17 +757,17 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_missing_fields_authorize_response() {
+        use std::str::FromStr;
+
         use common_enums::Currency;
-        use common_utils::pii::Email;
-        use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::PaymentFlowData;
-        use domain_types::types::{ConnectorParams, Connectors};
+        use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};
         use domain_types::{
+            connector_types::PaymentFlowData,
             payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
+            types::{ConnectorParams, Connectors},
         };
-        use std::str::FromStr;
 
         let connector: BoxedConnector = Box::new(Razorpay::new());
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
@@ -777,7 +780,7 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(AttemptStatus::Pending),
                 payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -897,6 +900,7 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -925,17 +929,17 @@ mod tests {
 
     #[test]
     fn test_handle_response_v2_invalid_json_authorize_response() {
+        use std::str::FromStr;
+
         use common_enums::Currency;
-        use common_utils::pii::Email;
-        use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::PaymentFlowData;
-        use domain_types::types::{ConnectorParams, Connectors};
+        use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};
         use domain_types::{
+            connector_types::PaymentFlowData,
             payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
+            types::{ConnectorParams, Connectors},
         };
-        use std::str::FromStr;
 
         let connector: BoxedConnector = Box::new(Razorpay::new());
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
@@ -948,7 +952,7 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(AttemptStatus::Pending),
                 payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1068,6 +1072,7 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -1088,9 +1093,11 @@ mod tests {
     mod order {
 
         use common_utils::{pii::Email, request::RequestContent};
-        use domain_types::payment_address::{Address, PhoneDetails};
-        use domain_types::router_data::ConnectorAuthType;
-        use domain_types::types::{ConnectorParams, Connectors};
+        use domain_types::{
+            payment_address::{Address, PhoneDetails},
+            router_data::ConnectorAuthType,
+            types::{ConnectorParams, Connectors},
+        };
         use interfaces::connector_types::BoxedConnector;
         use serde_json::{to_value, Value};
 
@@ -1101,13 +1108,12 @@ mod tests {
             use common_enums::Currency;
             use common_utils::{id_type::MerchantId, request::RequestContent, types::MinorUnit};
             use domain_types::{
+                connector_types::PaymentCreateOrderData,
                 payment_address::PaymentAddress,
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
             use serde_json::{to_value, Value};
-
-            use domain_types::connector_types::PaymentCreateOrderData;
 
             let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
@@ -1119,7 +1125,9 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: common_enums::AttemptStatus::Pending,
+                    status: domain_types::connector_types::Status::Attempt(
+                        common_enums::AttemptStatus::Pending,
+                    ),
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -1167,6 +1175,8 @@ mod tests {
                     amount: MinorUnit::new(1000),
                     currency: Currency::USD,
                     integrity_object: None,
+                    metadata: None,
+                    webhook_url: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1178,6 +1188,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -1208,13 +1219,13 @@ mod tests {
             use common_enums::Currency;
             use common_utils::{id_type::MerchantId, types::MinorUnit};
             use domain_types::{
+                connector_types::PaymentCreateOrderData,
                 payment_address::PaymentAddress,
                 router_data::{ConnectorAuthType, ErrorResponse},
                 router_data_v2::RouterDataV2,
             };
 
             use crate::connectors::Razorpay;
-            use domain_types::connector_types::PaymentCreateOrderData;
 
             let test_router_data = RouterDataV2 {
                 flow: std::marker::PhantomData,
@@ -1224,7 +1235,9 @@ mod tests {
                     connector_customer: None,
                     payment_id: "".to_string(),
                     attempt_id: "".to_string(),
-                    status: common_enums::AttemptStatus::Pending,
+                    status: domain_types::connector_types::Status::Attempt(
+                        common_enums::AttemptStatus::Pending,
+                    ),
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -1260,6 +1273,8 @@ mod tests {
                     amount: MinorUnit::new(0),
                     currency: Currency::default(),
                     integrity_object: None,
+                    metadata: None,
+                    webhook_url: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1271,6 +1286,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -1299,19 +1315,20 @@ mod tests {
 
         #[test]
         fn test_build_request_invalid() {
-            use crate::connectors::Razorpay;
             use common_enums::{
                 AttemptStatus, AuthenticationType, Currency, PaymentMethod, PaymentMethodType,
             };
             use common_utils::{id_type::MerchantId, types::MinorUnit};
-            use domain_types::connector_types::{PaymentFlowData, PaymentsAuthorizeData};
-            use domain_types::types::{ConnectorParams, Connectors};
             use domain_types::{
+                connector_types::{PaymentFlowData, PaymentsAuthorizeData, Status},
                 payment_address::PaymentAddress,
                 payment_method_data::{Card, PaymentMethodData},
                 router_data::ErrorResponse,
                 router_data_v2::RouterDataV2,
+                types::{ConnectorParams, Connectors},
             };
+
+            use crate::connectors::Razorpay;
 
             let test_router_data = RouterDataV2 {
                 flow: std::marker::PhantomData,
@@ -1321,7 +1338,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "invalid_payment_id".to_string(),
                     attempt_id: "invalid_attempt_id".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -1411,6 +1428,7 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
+                    raw_connector_response: None,
                 }),
             };
 
@@ -1427,14 +1445,13 @@ mod tests {
     #[test]
     fn test_handle_response_v2_valid_order_response() {
         use common_enums::Currency;
-        use common_utils::pii::Email;
-        use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::{PaymentCreateOrderData, PaymentFlowData};
-        use domain_types::types::{ConnectorParams, Connectors};
+        use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};
         use domain_types::{
+            connector_types::{PaymentCreateOrderData, PaymentFlowData},
             payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
+            types::{ConnectorParams, Connectors},
         };
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
         let connector: BoxedConnector = Box::new(Razorpay::new());
@@ -1447,7 +1464,9 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1495,6 +1514,8 @@ mod tests {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
                 integrity_object: None,
+                metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1506,6 +1527,7 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -1543,14 +1565,13 @@ mod tests {
     #[test]
     fn test_handle_response_missing() {
         use common_enums::Currency;
-        use common_utils::pii::Email;
-        use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::PaymentCreateOrderData;
-        use domain_types::types::{ConnectorParams, Connectors};
+        use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};
         use domain_types::{
+            connector_types::PaymentCreateOrderData,
             payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
+            types::{ConnectorParams, Connectors},
         };
 
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
@@ -1564,7 +1585,9 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1612,6 +1635,8 @@ mod tests {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
                 integrity_object: None,
+                metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1623,6 +1648,7 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 
@@ -1649,14 +1675,13 @@ mod tests {
     #[test]
     fn test_handle_response_invalid() {
         use common_enums::Currency;
-        use common_utils::pii::Email;
-        use common_utils::{id_type::MerchantId, types::MinorUnit};
-        use domain_types::connector_types::PaymentCreateOrderData;
-        use domain_types::types::{ConnectorParams, Connectors};
+        use common_utils::{id_type::MerchantId, pii::Email, types::MinorUnit};
         use domain_types::{
+            connector_types::PaymentCreateOrderData,
             payment_address::PaymentAddress,
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
+            types::{ConnectorParams, Connectors},
         };
 
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
@@ -1670,7 +1695,9 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1718,6 +1745,8 @@ mod tests {
                 amount: MinorUnit::new(1000),
                 currency: Currency::USD,
                 integrity_object: None,
+                metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1729,6 +1758,7 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             }),
         };
 

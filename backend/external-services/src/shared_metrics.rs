@@ -1,3 +1,10 @@
+use std::{
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+    time::Instant,
+};
+
 use error_stack::ResultExt;
 use http_body::Body as HttpBody;
 use lazy_static::lazy_static;
@@ -5,10 +12,6 @@ use prometheus::{
     self, register_histogram_vec, register_int_counter_vec, Encoder, HistogramVec, IntCounterVec,
     TextEncoder,
 };
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use std::time::Instant;
 use tower::{Layer, Service};
 // Define latency buckets for histograms
 const LATENCY_BUCKETS: &[f64] = &[

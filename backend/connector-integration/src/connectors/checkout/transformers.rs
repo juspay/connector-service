@@ -1,13 +1,15 @@
 use common_enums::enums;
 use common_utils::{
-    consts::NO_ERROR_CODE, consts::NO_ERROR_MESSAGE, errors::CustomResult, types::MinorUnit,
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult,
+    types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, Status,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodData,
@@ -455,7 +457,7 @@ impl<F>
         let status = get_attempt_status_cap((response.status, router_data.request.capture_method));
 
         let mut router_data = router_data;
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
 
         // Check if the response indicates an error
         if status == enums::AttemptStatus::Failure {
@@ -474,6 +476,7 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             let connector_meta =
@@ -482,8 +485,8 @@ impl<F>
             // Handle successful response
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
@@ -647,7 +650,7 @@ impl<F>
             (enums::AttemptStatus::Pending, None)
         };
 
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
         router_data.resource_common_data.amount_captured = amount_captured;
 
         // Determine the resource_id to return
@@ -668,8 +671,8 @@ impl<F>
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(resource_id),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: Some(connector_meta),
             network_txn_id: None,
             connector_response_reference_id: response.reference,
@@ -711,7 +714,7 @@ impl<F>
         // Get the attempt status using the From implementation
         let status = enums::AttemptStatus::from(&response);
 
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
 
         let connector_meta = serde_json::json!(CheckoutMeta {
             psync_flow: CheckoutPaymentIntent::Authorize,
@@ -719,8 +722,8 @@ impl<F>
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.action_id.clone()),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: Some(connector_meta),
             network_txn_id: None,
             connector_response_reference_id: None,
@@ -766,7 +769,7 @@ impl<F>
         };
 
         let mut router_data = router_data;
-        router_data.resource_common_data.status = status;
+        router_data.resource_common_data.status = Status::Attempt(status);
 
         if status == enums::AttemptStatus::Failure {
             router_data.response = Err(ErrorResponse {
@@ -784,6 +787,7 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
+                raw_connector_response: None,
             });
         } else {
             // Always include the connector metadata in the response
@@ -794,8 +798,8 @@ impl<F>
 
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),

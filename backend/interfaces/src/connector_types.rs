@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
 use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
 use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
@@ -11,14 +10,16 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodData,
     router_data::ConnectorAuthType,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
+
+use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
 
 pub trait ConnectorServiceTrait:
     ConnectorCommon
@@ -31,6 +32,7 @@ pub trait ConnectorServiceTrait:
     + RefundV2
     + PaymentCapture
     + SetupMandateV2
+    + RepeatPaymentV2
     + AcceptDispute
     + RefundSyncV2
     + DisputeDefend
@@ -106,6 +108,16 @@ pub trait SetupMandateV2:
     connector_flow::SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait RepeatPaymentV2:
+    ConnectorIntegrationV2<
+    connector_flow::RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
     PaymentsResponseData,
 >
 {

@@ -1,39 +1,40 @@
-use crate::errors::{ApiError, ApplicationErrorResponse};
-use crate::payment_address::{Address, AddressDetails, PhoneDetails};
-use crate::payment_method_data::Card;
-use crate::router_data::PaymentMethodToken;
-use crate::router_request_types::BrowserInformation;
-use crate::router_request_types::{
-    AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
-    CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
-    PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-    SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+use std::collections::HashMap;
+
+use common_enums::{
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, MandateStatus,
+    PaymentMethod, PaymentMethodType,
 };
-use crate::types::{
-    ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
-    PaymentMethodTypeMetadata, SupportedPaymentMethods,
+use common_utils::{
+    errors,
+    ext_traits::{OptionExt, ValueExt},
+    pii::IpAddress,
+    types::MinorUnit,
+    CustomResult, CustomerId, Email, SecretSerdeValue,
 };
-use crate::utils::{missing_field_err, Error, ForeignTryFrom};
-use common_enums::Currency;
-use common_utils::ext_traits::OptionExt;
-use common_utils::ext_traits::ValueExt;
-use common_utils::pii::IpAddress;
-use common_utils::{CustomResult, CustomerId, Email, SecretSerdeValue};
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumString};
 
 use crate::{
-    payment_method_data, payment_method_data::PaymentMethodData,
-    router_request_types::SyncRequestType,
+    errors::{ApiError, ApplicationErrorResponse},
+    payment_address::{Address, AddressDetails, PhoneDetails},
+    payment_method_data,
+    payment_method_data::{Card, PaymentMethodData},
+    router_data::PaymentMethodToken,
+    router_request_types::{
+        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
+        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        SyncRequestType,
+    },
+    types::{
+        ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
+        PaymentMethodTypeMetadata, SupportedPaymentMethods,
+    },
+    utils::{missing_field_err, Error, ForeignTryFrom},
 };
-use common_enums::{
-    AttemptStatus, AuthenticationType, DisputeStatus, EventClass, PaymentMethod, PaymentMethodType,
-};
-use common_utils::{errors, types::MinorUnit};
-
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use strum::{Display, EnumString};
 
 // snake case for enum variants
 #[derive(Clone, Debug, Display, EnumString)]
@@ -41,11 +42,16 @@ use strum::{Display, EnumString};
 pub enum ConnectorEnum {
     Adyen,
     Razorpay,
+    RazorpayV2,
     Fiserv,
     Elavon,
     Xendit,
     Checkout,
     Authorizedotnet,
+    Phonepe,
+    Cashfree,
+    Fiuu,
+    Payu,
     Nexinets,
 }
 
@@ -63,6 +69,10 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
+            grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
+            grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
+            grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -207,6 +217,12 @@ impl PaymentsSyncData {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Status {
+    Attempt(AttemptStatus),
+    Mandate(MandateStatus),
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
     pub merchant_id: common_utils::id_type::MerchantId,
@@ -214,7 +230,7 @@ pub struct PaymentFlowData {
     pub connector_customer: Option<String>,
     pub payment_id: String,
     pub attempt_id: String,
-    pub status: AttemptStatus,
+    pub status: Status,
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
@@ -911,9 +927,9 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data: Box<Option<crate::router_response_types::RedirectForm>>,
+        redirection_data: Option<Box<crate::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
-        mandate_reference: Box<Option<MandateReference>>,
+        mandate_reference: Option<Box<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
@@ -935,6 +951,8 @@ pub struct PaymentCreateOrderData {
     pub amount: MinorUnit,
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
+    pub metadata: Option<serde_json::Value>,
+    pub webhook_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -981,6 +999,7 @@ pub struct WebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -990,6 +1009,7 @@ pub struct RefundWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -999,6 +1019,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub stage: common_enums::DisputeStage,
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
+    pub raw_connector_response: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1215,6 +1236,24 @@ impl SetupMandateRequestData {
     }
     pub fn is_card(&self) -> bool {
         matches!(self.payment_method_data, PaymentMethodData::Card(_))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RepeatPaymentData {
+    pub mandate_reference: MandateReferenceId,
+    pub amount: i64,
+    pub minor_amount: MinorUnit,
+    pub currency: Currency,
+    pub merchant_order_reference_id: Option<String>,
+    pub metadata: Option<HashMap<String, String>>,
+    pub webhook_url: Option<String>,
+    pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+}
+
+impl RepeatPaymentData {
+    pub fn get_mandate_reference(&self) -> &MandateReferenceId {
+        &self.mandate_reference
     }
 }
 

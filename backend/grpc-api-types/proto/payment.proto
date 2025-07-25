@@ -421,6 +421,8 @@ enum Connector {
   XENDIT = 88;
   ZEN = 89;
   ZSL = 90;
+  PHONEPE = 91;
+  CASHFREE = 92;
 }
 
 // Payment method types.
@@ -912,7 +914,7 @@ message PaymentAddress {
   Address billing_address = 2;
 }
 
-// Data for a redirection, can be either form data or raw HTML.
+// Data for a redirection, can be either form data, raw HTML, or URI.
 message RedirectForm {
   oneof form_type {
     // Data for constructing an HTML form for redirection.
@@ -920,6 +922,9 @@ message RedirectForm {
     
     // Raw HTML data for redirection.
     HtmlData html = 2;
+    
+    // URI for direct redirection (e.g., UPI deep links).
+    UriData uri = 3;
   }
 }
 
@@ -939,6 +944,12 @@ message FormData {
 message HtmlData {
   // The HTML content as a string.
   string html_data = 1;
+}
+
+// Represents URI data for direct redirection.
+message UriData {
+  // The URI for redirection (e.g., UPI deep link).
+  string uri = 1;
 }
 
 // Details of an HTTP request, typically for incoming webhooks.
@@ -1108,6 +1119,9 @@ message PaymentServiceAuthorizeResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
+  
+  // Raw Response
+  optional string raw_connector_response = 9; // Raw response from the connector for debugging
 }
 
 // Request message for synchronizing payment status.
@@ -1156,6 +1170,9 @@ message PaymentServiceGetResponse {
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
+  
+  // Raw Response
+  optional string raw_connector_response = 25; // Raw response from the connector for debugging
 }
 
 // Request message for voiding a payment.
@@ -1275,6 +1292,9 @@ message RefundResponse {
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+  
+  // Raw Response
+  optional string raw_connector_response = 21; // Raw response from the connector for debugging
 }
 
 // Request message for creating a dispute.
@@ -1390,6 +1410,44 @@ message PaymentServiceRegisterResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+}
+
+// Request message for repeat payment (MIT - Merchant Initiated Transaction).
+message PaymentServiceRepeatEverythingRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Mandate Information (required for MIT)
+  MandateReference mandate_reference = 2; // Reference to existing mandate
+  
+  // Amount Information
+  int64 amount = 3; // The amount for the payment in major currency units
+  Currency currency = 4; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 5; // The minor amount for the payment (e.g., cents)
+  
+  // Optional fields
+  optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
+  map<string, string> metadata = 7; // Additional metadata for the connector
+  optional string webhook_url = 8; // URL for webhook notifications
+  optional bool all_keys_required = 9; // Indicates if all keys are required
+}
+
+// Response message for repeat payment operation.
+message PaymentServiceRepeatEverythingResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the payment attempt
+  optional string error_code = 3; // Error code if the payment failed
+  optional string error_message = 4; // Error message if the payment failed
+  
+  // Transaction Details
+  optional string network_txn_id = 5; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 6; // Reference ID from the connector response
+  
+  // Raw Response
+  optional string raw_connector_response = 7; // Raw response from the connector for debugging
 }
 
 // Request message for PaymentService.Transform RPC
