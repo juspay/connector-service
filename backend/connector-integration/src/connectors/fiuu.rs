@@ -113,8 +113,9 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        pub fn preprocess_response_bytes(
+        pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
         ) -> Result<Bytes, errors::ConnectorError> {
                 let response_str = String::from_utf8(response_bytes.to_vec()).map_err(|e| {
@@ -429,8 +430,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
             router_data: req.clone(),
         };
         let request = bridge.request_body(input_data)?;
-        let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request)
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request);
         Ok(Some(macro_types::RequestContent::FormData(form_data)))
     }
 
