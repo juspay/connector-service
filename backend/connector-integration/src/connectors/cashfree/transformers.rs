@@ -535,9 +535,7 @@ impl
             response: Ok(order_response),
             resource_common_data: PaymentFlowData {
                 // Update status to indicate successful order creation
-                status: domain_types::connector_types::Status::Attempt(
-                    common_enums::AttemptStatus::Pending,
-                ),
+                status: common_enums::AttemptStatus::Pending,
                 // Set reference_id to the payment_session_id for use in authorize flow
                 reference_id: Some(order_id),
                 ..item.router_data.resource_common_data
@@ -618,7 +616,7 @@ impl
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
-                status: domain_types::connector_types::Status::Attempt(status),
+                status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data

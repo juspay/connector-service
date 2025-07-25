@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId, Status,
+        RefundsResponseData, ResponseId,
     },
     errors,
     payment_method_data::{Card, PaymentMethodData},
@@ -758,7 +758,7 @@ impl<F, Req>
                 Ok(Self {
                     response: error.map_or_else(|| Ok(payment_response_data), Err),
                     resource_common_data: PaymentFlowData {
-                        status: Status::Attempt(status),
+                        status,
                         ..data.resource_common_data
                     },
                     ..data
@@ -782,7 +782,7 @@ impl<F, Req>
                 Ok(Self {
                     response: error.map_or_else(|| Ok(psync_response_data), Err),
                     resource_common_data: PaymentFlowData {
-                        status: Status::Attempt(status),
+                        status,
                         ..data.resource_common_data
                     },
                     ..data
@@ -1261,7 +1261,7 @@ impl<F, Req>
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..data.resource_common_data
             },
             ..data
@@ -1595,7 +1595,7 @@ impl<F, Req>
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(AttemptStatus::AuthenticationPending),
+                status: AttemptStatus::AuthenticationPending,
                 ..data.resource_common_data
             },
             ..data

@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, str::FromStr};
 
-use common_enums::{CaptureMethod, CardNetwork, MandateStatus, PaymentMethod, PaymentMethodType};
+use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
@@ -28,7 +28,7 @@ use crate::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, Status, SubmitEvidenceData, WebhookDetailsResponse,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
@@ -922,7 +922,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: crate::connector_types::Status::Attempt(common_enums::AttemptStatus::Pending),
+            status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::foreign_try_from(
                 value.payment_method.unwrap_or_default(),
             )?, // Use direct enum
@@ -992,7 +992,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: crate::connector_types::Status::Attempt(common_enums::AttemptStatus::Pending),
+            status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
@@ -1321,7 +1321,7 @@ impl
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "PAYMENT_ID".to_string(),
             attempt_id: "ATTEMPT_ID".to_string(),
-            status: crate::connector_types::Status::Attempt(common_enums::AttemptStatus::Pending),
+            status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, // Default
             address: crate::payment_address::PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
@@ -1352,36 +1352,6 @@ impl
             connectors,
             raw_connector_response: None,
         })
-    }
-}
-
-impl ForeignFrom<crate::connector_types::Status> for grpc_api_types::payments::PaymentStatus {
-    fn foreign_from(status: crate::connector_types::Status) -> Self {
-        match status {
-            crate::connector_types::Status::Attempt(attempt_status) => {
-                Self::foreign_from(attempt_status)
-            }
-            crate::connector_types::Status::Mandate(mandate_status) => match mandate_status {
-                common_enums::MandateStatus::MandateEstablished => Self::Authorized,
-                common_enums::MandateStatus::MandateFailed => Self::Failure,
-                common_enums::MandateStatus::MandatePending => Self::Pending,
-                common_enums::MandateStatus::MandateInitiated => Self::Started,
-                common_enums::MandateStatus::MandateAuthenticationPending => {
-                    Self::AuthenticationPending
-                }
-                common_enums::MandateStatus::MandateAuthenticationSuccessful => {
-                    Self::AuthenticationSuccessful
-                }
-                common_enums::MandateStatus::MandateAuthenticationFailed => {
-                    Self::AuthenticationFailed
-                }
-                common_enums::MandateStatus::MandateCancelled => Self::Voided,
-                common_enums::MandateStatus::MandateStatusUnspecified => Self::Pending,
-                common_enums::MandateStatus::MandateExpired => Self::Failure,
-                common_enums::MandateStatus::MandateRouterDeclined => Self::RouterDeclined,
-                common_enums::MandateStatus::MandateUnresolved => Self::Unresolved,
-            },
-        }
     }
 }
 
@@ -2445,7 +2415,7 @@ impl
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "PAYMENT_ID".to_string(),
             attempt_id: "ATTEMPT_ID".to_string(),
-            status: crate::connector_types::Status::Attempt(common_enums::AttemptStatus::Pending),
+            status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, // Default
             address: crate::payment_address::PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
@@ -2577,7 +2547,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-            status: crate::connector_types::Status::Attempt(common_enums::AttemptStatus::Pending),
+            status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
@@ -2770,10 +2740,7 @@ pub fn generate_setup_mandate_response(
 ) -> Result<PaymentServiceRegisterResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
-    let grpc_status = match status {
-        Status::Attempt(_attempt_status) => MandateStatus::MandateStatusUnspecified,
-        Status::Mandate(mandate_status) => mandate_status,
-    };
+    let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -3231,7 +3198,7 @@ impl
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "REPEAT_PAYMENT_ID".to_string(),
             attempt_id: "REPEAT_ATTEMPT_ID".to_string(),
-            status: crate::connector_types::Status::Attempt(common_enums::AttemptStatus::Pending),
+            status: common_enums::AttemptStatus::Pending,
             payment_method: common_enums::PaymentMethod::Card, // Default, actual method depends on mandate
             address,
             auth_type: common_enums::AuthenticationType::NoThreeDs, // MIT typically doesn't use 3DS

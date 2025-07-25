@@ -65,29 +65,7 @@ enum PaymentStatus {
   UNRESOLVED = 19;    // Status could not be determined
 }
 
-// Status of a mandate setup attempt.
-enum MandateStatus {
-  MANDATE_STATUS_UNSPECIFIED = 0; // Default value
-
-  // Initial states
-  MANDATE_INITIATED = 1;           // Mandate setup has been initiated
-  MANDATE_PENDING = 2;             // Mandate setup is pending (waiting for processing)
-  
-  // Authentication flow
-  MANDATE_AUTHENTICATION_PENDING = 3;      // Waiting for customer authentication
-  MANDATE_AUTHENTICATION_SUCCESSFUL = 4;   // Customer authentication successful
-  MANDATE_AUTHENTICATION_FAILED = 5;       // Customer authentication failed
-
-  // Setup completion states
-  MANDATE_ESTABLISHED = 6;         // Mandate has been successfully established
-  MANDATE_FAILED = 7;              // Mandate setup failed
-  MANDATE_CANCELLED = 8;           // Mandate setup was cancelled
-  MANDATE_EXPIRED = 9;             // Mandate setup expired
-
-  // Terminal/fallback states
-  MANDATE_ROUTER_DECLINED = 10;    // Mandate declined by router
-  MANDATE_UNRESOLVED = 11;         // Status could not be determined
-}
+// Note: MandateStatus enum removed - mandate setup now uses PaymentStatus with optional sub_status for detailed information
 
 // Status of a refund.
 enum RefundStatus {
@@ -1396,7 +1374,7 @@ message PaymentServiceRegisterResponse {
   Identifier registration_id = 1; // Identifier for the mandate registration
   
   // Status Information
-  MandateStatus status = 2; // Status of the mandate setup attempt
+  PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
   optional string error_code = 3; // Error code if the mandate setup failed
   optional string error_message = 4; // Error message if the mandate setup failed
   
@@ -1429,7 +1407,6 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
-  optional bool all_keys_required = 9; // Indicates if all keys are required
 }
 
 // Response message for repeat payment operation.
