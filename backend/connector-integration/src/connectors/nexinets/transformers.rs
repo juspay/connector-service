@@ -8,7 +8,7 @@ use domain_types::{
     connector_types::{
         MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        ResponseId, Status,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -372,7 +372,7 @@ impl<F> TryFrom<ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>>
             });
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: domain_types::connector_types::Status::Attempt(get_status(
+                status: Status::Attempt(get_status(
                     transaction.status.clone(),
                     item.response.transaction_type,
                 )),
@@ -461,7 +461,7 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: domain_types::connector_types::Status::Attempt(get_status(
+                status: Status::Attempt(get_status(
                     item.response.status,
                     item.response.transaction_type,
                 )),
