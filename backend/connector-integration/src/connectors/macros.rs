@@ -194,7 +194,7 @@ macro_rules! expand_fn_handle_response {
 
             // Apply preprocessing if specified in the macro
             let response_bytes = self
-                .preprocess_response_bytes(res.response)
+                .preprocess_response_bytes(data, res.response)
                 .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
             let response_body = bridge.response(response_bytes)?;

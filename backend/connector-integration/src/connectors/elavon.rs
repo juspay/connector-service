@@ -196,8 +196,9 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        pub fn preprocess_response_bytes(
+        pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
         ) -> Result<Bytes, errors::ConnectorError> {
             // Use the utility function to preprocess XML response bytes
