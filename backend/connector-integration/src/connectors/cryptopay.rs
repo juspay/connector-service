@@ -12,15 +12,15 @@ use hex::encode;
 
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     types::Connectors,
 };
@@ -133,6 +133,7 @@ impl connector_types::AcceptDispute for Cryptopay {}
 impl connector_types::SubmitEvidenceV2 for Cryptopay {}
 impl connector_types::DisputeDefend for Cryptopay {}
 impl connector_types::IncomingWebhook for Cryptopay {}
+impl connector_types::RepeatPaymentV2 for Cryptopay {}
 
 macros::create_all_prerequisites!(
     connector_name: Cryptopay,
@@ -440,5 +441,20 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Cryptopay
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Cryptopay
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Cryptopay
 {
 }

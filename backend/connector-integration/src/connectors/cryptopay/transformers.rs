@@ -15,6 +15,7 @@ use error_stack::ResultExt;
 use url::Url;
 
 use domain_types::{
+    connector_types::Status,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -197,8 +198,8 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 .map(|x| RedirectForm::from((x, common_utils::request::Method::Get)));
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(cryptopay_response.data.id.clone()),
-                redirection_data: Box::new(redirection_data),
-                mandate_reference: Box::new(None),
+                redirection_data: redirection_data.map(Box::new),
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: cryptopay_response
@@ -222,7 +223,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         amount_captured,
                         minor_amount_captured: amount_captured_in_minor_units,
                         ..router_data.resource_common_data
@@ -233,7 +234,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             }
             None => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status,
+                    status: Status::Attempt(status),
                     ..router_data.resource_common_data
                 },
                 response,
@@ -337,8 +338,8 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 .map(|x| RedirectForm::from((x, common_utils::request::Method::Get)));
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(cryptopay_response.data.id.clone()),
-                redirection_data: Box::new(redirection_data),
-                mandate_reference: Box::new(None),
+                redirection_data: redirection_data.map(Box::new),
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: cryptopay_response
@@ -362,7 +363,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status,
+                        status: Status::Attempt(status),
                         amount_captured,
                         minor_amount_captured: amount_captured_in_minor_units,
                         ..router_data.resource_common_data
@@ -373,7 +374,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             }
             None => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status,
+                    status: Status::Attempt(status),
                     ..router_data.resource_common_data
                 },
                 response,

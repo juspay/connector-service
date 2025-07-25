@@ -862,7 +862,6 @@ dependencies = [
  "error-stack 0.4.1",
  "hex",
  "image",
- "hex",
  "interfaces",
  "masking",
  "paste",
