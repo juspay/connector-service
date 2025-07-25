@@ -764,6 +764,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
                     raw_connector_response: None,
+                    status_code: Some(http_code),
                 })
             }
             (_, Some(err_resp)) => Err(err_resp),
@@ -997,6 +998,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
                     raw_connector_response: None,
+                    status_code: Some(http_code),
                 })
             }
             (_, Some(err_resp)) => Err(err_resp),
@@ -1146,6 +1148,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 connector_refund_id: payment_resp_struct.ssl_txn_id.clone(),
                 refund_status,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             }),
             (_, Some(err_resp)) => Err(err_resp),
             (ElavonResult::Error(error_payload), None) => Err(ErrorResponse {
@@ -1292,6 +1295,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRSyncResponse, Self>>
             connector_refund_id: response.ssl_txn_id.clone(),
             refund_status,
             raw_connector_response: None,
+            status_code: Some(value.http_code),
         };
 
         Ok(Self {
@@ -1378,6 +1382,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
             incremental_authorization_allowed: None,
             mandate_reference: None,
             raw_connector_response: None,
+            status_code: Some(value.http_code),
         };
 
         Ok(RouterDataV2 {
