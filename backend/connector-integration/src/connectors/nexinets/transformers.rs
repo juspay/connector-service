@@ -6,9 +6,9 @@ use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        MandateReference, PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -372,7 +372,10 @@ impl<F> TryFrom<ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>>
             });
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: domain_types::connector_types::Status::Attempt(get_status(transaction.status.clone(), item.response.transaction_type)),
+                status: domain_types::connector_types::Status::Attempt(get_status(
+                    transaction.status.clone(),
+                    item.response.transaction_type,
+                )),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -458,7 +461,10 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: domain_types::connector_types::Status::Attempt(get_status(item.response.status, item.response.transaction_type)),
+                status: domain_types::connector_types::Status::Attempt(get_status(
+                    item.response.status,
+                    item.response.transaction_type,
+                )),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
