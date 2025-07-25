@@ -236,11 +236,12 @@ fn get_redirect_form_data(
             method: Method::Post,
             form_fields: Default::default(),
         }),
-        common_enums::PaymentMethodType::Evoucher => Ok(RedirectForm::from((
+        common_enums::PaymentMethodType::Evoucher => Ok(RedirectForm::Form {
             //here the pay url gets parsed, and query params are sent as formfields as the connector expects
-            response_data.pay_url,
-            Method::Get,
-        ))),
+            endpoint: response_data.pay_url.to_string(),
+            method: Method::Get,
+            form_fields: Default::default(),
+        }),
         _ => Err(errors::ConnectorError::NotImplemented(
             utils::get_unimplemented_payment_method_error_message("CashToCode"),
         ))?,
@@ -290,7 +291,7 @@ impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
                                 .connector_request_reference_id
                                 .clone(),
                         ),
-                        redirection_data: Some(redirection_data).map(Box::new),
+                        redirection_data: Some(Box::new(redirection_data)),
                         mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
