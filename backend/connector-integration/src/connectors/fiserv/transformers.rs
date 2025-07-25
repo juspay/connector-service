@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId, Status,
+        RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodData,
@@ -749,7 +749,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -818,7 +818,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -885,7 +885,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -959,7 +959,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(

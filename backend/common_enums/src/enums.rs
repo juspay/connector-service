@@ -1040,38 +1040,6 @@ impl AttemptStatus {
     }
 }
 
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    Hash,
-    Eq,
-    PartialEq,
-    serde::Deserialize,
-    serde::Serialize,
-    strum::Display,
-    strum::EnumString,
-    ToSchema,
-)]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum MandateStatus {
-    #[default]
-    MandateStatusUnspecified, // Default value
-    MandateInitiated,                // Mandate setup has been initiated
-    MandatePending,                  // Mandate setup is pending (waiting for processing)
-    MandateAuthenticationPending,    // Waiting for customer authentication
-    MandateAuthenticationSuccessful, // Customer authentication successful
-    MandateAuthenticationFailed,     // Customer authentication failed
-    MandateEstablished,              // Mandate has been successfully established
-    MandateFailed,                   // Mandate setup failed
-    MandateCancelled,                // Mandate setup was cancelled
-    MandateExpired,                  // Mandate setup expired
-    MandateRouterDeclined,           // Mandate declined by router
-    MandateUnresolved,               // Status could not be determined
-}
-
 /// Status of the dispute
 #[derive(
     Clone,
@@ -1281,7 +1249,6 @@ pub enum EventClass {
     Payments,
     Refunds,
     Disputes,
-    Mandates,
 }
 
 #[derive(
