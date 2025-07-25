@@ -1,11 +1,14 @@
 pub mod transformers;
 
+use std::str::FromStr;
+
 use common_enums::AttemptStatus;
 use common_utils::{
     errors::CustomResult,
     ext_traits::BytesExt,
     request::RequestContent,
     types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+    Method,
 };
 use domain_types::{
     connector_flow::{
@@ -689,7 +692,15 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                         .redirect_form
                         .action_url
                         .clone(),
-                    method: common_utils::request::Method::Post,
+                    method: Method::from_str(
+                        bank_form_response
+                            .body
+                            .bank_form
+                            .redirect_form
+                            .method
+                            .as_str(),
+                    )
+                    .unwrap_or(Method::Post),
                     form_fields: bank_form_response
                         .body
                         .bank_form

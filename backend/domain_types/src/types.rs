@@ -1154,19 +1154,13 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
-                                                method: match method {
-                                                    Method::Get => 1,
-                                                    Method::Post => 2,
-                                                    Method::Put => 3,
-                                                    Method::Delete => 4,
-                                                    _ => 0,
-                                                },
-                                                form_fields: HashMap::default(), //TODO
+                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
+                                                form_fields, //TODO
                                             }
                                         ))
                                     })
@@ -1758,6 +1752,19 @@ impl ForeignFrom<common_enums::DisputeStatus> for grpc_api_types::payments::Disp
             common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
             common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
             common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
+        }
+    }
+}
+
+impl ForeignFrom<common_utils::Method> for grpc_api_types::payments::HttpMethod {
+    fn foreign_from(method: common_utils::Method) -> Self {
+        match method {
+            common_utils::Method::Post => Self::Post,
+            common_utils::Method::Get => Self::Get,
+            common_utils::Method::Put => Self::Put,
+            common_utils::Method::Delete => Self::Delete,
+            common_utils::Method::Patch => Self::Post, // Patch is not defined in gRPC, using Post
+                                                       // as a fallback
         }
     }
 }
