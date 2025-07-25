@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use base64::Engine;
 use common_enums;
 use common_utils::{
@@ -17,7 +19,6 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use super::constants;
 use crate::types::ResponseRouterData;
@@ -369,9 +370,10 @@ impl
             // Error response - PhonePe returned success: false
             let error_message = response.message.clone();
             let error_code = response.code.clone();
-            
+
             // Get merchant transaction ID from data if available for better tracking
-            let connector_transaction_id = response.data
+            let connector_transaction_id = response
+                .data
                 .as_ref()
                 .map(|data| data.merchant_transaction_id.clone());
 

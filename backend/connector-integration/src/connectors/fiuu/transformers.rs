@@ -1,46 +1,44 @@
+use std::collections::HashMap;
+
+use cards::CardNumber;
+use common_enums::{BankNames, CaptureMethod, Currency};
+use common_utils::{
+    consts,
+    crypto::{self, GenerateDigest},
+    errors::CustomResult,
+    ext_traits::Encode,
+    pii::Email,
+    request::Method,
+    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId, Status,
     },
-    payment_method_data::{Card, CardDetailsForNetworkTransactionId, GooglePayWalletData},
-};
-
-use crate::connectors::{fiuu::FiuuRouterData, macros::GetFormData};
-use crate::types::ResponseRouterData;
-use common_utils::{
-    crypto::{self, GenerateDigest},
-    request::Method,
-    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
-};
-use error_stack::ResultExt;
-
-use domain_types::{
-    payment_method_data::{BankRedirectData, PaymentMethodData, RealTimePaymentData, WalletData},
+    errors::{self, ConnectorError},
+    payment_method_data::{
+        BankRedirectData, Card, CardDetailsForNetworkTransactionId, GooglePayWalletData,
+        PaymentMethodData, RealTimePaymentData, WalletData,
+    },
     router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
     utils,
 };
-
-use std::collections::HashMap;
-
-use domain_types::errors::{self, ConnectorError};
-
-use common_utils::{consts, errors::CustomResult, ext_traits::Encode, pii::Email};
-
-use common_enums::{BankNames, CaptureMethod, Currency};
-
-use cards::CardNumber;
-
+use error_stack::ResultExt;
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use strum::Display;
 use url::Url;
+
+use crate::{
+    connectors::{fiuu::FiuuRouterData, macros::GetFormData},
+    types::ResponseRouterData,
+};
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
 const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;

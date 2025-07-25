@@ -1,8 +1,8 @@
 use common_enums::{self, AttemptStatus};
-use domain_types::errors::ConnectorError;
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, UpiData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,

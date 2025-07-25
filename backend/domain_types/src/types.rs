@@ -978,7 +978,9 @@ pub fn generate_create_order_response(
             // For successful order creation, return basic success response
             PaymentServiceAuthorizeResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(response.order_id)),
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        response.order_id,
+                    )),
                 }),
                 redirection_data: None,
                 network_txn_id: None,
