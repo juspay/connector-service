@@ -940,5 +940,5 @@ message RewardPaymentMethodType {
 enum RewardType {
   REWARD_TYPE_UNSPECIFIED = 0;
   CLASSICREWARD = 1;
-  EVOUCHER = 2;
+  E_VOUCHER = 2;
 }

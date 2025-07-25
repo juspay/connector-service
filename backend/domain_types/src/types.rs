@@ -270,7 +270,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(reward) => {
                     match reward.reward_type() {
                         grpc_api_types::payments::RewardType::Classicreward => Ok(Some(PaymentMethodType::ClassicReward)),
-                        grpc_api_types::payments::RewardType::Evoucher => Ok(Some(PaymentMethodType::Evoucher)),
+                        grpc_api_types::payments::RewardType::EVoucher => Ok(Some(PaymentMethodType::Evoucher)),
                         _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "UNSUPPORTED_REWARD_TYPE".to_owned(),
                             error_identifier: 400,
