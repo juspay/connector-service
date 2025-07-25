@@ -29,7 +29,7 @@ mod tests {
             id_type::MerchantId, pii::Email, request::RequestContent, types::MinorUnit,
         };
         use domain_types::{
-            connector_types::{PaymentFlowData, PaymentsAuthorizeData},
+            connector_types::{PaymentFlowData, PaymentsAuthorizeData, Status},
             payment_address::{Address, PaymentAddress, PhoneDetails},
             payment_method_data::{Card, PaymentMethodData},
             router_data::{ConnectorAuthType, ErrorResponse},
@@ -58,7 +58,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -233,7 +233,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "MISSING_EMAIL_ID".to_string(),
                     attempt_id: "MISSING_CARD_ID".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -350,7 +350,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "INVALID_PAYMENT".to_string(),
                     attempt_id: "INVALID_ATTEMPT".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -477,7 +477,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -625,7 +625,9 @@ mod tests {
 
             assert!(matches!(
                 result.resource_common_data.status,
-                AttemptStatus::AuthenticationPending
+                domain_types::connector_types::Status::Attempt(
+                    AttemptStatus::AuthenticationPending
+                )
             ));
         }
 
@@ -778,7 +780,7 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(AttemptStatus::Pending),
                 payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -950,7 +952,7 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(AttemptStatus::Pending),
                 payment_method: PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1123,7 +1125,9 @@ mod tests {
                     connector_customer: None,
                     payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                     attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                    status: common_enums::AttemptStatus::Pending,
+                    status: domain_types::connector_types::Status::Attempt(
+                        common_enums::AttemptStatus::Pending,
+                    ),
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -1172,6 +1176,7 @@ mod tests {
                     currency: Currency::USD,
                     integrity_object: None,
                     metadata: None,
+                    webhook_url: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1230,7 +1235,9 @@ mod tests {
                     connector_customer: None,
                     payment_id: "".to_string(),
                     attempt_id: "".to_string(),
-                    status: common_enums::AttemptStatus::Pending,
+                    status: domain_types::connector_types::Status::Attempt(
+                        common_enums::AttemptStatus::Pending,
+                    ),
                     payment_method: common_enums::PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -1267,6 +1274,7 @@ mod tests {
                     currency: Currency::default(),
                     integrity_object: None,
                     metadata: None,
+                    webhook_url: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1312,7 +1320,7 @@ mod tests {
             };
             use common_utils::{id_type::MerchantId, types::MinorUnit};
             use domain_types::{
-                connector_types::{PaymentFlowData, PaymentsAuthorizeData},
+                connector_types::{PaymentFlowData, PaymentsAuthorizeData, Status},
                 payment_address::PaymentAddress,
                 payment_method_data::{Card, PaymentMethodData},
                 router_data::ErrorResponse,
@@ -1330,7 +1338,7 @@ mod tests {
                     connector_customer: None,
                     payment_id: "invalid_payment_id".to_string(),
                     attempt_id: "invalid_attempt_id".to_string(),
-                    status: AttemptStatus::Pending,
+                    status: Status::Attempt(AttemptStatus::Pending),
                     payment_method: PaymentMethod::Card,
                     description: None,
                     return_url: None,
@@ -1456,7 +1464,9 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1505,6 +1515,7 @@ mod tests {
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1574,7 +1585,9 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1623,6 +1636,7 @@ mod tests {
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1681,7 +1695,9 @@ mod tests {
                 connector_customer: None,
                 payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
                 attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
-                status: common_enums::AttemptStatus::Pending,
+                status: domain_types::connector_types::Status::Attempt(
+                    common_enums::AttemptStatus::Pending,
+                ),
                 payment_method: common_enums::PaymentMethod::Card,
                 description: None,
                 return_url: None,
@@ -1730,6 +1746,7 @@ mod tests {
                 currency: Currency::USD,
                 integrity_object: None,
                 metadata: None,
+                webhook_url: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),

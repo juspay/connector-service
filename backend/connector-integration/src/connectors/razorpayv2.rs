@@ -9,15 +9,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodData,
@@ -448,6 +448,7 @@ impl interfaces::connector_types::IncomingWebhook for RazorpayV2 {}
 impl interfaces::connector_types::RefundV2 for RazorpayV2 {}
 impl interfaces::connector_types::PaymentCapture for RazorpayV2 {}
 impl interfaces::connector_types::SetupMandateV2 for RazorpayV2 {}
+impl interfaces::connector_types::RepeatPaymentV2 for RazorpayV2 {}
 impl interfaces::connector_types::AcceptDispute for RazorpayV2 {}
 impl interfaces::connector_types::RefundSyncV2 for RazorpayV2 {}
 impl interfaces::connector_types::DisputeDefend for RazorpayV2 {}
@@ -949,5 +950,20 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for RazorpayV2
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for RazorpayV2
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for RazorpayV2
 {
 }

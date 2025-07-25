@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
-    PaymentMethodType,
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, MandateStatus,
+    PaymentMethod, PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -48,6 +48,9 @@ pub enum ConnectorEnum {
     Xendit,
     Checkout,
     Authorizedotnet,
+    Phonepe,
+    Cashfree,
+    Fiuu,
     Cryptopay,
 }
 
@@ -65,6 +68,9 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
+            grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
+            grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
             grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -209,6 +215,12 @@ impl PaymentsSyncData {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Status {
+    Attempt(AttemptStatus),
+    Mandate(MandateStatus),
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
     pub merchant_id: common_utils::id_type::MerchantId,
@@ -216,7 +228,7 @@ pub struct PaymentFlowData {
     pub connector_customer: Option<String>,
     pub payment_id: String,
     pub attempt_id: String,
-    pub status: AttemptStatus,
+    pub status: Status,
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
@@ -913,9 +925,9 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data: Box<Option<crate::router_response_types::RedirectForm>>,
+        redirection_data: Option<Box<crate::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
-        mandate_reference: Box<Option<MandateReference>>,
+        mandate_reference: Option<Box<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
@@ -938,6 +950,7 @@ pub struct PaymentCreateOrderData {
     pub currency: Currency,
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<serde_json::Value>,
+    pub webhook_url: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -1221,6 +1234,24 @@ impl SetupMandateRequestData {
     }
     pub fn is_card(&self) -> bool {
         matches!(self.payment_method_data, PaymentMethodData::Card(_))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RepeatPaymentData {
+    pub mandate_reference: MandateReferenceId,
+    pub amount: i64,
+    pub minor_amount: MinorUnit,
+    pub currency: Currency,
+    pub merchant_order_reference_id: Option<String>,
+    pub metadata: Option<HashMap<String, String>>,
+    pub webhook_url: Option<String>,
+    pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+}
+
+impl RepeatPaymentData {
+    pub fn get_mandate_reference(&self) -> &MandateReferenceId {
+        &self.mandate_reference
     }
 }
 

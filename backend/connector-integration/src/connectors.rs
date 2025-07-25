@@ -22,5 +22,14 @@ pub mod macros;
 pub mod checkout;
 pub use self::checkout::Checkout;
 
+pub mod phonepe;
+pub use self::phonepe::Phonepe;
+
+pub mod cashfree;
+pub use self::cashfree::Cashfree;
+
+pub mod fiuu;
+pub use self::fiuu::Fiuu;
+
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
