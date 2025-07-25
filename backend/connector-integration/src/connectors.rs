@@ -33,3 +33,6 @@ pub use self::fiuu::Fiuu;
 
 pub mod payu;
 pub use self::payu::Payu;
+
+pub mod nexinets;
+pub use self::nexinets::Nexinets;
