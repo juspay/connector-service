@@ -58,17 +58,17 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-impl<T: PaymentMethodDataTypes> connector_types::ConnectorServiceTrait<T> for Adyen {}
-impl<T: PaymentMethodDataTypes> connector_types::PaymentAuthorizeV2<T> for Adyen {}
-impl connector_types::PaymentSyncV2 for Adyen {}
-impl connector_types::PaymentVoidV2 for Adyen {}
-impl connector_types::RefundSyncV2 for Adyen {}
-impl connector_types::RefundV2 for Adyen {}
-impl connector_types::PaymentCapture for Adyen {}
-impl<T: PaymentMethodDataTypes> connector_types::SetupMandateV2<T> for Adyen {}
-impl connector_types::AcceptDispute for Adyen {}
-impl connector_types::SubmitEvidenceV2 for Adyen {}
-impl connector_types::DisputeDefend for Adyen {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::ConnectorServiceTrait<T> for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::PaymentAuthorizeV2<T> for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::PaymentSyncV2 for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::PaymentVoidV2 for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::RefundSyncV2 for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::RefundV2 for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::PaymentCapture for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::SetupMandateV2<T> for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::AcceptDispute for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::SubmitEvidenceV2 for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> connector_types::DisputeDefend for Adyen<T> {}
 
 // type AuthorizeRouterData<T> = RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>;
 // type SetupMandateRouterData<T> = RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>;
@@ -84,7 +84,6 @@ impl connector_types::DisputeDefend for Adyen {}
 macros::create_all_prerequisites!(
     connector_name: Adyen,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static],
     api: [
         (
             flow: Authorize,
@@ -486,7 +485,7 @@ macros::create_all_prerequisites!(
 //     }
 // }
 
-impl ConnectorCommon for Adyen
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> ConnectorCommon for Adyen<T>
 {
     fn id(&self) -> &'static str {
         "adyen"
@@ -700,17 +699,23 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl connector_types::ValidationTrait for Adyen {}
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    > connector_types::ValidationTrait for Adyen<T> {}
 
-impl connector_types::PaymentOrderCreate for Adyen {}
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    > connector_types::PaymentOrderCreate for Adyen<T> {}
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    > 
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
@@ -773,7 +778,9 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Adyen {}
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Adyen<T> {}
 
 // SourceVerification implementations for all flows
 impl<
@@ -784,57 +791,67 @@ impl<
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
@@ -846,51 +863,61 @@ impl<
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl <
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    >
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl connector_types::IncomingWebhook for Adyen {
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    > connector_types::IncomingWebhook for Adyen<T> {
     fn get_event_type(
         &self,
         request: RequestDetails,
@@ -1171,7 +1198,7 @@ static ADYEN_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
 
 static ADYEN_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
 
-impl ConnectorSpecifications for Adyen {
+impl  ConnectorSpecifications for Adyen<DefaultPCIHolder> {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         Some(&ADYEN_CONNECTOR_INFO)
     }
@@ -1185,7 +1212,7 @@ impl ConnectorSpecifications for Adyen {
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static > ConnectorValidation for Adyen
+impl ConnectorValidation for Adyen<DefaultPCIHolder>
 {
     fn validate_mandate_payment(
         &self,

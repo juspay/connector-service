@@ -110,7 +110,7 @@ pub struct Bridge<Q, S, T>(pub PhantomData<(Q, S, T)>);
 
 macro_rules! expand_fn_get_request_body {
     (
-        $connector: ty,
+        $connector: ident,
         $curl_req: ty,
         FormData,
         $curl_res: ty,
@@ -179,7 +179,7 @@ pub(crate) use expand_fn_get_request_body;
 
 macro_rules! expand_fn_handle_response {
     // When preprocess_response is true
-    ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, true) => {
+    ($connector: ident, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, true) => {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -285,7 +285,7 @@ macro_rules! macro_connector_implementation {
     // Version with preprocess_response parameter explicitly set
     (
         connector_default_implementations: [$($function_name: ident), *],
-        connector: $connector: ty,
+        connector: $connector: ident,
         $(curl_request: $content_type:ident($curl_req: ty),)?
         curl_response:$curl_res: ty,
         flow_name:$flow: ident,
@@ -304,7 +304,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-            > for $connector
+            > for $connector<T>
         {
             fn get_http_method(&self) -> common_utils::request::Method {
                 common_utils::request::Method::$http_method_type
@@ -343,7 +343,7 @@ macro_rules! macro_connector_implementation {
     // Version without preprocess_response parameter (defaults to false)
     (
         connector_default_implementations: [$($function_name:ident), *],
-        connector: $connector:ty,
+        connector: $connector:ident,
         curl_request: $content_type:ident($curl_req:ty),
         curl_response: $curl_res:ty,
         flow_name: $flow:ident,
@@ -363,7 +363,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-            > for $connector
+            > for $connector<$generic_type>
         {
             fn get_http_method(&self) -> common_utils::request::Method {
                 common_utils::request::Method::$http_method_type
@@ -437,12 +437,11 @@ macro_rules! impl_templating {
         curl_request: $curl_req: ident,
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
-        generic_type: $generic_type: ident,
-        $bounds:tt
+        generic_type: $generic_type: tt,
     ) => {
         macros::create_template_types_for_request_and_response_types!($curl_req, $curl_res);
         paste::paste!{
-            impl<$generic_type: $($bounds)*> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>], $generic_type>{
+            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>], $generic_type>{
                 type RequestBody = $curl_req;
                 type ResponseBody = $curl_res;
                 type ConnectorInputData = [<$connector RouterData>]<$router_data>;
@@ -454,11 +453,10 @@ macro_rules! impl_templating {
         curl_response: $curl_res: ident,
         router_data: $router_data: ty,
         generic_type: $generic_type:tt,
-        $bounds:tt
     ) => {
         macros::create_template_types_for_request_and_response_types!($curl_res);
         paste::paste!{
-            impl<$generic_type: $($bounds)*> BridgeRequestResponse for Bridge<NoRequestBodyTemplating, [<$curl_res Templating>], $generic_type> {
+            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<NoRequestBodyTemplating, [<$curl_res Templating>], $generic_type> {
                 type RequestBody = NoRequestBody;
                 type ResponseBody = $curl_res;
                 type ConnectorInputData = [<$connector RouterData>]<$router_data>;
@@ -513,8 +511,7 @@ pub(crate) use optional_or_default;
 macro_rules! create_all_prerequisites {
     (
         connector_name: $connector: ident,
-        generic_type: $generic_type: ident,
-        [$($bounds:tt)*],
+        generic_type: $generic_type:tt,
         api: [
             $(
                 (
@@ -542,12 +539,11 @@ macro_rules! create_all_prerequisites {
                 curl_response: $flow_response,
                 router_data: $router_data_type,
                 generic_type: $generic_type,
-                 $($bounds)*
             );
         )*
         paste::paste! {
             #[derive(Clone)]
-            pub struct $connector<$generic_type: $($bounds)*> {
+            pub struct $connector<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> {
                 $(
                     pub $converter_name: &'static (dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
                 )*
@@ -559,7 +555,7 @@ macro_rules! create_all_prerequisites {
                     >),
                 )*
             }
-            impl<$generic_type: $($bounds)*> $connector<$generic_type> {
+            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> $connector<$generic_type> {
                 pub const fn new() -> &'static Self {
                     &Self{
                         $(
