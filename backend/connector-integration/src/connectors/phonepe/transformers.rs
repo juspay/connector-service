@@ -370,9 +370,10 @@ impl
             // Error response - PhonePe returned success: false
             let error_message = response.message.clone();
             let error_code = response.code.clone();
-            
+
             // Get merchant transaction ID from data if available for better tracking
-            let connector_transaction_id = response.data
+            let connector_transaction_id = response
+                .data
                 .as_ref()
                 .map(|data| data.merchant_transaction_id.clone());
 
