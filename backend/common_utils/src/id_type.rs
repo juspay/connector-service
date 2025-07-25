@@ -91,6 +91,8 @@ impl TryFrom<std::borrow::Cow<'_, str>> for CustomerId {
     }
 }
 
+impl hyperswitch_masking::SerializableSecret for CustomerId {}
+
 #[derive(Debug, Clone, Serialize, Hash, PartialEq, Eq)]
 
 pub struct MerchantId(String);
