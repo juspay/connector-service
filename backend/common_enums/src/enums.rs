@@ -986,10 +986,6 @@ pub enum AttemptStatus {
     DeviceDataCollectionPending,
     IntegrityFailure,
     Unknown,
-    // Mandate Status
-    MandateEstablished,
-    MandateFailed,
-    MandateEstablishedAndCharged,
 }
 
 impl TryFrom<u32> for AttemptStatus {
@@ -1021,9 +1017,6 @@ impl TryFrom<u32> for AttemptStatus {
             22 => AttemptStatus::PaymentMethodAwaited,
             23 => AttemptStatus::ConfirmationAwaited,
             24 => AttemptStatus::DeviceDataCollectionPending,
-            25 => AttemptStatus::MandateEstablished,
-            26 => AttemptStatus::MandateFailed,
-            27 => AttemptStatus::MandateEstablishedAndCharged,
             _ => AttemptStatus::Unknown,
         })
     }
@@ -1043,43 +1036,8 @@ impl AttemptStatus {
                 | Self::CaptureFailed
                 | Self::Failure
                 | Self::IntegrityFailure
-                | Self::MandateEstablished
-                | Self::MandateFailed
-                | Self::MandateEstablishedAndCharged
         )
     }
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    Hash,
-    Eq,
-    PartialEq,
-    serde::Deserialize,
-    serde::Serialize,
-    strum::Display,
-    strum::EnumString,
-    ToSchema,
-)]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-pub enum MandateStatus {
-    #[default]
-    MandateStatusUnspecified, // Default value
-    MandateInitiated,                // Mandate setup has been initiated
-    MandatePending,                  // Mandate setup is pending (waiting for processing)
-    MandateAuthenticationPending,    // Waiting for customer authentication
-    MandateAuthenticationSuccessful, // Customer authentication successful
-    MandateAuthenticationFailed,     // Customer authentication failed
-    MandateEstablished,              // Mandate has been successfully established
-    MandateFailed,                   // Mandate setup failed
-    MandateCancelled,                // Mandate setup was cancelled
-    MandateExpired,                  // Mandate setup expired
-    MandateRouterDeclined,           // Mandate declined by router
-    MandateUnresolved,               // Status could not be determined
 }
 
 /// Status of the dispute
@@ -1291,7 +1249,6 @@ pub enum EventClass {
     Payments,
     Refunds,
     Disputes,
-    Mandates,
 }
 
 #[derive(

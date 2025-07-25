@@ -192,13 +192,6 @@ pub fn get_header_key_value<'a>(
     get_header_field(headers.get(key))
 }
 
-pub fn get_http_header<'a>(
-    key: &str,
-    headers: &'a http::HeaderMap,
-) -> CustomResult<&'a str, errors::ConnectorError> {
-    get_header_field(headers.get(key))
-}
-
 fn get_header_field(
     field: Option<&http::HeaderValue>,
 ) -> CustomResult<&str, errors::ConnectorError> {
@@ -219,8 +212,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::AuthorizationFailed
         | common_enums::AttemptStatus::CaptureFailed
         | common_enums::AttemptStatus::VoidFailed
-        | common_enums::AttemptStatus::Failure
-        | common_enums::AttemptStatus::MandateFailed => true,
+        | common_enums::AttemptStatus::Failure => true,
         common_enums::AttemptStatus::Started
         | common_enums::AttemptStatus::RouterDeclined
         | common_enums::AttemptStatus::AuthenticationPending
@@ -241,9 +233,7 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
         | common_enums::AttemptStatus::ConfirmationAwaited
         | common_enums::AttemptStatus::DeviceDataCollectionPending
         | common_enums::AttemptStatus::IntegrityFailure
-        | common_enums::AttemptStatus::Unknown
-        | common_enums::AttemptStatus::MandateEstablished
-        | common_enums::AttemptStatus::MandateEstablishedAndCharged => false,
+        | common_enums::AttemptStatus::Unknown => false,
     }
 }
 

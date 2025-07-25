@@ -1,12 +1,11 @@
 use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
-use common_enums::{self, enums, AttemptStatus, MandateStatus, RefundStatus};
+use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{
     consts,
     ext_traits::{OptionExt, ValueExt},
     pii::Email,
 };
-use domain_types::connector_types::Status;
 use domain_types::errors::ConnectorError;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
@@ -633,6 +632,7 @@ impl
         .cloned();
 
         let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
+
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
             amount: item.router_data.request.amount.to_string(),
@@ -839,6 +839,7 @@ impl
         .cloned();
 
         let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
+
         let transaction_void_details = AuthorizedotnetTransactionVoidDetails {
             transaction_type: TransactionType::VoidTransaction,
             ref_trans_id: transaction_id,
@@ -1249,7 +1250,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1290,7 +1291,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1372,49 +1373,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
 
         // Update the status in resource_common_data
         let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
-        new_router_data.resource_common_data = resource_common_data;
-
-        // Set the response
-        new_router_data.response = response_result;
-
-        Ok(new_router_data)
-    }
-}
-
-impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<HsInterfacesConnectorError>;
-    fn try_from(
-        value: ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response,
-            router_data,
-            http_code,
-        } = value;
-
-        // Use our helper function to convert the response
-        // RepeatPayment is always captured immediately, so no capture_method needed
-        let (status, response_result) = convert_to_payments_response_data_or_error(
-            &response.0,
-            http_code,
-            Operation::Authorize,
-            Some(enums::CaptureMethod::Automatic),
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
-        )
-        .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
-
-        // Create a new RouterDataV2 with updated fields
-        let mut new_router_data = router_data;
-
-        // Update the status in resource_common_data
-        let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = Status::Attempt(status);
+        resource_common_data.status = status;
         new_router_data.resource_common_data = resource_common_data;
 
         // Set the response
@@ -1510,7 +1469,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
 
                 // Update the status in resource_common_data
                 let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = Status::Attempt(payment_status);
+                resource_common_data.status = payment_status;
                 new_router_data.resource_common_data = resource_common_data;
 
                 // Set the response
@@ -1562,7 +1521,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                 // Update router data with status and error response
                 let mut new_router_data = router_data;
                 let mut resource_common_data = new_router_data.resource_common_data.clone();
-                resource_common_data.status = Status::Attempt(status);
+                resource_common_data.status = status;
                 new_router_data.resource_common_data = resource_common_data;
                 new_router_data.response = Err(error_response);
 
@@ -2132,9 +2091,9 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
         } = value;
 
         let status = if response.messages.result_code == ResultCode::Ok {
-            AttemptStatus::MandateEstablished
+            AttemptStatus::Authorized
         } else {
-            AttemptStatus::MandateFailed
+            AttemptStatus::Failure
         };
 
         let raw_connector_response = router_data
@@ -2144,6 +2103,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
         let mut new_router_data = router_data;
         let mut resource_common_data = new_router_data.resource_common_data.clone();
         resource_common_data.status = status;
+        new_router_data.resource_common_data = resource_common_data;
 
         if let Some(profile_id) = response.customer_profile_id.clone() {
             // Create composite mandate ID using customer profile ID and first payment profile ID

@@ -63,11 +63,6 @@ enum PaymentStatus {
   PENDING = 20;       // General pending state
   FAILURE = 21;       // General failure state
   UNRESOLVED = 19;    // Status could not be determined
-
-  // Mandate Status
-  MANDATE_ESTABLISHED = 25;           // Mandate has been successfully established
-  MANDATE_FAILED = 26;               // Mandate setup failed  
-  MANDATE_ESTABLISHED_AND_CHARGED = 27; // Mandate established and charged
 }
 
 // Note: MandateStatus enum removed - mandate setup now uses PaymentStatus with optional sub_status for detailed information
