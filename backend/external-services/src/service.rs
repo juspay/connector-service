@@ -86,7 +86,7 @@ where
         });
     let headers = serde_json::Value::Object(masked_headers);
     tracing::Span::current().record("request.headers", tracing::field::display(&headers));
-    let mut router_data = router_data.clone();
+    let router_data = router_data.clone();
 
     let req = connector_request.as_ref().map(|connector_request| {
         let masked_request = match connector_request.body.as_ref() {
@@ -140,9 +140,7 @@ where
                             let status_code = body.status_code;
                             tracing::Span::current()
                                 .record("status_code", tracing::field::display(status_code));
-                            if let Ok(response) =
-                                serde_json::from_slice::<serde_json::Value>(&body.response)
-                            {
+                            if let Ok(response) = parse_json_with_bom_handling(&body.response) {
                                 let headers = body.headers.clone().unwrap_or_default();
                                 let map = headers.iter().fold(
                                     serde_json::Map::new(),
@@ -176,17 +174,25 @@ where
                                 ));
                             }
 
-                            let handle_response_result =
-                                connector.handle_response_v2(&router_data, None, body.clone());
+                            // Set raw_connector_response BEFORE calling the transformer
+                            let mut updated_router_data = router_data.clone();
+                            if all_keys_required.unwrap_or(true) {
+                                let raw_response_string =
+                                    strip_bom_and_convert_to_string(&body.response);
+                                updated_router_data
+                                    .resource_common_data
+                                    .set_raw_connector_response(raw_response_string);
+                            }
+
+                            let handle_response_result = connector.handle_response_v2(
+                                &updated_router_data,
+                                None,
+                                body.clone(),
+                            );
 
                             match handle_response_result {
-                                Ok(mut data) => {
-                                    if all_keys_required.unwrap_or(true) {
-                                        let raw_response_string =
-                                            String::from_utf8(body.response.to_vec()).ok();
-                                        data.resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
-                                    }
+                                Ok(data) => {
+                                    tracing::info!("Transformer completed successfully");
                                     Ok(data)
                                 }
                                 Err(err) => Err(err),
@@ -201,6 +207,17 @@ where
                                     body.status_code.to_string().as_str(),
                                 ])
                                 .inc();
+
+                            // Set raw connector response for error cases BEFORE processing error
+                            let mut updated_router_data = router_data.clone();
+                            if all_keys_required.unwrap_or(true) {
+                                let raw_response_string =
+                                    strip_bom_and_convert_to_string(&body.response);
+                                updated_router_data
+                                    .resource_common_data
+                                    .set_raw_connector_response(raw_response_string);
+                            }
+
                             let error = match body.status_code {
                                 500..=511 => {
                                     connector.get_5xx_error_response(body.clone(), None)?
@@ -215,16 +232,8 @@ where
                                 "response.status_code",
                                 tracing::field::display(error.status_code),
                             );
-                            // Set raw connector response for error cases too
-                            if all_keys_required.unwrap_or(true) {
-                                let raw_response_string =
-                                    String::from_utf8(body.response.to_vec()).ok();
-                                router_data
-                                    .resource_common_data
-                                    .set_raw_connector_response(raw_response_string);
-                            }
-                            router_data.response = Err(error);
-                            router_data
+                            updated_router_data.response = Err(error);
+                            updated_router_data
                         }
                     };
                     Ok(response)
@@ -534,6 +543,38 @@ async fn handle_response(
             }
         })
         .await?
+}
+
+/// Helper function to remove BOM from response bytes and convert to string
+fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
+    String::from_utf8(response_bytes.to_vec()).ok().map(|s| {
+        // Remove BOM if present (UTF-8 BOM is 0xEF, 0xBB, 0xBF)
+        if s.starts_with('\u{FEFF}') {
+            s.trim_start_matches('\u{FEFF}').to_string()
+        } else {
+            s
+        }
+    })
+}
+
+/// Helper function to parse JSON from response bytes with BOM handling
+fn parse_json_with_bom_handling(
+    response_bytes: &[u8],
+) -> Result<serde_json::Value, serde_json::Error> {
+    // Try direct parsing first (most common case)
+    match serde_json::from_slice::<serde_json::Value>(response_bytes) {
+        Ok(value) => Ok(value),
+        Err(_) => {
+            // If direct parsing fails, try after removing BOM
+            let cleaned_response = if response_bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
+                // UTF-8 BOM detected, remove it
+                &response_bytes[3..]
+            } else {
+                response_bytes
+            };
+            serde_json::from_slice::<serde_json::Value>(cleaned_response)
+        }
+    }
 }
 
 pub(super) trait HeaderExt {

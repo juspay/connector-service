@@ -2,9 +2,7 @@ use common_enums::{self, AttemptStatus};
 use domain_types::errors::ConnectorError;
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId, Status,
-    },
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     payment_method_data::{PaymentMethodData, UpiData, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -609,7 +607,7 @@ impl
             return Ok(Self {
                 response: Err(error_response),
                 resource_common_data: PaymentFlowData {
-                    status: Status::Attempt(AttemptStatus::Failure),
+                    status: AttemptStatus::Failure,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
@@ -690,7 +688,7 @@ impl
         Ok(Self {
             response: Ok(payment_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
