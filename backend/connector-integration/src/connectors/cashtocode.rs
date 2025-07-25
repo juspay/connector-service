@@ -9,15 +9,15 @@ use error_stack::ResultExt;
 
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::ErrorResponse,
@@ -95,6 +95,7 @@ impl connector_types::AcceptDispute for Cashtocode {}
 impl connector_types::SubmitEvidenceV2 for Cashtocode {}
 impl connector_types::DisputeDefend for Cashtocode {}
 impl connector_types::IncomingWebhook for Cashtocode {}
+impl connector_types::RepeatPaymentV2 for Cashtocode {}
 
 macros::create_all_prerequisites!(
     connector_name: Cashtocode,
@@ -333,6 +334,21 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Cashtocode
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Cashtocode
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Cashtocode
 {
 }
 
