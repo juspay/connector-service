@@ -2,7 +2,6 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
-use common_enums::CardNetwork;
 use grpc_server::{app, configs};
 mod common;
 
@@ -11,8 +10,6 @@ use std::{
     env,
     time::{SystemTime, UNIX_EPOCH},
 };
-
-use reqwest;
 
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
@@ -126,7 +123,7 @@ fn create_payment_authorize_request(
         card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
         card_cvc: TEST_CARD_CVC.to_string(),
         card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
-        card_network: Some(CardNetwork::JCB as i32),
+        card_network: Some(1),
         card_issuer: None,
         card_type: None,
         card_issuing_country_alpha2: None,
@@ -253,10 +250,7 @@ async fn visit_3ds_authentication_url(
         .expect("TEST_NEXINETS_KEY1 environment variable is required for 3DS URL");
 
     // Construct the 3DS authentication URL with correct format
-    let url = format!(
-        "https://pptest.payengine.de/three-ds-v2-order/{}/{}",
-        key1, request_ref_id
-    );
+    let url = format!("https://pptest.payengine.de/three-ds-v2-order/{key1}/{request_ref_id}",);
 
     // Create reqwest client with timeout and proper TLS configuration
     let client = reqwest::Client::builder()
@@ -362,9 +356,7 @@ async fn test_payment_authorization_manual_capture() {
         // Check if payment requires 3DS authentication
         if auth_response.status == i32::from(PaymentStatus::AuthenticationPending) {
             // Visit the 3DS authentication URL to simulate user completing authentication
-            if let Err(e) = visit_3ds_authentication_url(&request_ref_id).await {
-                println!("Warning: Failed to visit 3DS authentication URL: {}", e);
-            }
+            let _ = visit_3ds_authentication_url(&request_ref_id).await;
 
             // Wait a moment for the authentication state to be updated
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -389,8 +381,7 @@ async fn test_payment_authorization_manual_capture() {
             assert!(
                 final_payment_status == i32::from(PaymentStatus::Authorized)
                     || final_payment_status == i32::from(PaymentStatus::AuthenticationPending),
-                "Payment should be in AUTHORIZED or still AUTHENTICATION_PENDING state after visiting 3DS URL. Current status: {}", 
-                final_payment_status
+                "Payment should be in AUTHORIZED or still AUTHENTICATION_PENDING state after visiting 3DS URL. Current status: {final_payment_status}", 
             );
         } else {
             // Verify payment status is authorized (for manual capture without 3DS)
@@ -421,11 +412,6 @@ async fn test_payment_authorization_manual_capture() {
             assert!(
                 capture_response.status == i32::from(PaymentStatus::Charged),
                 "Payment should be in CHARGED state after capture"
-            );
-        } else {
-            println!("Skipping capture as payment is still in AuthenticationPending state");
-            println!(
-                "In a real scenario, capture would proceed after user completes 3DS authentication"
             );
         }
     });
@@ -460,10 +446,7 @@ async fn test_payment_sync() {
 
         // Check if payment requires 3DS authentication
         if auth_response.status == i32::from(PaymentStatus::AuthenticationPending) {
-            if let Err(e) = visit_3ds_authentication_url(&request_ref_id).await {
-                println!("Warning: Failed to visit 3DS authentication URL: {}", e);
-                // Continue with the test even if the URL visit fails
-            }
+            let _ = visit_3ds_authentication_url(&request_ref_id).await;
 
             // Wait a moment for the authentication state to be updated
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -522,10 +505,7 @@ async fn test_refund() {
 
         // Check if payment requires 3DS authentication
         if response.status == i32::from(PaymentStatus::AuthenticationPending) {
-            if let Err(e) = visit_3ds_authentication_url(&request_ref_id).await {
-                println!("Warning: Failed to visit 3DS authentication URL: {}", e);
-                // Continue with the test even if the URL visit fails
-            }
+            let _ = visit_3ds_authentication_url(&request_ref_id).await;
 
             // Wait a moment for the authentication state to be updated
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -594,14 +574,6 @@ async fn test_refund() {
                 refund_response.status == i32::from(RefundStatus::RefundSuccess),
                 "Refund should be in RefundSuccess state"
             );
-        } else {
-            println!("Skipping refund as payment is still in AuthenticationPending state");
-            println!(
-                "In a real scenario, refund would proceed after user completes 3DS authentication"
-            );
-            println!(
-                "Test completed successfully - 3DS URL was visited and payment state was verified"
-            );
         }
     });
 }
@@ -636,10 +608,7 @@ async fn test_refund_sync() {
 
             // Check if payment requires 3DS authentication
             if auth_response.status == i32::from(PaymentStatus::AuthenticationPending) {
-                if let Err(e) = visit_3ds_authentication_url(&request_ref_id).await {
-                    println!("Warning: Failed to visit 3DS authentication URL: {}", e);
-                    // Continue with the test even if the URL visit fails
-                }
+                let _ = visit_3ds_authentication_url(&request_ref_id).await;
 
                 // Wait a moment for the authentication state to be updated
                 tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -701,7 +670,7 @@ async fn test_refund_sync() {
 
                 // Create refund sync request with our mock ID
                 let refund_sync_request =
-                    create_refund_sync_request(&transaction_id, &refund_id, &request_ref_id);
+                    create_refund_sync_request(&transaction_id, refund_id, &request_ref_id);
 
                 // Add metadata headers for refund sync request
                 let mut refund_sync_grpc_request = Request::new(refund_sync_request);
@@ -719,10 +688,6 @@ async fn test_refund_sync() {
                     refund_sync_response.status == i32::from(RefundStatus::RefundSuccess),
                     "Refund Sync should be in RefundSuccess state"
                 );
-            } else {
-                println!("Skipping refund sync as payment is still in AuthenticationPending state");
-                println!("In a real scenario, refund sync would proceed after user completes 3DS authentication");
-                println!("Test completed successfully - 3DS URL was visited and payment state was verified");
             }
         });
     });
