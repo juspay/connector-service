@@ -11,7 +11,7 @@ use domain_types::{
         MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData,
+        SetupMandateRequestData, Status,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodData,

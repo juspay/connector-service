@@ -19,9 +19,19 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
+    connector_types::{
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId, Status,
+    },
+    errors::{self, ConnectorError},
     payment_method_data::{
+        
         BankRedirectData, Card, CardDetailsForNetworkTransactionId, GooglePayWalletData,
+        Card, CardDetailsForNetworkTransactionId, GooglePayWalletData,
         PaymentMethodData, RealTimePaymentData, WalletData,
+    ,
     },
     router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
