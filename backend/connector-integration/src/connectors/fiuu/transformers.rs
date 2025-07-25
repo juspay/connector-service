@@ -18,7 +18,6 @@ use common_utils::{
 use error_stack::ResultExt;
 
 use domain_types::{
-    connector_types::Status,
     payment_method_data::{BankRedirectData, PaymentMethodData, RealTimePaymentData, WalletData},
     router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
@@ -887,7 +886,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
         match response {
             FiuuPaymentsResponse::QRPaymentResponse(ref response) => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status: Status::Attempt(common_enums::AttemptStatus::AuthenticationPending),
+                    status: common_enums::AttemptStatus::AuthenticationPending,
                     ..router_data.resource_common_data
                 },
                 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -930,9 +929,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                     });
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
-                            status: Status::Attempt(
-                                common_enums::AttemptStatus::AuthenticationPending,
-                            ),
+                            status: common_enums::AttemptStatus::AuthenticationPending,
                             ..router_data.resource_common_data
                         },
                         response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1006,7 +1003,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                     };
                     Ok(Self {
                         resource_common_data: PaymentFlowData {
-                            status: Status::Attempt(status),
+                            status,
                             ..router_data.resource_common_data
                         },
                         response,
@@ -1059,7 +1056,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                         };
                         Self {
                             resource_common_data: PaymentFlowData {
-                                status: Status::Attempt(status),
+                                status,
                                 ..router_data.resource_common_data
                             },
                             response,
@@ -1474,7 +1471,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status: Status::Attempt(status),
+                        status,
                         ..router_data.resource_common_data
                     },
                     response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -1531,7 +1528,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status: Status::Attempt(status),
+                        status,
                         ..router_data.resource_common_data
                     },
                     response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -1735,7 +1732,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -1865,7 +1862,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             response: error_response.map_or_else(|| Ok(payments_response_data), Err),
@@ -2184,37 +2181,41 @@ pub enum FiuuPaymentsRequest {
 }
 
 impl GetFormData for FiuuPaymentsRequest {
-    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError> {
+    fn get_form_data(&self) -> reqwest::multipart::Form {
         match self {
-            FiuuPaymentsRequest::FiuuPaymentRequest(req) => build_form_from_struct(req),
-            FiuuPaymentsRequest::FiuuMandateRequest(req) => build_form_from_struct(req),
+            FiuuPaymentsRequest::FiuuPaymentRequest(req) => {
+                build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
+            }
+            FiuuPaymentsRequest::FiuuMandateRequest(req) => {
+                build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
+            }
         }
     }
 }
 
 impl GetFormData for FiuuPaymentSyncRequest {
-    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-        build_form_from_struct(self)
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
     }
 }
 impl GetFormData for PaymentCaptureRequest {
-    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-        build_form_from_struct(self)
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
     }
 }
 impl GetFormData for FiuuPaymentCancelRequest {
-    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-        build_form_from_struct(self)
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
     }
 }
 impl GetFormData for FiuuRefundRequest {
-    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-        build_form_from_struct(self)
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
     }
 }
 impl GetFormData for FiuuRefundSyncRequest {
-    fn get_form_data(&self) -> Result<reqwest::multipart::Form, errors::ParsingError> {
-        build_form_from_struct(self)
+    fn get_form_data(&self) -> reqwest::multipart::Form {
+        build_form_from_struct(self).unwrap_or_else(|_| reqwest::multipart::Form::new())
     }
 }
 

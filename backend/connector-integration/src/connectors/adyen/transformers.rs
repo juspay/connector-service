@@ -16,7 +16,7 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId, SetupMandateRequestData, Status, SubmitEvidenceData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, WalletData},
@@ -1073,7 +1073,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1105,7 +1105,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPSyncResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1157,7 +1157,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
         Ok(Self {
             response: Ok(payment_void_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1978,7 +1978,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 raw_connector_response: None,
             }),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(AttemptStatus::Pending),
+                status: AttemptStatus::Pending,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -2174,7 +2174,7 @@ impl<F> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
