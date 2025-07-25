@@ -16,7 +16,7 @@ use domain_types::{
     connector_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId, Status,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
