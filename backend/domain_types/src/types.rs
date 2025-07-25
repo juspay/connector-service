@@ -24,9 +24,7 @@ use grpc_api_types::payments::{
     PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::Secret;
-use serde::Serialize;
 use serde_json::json;
-use utoipa::ToSchema;
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::mandates::MandateData;

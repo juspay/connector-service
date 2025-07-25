@@ -387,7 +387,7 @@ async fn test_payment_authorization_manual_capture() {
 
             // For testing purposes, we'll accept either AuthenticationPending or Authorized
             assert!(
-                final_payment_status == i32::from(PaymentStatus::Authorized) 
+                final_payment_status == i32::from(PaymentStatus::Authorized)
                     || final_payment_status == i32::from(PaymentStatus::AuthenticationPending),
                 "Payment should be in AUTHORIZED or still AUTHENTICATION_PENDING state after visiting 3DS URL. Current status: {}", 
                 final_payment_status
