@@ -1412,6 +1412,44 @@ message PaymentServiceRegisterResponse {
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
 }
 
+// Request message for repeat payment (MIT - Merchant Initiated Transaction).
+message PaymentServiceRepeatEverythingRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Mandate Information (required for MIT)
+  MandateReference mandate_reference = 2; // Reference to existing mandate
+  
+  // Amount Information
+  int64 amount = 3; // The amount for the payment in major currency units
+  Currency currency = 4; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 5; // The minor amount for the payment (e.g., cents)
+  
+  // Optional fields
+  optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
+  map<string, string> metadata = 7; // Additional metadata for the connector
+  optional string webhook_url = 8; // URL for webhook notifications
+  optional bool all_keys_required = 9; // Indicates if all keys are required
+}
+
+// Response message for repeat payment operation.
+message PaymentServiceRepeatEverythingResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the payment attempt
+  optional string error_code = 3; // Error code if the payment failed
+  optional string error_message = 4; // Error message if the payment failed
+  
+  // Transaction Details
+  optional string network_txn_id = 5; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 6; // Reference ID from the connector response
+  
+  // Raw Response
+  optional string raw_connector_response = 7; // Raw response from the connector for debugging
+}
+
 // Request message for PaymentService.Transform RPC
 message PaymentServiceTransformRequest {
   // Identification

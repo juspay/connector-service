@@ -9,13 +9,13 @@ use common_utils::errors::IntegrityCheckError;
 use domain_types::connector_types::{
     AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentVoidData,
     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
-    SetupMandateRequestData, SubmitEvidenceData,
+    RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::router_request_types::{
     AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
     CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
     PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-    SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+    RepeatPaymentIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
 };
 
 // ========================================================================
@@ -120,6 +120,7 @@ impl_check_integrity!(AcceptDisputeData);
 impl_check_integrity!(DisputeDefendData);
 impl_check_integrity!(RefundSyncData);
 impl_check_integrity!(SubmitEvidenceData);
+impl_check_integrity!(RepeatPaymentData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -261,6 +262,33 @@ impl GetIntegrityObject<SubmitEvidenceIntegrityObject> for SubmitEvidenceData {
     fn get_request_integrity_object(&self) -> SubmitEvidenceIntegrityObject {
         SubmitEvidenceIntegrityObject {
             connector_dispute_id: self.connector_dispute_id.clone(),
+        }
+    }
+}
+
+impl GetIntegrityObject<RepeatPaymentIntegrityObject> for RepeatPaymentData {
+    fn get_response_integrity_object(&self) -> Option<RepeatPaymentIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> RepeatPaymentIntegrityObject {
+        RepeatPaymentIntegrityObject {
+            amount: self.amount,
+            currency: self.currency,
+            mandate_reference: match &self.mandate_reference {
+                domain_types::connector_types::MandateReferenceId::ConnectorMandateId(
+                    mandate_ref,
+                ) => mandate_ref
+                    .get_connector_mandate_id()
+                    .unwrap_or_default()
+                    .to_string(),
+                domain_types::connector_types::MandateReferenceId::NetworkMandateId(
+                    network_mandate,
+                ) => network_mandate.clone(),
+                domain_types::connector_types::MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    String::new()
+                }
+            },
         }
     }
 }
@@ -579,6 +607,44 @@ impl FlowIntegrity for SubmitEvidenceIntegrityObject {
                 "connector_dispute_id",
                 &req_integrity_object.connector_dispute_id,
                 &res_integrity_object.connector_dispute_id,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for RepeatPaymentIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        if req_integrity_object.mandate_reference != res_integrity_object.mandate_reference {
+            mismatched_fields.push(format_mismatch(
+                "mandate_reference",
+                &req_integrity_object.mandate_reference,
+                &res_integrity_object.mandate_reference,
             ));
         }
 

@@ -108,6 +108,9 @@ pub const NAME: &str = "UCS";
 /// Constant variable for payment service name
 pub const PAYMENT_SERVICE_NAME: &str = "payment_service";
 
+pub const CONST_DEVELOPMENT: &str = "development";
+pub const CONST_PRODUCTION: &str = "production";
+
 // =============================================================================
 // Environment and Configuration
 // =============================================================================
