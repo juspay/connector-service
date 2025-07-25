@@ -4,9 +4,9 @@ use cards::CardNumber;
 use common_enums::{enums, AttemptStatus};
 use common_utils::{errors::CustomResult, request::Method};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Void},
+    connector_flow::{Authorize, Capture},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        MandateReference, PaymentFlowData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
         RefundsResponseData, ResponseId,
     },
@@ -372,13 +372,13 @@ impl<F> TryFrom<ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>>
             });
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: get_status(transaction.status.clone(), item.response.transaction_type),
+                status: domain_types::connector_types::Status::Attempt(get_status(transaction.status.clone(), item.response.transaction_type)),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id,
-                redirection_data: Box::new(redirection_data),
-                mandate_reference: Box::new(mandate_reference),
+                redirection_data: redirection_data.map(Box::new),
+                mandate_reference: mandate_reference.map(Box::new),
                 connector_metadata: Some(connector_metadata),
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_id),
@@ -423,30 +423,6 @@ impl
     }
 }
 
-impl
-    TryFrom<
-        NexinetsRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for NexinetsCaptureOrVoidRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: NexinetsRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            initial_amount: item
-                .router_data
-                .resource_common_data
-                .amount_captured
-                .unwrap(),
-            currency: common_enums::Currency::EUR,
-        })
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NexinetsPaymentResponse {
@@ -482,13 +458,13 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: get_status(item.response.status, item.response.transaction_type),
+                status: domain_types::connector_types::Status::Attempt(get_status(item.response.status, item.response.transaction_type)),
                 ..item.router_data.resource_common_data
             },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id,
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_metadata),
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order.order_id),

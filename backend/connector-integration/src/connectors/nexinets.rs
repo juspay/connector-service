@@ -5,14 +5,14 @@ use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::Requ
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        SubmitEvidence, Void, RepeatPayment,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        SubmitEvidenceData, RepeatPaymentData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -108,6 +108,7 @@ impl ConnectorCommon for Nexinets {
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
+            raw_connector_response: None,
         })
     }
 }
@@ -123,6 +124,7 @@ impl connector_types::PaymentCapture for Nexinets {}
 impl connector_types::ValidationTrait for Nexinets {}
 impl connector_types::PaymentOrderCreate for Nexinets {}
 impl connector_types::SetupMandateV2 for Nexinets {}
+impl connector_types::RepeatPaymentV2 for Nexinets {}
 impl connector_types::AcceptDispute for Nexinets {}
 impl connector_types::SubmitEvidenceV2 for Nexinets {}
 impl connector_types::DisputeDefend for Nexinets {}
@@ -541,5 +543,20 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Nexinets
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Nexinets
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Nexinets
 {
 }

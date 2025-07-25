@@ -5,7 +5,6 @@ use crate::connectors::{
     
     Adyen, Authorizedotnet, Cashfree, Checkout, Elavon, Fiserv, Fiuu, Payu, Phonepe, Nexinets, Razorpay,
     RazorpayV2, Xendit,
-,
 };
 
 #[derive(Clone)]
