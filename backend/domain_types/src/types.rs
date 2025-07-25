@@ -50,6 +50,7 @@ pub struct Connectors {
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
     pub fiuu: ConnectorParams,
+    pub payu: ConnectorParams,
     pub cryptopay: ConnectorParams,
 }
 

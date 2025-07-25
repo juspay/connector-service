@@ -31,5 +31,8 @@ pub use self::cashfree::Cashfree;
 pub mod fiuu;
 pub use self::fiuu::Fiuu;
 
+pub mod payu;
+pub use self::payu::Payu;
+
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
