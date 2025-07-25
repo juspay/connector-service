@@ -444,7 +444,7 @@ macro_rules! impl_templating {
             impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>], $generic_type>{
                 type RequestBody = $curl_req;
                 type ResponseBody = $curl_res;
-                type ConnectorInputData = [<$connector RouterData>]<$router_data>;
+                type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
             }
         }
     };
@@ -459,7 +459,7 @@ macro_rules! impl_templating {
             impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<NoRequestBodyTemplating, [<$curl_res Templating>], $generic_type> {
                 type RequestBody = NoRequestBody;
                 type ResponseBody = $curl_res;
-                type ConnectorInputData = [<$connector RouterData>]<$router_data>;
+                type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
             }
         }
     }
@@ -467,13 +467,13 @@ macro_rules! impl_templating {
 pub(crate) use impl_templating;
 
 macro_rules! expand_connector_input_data {
-    ($connector: ident) => {
+    ($connector: ident, $generics: tt) => { //add t here
         paste::paste! {
-            pub struct [<$connector RouterData>]<RD: FlowTypes> {
-                pub connector: $connector,
+            pub struct [<$connector RouterData>]<RD: FlowTypes, $generics: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> {
+                pub connector: $connector<$generics>,
                 pub router_data: RD,
             }
-            impl<RD: FlowTypes> FlowTypes for [<$connector RouterData>]<RD> {
+            impl<RD: FlowTypes, $generics: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> FlowTypes for [<$connector RouterData>]<RD, $generics> { //here too
                 type Flow = RD::Flow;
                 type FlowCommonData = RD::FlowCommonData;
                 type Request = RD::Request;
@@ -531,7 +531,7 @@ macro_rules! create_all_prerequisites {
     ) => {
         crate::connectors::macros::expand_imports!();
         // use macro_types::connector_flow::{ $($flow_name,)* };
-        macros::expand_connector_input_data!($connector);
+        macros::expand_connector_input_data!($connector, $generic_type);
         $(
             macros::impl_templating!(
                 connector: $connector,
@@ -551,7 +551,7 @@ macro_rules! create_all_prerequisites {
                     [<$flow_name:snake>]: &'static (dyn BridgeRequestResponse<
                         RequestBody = macros::optional_or_default!($flow_request | default:NoRequestBody),
                         ResponseBody = $flow_response,
-                        ConnectorInputData = [<$connector RouterData>]<$router_data_type>,
+                        ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
                     >),
                 )*
             }
