@@ -683,6 +683,7 @@ impl
             connector_response_reference_id: Some(transaction_id),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         Ok(Self {

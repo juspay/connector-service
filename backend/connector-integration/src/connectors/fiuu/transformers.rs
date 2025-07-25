@@ -896,6 +896,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     raw_connector_response: None,
+                    status_code: Some(item.http_code),
                 }),
                 ..router_data
             }),
@@ -939,6 +940,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
                             raw_connector_response: None,
+                            status_code: Some(item.http_code),
                         }),
                         ..router_data
                     })
@@ -997,6 +999,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
                             raw_connector_response: None,
+                            status_code: Some(item.http_code),
                         })
                     };
                     Ok(Self {
@@ -1050,6 +1053,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                                 connector_response_reference_id: None,
                                 incremental_authorization_allowed: None,
                                 raw_connector_response: None,
+                                status_code: Some(item.http_code),
                             })
                         };
                         Self {
@@ -1072,6 +1076,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
                             raw_connector_response: None,
+                            status_code: Some(item.http_code),
                         });
                         Self {
                             response,
@@ -1237,6 +1242,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                             connector_refund_id: refund_data.refund_id.clone().to_string(),
                             refund_status,
                             raw_connector_response: None,
+                            status_code: Some(item.http_code),
                         }),
                         ..router_data
                     })
@@ -1466,6 +1472,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     raw_connector_response: None,
+                    status_code: Some(item.http_code),
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -1523,6 +1530,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     raw_connector_response: None,
+                    status_code: Some(item.http_code),
                 };
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
@@ -1727,6 +1735,7 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -1857,6 +1866,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -1971,6 +1981,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                         connector_refund_id: refund.refund_id.clone(),
                         refund_status: common_enums::RefundStatus::from(refund.status.clone()),
                         raw_connector_response: None,
+                        status_code: Some(item.http_code),
                     }),
                     ..router_data
                 })
@@ -1982,6 +1993,7 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                         fiuu_webhooks_refund_response.status.clone(),
                     ),
                     raw_connector_response: None,
+                    status_code: Some(item.http_code),
                 }),
                 ..router_data
             }),
