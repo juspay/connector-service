@@ -11,8 +11,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::Authorize,
     connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
-        Status,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId, Status,
     },
     errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -309,43 +308,6 @@ impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
                 ..router_data.resource_common_data
             },
             response,
-            ..router_data
-        })
-    }
-}
-
-impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<CashtocodePaymentsResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let ResponseRouterData {
-            response: _response,
-            router_data,
-            http_code: _http_code,
-        } = item;
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    router_data
-                        .resource_common_data
-                        .connector_request_reference_id
-                        .clone(), //in response they only send PayUrl, so we use attempt_id as connector_transaction_id
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                raw_connector_response: None,
-            }),
-            resource_common_data: PaymentFlowData {
-                status: Status::Attempt(common_enums::AttemptStatus::Charged), // Charged status is hardcoded because cashtocode do not support Psync, and we only receive webhooks when payment is succeeded, this tryFrom is used for CallConnectorAction.
-                ..router_data.resource_common_data
-            },
             ..router_data
         })
     }
