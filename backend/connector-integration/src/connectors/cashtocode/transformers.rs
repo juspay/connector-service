@@ -10,9 +10,7 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{
-        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId, Status,
-    },
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -304,7 +302,7 @@ impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
 
         Ok(Self {
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             response,
