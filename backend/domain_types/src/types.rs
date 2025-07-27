@@ -2,7 +2,7 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, str::FromStr};
 
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
+use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, request::Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -1063,12 +1063,18 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
-                                                method: 0,
+                                                method: match method {
+                                                    Method::Get => 1,
+                                                    Method::Post => 2,
+                                                    Method::Put => 3,
+                                                    Method::Delete => 4,
+                                                    _ => 0,
+                                                },
                                                 form_fields: HashMap::default(), //TODO
                                             }
                                         ))

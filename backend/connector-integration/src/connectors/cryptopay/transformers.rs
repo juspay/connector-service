@@ -15,7 +15,6 @@ use error_stack::ResultExt;
 use url::Url;
 
 use domain_types::{
-    connector_types::Status,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
@@ -223,7 +222,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status: Status::Attempt(status),
+                        status,
                         amount_captured,
                         minor_amount_captured: amount_captured_in_minor_units,
                         ..router_data.resource_common_data
@@ -234,7 +233,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             }
             None => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status: Status::Attempt(status),
+                    status,
                     ..router_data.resource_common_data
                 },
                 response,
@@ -363,7 +362,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 let amount_captured = Some(minor_amount.get_amount_as_i64());
                 Ok(Self {
                     resource_common_data: PaymentFlowData {
-                        status: Status::Attempt(status),
+                        status,
                         amount_captured,
                         minor_amount_captured: amount_captured_in_minor_units,
                         ..router_data.resource_common_data
@@ -374,7 +373,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             }
             None => Ok(Self {
                 resource_common_data: PaymentFlowData {
-                    status: Status::Attempt(status),
+                    status,
                     ..router_data.resource_common_data
                 },
                 response,
