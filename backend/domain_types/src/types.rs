@@ -1140,7 +1140,7 @@ pub fn generate_payment_authorize_response(
                                                     Method::Post => 2,
                                                     Method::Put => 3,
                                                     Method::Delete => 4,
-                                                    _ => 0,  
+                                                    _ => 0,
                                                 },
                                                 form_fields: HashMap::default(), //TODO
                                             }
