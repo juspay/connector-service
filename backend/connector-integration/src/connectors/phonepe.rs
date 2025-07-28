@@ -2,7 +2,6 @@ pub mod constants;
 pub mod headers;
 pub mod transformers;
 
-use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use common_enums as enums;
 use common_utils::{
     errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::MinorUnit,
@@ -33,6 +32,7 @@ use interfaces::{
 };
 use transformers as phonepe;
 
+use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
 

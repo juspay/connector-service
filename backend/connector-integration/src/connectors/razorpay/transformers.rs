@@ -634,14 +634,16 @@ impl
     ForeignTryFrom<(
         RazorpayRefundResponse,
         RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        u16,
     )> for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data): (
+        (response, data, http_code): (
             RazorpayRefundResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            u16,
         ),
     ) -> Result<Self, Self::Error> {
         let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
@@ -649,7 +651,8 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: None,
+            raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
+            status_code: Some(http_code),
         };
 
         Ok(Self {
@@ -667,14 +670,16 @@ impl
     ForeignTryFrom<(
         RazorpayRefundResponse,
         RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        u16,
     )> for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data): (
+        (response, data, http_code): (
             RazorpayRefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            u16,
         ),
     ) -> Result<Self, Self::Error> {
         let status = common_enums::RefundStatus::foreign_try_from(response.status)?;
@@ -682,7 +687,8 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: None,
+            raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
+            status_code: Some(http_code),
         };
 
         Ok(Self {
@@ -751,7 +757,11 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: None,
+                    raw_connector_response: data
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
+                    status_code: Some(_http_code),
                 };
                 let error = None;
 
@@ -775,7 +785,11 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: None,
+                    raw_connector_response: data
+                        .resource_common_data
+                        .raw_connector_response
+                        .clone(),
+                    status_code: Some(_http_code),
                 };
                 let error = None;
 
@@ -1235,13 +1249,15 @@ impl<F, Req>
     ForeignTryFrom<(
         RazorpayCaptureResponse,
         RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+        u16,
     )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
 {
     type Error = domain_types::errors::ConnectorError;
     fn foreign_try_from(
-        (response, data): (
+        (response, data, http_code): (
             RazorpayCaptureResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
+            u16,
         ),
     ) -> Result<Self, Self::Error> {
         let status = match response.status {
@@ -1258,7 +1274,8 @@ impl<F, Req>
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
-                raw_connector_response: None,
+                raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
+                status_code: Some(http_code),
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1590,6 +1607,7 @@ impl<F, Req>
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {

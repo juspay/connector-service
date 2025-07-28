@@ -100,6 +100,7 @@ impl Payments {
                         Some("Failed to process payment flow data".to_string()),
                         Some("PAYMENT_FLOW_ERROR".to_string()),
                         None,
+                        None,
                     )
                 })?;
 
@@ -131,6 +132,7 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some("Failed to process payment authorize data".to_string()),
                     Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                    None,
                     None,
                 )
             })?;
@@ -172,6 +174,7 @@ impl Payments {
                     Some("Failed to generate authorize response".to_string()),
                     Some("RESPONSE_GENERATION_ERROR".to_string()),
                     None,
+                    None,
                 )
             })?,
             Err(error_report) => {
@@ -193,6 +196,7 @@ impl Payments {
                                         .to_string(),
                                 ),
                                 Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
+                                None,
                                 None,
                             )
                         },
@@ -220,6 +224,7 @@ impl Payments {
                             grpc_api_types::payments::PaymentStatus::Pending,
                             Some(format!("Connector error: {error_report}")),
                             Some("CONNECTOR_ERROR".to_string()),
+                            None,
                             None,
                         )
                     })?
@@ -253,6 +258,7 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Currency conversion failed: {e}")),
                     Some("CURRENCY_ERROR".to_string()),
+                    None,
                     None,
                 )
             })?;
@@ -299,6 +305,7 @@ impl Payments {
                     Some(format!("Order creation failed: {e}")),
                     Some("ORDER_CREATION_ERROR".to_string()),
                     None,
+                    None,
                 )
             },
         )?;
@@ -310,6 +317,7 @@ impl Payments {
                 Some(e.message.clone()),
                 Some(e.code.clone()),
                 e.raw_connector_response.clone(),
+                Some(e.status_code.into()),
             )),
         }
     }
