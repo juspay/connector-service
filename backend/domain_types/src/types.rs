@@ -1101,7 +1101,7 @@ pub fn generate_payment_authorize_response(
                     error_message: None,
                     error_code: None,
                     raw_connector_response,
-                    status_code: Some(status_code.unwrap_or(200) as u32),
+                    status_code: None,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1132,7 +1132,7 @@ pub fn generate_payment_authorize_response(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
-                status_code: Some(err.status_code as u32),
+                status_code: None,
             }
         }
     };
