@@ -52,6 +52,7 @@ pub enum ConnectorEnum {
     Cashfree,
     Fiuu,
     Payu,
+    Novalnet,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -72,6 +73,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
             grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
             grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
+            grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -647,6 +649,7 @@ pub struct PaymentVoidData {
     pub cancellation_reason: Option<String>,
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
 }
 
 impl PaymentVoidData {
@@ -666,6 +669,11 @@ impl PaymentVoidData {
     //         .clone()
     //         .ok_or_else(missing_field_err("browser_info"))
     // }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -739,6 +747,11 @@ impl PaymentsAuthorizeData {
             .clone()
             .ok_or_else(missing_field_err("browser_info"))
     }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
     // pub fn get_order_details(&self) -> Result<Vec<OrderDetailsWithAmount>, Error> {
     //     self.order_details
     //         .clone()
@@ -784,15 +797,14 @@ impl PaymentsAuthorizeData {
             })
     }
 
-    // pub fn is_mandate_payment(&self) -> bool {
-    //     ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession))
-    //         || self
-    //             .mandate_id
-    //             .as_ref()
-    //             .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
-    //             .is_some()
-    // }
+    pub fn is_mandate_payment(&self) -> bool {
+        (self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+            || self
+                .mandate_id
+                .as_ref()
+                .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+                .is_some()
+    }
     // fn is_cit_mandate_payment(&self) -> bool {
     //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
     //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
@@ -961,6 +973,15 @@ pub struct RefundSyncData {
     pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<RefundSyncIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl RefundSyncData {
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1141,6 +1162,7 @@ pub struct RefundsData {
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub integrity_object: Option<RefundIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
 }
 
 impl RefundsData {
@@ -1161,6 +1183,11 @@ impl RefundsData {
             .clone()
             .ok_or_else(missing_field_err("connector_metadata"))
     }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1178,11 +1205,29 @@ pub struct PaymentsCaptureData {
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
 }
 
 impl PaymentsCaptureData {
     pub fn is_multiple_capture(&self) -> bool {
         self.multiple_capture_data.is_some()
+    }
+    pub fn get_connector_transaction_id(
+        &self,
+    ) -> CustomResult<String, crate::errors::ConnectorError> {
+        match self.connector_transaction_id.clone() {
+            ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
+            _ => Err(errors::ValidationError::IncorrectValueProvided {
+                field_name: "connector_transaction_id",
+            })
+            .attach_printable("Expected connector transaction ID not found")
+            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)?,
+        }
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
 }
 
@@ -1228,6 +1273,21 @@ impl SetupMandateRequestData {
     }
     pub fn is_card(&self) -> bool {
         matches!(self.payment_method_data, PaymentMethodData::Card(_))
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_router_return_url(&self) -> Result<String, Error> {
+        self.router_return_url
+            .clone()
+            .ok_or_else(missing_field_err("return_url"))
     }
 }
 

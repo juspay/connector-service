@@ -2,7 +2,7 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, str::FromStr};
 
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
+use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, request::Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -51,6 +51,7 @@ pub struct Connectors {
     pub cashfree: ConnectorParams,
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
+    pub novalnet: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1046,12 +1047,18 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
-                                                method: 0,
+                                                method: match method {
+                                                    Method::Get => 1,
+                                                    Method::Post => 2,
+                                                    Method::Put => 3,
+                                                    Method::Delete => 4,
+                                                    _ => 0,
+                                                },
                                                 form_fields: HashMap::default(), //TODO
                                             }
                                         ))
@@ -1565,6 +1572,7 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             .unwrap_or_default();
 
         Ok(RefundSyncData {
+            browser_info: None,
             connector_transaction_id,
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
@@ -1888,6 +1896,7 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
+            browser_info: None,
             connector_transaction_id: value
                 .transaction_id
                 .and_then(|id| id.id_type)
@@ -1999,6 +2008,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
         Ok(RefundsData {
             refund_id: value.refund_id.to_string(),
             connector_transaction_id,
+            browser_info: None,
             connector_refund_id: None, // refund_id field is used as refund_id, not connector_refund_id
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_amount: value.payment_amount,
@@ -2290,6 +2300,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
         Ok(Self {
             amount_to_capture: value.amount_to_capture,
             minor_amount_to_capture: minor_amount,
+            browser_info: None,
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
