@@ -576,7 +576,7 @@ macro_rules! optional_or_default {
         $optional_item: ident<$generic:ident> Templating |
         default: $default:ident
     ) => {
-        paste::paste! { [<$optional_item Templating>]<$generic> }
+        paste::paste! { [<$optional_item Templating>] }
     };
     // Handle non-generic templating types like AdyenRedirectRequest Templating  
     (
