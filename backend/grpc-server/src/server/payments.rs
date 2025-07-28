@@ -6,20 +6,14 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateOrder, FlowName, PSync, Refund, SetupMandate, Void,
-    },
-    connector_types::{
+    }, connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-    },
-    errors::{ApiError, ApplicationErrorResponse},
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-    types::{
+    }, errors::{ApiError, ApplicationErrorResponse}, payment_method_data::{DefaultPCIHolder, VaultTokenHolder}, router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
-    },
-    utils::ForeignTryFrom,
+    }, utils::ForeignTryFrom
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
@@ -83,7 +77,7 @@ impl Payments {
             '_,
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         > = connector_data.connector.get_connector_integration_v2();
 
@@ -137,7 +131,7 @@ impl Payments {
         let router_data = RouterDataV2::<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         > {
             flow: std::marker::PhantomData,

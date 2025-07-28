@@ -31,7 +31,7 @@ pub struct Card<T: PaymentMethodDataTypes> { //
 
 
 pub trait PaymentMethodDataTypes: Clone {
-    type Inner: Default + Debug + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
+    type Inner: Default + Debug+ Send + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
 }
 
 /// PCI holder implementation for handling raw PCI data
