@@ -170,8 +170,10 @@ macros::macro_connector_implementation!(
 
             // Get merchant ID from auth
             let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
+            let api_endpoint = constants::API_STATUS_ENDPOINT;
+            let merchant_id = auth.merchant_id.peek();
 
-            Ok(format!("{}{}/{}/{}", base_url, constants::API_STATUS_ENDPOINT, auth.merchant_id.peek(), merchant_transaction_id))
+            Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
         }
     }
 );
@@ -255,7 +257,6 @@ impl ConnectorCommon for Phonepe {
     }
 }
 
-// PSync flow uses the macro implementation above, no need for default implementation
 impl
     ConnectorIntegrationV2<
         CreateOrder,
