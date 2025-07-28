@@ -1,14 +1,10 @@
 pub mod transformers;
 
-use super::macros;
-use super::xendit::BASE64_ENGINE;
-use crate::types::ResponseRouterData;
 use base64::Engine;
 use common_enums::enums;
-use common_utils::RequestContent;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
-use domain_types::errors::{self, ConnectorError};
-use domain_types::router_response_types::Response;
+use common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit, RequestContent,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -21,8 +17,10 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
+    errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::Connectors,
 };
 use error_stack::ResultExt;
@@ -31,8 +29,10 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
-
 use transformers::{is_upi_collect_flow, PayuAuthType, PayuPaymentRequest, PayuPaymentResponse};
+
+use super::{macros, xendit::BASE64_ENGINE};
+use crate::types::ResponseRouterData;
 
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(

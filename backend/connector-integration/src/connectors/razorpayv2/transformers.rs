@@ -440,6 +440,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
@@ -483,6 +484,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
@@ -545,6 +547,7 @@ impl
             connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
@@ -611,6 +614,7 @@ impl
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
@@ -651,6 +655,7 @@ impl
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {

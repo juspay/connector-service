@@ -772,6 +772,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -841,6 +842,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -908,6 +910,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure {
@@ -982,6 +985,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -1039,6 +1043,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 }),
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         };
 
         if refund_status == enums::RefundStatus::Failure {
@@ -1105,6 +1110,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 }),
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         };
 
         if refund_status == enums::RefundStatus::Failure {
