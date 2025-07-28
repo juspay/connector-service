@@ -60,12 +60,14 @@ impl
         let cryptopay_request = match item.router_data.request.payment_method_data {
             PaymentMethodData::Crypto(ref cryptodata) => {
                 let pay_currency = cryptodata.get_pay_currency()?;
-                let amount = StringMajorUnitForConnector
+                let amount = item
+                    .connector
+                    .amount_converter
                     .convert(
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
                     )
-                    .change_context(ConnectorError::RequestEncodingFailed)?;
+                    .change_context(ConnectorError::AmountConversionFailed)?;
                 Ok(Self {
                     price_amount: amount,
                     price_currency: item.router_data.request.currency,
