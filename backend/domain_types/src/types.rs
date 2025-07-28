@@ -1200,6 +1200,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
                 .transaction_id
+                .clone()
                 .and_then(|id| id.id_type)
                 .and_then(|id_type| match id_type {
                     grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
@@ -1207,6 +1208,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
                 })
                 .unwrap_or_default(),
         );
+
+        let encoded_data = value
+            .transaction_id
+            .and_then(|id| id.id_type)
+            .and_then(|id_type| match id_type {
+                grpc_api_types::payments::identifier::IdType::EncodedData(data) => Some(data),
+                _ => None,
+            });
 
         // Default currency to USD for now (you might want to get this from somewhere else)
         let currency = common_enums::Currency::USD;
@@ -1216,7 +1225,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
 
         Ok(Self {
             connector_transaction_id,
-            encoded_data: None,
+            encoded_data,
             capture_method: None,
             connector_meta: None,
             sync_type: crate::router_request_types::SyncRequestType::SinglePaymentSync,
