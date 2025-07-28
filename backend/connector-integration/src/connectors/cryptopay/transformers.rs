@@ -169,7 +169,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
         let ResponseRouterData {
             response: cryptopay_response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
         let status = common_enums::AttemptStatus::from(cryptopay_response.data.status.clone());
         let response = if is_payment_failure(status) {
@@ -209,6 +209,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     .or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
@@ -309,7 +310,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
         let ResponseRouterData {
             response: cryptopay_response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
         let status = common_enums::AttemptStatus::from(cryptopay_response.data.status.clone());
         let response = if is_payment_failure(status) {
@@ -349,6 +350,7 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     .or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
