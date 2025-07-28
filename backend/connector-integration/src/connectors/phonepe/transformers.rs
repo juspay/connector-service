@@ -705,6 +705,7 @@ impl
                             network_txn_id: Some(transaction_id.clone()),
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
+                            status_code: Some(item.http_code),
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
