@@ -18,24 +18,24 @@ use common_utils::dapr::FlowName;
 use domain_types::connector_flow::{Capture, PSync, Refund, SetupMandate, Void};
 
 // Helper function to map flow markers to flow names
-pub fn flow_marker_to_flow_name<F>() -> FlowName
+pub fn flow_marker_to_flow_name<F>() -> Option<FlowName>
 where
     F: 'static,
 {
     let type_id = std::any::TypeId::of::<F>();
 
     if type_id == std::any::TypeId::of::<PSync>() {
-        FlowName::Psync
+        Some(FlowName::Psync)
     } else if type_id == std::any::TypeId::of::<Void>() {
-        FlowName::Void
+        Some(FlowName::Void)
     } else if type_id == std::any::TypeId::of::<Refund>() {
-        FlowName::Refund
+        Some(FlowName::Refund)
     } else if type_id == std::any::TypeId::of::<Capture>() {
-        FlowName::Capture
+        Some(FlowName::Capture)
     } else if type_id == std::any::TypeId::of::<SetupMandate>() {
-        FlowName::SetupMandate
+        Some(FlowName::SetupMandate)
     } else {
-        FlowName::Authorize // Default fallback
+        None
     }
 }
 
@@ -379,7 +379,10 @@ macro_rules! implement_connector_operation {
             };
 
             // Execute connector processing
-            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>()
+                .ok_or_else(|| {
+                    tonic::Status::internal("Unknown flow marker type")
+                })?;
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
