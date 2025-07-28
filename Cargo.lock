@@ -1571,8 +1571,9 @@ dependencies = [
 
 [[package]]
 name = "g2h"
-version = "0.4.0"
-source = "git+https://github.com/NishantJoshi00/g2h?branch=fixing-response-serializing#fd2c856b2c6c88a85d6fe51d95b4d3342b788d31"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d843f7c70cdae8a2452e0b2f463b7e483a57cece7687da89371d952d44e0445d"
 dependencies = [
  "cargo_metadata",
  "heck",
