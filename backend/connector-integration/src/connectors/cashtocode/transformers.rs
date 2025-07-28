@@ -1,11 +1,7 @@
 use std::collections::HashMap;
 
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::ValueExt,
-    id_type,
-    request::Method,
-    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+    errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::FloatMajorUnit,
     Email,
 };
 use domain_types::{
@@ -78,8 +74,9 @@ impl
             item.router_data.request.payment_method_type,
             item.router_data.request.currency,
         )?;
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
@@ -255,7 +252,7 @@ impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
         let (status, response) = match response {
             CashtocodePaymentsResponse::CashtoCodeError(error_data) => (
@@ -295,6 +292,7 @@ impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
+                        status_code: Some(http_code),
                     }),
                 )
             }
