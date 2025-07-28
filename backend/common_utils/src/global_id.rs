@@ -52,9 +52,7 @@ pub struct CellId(LengthId<CELL_IDENTIFIER_LENGTH, CELL_IDENTIFIER_LENGTH>);
 
 impl Default for CellId {
     fn default() -> Self {
-        // Using "cell1" as default
         Self::from_str("cell1").unwrap_or_else(|_| {
-            // This should never happen with hardcoded string, but provide fallback
             let id = AlphaNumericId::new_unchecked("cell1".to_string());
             Self(LengthId::new_unchecked(id))
         })
