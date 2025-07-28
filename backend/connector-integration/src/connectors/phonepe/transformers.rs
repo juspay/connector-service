@@ -385,7 +385,7 @@ impl
                 "INTERNAL_SERVER_ERROR" => Some(common_enums::AttemptStatus::Failure),
                 "PAYMENT_PENDING" => Some(common_enums::AttemptStatus::Pending),
                 "PAYMENT_DECLINED" => Some(common_enums::AttemptStatus::Failure),
-                _ => Some(common_enums::AttemptStatus::Failure),
+                _ => Some(common_enums::AttemptStatus::Pending),
             };
 
             tracing::warn!(
