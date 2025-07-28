@@ -975,10 +975,14 @@ pub fn generate_create_order_response(
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
 
     let response = match transaction_response {
-        Ok(_response) => {
+        Ok(response) => {
             // For successful order creation, return basic success response
             PaymentServiceAuthorizeResponse {
-                transaction_id: None,
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        response.order_id,
+                    )),
+                }),
                 redirection_data: None,
                 network_txn_id: None,
                 response_ref_id: None,
@@ -987,6 +991,7 @@ pub fn generate_create_order_response(
                 error_message: None,
                 error_code: None,
                 raw_connector_response: None,
+                status_code: Some(200),
             }
         }
         Err(err) => {
@@ -1012,6 +1017,7 @@ pub fn generate_create_order_response(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
+                status_code: Some(err.status_code as u32),
             }
         }
     };
@@ -1041,6 +1047,7 @@ pub fn generate_payment_authorize_response(
                 incremental_authorization_allowed,
                 mandate_reference: _,
                 raw_connector_response,
+                status_code,
             } => {
                 PaymentServiceAuthorizeResponse {
                     transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
@@ -1101,6 +1108,7 @@ pub fn generate_payment_authorize_response(
                     error_message: None,
                     error_code: None,
                     raw_connector_response,
+                    status_code: Some(status_code.unwrap_or(200) as u32),
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1131,6 +1139,7 @@ pub fn generate_payment_authorize_response(
                 error_message: Some(err.message),
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
+                status_code: Some(err.status_code as u32),
             }
         }
     };
@@ -1391,6 +1400,7 @@ pub fn generate_payment_void_response(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response: _,
+                status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -1408,6 +1418,7 @@ pub fn generate_payment_void_response(
                     }),
                     error_code: None,
                     error_message: None,
+                    status_code: Some(status_code.unwrap_or(200) as u32),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1438,6 +1449,7 @@ pub fn generate_payment_void_response(
                 status: status as i32,
                 error_message: Some(e.message),
                 error_code: Some(e.code),
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -1469,6 +1481,7 @@ pub fn generate_payment_sync_response(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response,
+                status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -1504,6 +1517,7 @@ pub fn generate_payment_sync_response(
                     merchant_order_reference_id: None,
                     metadata: std::collections::HashMap::new(),
                     raw_connector_response,
+                    status_code: Some(status_code.unwrap_or(200) as u32),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1550,6 +1564,7 @@ pub fn generate_payment_sync_response(
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 raw_connector_response: None,
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -1661,6 +1676,7 @@ pub fn generate_accept_dispute_response(
                 error_message: None,
                 error_code: None,
                 response_ref_id: None,
+                status_code: Some(response.status_code.unwrap_or(200) as u32),
             })
         }
         Err(e) => {
@@ -1673,6 +1689,7 @@ pub fn generate_accept_dispute_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 response_ref_id: None,
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -1719,6 +1736,7 @@ pub fn generate_submit_evidence_response(
                 error_message: None,
                 error_code: None,
                 response_ref_id: None,
+                status_code: Some(response.status_code.unwrap_or(200) as u32),
             })
         }
         Err(e) => {
@@ -1735,6 +1753,7 @@ pub fn generate_submit_evidence_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 response_ref_id: None,
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -1800,6 +1819,7 @@ pub fn generate_refund_sync_response(
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: response.raw_connector_response,
+                status_code: Some(response.status_code.unwrap_or(200) as u32),
             })
         }
         Err(e) => {
@@ -1843,6 +1863,7 @@ pub fn generate_refund_sync_response(
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: e.raw_connector_response,
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -1885,6 +1906,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             merchant_order_reference_id: None,
             metadata: std::collections::HashMap::new(),
             raw_connector_response: value.raw_connector_response,
+            status_code: Some(value.status_code.unwrap_or(200) as u32),
         })
     }
 }
@@ -1946,6 +1968,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             metadata: std::collections::HashMap::new(),
             refund_metadata: std::collections::HashMap::new(),
             raw_connector_response: value.raw_connector_response,
+            status_code: Some(value.status_code.unwrap_or(200) as u32),
         })
     }
 }
@@ -1980,6 +2003,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
                     id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                 }
             }),
+            status_code: Some(value.status_code.unwrap_or(200) as u32),
         })
     }
 }
@@ -2225,6 +2249,7 @@ pub fn generate_refund_response(
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: response.raw_connector_response,
+                status_code: Some(response.status_code.unwrap_or(200) as u32),
             })
         }
         Err(e) => {
@@ -2261,6 +2286,7 @@ pub fn generate_refund_response(
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: e.raw_connector_response,
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -2393,6 +2419,7 @@ pub fn generate_payment_capture_response(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 raw_connector_response: _,
+                status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
                 let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
@@ -2409,6 +2436,7 @@ pub fn generate_payment_capture_response(
                     error_code: None,
                     error_message: None,
                     status: grpc_status.into(),
+                    status_code: Some(status_code.unwrap_or(200) as u32),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2439,6 +2467,7 @@ pub fn generate_payment_capture_response(
                 status: status.into(),
                 error_message: Some(e.message),
                 error_code: Some(e.code),
+                status_code: Some(e.status_code as u32),
             })
         }
     }
@@ -2675,6 +2704,7 @@ pub fn generate_setup_mandate_response(
                 incremental_authorization_allowed,
                 mandate_reference,
                 raw_connector_response: _,
+                status_code,
             } => {
                 PaymentServiceRegisterResponse {
                     registration_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
@@ -2722,6 +2752,7 @@ pub fn generate_setup_mandate_response(
                     incremental_authorization_allowed,
                     error_message: None,
                     error_code: None,
+                    status_code: Some(status_code.unwrap_or(200) as u32),
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -2747,6 +2778,7 @@ pub fn generate_setup_mandate_response(
             incremental_authorization_allowed: None,
             error_message: Some(err.message),
             error_code: Some(err.code),
+            status_code: Some(err.status_code as u32),
         },
     };
     Ok(response)
@@ -2801,6 +2833,7 @@ pub fn generate_defend_dispute_response(
             error_message: None,
             error_code: None,
             response_ref_id: None,
+            status_code: Some(response.status_code.unwrap_or(200) as u32),
         }),
         Err(e) => Ok(DisputeDefendResponse {
             dispute_id: e
@@ -2811,6 +2844,7 @@ pub fn generate_defend_dispute_response(
             error_message: Some(e.message),
             error_code: Some(e.code),
             response_ref_id: None,
+            status_code: Some(e.status_code as u32),
         }),
     }
 }
@@ -3177,6 +3211,7 @@ pub fn generate_repeat_payment_response(
                 network_txn_id,
                 connector_response_reference_id,
                 raw_connector_response,
+                status_code,
                 ..
             } => Ok(
                 grpc_api_types::payments::PaymentServiceRepeatEverythingResponse {
@@ -3193,6 +3228,7 @@ pub fn generate_repeat_payment_response(
                         }
                     }),
                     raw_connector_response,
+                    status_code: Some(status_code.unwrap_or(200) as u32),
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3224,6 +3260,7 @@ pub fn generate_repeat_payment_response(
                         }
                     }),
                     raw_connector_response: err.raw_connector_response,
+                    status_code: Some(err.status_code as u32),
                 },
             )
         }
