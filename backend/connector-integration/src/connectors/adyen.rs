@@ -87,7 +87,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: AdyenPaymentRequest,
+            request_body: AdyenPaymentRequest<T>,
             response_body: AdyenPaymentResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
@@ -117,7 +117,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: SetupMandate,
-            request_body: SetupMandateRequest,
+            request_body: SetupMandateRequest<T>,
             response_body: SetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ),
