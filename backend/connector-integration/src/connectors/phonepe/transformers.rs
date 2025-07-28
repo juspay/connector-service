@@ -401,9 +401,7 @@ impl
                             status_code: Some(item.http_code),
                         }),
                         resource_common_data: PaymentFlowData {
-                            status: domain_types::connector_types::Status::Attempt(
-                                common_enums::AttemptStatus::AuthenticationPending,
-                            ),
+                            status: common_enums::AttemptStatus::AuthenticationPending,
                             ..item.router_data.resource_common_data
                         },
                         ..item.router_data
@@ -661,7 +659,7 @@ impl
                             ),
                         }),
                         resource_common_data: PaymentFlowData {
-                            status: domain_types::connector_types::Status::Attempt(status),
+                            status,
                             ..item.router_data.resource_common_data
                         },
                         ..item.router_data
