@@ -310,13 +310,21 @@ where
                             }
                         });
                     }
-                    Err(_) => {
+                    Err(network_error) => {
+                        tracing::error!(
+                            "Network error occurred while calling connector {}: {:?}",
+                            connector_name,
+                            network_error
+                        );
+
                         // Emit network error event
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
                         let ref_id_for_event = ref_id.clone();
                         let ref_id_clone = ref_id.clone();
+                        let error_message =
+                            format!("Failed to get response from connector: {:?}", network_error);
 
                         tokio::spawn(async move {
                             let result = emit_event(
@@ -333,7 +341,7 @@ where
                                 None,
                                 None,
                                 Some("NETWORK_ERROR".to_string()),
-                                Some("Failed to get response from connector".to_string()),
+                                Some(error_message),
                             )
                             .await;
 

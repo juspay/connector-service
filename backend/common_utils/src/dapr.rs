@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct EulerAuditEvent {
+pub struct AuditEvent {
     pub timestamp: String,
     pub hostname: String,
     #[serde(rename = "x-request-id")]
@@ -230,9 +230,8 @@ pub async fn create_client() -> Result<Client<dapr::client::TonicClient>> {
     Ok(client)
 }
 
-/// Publish an Euler audit event through Dapr using the SDK client
-pub async fn publish_event(event: EulerAuditEvent) -> Result<()> {
-    info!("Request to publish Euler audit event through Dapr SDK");
+pub async fn publish_event(event: AuditEvent) -> Result<()> {
+    info!("Request to publish audit event through Dapr SDK");
     info!("Event details: {:?}", event);
 
     let event_json = serde_json::to_string(&event)?;
@@ -260,7 +259,7 @@ pub async fn publish_event(event: EulerAuditEvent) -> Result<()> {
         .context("Failed to publish audit event through Dapr SDK")?;
 
     info!(
-        "Successfully published Euler audit event to pubsub component: {}",
+        "Successfully published audit event to pubsub component: {}",
         pubsub_name
     );
     Ok(())
@@ -284,8 +283,7 @@ pub struct ConnectorEventData {
     pub error_reason: Option<String>,
 }
 
-/// Create an Euler audit event for connector calls - unified approach
-pub fn create_event_data(event_data: ConnectorEventData) -> EulerAuditEvent {
+pub fn create_event_data(event_data: ConnectorEventData) -> AuditEvent {
     let now = chrono::Utc::now();
     let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
     let request_time = now.to_rfc3339();
@@ -312,7 +310,7 @@ pub fn create_event_data(event_data: ConnectorEventData) -> EulerAuditEvent {
 
     let message = serde_json::to_value(outgoing_message).unwrap_or_else(|_| serde_json::json!({}));
 
-    EulerAuditEvent {
+    AuditEvent {
         timestamp,
         hostname,
         x_request_id: event_data.request_id.unwrap_or_else(|| "null".to_string()),
