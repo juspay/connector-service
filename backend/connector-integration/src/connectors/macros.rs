@@ -423,10 +423,10 @@ macro_rules! impl_templating {
         generic_type: $generic_type: tt,
     ) => {
         paste::paste!{
-            pub struct [<$base_req Templating>]<$req_generic>;
+            pub struct [<$base_req Templating>];
             pub struct [<$curl_res Templating>];
             
-            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$base_req Templating>]<$generic_type>, [<$curl_res Templating>], $generic_type>{
+            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$base_req Templating>], [<$curl_res Templating>], $generic_type>{
                 type RequestBody = $base_req<$generic_type>;
                 type ResponseBody = $curl_res;
                 type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
