@@ -324,7 +324,7 @@ where
                         let ref_id_for_event = ref_id.clone();
                         let ref_id_clone = ref_id.clone();
                         let error_message =
-                            format!("Failed to get response from connector: {:?}", network_error);
+                            format!("Failed to get response from connector: {network_error:?}");
 
                         tokio::spawn(async move {
                             let result = emit_event(
