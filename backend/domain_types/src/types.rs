@@ -2,7 +2,7 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, str::FromStr};
 
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
+use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, request::Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -51,6 +51,7 @@ pub struct Connectors {
     pub cashfree: ConnectorParams,
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
+    pub cryptopay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -213,6 +214,22 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                             crate::payment_method_data::UpiIntentData {},
                         ),
                     ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Crypto(crypto) => {
+                    match crypto.crypto_type {
+                        Some(grpc_api_types::payments::crypto_currency_payment_method_type::CryptoType::CryptoCurrency(cryptocurrency)) =>
+                        Ok(
+                        PaymentMethodData::Crypto(crate::payment_method_data::CryptoData {
+                            pay_currency: cryptocurrency.pay_currency,
+                            network: cryptocurrency.network,
+                        })),
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "crypto_currency is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1053,12 +1070,18 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
-                                                method: 0,
+                                                method: match method {
+                                                    Method::Get => 1,
+                                                    Method::Post => 2,
+                                                    Method::Put => 3,
+                                                    Method::Delete => 4,
+                                                    _ => 0,
+                                                },
                                                 form_fields: HashMap::default(), //TODO
                                             }
                                         ))

@@ -27,3 +27,7 @@ FPR = "FPR"  # Financial processing response code
 
 # Company/executable names
 jus = "jus"  # Company executable name
+
+[default.extend-identifiers]
+# Custom field name required by external API
+unsuccess_redirect_url = "unsuccess_redirect_url"
