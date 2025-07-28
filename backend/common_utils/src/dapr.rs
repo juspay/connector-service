@@ -329,7 +329,6 @@ pub fn create_event_data(event_data: ConnectorEventData) -> AuditEvent {
     }
 }
 
-/// Unified function to emit connector events - replaces all the separate emit_*_event functions
 #[allow(clippy::too_many_arguments)]
 pub async fn emit_event(
     flow_name: FlowName,
