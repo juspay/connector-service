@@ -1,4 +1,3 @@
-use crate::types::ResponseRouterData;
 use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{
@@ -19,14 +18,18 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
+
+use crate::types::ResponseRouterData;
 // Alias to make the transition easier
 type HsInterfacesConnectorError = ConnectorError;
-use super::AuthorizedotnetRouterData;
+use std::str::FromStr;
+
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret, StrongSecret};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::str::FromStr;
+
+use super::AuthorizedotnetRouterData;
 
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
@@ -1433,6 +1436,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
                 connector_refund_id: transaction_response.transaction_id.clone(),
                 refund_status,
                 raw_connector_response,
+                status_code: Some(http_code),
             }),
         };
 
@@ -1484,6 +1488,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
                     raw_connector_response,
+                    status_code: Some(http_code),
                 });
 
                 Ok(new_router_data)
@@ -1770,6 +1775,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response: raw_connector_response.clone(),
+                status_code: Some(http_status_code),
             })
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
@@ -1805,6 +1811,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response: raw_connector_response.clone(),
+                status_code: Some(http_status_code),
             })
         }
         None => {
@@ -1950,6 +1957,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                     connector_refund_id: transaction.transaction_id,
                     refund_status,
                     raw_connector_response,
+                    status_code: Some(http_code),
                 });
 
                 Ok(new_router_data)
@@ -2127,6 +2135,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response,
+                status_code: Some(http_code),
             });
         } else {
             let error_response = ErrorResponse {

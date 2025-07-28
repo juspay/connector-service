@@ -14,20 +14,19 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use grpc_api_types::payments::{
-    card_payment_method_type, identifier::IdType, payment_method, AcceptanceType, Address,
-    AuthenticationType, BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType,
-    CountryAlpha2, Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference,
-    PaymentAddress, PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
-    PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
-    PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
-    PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
-};
-
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
-    payments::payment_service_client::PaymentServiceClient,
+    payments::{
+        card_payment_method_type, identifier::IdType, payment_method,
+        payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
+        BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2,
+        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        PaymentMethod, PaymentMethodType, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
+        PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
+        PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
+    },
 };
 use rand::{distributions::Alphanumeric, Rng};
 use tonic::{transport::Channel, Request};
