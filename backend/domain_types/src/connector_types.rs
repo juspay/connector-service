@@ -139,6 +139,26 @@ pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
 }
 
+pub trait ConnectorResponseHeaders {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>);
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap>;
+    fn get_connector_response_headers_as_map(&self) -> std::collections::HashMap<String, String> {
+        self.get_connector_response_headers()
+            .map(|headers| {
+                headers
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+}
+
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Eq, PartialEq)]
 pub struct NetworkTokenWithNTIRef {
     pub network_transaction_id: String,
@@ -243,6 +263,7 @@ pub struct PaymentFlowData {
     pub connector_request_reference_id: String,
     pub test_mode: Option<bool>,
     pub connector_http_status_code: Option<u16>,
+    pub connector_response_headers: Option<http::HeaderMap>,
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
@@ -641,6 +662,16 @@ impl RawConnectorResponse for PaymentFlowData {
     }
 }
 
+impl ConnectorResponseHeaders for PaymentFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+    
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentVoidData {
     pub connector_transaction_id: String,
@@ -979,11 +1010,22 @@ pub struct RefundFlowData {
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    pub connector_response_headers: Option<http::HeaderMap>,
 }
 
 impl RawConnectorResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+}
+
+impl ConnectorResponseHeaders for RefundFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+    
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
     }
 }
 
@@ -996,6 +1038,7 @@ pub struct WebhookDetailsResponse {
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
     pub status_code: Option<u16>,
+    pub response_headers: Option<http::HeaderMap>,
 }
 
 #[derive(Debug, Clone)]
@@ -1007,6 +1050,7 @@ pub struct RefundWebhookDetailsResponse {
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
     pub status_code: Option<u16>,
+    pub response_headers: Option<http::HeaderMap>,
 }
 
 #[derive(Debug, Clone)]
@@ -1018,6 +1062,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub dispute_message: Option<String>,
     pub raw_connector_response: Option<String>,
     pub status_code: Option<u16>,
+    pub response_headers: Option<http::HeaderMap>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1268,11 +1313,22 @@ pub struct DisputeFlowData {
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub connector_response_headers: Option<http::HeaderMap>,
 }
 
 impl RawConnectorResponse for DisputeFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+}
+
+impl ConnectorResponseHeaders for DisputeFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+    
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
     }
 }
 

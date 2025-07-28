@@ -58,6 +58,7 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
+
 impl connector_types::ConnectorServiceTrait for Adyen {}
 impl connector_types::PaymentAuthorizeV2 for Adyen {}
 impl connector_types::PaymentSyncV2 for Adyen {}
@@ -521,6 +522,7 @@ impl connector_types::IncomingWebhook for Adyen {
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: Some(200),
+            response_headers: None,
         })
     }
 
@@ -548,6 +550,7 @@ impl connector_types::IncomingWebhook for Adyen {
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: Some(200),
+            response_headers: None,
         })
     }
 
@@ -581,6 +584,7 @@ impl connector_types::IncomingWebhook for Adyen {
                     String::from_utf8_lossy(&request_body_copy).to_string(),
                 ),
                 status_code: Some(200),
+                response_headers: None,
             },
         )
     }
