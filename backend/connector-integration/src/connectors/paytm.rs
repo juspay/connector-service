@@ -35,7 +35,6 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent, verification,
 };
-
 use paytm::constants;
 use transformers as paytm;
 
@@ -420,7 +419,7 @@ impl
                     .txn_info
                     .status
                     .as_ref()
-                    .map_or(false, |s| s == "TXN_FAILURE")
+                    .is_some_and(|s| s == "TXN_FAILURE")
             {
                 return Err(errors::ConnectorError::ResponseHandlingFailed.into());
             }
@@ -612,7 +611,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     .txn_info
                     .status
                     .as_ref()
-                    .map_or(false, |s| s == "TXN_SUCCESS")
+                    .is_some_and(|s| s == "TXN_SUCCESS")
             {
                 let payments_response = PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::ConnectorTransactionId(
@@ -755,7 +754,7 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
                     .txn_info
                     .status
                     .as_ref()
-                    .map_or(false, |s| s == "TXN_FAILURE")
+                    .is_some_and(|s| s == "TXN_FAILURE")
             {
                 let error_response = domain_types::router_data::ErrorResponse {
                     code: callback_response

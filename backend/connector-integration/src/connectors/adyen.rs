@@ -14,10 +14,11 @@ use common_enums::{
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue};
 use domain_types::{
     connector_flow::{
-        Accept, Accept, Authorize, Authorize, Capture, Capture, CreateOrder, CreateOrder,
-        CreateSessionToken, CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, RSync,
-        RSync, Refund, Refund, SetupMandate, SetupMandate, SubmitEvidence, SubmitEvidence, Void,
-        Void,
+        Accept, Accept, Accept, Authorize, Authorize, Authorize, Capture, Capture, Capture,
+        CreateOrder, CreateOrder, CreateOrder, CreateSessionToken, CreateSessionToken,
+        CreateSessionToken, DefendDispute, DefendDispute, DefendDispute, PSync, PSync, PSync,
+        RSync, RSync, RSync, Refund, Refund, Refund, SetupMandate, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, SubmitEvidence, Void, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,

@@ -317,7 +317,6 @@ pub struct PaytmTxnInfo {
     pub txn_date: Option<String>,
 }
 
-
 // Alternative error response structure for callback URL format
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PaytmCallbackErrorResponse {
@@ -1078,7 +1077,7 @@ pub struct PaytmSessionTokenErrorResponse {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PaytmSessionTokenErrorBody {
     #[serde(rename = "extraParamsMap")]
-    pub extra_params_map: Option<serde_json::Value>,  // This field must be present (even if null) to distinguish from other types
+    pub extra_params_map: Option<serde_json::Value>, // This field must be present (even if null) to distinguish from other types
     #[serde(rename = "resultInfo")]
     pub result_info: PaytmResultInfo,
 }

@@ -3,8 +3,8 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync,
-        Refund, RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
+        RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -149,10 +149,9 @@ impl Payments {
                     connector_auth_details.clone(),
                     &payload,
                     &connector.to_string(),
-                    &service_name,
+                    service_name,
                 )
-                .await
-                .map_err(|e| e)?;
+                .await?;
             tracing::info!(
                 "Session Token created successfully with session_id: {}",
                 payment_session_data.session_token
@@ -165,7 +164,7 @@ impl Payments {
         // This duplicate session token check has been removed - the session token handling is already done above
 
         // Create connector request data
-        let mut payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
+        let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
             .map_err(|err| {
                 tracing::error!("Failed to process payment authorize data: {:?}", err);
                 PaymentAuthorizationError::new(
@@ -175,12 +174,9 @@ impl Payments {
                     None,
                     None,
                 )
-            })?;
-
-        // Set session token from payment flow data if available
-        if let Some(session_token) = payment_flow_data.session_token.as_ref() {
-            payment_authorize_data.session_token = Some(session_token.clone());
-        }
+            })?
+            // Set session token from payment flow data if available
+            .set_session_token(payment_flow_data.session_token.clone());
 
         // Construct router data
         let router_data = RouterDataV2::<
@@ -531,12 +527,16 @@ impl Payments {
                 );
                 Ok(session_token_data)
             }
-            Err(ErrorResponse { message, status_code, .. }) => Err(PaymentAuthorizationError::new(
+            Err(ErrorResponse {
+                message,
+                status_code,
+                ..
+            }) => Err(PaymentAuthorizationError::new(
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {message}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
                 None,
-                Some(status_code as u32), // Use actual status code from ErrorResponse
+                Some(status_code.into()), // Use actual status code from ErrorResponse
             )),
         }
     }

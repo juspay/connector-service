@@ -5,8 +5,10 @@ use common_enums::{enums, CurrencyUnit};
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Accept, Authorize, Authorize, Capture, Capture, CreateOrder, CreateOrder,
+        CreateSessionToken, CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, RSync,
+        RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
@@ -661,6 +663,40 @@ impl<
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Payu<T>
+    > for Payu
 {
 }
+
+// Add stub implementation for CreateSessionToken
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Payu
+{
+}
+
+// Add source verification stub for CreateSessionToken
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
+
+// Trait aliases (required for compilation)
+impl connector_types::RefundV2 for Payu {}
+impl connector_types::RefundSyncV2 for Payu {}
+impl connector_types::PaymentSyncV2 for Payu {}
+impl connector_types::PaymentVoidV2 for Payu {}
+impl connector_types::PaymentCapture for Payu {}
+impl connector_types::SetupMandateV2 for Payu {}
+impl connector_types::AcceptDispute for Payu {}
+impl connector_types::SubmitEvidenceV2 for Payu {}
+impl connector_types::DisputeDefend for Payu {}
+impl connector_types::IncomingWebhook for Payu {}
+impl connector_types::PaymentOrderCreate for Payu {}
+impl connector_types::ValidationTrait for Payu {}
+impl connector_types::RepeatPaymentV2 for Payu {}
