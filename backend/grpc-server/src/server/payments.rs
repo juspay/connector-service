@@ -77,6 +77,7 @@ impl Payments {
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
+        session_id: Option<String>,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -114,6 +115,7 @@ impl Payments {
                     &payload,
                     &connector.to_string(),
                     service_name,
+                    session_id.clone(),
                 )
                 .await?;
 
@@ -149,6 +151,16 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Create test context for mock server integration  
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                session_id,
+                self.config.test.mock_server_url.clone(),
+            ))
+        } else {
+            None
+        };
+
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
@@ -157,6 +169,7 @@ impl Payments {
             None,
             &connector.to_string(),
             service_name,
+            test_context,
         )
         .await;
 
@@ -237,6 +250,7 @@ impl Payments {
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
+        session_id: Option<String>,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -282,6 +296,16 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Create test context for mock server integration  
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                session_id,
+                self.config.test.mock_server_url.clone(),
+            ))
+        } else {
+            None
+        };
+
         // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
@@ -290,6 +314,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            test_context,
         )
         .await
         .map_err(
@@ -367,6 +392,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None, // TODO: Add test context support for setup mandate order creation
         )
         .await
         .switch()
@@ -478,10 +504,12 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let metadata = request.metadata();
+                let connector = connector_from_metadata(metadata)
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
-                    auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                    auth_from_metadata(metadata).map_err(|e| e.into_grpc_status())?;
+                let session_id = crate::utils::session_id_from_metadata(metadata);
                 let payload = request.into_inner();
 
                 let authorize_response = match Box::pin(self.process_authorization_internal(
@@ -489,6 +517,7 @@ impl PaymentService for Payments {
                     connector,
                     connector_auth_details,
                     &service_name,
+                    session_id,
                 ))
                 .await
                 {
@@ -879,6 +908,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    None, // TODO: Add test context support for setup mandate
                 )
                 .await
                 .switch()
@@ -975,6 +1005,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    None, // TODO: Add test context support for repeat payment
                 )
                 .await
                 .switch()

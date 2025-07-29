@@ -54,6 +54,17 @@ pub const X_KEY2: &str = "x-key2";
 pub const X_API_SECRET: &str = "x-api-secret";
 
 // =============================================================================
+// Test Environment Headers
+// =============================================================================
+
+/// Session ID header for test environment
+pub const X_SESSION_ID: &str = "x-session-id";
+/// Original URL header for test environment (sent to mock server)
+pub const X_API_URL: &str = "x-api-url";
+/// API tag header for test environment (identifies the flow)
+pub const X_API_TAG: &str = "x-api-tag";
+
+// =============================================================================
 // Error Messages and Codes
 // =============================================================================
 

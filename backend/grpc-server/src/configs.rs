@@ -13,6 +13,8 @@ pub struct Config {
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+    #[serde(default)]
+    pub test: TestConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -52,6 +54,21 @@ pub enum ServiceType {
     #[default]
     Grpc,
     Http,
+}
+
+#[derive(Clone, serde::Deserialize, Debug)]
+pub struct TestConfig {
+    pub enabled: bool,
+    pub mock_server_url: Option<String>,
+}
+
+impl Default for TestConfig {
+    fn default() -> Self {
+        Self {
+            enabled: std::env::var("TEST_ENV").is_ok(),
+            mock_server_url: std::env::var("MOCK_SERVER_URL_V2").ok(),
+        }
+    }
 }
 
 impl Config {
