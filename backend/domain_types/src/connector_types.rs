@@ -902,6 +902,11 @@ impl PaymentsAuthorizeData {
     //         })
     //         .ok_or_else(missing_field_err("connector_mandate_request_reference_id"))
     // }
+
+    pub fn set_session_token(mut self, session_token: Option<String>) -> Self {
+        self.session_token = session_token;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
