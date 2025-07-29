@@ -66,6 +66,7 @@ mod tests {
                         ..Default::default()
                     },
                     external_latency: None,
+                    connector_response_headers: None,
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -232,6 +233,7 @@ mod tests {
                         ..Default::default()
                     },
                     external_latency: None,
+                    connector_response_headers: None,
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
