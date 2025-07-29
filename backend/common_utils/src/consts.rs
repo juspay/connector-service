@@ -52,6 +52,8 @@ pub const X_KEY1: &str = "x-key1";
 pub const X_KEY2: &str = "x-key2";
 /// API secret header
 pub const X_API_SECRET: &str = "x-api-secret";
+/// Auth Key Map header
+pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
 
 // =============================================================================
 // Error Messages and Codes
