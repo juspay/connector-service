@@ -1916,11 +1916,16 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
         value: WebhookDetailsResponse,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let status = grpc_api_types::payments::PaymentStatus::foreign_from(value.status);
-        let response_headers = value.response_headers
+        let response_headers = value
+            .response_headers
             .map(|headers| {
-                headers.iter()
+                headers
+                    .iter()
                     .filter_map(|(name, value)| {
-                        value.to_str().ok().map(|v| (name.to_string(), v.to_string()))
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
                     })
                     .collect()
             })
@@ -1991,11 +1996,16 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
         value: RefundWebhookDetailsResponse,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let status = grpc_api_types::payments::RefundStatus::foreign_from(value.status);
-        let response_headers = value.response_headers
+        let response_headers = value
+            .response_headers
             .map(|headers| {
-                headers.iter()
+                headers
+                    .iter()
                     .filter_map(|(name, value)| {
-                        value.to_str().ok().map(|v| (name.to_string(), v.to_string()))
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
                     })
                     .collect()
             })
@@ -2041,11 +2051,16 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let grpc_status = grpc_api_types::payments::DisputeStatus::foreign_from(value.status);
         let grpc_stage = grpc_api_types::payments::DisputeStage::foreign_from(value.stage);
-        let response_headers = value.response_headers
+        let response_headers = value
+            .response_headers
             .map(|headers| {
-                headers.iter()
+                headers
+                    .iter()
                     .filter_map(|(name, value)| {
-                        value.to_str().ok().map(|v| (name.to_string(), v.to_string()))
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
                     })
                     .collect()
             })

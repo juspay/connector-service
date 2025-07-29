@@ -7,7 +7,7 @@ use common_utils::{
     request::{Method, Request, RequestContent},
 };
 use domain_types::{
-    connector_types::{RawConnectorResponse, ConnectorResponseHeaders},
+    connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -182,7 +182,7 @@ where
                                 updated_router_data
                                     .resource_common_data
                                     .set_raw_connector_response(raw_response_string);
-                                
+
                                 // Set response headers if available
                                 updated_router_data
                                     .resource_common_data
@@ -221,6 +221,9 @@ where
                                 updated_router_data
                                     .resource_common_data
                                     .set_raw_connector_response(raw_response_string);
+                                updated_router_data
+                                    .resource_common_data
+                                    .set_connector_response_headers(body.headers.clone());
                             }
 
                             let error = match body.status_code {

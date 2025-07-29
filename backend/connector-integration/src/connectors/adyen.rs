@@ -58,7 +58,6 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-
 impl connector_types::ConnectorServiceTrait for Adyen {}
 impl connector_types::PaymentAuthorizeV2 for Adyen {}
 impl connector_types::PaymentSyncV2 for Adyen {}
