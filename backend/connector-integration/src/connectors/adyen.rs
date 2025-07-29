@@ -3,6 +3,8 @@ mod test;
 pub mod transformers;
 use std::sync::LazyLock;
 
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
@@ -42,6 +44,7 @@ use interfaces::{
     connector_types::{self, is_mandate_supported, ConnectorValidation},
     events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
 use transformers::{
     self as adyen, AdyenCaptureRequest, AdyenCaptureResponse, AdyenDefendDisputeRequest,
     AdyenDefendDisputeResponse, AdyenDisputeAcceptRequest, AdyenDisputeAcceptResponse,
@@ -50,26 +53,122 @@ use transformers::{
     AdyenRefundResponse, AdyenSubmitEvidenceResponse, AdyenVoidRequest, AdyenVoidResponse,
     SetupMandateRequest, SetupMandateResponse,
 };
-use serde::Serialize;
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::ConnectorServiceTrait<T> for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentAuthorizeV2<T> for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentSyncV2 for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentVoidV2 for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::RefundSyncV2 for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::RefundV2 for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::PaymentCapture for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::SetupMandateV2<T> for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::AcceptDispute for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::SubmitEvidenceV2 for Adyen<T> {}
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> connector_types::DisputeDefend for Adyen<T> {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSyncV2 for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidV2 for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundSyncV2 for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundV2 for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentCapture for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SetupMandateV2<T> for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::AcceptDispute for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SubmitEvidenceV2 for Adyen<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::DisputeDefend for Adyen<T>
+{
+}
 
 // type AuthorizeRouterData<T> = RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>;
 // type SetupMandateRouterData<T> = RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>;
@@ -80,7 +179,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 // type AcceptRouterData = RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>;
 // type SubmitEvidenceRouterData = RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>;
 // type DefendDisputeRouterData = RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>;
-
 
 macros::create_all_prerequisites!(
     connector_name: Adyen,
@@ -134,7 +232,7 @@ macros::create_all_prerequisites!(
             request_body: AdyenDisputeSubmitEvidenceRequest,
             response_body: AdyenSubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-    
+
         ),
         (
             flow: DefendDispute,
@@ -181,362 +279,14 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Recursive expansion of create_all_prerequisites! macro
-// =======================================================
-
-// #[allow(unused_imports)]
-// use crate::connectors::macros::{
-//     Bridge, BridgeRequestResponse, FlowTypes, GetFormData, NoRequestBody, NoRequestBodyTemplating,
-// };
-// use std::marker::PhantomData;
-// #[allow(unused_imports)]
-// mod macro_types {
-//     pub(super) use crate::types::*;
-//     pub(super) use common_utils::{errors::CustomResult, request::RequestContent};
-//     pub(super) use domain_types::{
-//         errors::ConnectorError, router_data::ErrorResponse, router_data_v2::RouterDataV2,
-//         router_response_types::Response,
-//     };
-//     pub(super) use hyperswitch_masking::Maskable;
-//     pub(super) use interfaces::events::connector_api_logs::ConnectorEvent;
-// }
-// pub struct AdyenRouterData<
-//     RD: FlowTypes,
-//     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-// > {
-//     pub connector: Adyen<T>,
-//     pub router_data: RD,
-// }
-// impl<
-//         RD: FlowTypes,
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > FlowTypes for AdyenRouterData<RD, T>
-// {
-//     type Flow = RD::Flow;
-//     type FlowCommonData = RD::FlowCommonData;
-//     type Request = RD::Request;
-//     type Response = RD::Response;
-// }
-// pub struct AdyenPaymentRequestTemplating;
-
-// pub struct AdyenPaymentResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<AdyenPaymentRequestTemplating, AdyenPaymentResponseTemplating, T>
-// {
-//     type RequestBody = AdyenPaymentRequest<T>;
-//     type ResponseBody = AdyenPaymentResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-//         T,
-//     >;
-// }
-// pub struct AdyenRedirectRequestTemplating;
-
-// pub struct AdyenPSyncResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<AdyenRedirectRequestTemplating, AdyenPSyncResponseTemplating, T>
-// {
-//     type RequestBody = AdyenRedirectRequest;
-//     type ResponseBody = AdyenPSyncResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-//         T,
-//     >;
-// }
-// pub struct AdyenCaptureRequestTemplating;
-
-// pub struct AdyenCaptureResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<AdyenCaptureRequestTemplating, AdyenCaptureResponseTemplating, T>
-// {
-//     type RequestBody = AdyenCaptureRequest;
-//     type ResponseBody = AdyenCaptureResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-//         T,
-//     >;
-// }
-// pub struct AdyenVoidRequestTemplating;
-
-// pub struct AdyenVoidResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse for Bridge<AdyenVoidRequestTemplating, AdyenVoidResponseTemplating, T>
-// {
-//     type RequestBody = AdyenVoidRequest;
-//     type ResponseBody = AdyenVoidResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-//         T,
-//     >;
-// }
-// pub struct AdyenRefundRequestTemplating;
-
-// pub struct AdyenRefundResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<AdyenRefundRequestTemplating, AdyenRefundResponseTemplating, T>
-// {
-//     type RequestBody = AdyenRefundRequest;
-//     type ResponseBody = AdyenRefundResponse;
-//     type ConnectorInputData =
-//         AdyenRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>;
-// }
-// pub struct SetupMandateRequestTemplating;
-
-// pub struct SetupMandateResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<SetupMandateRequestTemplating, SetupMandateResponseTemplating, T>
-// {
-//     type RequestBody = SetupMandateRequest<T>;
-//     type ResponseBody = SetupMandateResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<
-//             SetupMandate,
-//             PaymentFlowData,
-//             SetupMandateRequestData<T>,
-//             PaymentsResponseData,
-//         >,
-//         T,
-//     >;
-// }
-// pub struct AdyenDisputeAcceptRequestTemplating;
-
-// pub struct AdyenDisputeAcceptResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<AdyenDisputeAcceptRequestTemplating, AdyenDisputeAcceptResponseTemplating, T>
-// {
-//     type RequestBody = AdyenDisputeAcceptRequest;
-//     type ResponseBody = AdyenDisputeAcceptResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-//         T,
-//     >;
-// }
-// pub struct AdyenDisputeSubmitEvidenceRequestTemplating;
-
-// pub struct AdyenSubmitEvidenceResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<
-//         AdyenDisputeSubmitEvidenceRequestTemplating,
-//         AdyenSubmitEvidenceResponseTemplating,
-//         T,
-//     >
-// {
-//     type RequestBody = AdyenDisputeSubmitEvidenceRequest;
-//     type ResponseBody = AdyenSubmitEvidenceResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-//         T,
-//     >;
-// }
-// pub struct AdyenDefendDisputeRequestTemplating;
-
-// pub struct AdyenDefendDisputeResponseTemplating;
-
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > BridgeRequestResponse
-//     for Bridge<AdyenDefendDisputeRequestTemplating, AdyenDefendDisputeResponseTemplating, T>
-// {
-//     type RequestBody = AdyenDefendDisputeRequest;
-//     type ResponseBody = AdyenDefendDisputeResponse;
-//     type ConnectorInputData = AdyenRouterData<
-//         RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-//         T,
-//     >;
-// }
-// #[derive(Clone)]
-// pub struct Adyen<
-//     T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-// > {
-//     authorize: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenPaymentRequest<T>,
-//         ResponseBody = AdyenPaymentResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<
-//                 Authorize,
-//                 PaymentFlowData,
-//                 PaymentsAuthorizeData<T>,
-//                 PaymentsResponseData,
-//             >,
-//             T,
-//         >,
-//     >),
-//     p_sync: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenRedirectRequest,
-//         ResponseBody = AdyenPSyncResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-//             T,
-//         >,
-//     >),
-//     capture: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenCaptureRequest,
-//         ResponseBody = AdyenCaptureResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-//             T,
-//         >,
-//     >),
-//     void: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenVoidRequest,
-//         ResponseBody = AdyenVoidResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-//             T,
-//         >,
-//     >),
-//     refund: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenRefundRequest,
-//         ResponseBody = AdyenRefundResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-//             T,
-//         >,
-//     >),
-//     setup_mandate: &'static (dyn BridgeRequestResponse<
-//         RequestBody = SetupMandateRequest<T>,
-//         ResponseBody = SetupMandateResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<
-//                 SetupMandate,
-//                 PaymentFlowData,
-//                 SetupMandateRequestData<T>,
-//                 PaymentsResponseData,
-//             >,
-//             T,
-//         >,
-//     >),
-//     accept: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenDisputeAcceptRequest,
-//         ResponseBody = AdyenDisputeAcceptResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
-//             T,
-//         >,
-//     >),
-//     submit_evidence: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenDisputeSubmitEvidenceRequest,
-//         ResponseBody = AdyenSubmitEvidenceResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
-//             T,
-//         >,
-//     >),
-//     defend_dispute: &'static (dyn BridgeRequestResponse<
-//         RequestBody = AdyenDefendDisputeRequest,
-//         ResponseBody = AdyenDefendDisputeResponse,
-//         ConnectorInputData = AdyenRouterData<
-//             RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
-//             T,
-//         >,
-//     >),
-// }
-// impl<
-//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-//     > Adyen<T>
-// {
-//     pub const fn new() -> &'static Self {
-//         &Self {
-//             authorize: &Bridge::<AdyenPaymentRequestTemplating, AdyenPaymentResponseTemplating, T>(
-//                 PhantomData,
-//             ),
-//             p_sync: &Bridge::<AdyenRedirectRequestTemplating, AdyenPSyncResponseTemplating, T>(
-//                 PhantomData,
-//             ),
-//             capture: &Bridge::<AdyenCaptureRequestTemplating, AdyenCaptureResponseTemplating, T>(
-//                 PhantomData,
-//             ),
-//             void: &Bridge::<AdyenVoidRequestTemplating, AdyenVoidResponseTemplating, T>(
-//                 PhantomData,
-//             ),
-//             refund: &Bridge::<AdyenRefundRequestTemplating, AdyenRefundResponseTemplating, T>(
-//                 PhantomData,
-//             ),
-//             setup_mandate: &Bridge::<
-//                 SetupMandateRequestTemplating,
-//                 SetupMandateResponseTemplating,
-//                 T,
-//             >(PhantomData),
-//             accept: &Bridge::<
-//                 AdyenDisputeAcceptRequestTemplating,
-//                 AdyenDisputeAcceptResponseTemplating,
-//                 T,
-//             >(PhantomData),
-//             submit_evidence: &Bridge::<
-//                 AdyenDisputeSubmitEvidenceRequestTemplating,
-//                 AdyenSubmitEvidenceResponseTemplating,
-//                 T,
-//             >(PhantomData),
-//             defend_dispute: &Bridge::<
-//                 AdyenDefendDisputeRequestTemplating,
-//                 AdyenDefendDisputeResponseTemplating,
-//                 T,
-//             >(PhantomData),
-//         }
-//     }
-//     pub fn build_headers<F, FCD, Req, Res>(
-//         &self,
-//         req: &RouterDataV2<F, FCD, Req, Res>,
-//     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-//         let mut header = <[_]>::into_vec(
-//             // #[rustc_box]
-//             Box::new([(
-//                 headers::CONTENT_TYPE.to_string(),
-//                 "application/json".to_string().into(),
-//             )]),
-//         );
-//         let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-//         header.append(&mut api_key);
-//         Ok(header)
-//     }
-//     pub fn connector_base_url_payments<'a, F, Req, Res>(
-//         &self,
-//         req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-//     ) -> &'a str {
-//         &req.resource_common_data.connectors.adyen.base_url
-//     }
-//     pub fn connector_base_url_refunds<'a, F, Req, Res>(
-//         &self,
-//         req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-//     ) -> &'a str {
-//         &req.resource_common_data.connectors.adyen.base_url
-//     }
-//     pub fn connector_base_url_disputes<'a, F, Req, Res>(
-//         &self,
-//         req: &'a RouterDataV2<F, DisputeFlowData, Req, Res>,
-//     ) -> Option<&'a str> {
-//         req.resource_common_data
-//             .connectors
-//             .adyen
-//             .dispute_base_url
-//             .as_deref()
-//     }
-// }
-
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> ConnectorCommon for Adyen<T>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorCommon for Adyen<T>
 {
     fn id(&self) -> &'static str {
         "adyen"
@@ -588,223 +338,223 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
 
 const ADYEN_API_VERSION: &str = "v68";
 
-// macros::macro_connector_implementation!(
-//     connector_default_implementations: [get_content_type, get_error_response_v2],
-//     connector: Adyen,
-//     curl_request: Json(AdyenPaymentRequest),
-//     curl_response: AdyenPaymentResponse,
-//     flow_name: Authorize,
-//     resource_common_data: PaymentFlowData,
-//     flow_request: PaymentsAuthorizeData<T>,
-//     flow_response: PaymentsResponseData,
-//     http_method: Post,
-//     generic_type: T,
-//     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize ],
-//     other_functions: {
-//         fn get_headers(
-//             &self,
-//             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-//         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-//             self.build_headers(req)
-//         }
-//         fn get_url(
-//             &self,
-//             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-//         ) -> CustomResult<String, errors::ConnectorError> {
-//             Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
-//         }
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenPaymentRequest),
+    curl_response: AdyenPaymentResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize ],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}/payments", self.connector_base_url_payments(req), ADYEN_API_VERSION))
+        }
+    }
+);
+
+// impl<
+//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+//     >
+//     ConnectorIntegrationV2<
+//         Authorize,
+//         PaymentFlowData,
+//         PaymentsAuthorizeData<T>,
+//         PaymentsResponseData,
+//     > for Adyen<T>
+// {
+//     fn get_http_method(&self) -> common_utils::request::Method {
+//         common_utils::request::Method::Post
 //     }
-// );
-
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    >
-    ConnectorIntegrationV2<
-        Authorize,
-        PaymentFlowData,
-        PaymentsAuthorizeData<T>,
-        PaymentsResponseData,
-    > for Adyen<T>
-{
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Post
-    }
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
-    }
-    fn get_url(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-                "{}{}/payments",
-                self.connector_base_url_payments(req),
-                ADYEN_API_VERSION
-
-        ))
-    }
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError> {
-        let bridge = self.authorize;
-        let input_data = AdyenRouterData {
-            connector: self.to_owned(),
-            router_data: req.clone(),
-        };
-        let request = bridge.request_body(input_data)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        macro_types::ConnectorError,
-    > {
-        let bridge = self.authorize;
-        let response_body = bridge.response(res.response)?;
-        event_builder.map(|i| i.set_response_body(&response_body));
-        let response_router_data = ResponseRouterData {
-            response: response_body,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        };
-        let result = bridge.router_data(response_router_data)?;
-        Ok(result)
-    }
-}
-
-// macros::macro_connector_implementation!(
-//     connector_default_implementations: [get_content_type, get_error_response_v2],
-//     connector: Adyen,
-//     curl_request: Json(AdyenRedirectRequest),
-//     curl_response: AdyenPSyncResponse,
-//     flow_name: PSync,
-//     resource_common_data: PaymentFlowData,
-//     flow_request: PaymentsSyncData,
-//     flow_response: PaymentsResponseData,
-//     http_method: Post,
-//     generic_type: T,
-//     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize ],
-//     other_functions: {
-//         fn get_headers(
-//             &self,
-//             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-//         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-//             self.build_headers(req)
-//         }
-//         fn get_url(
-//             &self,
-//             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-//         ) -> CustomResult<String, errors::ConnectorError> {
-//             Ok(format!("{}{}/payments/details", self.connector_base_url_payments(req), ADYEN_API_VERSION))
-//         }
+//     fn get_headers(
+//         &self,
+//         req: &RouterDataV2<
+//             Authorize,
+//             PaymentFlowData,
+//             PaymentsAuthorizeData<T>,
+//             PaymentsResponseData,
+//         >,
+//     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+//         self.build_headers(req)
 //     }
-// );
+//     fn get_url(
+//         &self,
+//         req: &RouterDataV2<
+//             Authorize,
+//             PaymentFlowData,
+//             PaymentsAuthorizeData<T>,
+//             PaymentsResponseData,
+//         >,
+//     ) -> CustomResult<String, errors::ConnectorError> {
+//         Ok(format!(
+//                 "{}{}/payments",
+//                 self.connector_base_url_payments(req),
+//                 ADYEN_API_VERSION
 
-impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Adyen<T>
-{
-    fn get_http_method(&self) -> common_utils::request::Method {
-        common_utils::request::Method::Post
+//         ))
+//     }
+//     fn get_content_type(&self) -> &'static str {
+//         self.common_get_content_type()
+//     }
+//     fn get_error_response_v2(
+//         &self,
+//         res: Response,
+//         event_builder: Option<&mut ConnectorEvent>,
+//     ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
+//         self.build_error_response(res, event_builder)
+//     }
+//     fn get_request_body(
+//         &self,
+//         req: &RouterDataV2<
+//             Authorize,
+//             PaymentFlowData,
+//             PaymentsAuthorizeData<T>,
+//             PaymentsResponseData,
+//         >,
+//     ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError> {
+//         let bridge = self.authorize;
+//         let input_data = AdyenRouterData {
+//             connector: self.to_owned(),
+//             router_data: req.clone(),
+//         };
+//         let request = bridge.request_body(input_data)?;
+//         Ok(Some(RequestContent::Json(Box::new(request))))
+//     }
+//     fn handle_response_v2(
+//         &self,
+//         data: &RouterDataV2<
+//             Authorize,
+//             PaymentFlowData,
+//             PaymentsAuthorizeData<T>,
+//             PaymentsResponseData,
+//         >,
+//         event_builder: Option<&mut ConnectorEvent>,
+//         res: Response,
+//     ) -> CustomResult<
+//         RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+//         macro_types::ConnectorError,
+//     > {
+//         let bridge = self.authorize;
+//         let response_body = bridge.response(res.response)?;
+//         event_builder.map(|i| i.set_response_body(&response_body));
+//         let response_router_data = ResponseRouterData {
+//             response: response_body,
+//             router_data: data.clone(),
+//             http_code: res.status_code,
+//         };
+//         let result = bridge.router_data(response_router_data)?;
+//         Ok(result)
+//     }
+// }
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Adyen,
+    curl_request: Json(AdyenRedirectRequest),
+    curl_response: AdyenPSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize ],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}{}/payments/details", self.connector_base_url_payments(req), ADYEN_API_VERSION))
+        }
     }
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        self.build_headers(req)
-    }
-    fn get_url(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}{}/payments/details",
-            self.connector_base_url_payments(req),
-            ADYEN_API_VERSION
-        ))
-    }
-    fn get_content_type(&self) -> &'static str {
-        self.common_get_content_type()
-    }
-    fn get_error_response_v2(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
-        self.build_error_response(res, event_builder)
-    }
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-    ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError> {
-        let bridge = self.p_sync;
-        let input_data = AdyenRouterData {
-            connector: self.to_owned(),
-            router_data: req.clone(),
-        };
-        let request = bridge.request_body(input_data)?;
-        Ok(Some(RequestContent::Json(Box::new(request))))
-    }
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        macro_types::ConnectorError,
-    > {
-        let bridge = self.p_sync;
-        let response_body = bridge.response(res.response)?;
-        event_builder.map(|i| i.set_response_body(&response_body));
-        let response_router_data = ResponseRouterData {
-            response: response_body,
-            router_data: data.clone(),
-            http_code: res.status_code,
-        };
-        let result = bridge.router_data(response_router_data)?;
-        Ok(result)
-    }
-}
+);
+
+// impl<
+//         T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+//     > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+//     for Adyen<T>
+// {
+//     fn get_http_method(&self) -> common_utils::request::Method {
+//         common_utils::request::Method::Post
+//     }
+//     fn get_headers(
+//         &self,
+//         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+//         self.build_headers(req)
+//     }
+//     fn get_url(
+//         &self,
+//         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//     ) -> CustomResult<String, errors::ConnectorError> {
+//         Ok(format!(
+//             "{}{}/payments/details",
+//             self.connector_base_url_payments(req),
+//             ADYEN_API_VERSION
+//         ))
+//     }
+//     fn get_content_type(&self) -> &'static str {
+//         self.common_get_content_type()
+//     }
+//     fn get_error_response_v2(
+//         &self,
+//         res: Response,
+//         event_builder: Option<&mut ConnectorEvent>,
+//     ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
+//         self.build_error_response(res, event_builder)
+//     }
+//     fn get_request_body(
+//         &self,
+//         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//     ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError> {
+//         let bridge = self.p_sync;
+//         let input_data = AdyenRouterData {
+//             connector: self.to_owned(),
+//             router_data: req.clone(),
+//         };
+//         let request = bridge.request_body(input_data)?;
+//         Ok(Some(RequestContent::Json(Box::new(request))))
+//     }
+//     fn handle_response_v2(
+//         &self,
+//         data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//         event_builder: Option<&mut ConnectorEvent>,
+//         res: Response,
+//     ) -> CustomResult<
+//         RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+//         macro_types::ConnectorError,
+//     > {
+//         let bridge = self.p_sync;
+//         let response_body = bridge.response(res.response)?;
+//         event_builder.map(|i| i.set_response_body(&response_body));
+//         let response_router_data = ResponseRouterData {
+//             response: response_body,
+//             router_data: data.clone(),
+//             http_code: res.status_code,
+//         };
+//         let result = bridge.router_data(response_router_data)?;
+//         Ok(result)
+//     }
+// }
 
 // macros::macro_connector_implementation!(
 //     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -838,7 +588,12 @@ impl<
 //     }
 // );
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Adyen<T>
 {
@@ -860,12 +615,11 @@ impl<
             _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into()),
         };
         Ok(format!(
-                "{}{}/payments/{}/captures",
-                self.connector_base_url_payments(req),
-                ADYEN_API_VERSION,
-                id
-            )
-        )
+            "{}{}/payments/{}/captures",
+            self.connector_base_url_payments(req),
+            ADYEN_API_VERSION,
+            id
+        ))
     }
     fn get_content_type(&self) -> &'static str {
         self.common_get_content_type()
@@ -911,17 +665,36 @@ impl<
     }
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    > connector_types::ValidationTrait for Adyen<T> {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ValidationTrait for Adyen<T>
+{
+}
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    > connector_types::PaymentOrderCreate for Adyen<T> {}
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentOrderCreate for Adyen<T>
+{
+}
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    > 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -961,7 +734,12 @@ impl <
 // );
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Adyen<T>
 {
@@ -980,10 +758,10 @@ impl<
     ) -> CustomResult<String, errors::ConnectorError> {
         let id = req.request.connector_transaction_id.clone();
         Ok(format!(
-                "{}{}/payments/{}/cancels",
-                self.connector_base_url_payments(req),
-                ADYEN_API_VERSION,
-                id
+            "{}{}/payments/{}/cancels",
+            self.connector_base_url_payments(req),
+            ADYEN_API_VERSION,
+            id
         ))
     }
     fn get_content_type(&self) -> &'static str {
@@ -1060,9 +838,13 @@ impl<
 //     }
 // );
 
-
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Adyen<T>
 {
@@ -1083,7 +865,7 @@ impl<
             .connector_base_url_disputes(req)
             .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
         Ok(format!(
-                "{dispute_url}ca/services/DisputeService/v30/defendDispute"
+            "{dispute_url}ca/services/DisputeService/v30/defendDispute"
         ))
     }
     fn get_content_type(&self) -> &'static str {
@@ -1130,13 +912,26 @@ impl<
     }
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Adyen<T> {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Adyen<T>
+{
+}
 
 // SourceVerification implementations for all flows
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         Authorize,
@@ -1147,8 +942,13 @@ impl<
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         PSync,
@@ -1159,8 +959,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         Capture,
@@ -1171,8 +976,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         Void,
@@ -1183,8 +993,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         Refund,
@@ -1195,8 +1010,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         RSync,
@@ -1208,7 +1028,12 @@ impl <
 }
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         SetupMandate,
@@ -1219,8 +1044,13 @@ impl<
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         Accept,
@@ -1231,8 +1061,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         SubmitEvidence,
@@ -1243,8 +1078,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         DefendDispute,
@@ -1255,8 +1095,13 @@ impl <
 {
 }
 
-impl <
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     interfaces::verification::SourceVerification<
         CreateOrder,
@@ -1268,8 +1113,14 @@ impl <
 }
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
-    > connector_types::IncomingWebhook for Adyen<T> {
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Adyen<T>
+{
     fn get_event_type(
         &self,
         request: RequestDetails,
@@ -1399,7 +1250,12 @@ impl<
 // );
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
     for Adyen<T>
 {
@@ -1418,10 +1274,10 @@ impl<
     ) -> CustomResult<String, errors::ConnectorError> {
         let connector_payment_id = req.request.connector_transaction_id.clone();
         Ok(format!(
-                "{}{}/payments/{}/refunds",
-                self.connector_base_url_refunds(req),
-                ADYEN_API_VERSION,
-                connector_payment_id
+            "{}{}/payments/{}/refunds",
+            self.connector_base_url_refunds(req),
+            ADYEN_API_VERSION,
+            connector_payment_id
         ))
     }
     fn get_content_type(&self) -> &'static str {
@@ -1496,7 +1352,12 @@ impl<
 //     }
 // );
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     ConnectorIntegrationV2<
         SetupMandate,
@@ -1529,9 +1390,9 @@ impl<
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
         Ok(format!(
-                "{}{}/payments",
-                self.connector_base_url_payments(req),
-                ADYEN_API_VERSION
+            "{}{}/payments",
+            self.connector_base_url_payments(req),
+            ADYEN_API_VERSION
         ))
     }
     fn get_content_type(&self) -> &'static str {
@@ -1624,7 +1485,12 @@ impl<
 // );
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Adyen<T>
 {
@@ -1645,7 +1511,7 @@ impl<
             .connector_base_url_disputes(req)
             .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
         Ok(format!(
-                "{dispute_url}ca/services/DisputeService/v30/acceptDispute"
+            "{dispute_url}ca/services/DisputeService/v30/acceptDispute"
         ))
     }
     fn get_content_type(&self) -> &'static str {
@@ -1723,7 +1589,12 @@ impl<
 // );
 
 impl<
-        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Adyen<T>
@@ -1755,7 +1626,7 @@ impl<
             .connector_base_url_disputes(req)
             .ok_or(errors::ConnectorError::FailedToObtainIntegrationUrl)?;
         Ok(format!(
-                "{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"
+            "{dispute_url}ca/services/DisputeService/v30/supplyDefenseDocument"
         ))
     }
     fn get_content_type(&self) -> &'static str {
@@ -1876,7 +1747,7 @@ static ADYEN_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
 
 static ADYEN_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
 
-impl  ConnectorSpecifications for Adyen<DefaultPCIHolder> {
+impl ConnectorSpecifications for Adyen<DefaultPCIHolder> {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         Some(&ADYEN_CONNECTOR_INFO)
     }
@@ -1890,8 +1761,7 @@ impl  ConnectorSpecifications for Adyen<DefaultPCIHolder> {
     }
 }
 
-impl ConnectorValidation for Adyen<DefaultPCIHolder>
-{
+impl ConnectorValidation for Adyen<DefaultPCIHolder> {
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,

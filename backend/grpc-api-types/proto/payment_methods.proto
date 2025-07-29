@@ -60,6 +60,8 @@ message CardPaymentMethodType {
     CardDetails credit = 1;                // Credit card payment details
     CardDetails debit = 2;                 // Debit card payment details
     CardRedirect card_redirect = 3;        // Card payment via redirect flow
+    CardDetails credit_proxy = 4;       // Credit card details for proxy payments
+    CardDetails debit_proxy = 5;        // Debit card details for proxy payments
   }
 }
 

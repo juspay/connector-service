@@ -1,5 +1,5 @@
-use std::sync::Arc;
-
+use std::{marker::PhantomData, sync::Arc};
+use std::fmt::Debug;
 use common_enums;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -10,21 +10,16 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-    }, errors::{ApiError, ApplicationErrorResponse}, payment_method_data::{DefaultPCIHolder, VaultTokenHolder}, router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, types::{
+    }, errors::{ApiError, ApplicationErrorResponse}, payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder}, router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_setup_mandate_response,
     }, utils::ForeignTryFrom
 };
 use error_stack::ResultExt;
 use grpc_api_types::payments::{
-    payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest,
-    PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse,
-    PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse,
-    PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
-    PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse,
+    payment_method, payment_service_server::PaymentService, DisputeResponse, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceCaptureResponse, PaymentServiceDisputeRequest, PaymentServiceGetRequest, PaymentServiceGetResponse, PaymentServiceRefundRequest, PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse
 };
-use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use interfaces::{connector_integration_v2::{BoxedConnectorIntegrationV2, ConnectorIntegrationV2}, connector_types::ConnectorServiceTrait};
 use tracing::info;
 
 use crate::{
@@ -57,12 +52,13 @@ trait PaymentOperationsInternal {
 }
 
 #[derive(Clone)]
-pub struct Payments {
+pub struct Payments{
     pub config: Arc<Config>,
 }
 
-impl Payments {
-    async fn process_authorization_internal( //
+impl Payments
+{
+    async fn process_authorization_internal<T : PaymentMethodDataTypes + Default + Debug+ Send + Eq + PartialEq + serde::Serialize + serde::de::DeserializeOwned + Clone>(
         &self,
         payload: PaymentServiceAuthorizeRequest,
         connector: domain_types::connector_types::ConnectorEnum,
@@ -371,7 +367,7 @@ impl Payments {
     }
 }
 
-impl PaymentOperationsInternal for Payments {
+impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde::Serialize + serde::de::DeserializeOwned + 'static + Clone> PaymentOperationsInternal for Payments<T> {
     implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
@@ -434,7 +430,7 @@ impl PaymentOperationsInternal for Payments {
 }
 
 #[tonic::async_trait]
-impl PaymentService for Payments {
+impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde::Serialize + serde::de::DeserializeOwned+ 'static + Clone> PaymentService for Payments<T> {
     #[tracing::instrument(
         name = "payment_authorize",
         fields(
@@ -474,16 +470,67 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let payload = request.into_inner();
 
-                let authorize_response = match Box::pin(self.process_authorization_internal(
-                    payload,
-                    connector,
-                    connector_auth_details,
-                    &service_name,
-                ))
-                .await
-                {
-                    Ok(response) => response,
-                    Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                let authorize_response = match payload.payment_method.as_ref() {
+                    Some(pm) => {
+                        match pm.payment_method.as_ref() {
+                            Some(payment_method::PaymentMethod::Card(card_details)) => {
+                                match card_details.card_type {
+                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
+                                        match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                                            payload,
+                                            connector,
+                                            connector_auth_details,
+                                            &service_name,
+                                        ))
+                                        .await
+                                        {
+                                            Ok(response) => response,
+                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                        }
+                                    }
+                                    _ => {
+                                        match Box::pin(self.process_authorization_internal(
+                                            payload,
+                                            connector,
+                                            connector_auth_details,
+                                            &service_name,
+                                        ))
+                                        .await
+                                        {
+                                            Ok(response) => response,
+                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {
+                                match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                                    payload,
+                                    connector,
+                                    connector_auth_details,
+                                    &service_name,
+                                ))
+                                .await
+                                {
+                                    Ok(response) => response,
+                                    Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                }
+                            }
+                        }
+                    }
+                    _ => {
+                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                            payload,
+                            connector,
+                            connector_auth_details,
+                            &service_name,
+                        ))
+                        .await
+                        {
+                            Ok(response) => response,
+                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                        }
+                    }
                 };
 
                 Ok(tonic::Response::new(authorize_response))
