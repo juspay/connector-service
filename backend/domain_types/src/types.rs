@@ -65,7 +65,6 @@ pub struct Connectors {
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
-    pub paytm: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
 }
@@ -3704,22 +3703,5 @@ pub fn generate_repeat_payment_response(
                 },
             )
         }
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
-    for SessionTokenRequestData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-
-        Ok(Self {
-            amount: common_utils::types::MinorUnit::new(value.minor_amount),
-            currency,
-        })
     }
 }

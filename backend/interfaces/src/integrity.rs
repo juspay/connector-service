@@ -8,8 +8,7 @@ use common_utils::errors::IntegrityCheckError;
 use domain_types::connector_types::{
     AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentVoidData,
     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
-    RepeatPaymentData, SessionTokenRequestData, SessionTokenRequestData, SetupMandateRequestData,
-    SubmitEvidenceData,
+    RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::payment_method_data::PaymentMethodDataTypes;
 use domain_types::router_request_types::{

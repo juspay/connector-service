@@ -15,9 +15,9 @@ use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSe
 use domain_types::{
     connector_flow::{
         Accept, Accept, Authorize, Authorize, Capture, Capture, CreateOrder, CreateOrder,
-        CreateSessionToken, CreateSessionToken, CreateSessionToken, DefendDispute, DefendDispute,
-        PSync, PSync, RSync, RSync, Refund, Refund, SetupMandate, SetupMandate, SubmitEvidence,
-        SubmitEvidence, Void, Void,
+        CreateSessionToken, CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, RSync,
+        RSync, Refund, Refund, SetupMandate, SetupMandate, SubmitEvidence, SubmitEvidence, Void,
+        Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,

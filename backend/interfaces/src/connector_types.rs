@@ -24,8 +24,8 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData, 
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -64,10 +64,6 @@ pub type BoxedConnector<T> = Box<&'static (dyn ConnectorServiceTrait<T> + Sync)>
 
 pub trait ValidationTrait {
     fn should_do_order_create(&self) -> bool {
-        false
-    }
-
-    fn should_do_session_token(&self) -> bool {
         false
     }
 
