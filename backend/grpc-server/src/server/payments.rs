@@ -124,6 +124,7 @@ impl Payments {
         metadata_payload: &utils::MetadataPayload,
         service_name: &str,
         request_id: &str,
+        session_id: Option<String>,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -172,6 +173,7 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
+                    session_id.clone(),
                 )
                 .await?;
 
@@ -239,6 +241,16 @@ impl Payments {
             request: payment_authorize_data,
             response: Err(ErrorResponse::default()),
         };
+
+        // Create test context for mock server integration  
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                session_id,
+                self.config.test.mock_server_url.clone(),
+            ))
+        } else {
+            None
+        };
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -259,6 +271,7 @@ impl Payments {
             router_data,
             None,
             event_params,
+            test_context,
         )
         .await;
 
@@ -348,6 +361,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
+        session_id: Option<String>,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -393,6 +407,16 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Create test context for mock server integration  
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                session_id,
+                self.config.test.mock_server_url.clone(),
+            ))
+        } else {
+            None
+        };
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name: event_params.connector_name,
@@ -413,6 +437,7 @@ impl Payments {
             order_router_data,
             None,
             external_event_params,
+            test_context,
         )
         .await
         .map_err(
@@ -511,6 +536,7 @@ impl Payments {
             order_router_data,
             None,
             external_event_params,
+            None, // TODO: Add test context support for setup mandate order creation
         )
         .await
         .switch()
@@ -738,6 +764,7 @@ impl PaymentService for Payments {
                 let utils::MetadataPayload {connector, ref request_id, ref connector_auth_type, ..} = metadata_payload;
                 let connector_auth_details = connector_auth_type.clone();
                 let metadata = request.metadata().clone();
+                let session_id = crate::utils::session_id_from_metadata(&metadata);
                 let payload = request.into_inner();
 
                 let authorize_response = match payload.payment_method.as_ref() {
@@ -754,7 +781,8 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
-                                        ))
+                                            session_id,
+                ))
                                         .await
                                         {
                                             Ok(response) => response,
@@ -1237,6 +1265,7 @@ impl PaymentService for Payments {
                         router_data,
                         None,
                         event_params,
+                    None, // TODO: Add test context support for setup mandate
                     )
                     .await
                     .switch()
@@ -1352,6 +1381,7 @@ impl PaymentService for Payments {
                         router_data,
                         None,
                         event_params,
+                    None, // TODO: Add test context support for repeat payment
                     )
                     .await
                     .switch()

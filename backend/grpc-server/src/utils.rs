@@ -1,7 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use common_utils::{
-    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
+    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SESSION_ID},
     errors::CustomResult,
     events::FlowName,
     lineage::LineageIds,
@@ -202,6 +202,14 @@ pub fn tenant_id_from_metadata(
     parse_metadata(metadata, consts::X_TENANT_ID)
         .map(|s| s.to_string())
         .or_else(|_| Ok("DefaultTenantId".to_string()))
+}
+
+pub fn session_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> Option<String> {
+    parse_metadata(metadata, X_SESSION_ID)
+        .map(|inner| inner.to_string())
+        .ok()
 }
 
 pub fn reference_id_from_metadata(
@@ -494,6 +502,7 @@ macro_rules! implement_connector_operation {
                 router_data,
                 $all_keys_required,
                 event_params,
+                None, // TODO: Add test context support for macro-generated calls
             )
             .await
             .switch()

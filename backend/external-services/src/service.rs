@@ -5,8 +5,87 @@ use common_utils::ext_traits::AsyncExt;
 use common_utils::{
     lineage,
     // consts::BASE64_ENGINE,
+    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
     request::{Method, Request, RequestContent},
 };
+
+/// Trait to get flow name from flow types
+pub trait GetFlowName {
+    fn get_flow_name() -> &'static str;
+}
+
+// Implement GetFlowName for all flow types
+impl GetFlowName for domain_types::connector_flow::CreateOrder {
+    fn get_flow_name() -> &'static str {
+        "create_order"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::Authorize {
+    fn get_flow_name() -> &'static str {
+        "authorize"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::PSync {
+    fn get_flow_name() -> &'static str {
+        "psync"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::Capture {
+    fn get_flow_name() -> &'static str {
+        "capture"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::Void {
+    fn get_flow_name() -> &'static str {
+        "void"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::Refund {
+    fn get_flow_name() -> &'static str {
+        "refund"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::RSync {
+    fn get_flow_name() -> &'static str {
+        "rsync"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::SetupMandate {
+    fn get_flow_name() -> &'static str {
+        "setup_mandate"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::RepeatPayment {
+    fn get_flow_name() -> &'static str {
+        "repeat_payment"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::Accept {
+    fn get_flow_name() -> &'static str {
+        "accept_dispute"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::SubmitEvidence {
+    fn get_flow_name() -> &'static str {
+        "submit_evidence"
+    }
+}
+
+impl GetFlowName for domain_types::connector_flow::DefendDispute {
+    fn get_flow_name() -> &'static str {
+        "defend_dispute"
+    }
+}
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
@@ -56,6 +135,55 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+/// Test context for mock server integration
+#[derive(Debug, Clone)]
+pub struct TestContext {
+    pub session_id: Option<String>,
+    pub mock_server_url: Option<String>,
+    pub is_test_env: bool,
+}
+
+impl TestContext {
+    pub fn new(session_id: Option<String>, mock_server_url: Option<String>) -> Self {
+        let is_test_env = mock_server_url.is_some();
+        Self {
+            session_id,
+            mock_server_url,
+            is_test_env,
+        }
+    }
+
+    /// Get test headers to be added to connector requests
+    pub fn get_test_headers(&self, original_url: &str, flow_name: &str) -> Vec<(String, Maskable<String>)> {
+        let mut headers = Vec::new();
+
+        if self.is_test_env {
+            // Add x-api-url header with original connector URL
+            headers.push((X_API_URL.to_string(), original_url.to_string().into()));
+
+            // Add x-api-tag header with flow identification
+            headers.push((X_API_TAG.to_string(), flow_name.to_string().into()));
+
+            // Add x-session-id header if available
+            if let Some(ref session_id) = self.session_id {
+                headers.push((X_SESSION_ID.to_string(), session_id.clone().into()));
+            }
+        }
+
+        headers
+    }
+
+    /// Get the URL to use for the request (mock server URL if in test mode, otherwise original URL)
+    pub fn get_request_url(&self, original_url: String) -> String {
+        if self.is_test_env {
+            if let Some(ref mock_url) = self.mock_server_url {
+                return mock_url.clone();
+            }
+        }
+        original_url
+    }
+}
+
 #[derive(Debug)]
 pub struct EventProcessingParams<'a> {
     pub connector_name: &'a str,
@@ -90,9 +218,10 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
     event_params: EventProcessingParams<'_>,
+    test_context: Option<TestContext>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
-    F: Clone + 'static,
+    F: Clone + 'static + GetFlowName,
     T: FlowIntegrity,
     Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,
     Resp: Clone + 'static + std::fmt::Debug,
@@ -103,7 +232,25 @@ where
         + ConnectorRequestReference,
 {
     let start = tokio::time::Instant::now();
-    let connector_request = connector.build_request_v2(&router_data)?;
+    let mut connector_request = connector.build_request_v2(&router_data)?;
+
+    // Apply test environment modifications if test context is provided
+    if let (Some(ref mut request), Some(ref test_ctx)) = (connector_request.as_mut(), test_context.as_ref()) {
+        if test_ctx.is_test_env {
+            // Store original URL for x-api-url header
+            let original_url = request.url.clone();
+            
+            // Replace URL with mock server URL
+            request.url = test_ctx.get_request_url(request.url.clone());
+            
+            // Add test headers using the flow type
+            let flow_name = F::get_flow_name();
+            let test_headers = test_ctx.get_test_headers(&original_url, flow_name);
+            request.headers.extend(test_headers);
+            
+            tracing::info!("Test mode enabled: redirected {} to {}", original_url, request.url);
+        }
+    }
 
     let headers = connector_request
         .as_ref()
