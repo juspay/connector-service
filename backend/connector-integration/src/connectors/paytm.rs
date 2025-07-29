@@ -161,27 +161,54 @@ impl ConnectorCommon for Paytm {
             });
         }
 
-        // Fallback to original error response format
-        let response: paytm::PaytmErrorResponse =
-            res.response
-                .parse_struct("PaytmErrorResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        // Try to parse as original JSON error response format
+        if let Ok(response) = res
+            .response
+            .parse_struct::<paytm::PaytmErrorResponse>("PaytmErrorResponse")
+        {
+            if let Some(event) = event_builder {
+                event.set_error_response_body(&response);
+            }
 
-        if let Some(event) = event_builder {
-            event.set_error_response_body(&response);
+            return Ok(domain_types::router_data::ErrorResponse {
+                code: response.error_code.unwrap_or_default(),
+                message: response.error_message.unwrap_or_default(),
+                reason: response.error_description,
+                status_code: res.status_code,
+                attempt_status: Some(AttemptStatus::Failure),
+                connector_transaction_id: response.transaction_id,
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+            });
         }
 
+        // Final fallback for non-JSON responses (HTML errors, etc.)
+        let raw_response = String::from_utf8_lossy(&res.response);
+        let error_message = match res.status_code {
+            503 => "Service temporarily unavailable".to_string(),
+            502 => "Bad gateway".to_string(),
+            500 => "Internal server error".to_string(),
+            404 => "Not found".to_string(),
+            400 => "Bad request".to_string(),
+            _ => format!("HTTP {} error", res.status_code),
+        };
+
         Ok(domain_types::router_data::ErrorResponse {
-            code: response.error_code.unwrap_or_default(),
-            message: response.error_message.unwrap_or_default(),
-            reason: response.error_description,
+            code: res.status_code.to_string(),
+            message: error_message,
+            reason: Some(format!(
+                "Raw response: {}",
+                raw_response.chars().take(200).collect::<String>()
+            )),
             status_code: res.status_code,
             attempt_status: Some(AttemptStatus::Failure),
-            connector_transaction_id: response.transaction_id,
+            connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
+            raw_connector_response: Some(raw_response.to_string()),
         })
     }
 }
