@@ -10,7 +10,7 @@ use domain_types::{
     connector_types::{
         PaymentCreateOrderData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, Status,
+        ResponseId,
     },
     errors,
     payment_address::Address,
@@ -440,6 +440,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
@@ -483,6 +484,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
@@ -545,12 +547,13 @@ impl
             connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..data.resource_common_data.clone()
             },
             ..data
@@ -611,12 +614,13 @@ impl
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(AttemptStatus::AuthenticationPending),
+                status: AttemptStatus::AuthenticationPending,
                 ..data.resource_common_data
             },
             ..data
@@ -651,12 +655,13 @@ impl
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: Some(_status_code),
         };
 
         Ok(RouterDataV2 {
             response: Ok(payments_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(AttemptStatus::AuthenticationPending),
+                status: AttemptStatus::AuthenticationPending,
                 ..data.resource_common_data
             },
             ..data

@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId, Status,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodData,
@@ -457,7 +457,7 @@ impl<F>
         let status = get_attempt_status_cap((response.status, router_data.request.capture_method));
 
         let mut router_data = router_data;
-        router_data.resource_common_data.status = Status::Attempt(status);
+        router_data.resource_common_data.status = status;
 
         // Check if the response indicates an error
         if status == enums::AttemptStatus::Failure {
@@ -492,6 +492,7 @@ impl<F>
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             });
         }
 
@@ -650,7 +651,7 @@ impl<F>
             (enums::AttemptStatus::Pending, None)
         };
 
-        router_data.resource_common_data.status = Status::Attempt(status);
+        router_data.resource_common_data.status = status;
         router_data.resource_common_data.amount_captured = amount_captured;
 
         // Determine the resource_id to return
@@ -678,6 +679,7 @@ impl<F>
             connector_response_reference_id: response.reference,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(http_code),
         });
 
         Ok(router_data)
@@ -714,7 +716,7 @@ impl<F>
         // Get the attempt status using the From implementation
         let status = enums::AttemptStatus::from(&response);
 
-        router_data.resource_common_data.status = Status::Attempt(status);
+        router_data.resource_common_data.status = status;
 
         let connector_meta = serde_json::json!(CheckoutMeta {
             psync_flow: CheckoutPaymentIntent::Authorize,
@@ -729,6 +731,7 @@ impl<F>
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(http_code),
         });
 
         Ok(router_data)
@@ -769,7 +772,7 @@ impl<F>
         };
 
         let mut router_data = router_data;
-        router_data.resource_common_data.status = Status::Attempt(status);
+        router_data.resource_common_data.status = status;
 
         if status == enums::AttemptStatus::Failure {
             router_data.response = Err(ErrorResponse {
@@ -805,6 +808,7 @@ impl<F>
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             });
         }
 
@@ -848,6 +852,7 @@ impl<F>
             connector_refund_id: checkout_refund_response.response.action_id,
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         });
 
         Ok(router_data)
@@ -873,7 +878,7 @@ impl<F>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
 
         // Get the refund status using the From implementation
@@ -884,6 +889,7 @@ impl<F>
             connector_refund_id: response.action_id,
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         });
 
         Ok(router_data)
@@ -945,7 +951,7 @@ impl<F>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
 
         // Get the refund status using the From implementation
@@ -956,6 +962,7 @@ impl<F>
             connector_refund_id: response.action_id.clone(),
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         });
 
         Ok(router_data)

@@ -9,7 +9,7 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId, Status,
+        RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
     payment_method_data::PaymentMethodData,
@@ -749,7 +749,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -772,6 +772,7 @@ impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -818,7 +819,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -841,6 +842,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -885,7 +887,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -908,6 +910,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure {
@@ -959,7 +962,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
 
         // Update the status in router_data
         let mut router_data_out = router_data;
-        router_data_out.resource_common_data.status = Status::Attempt(status);
+        router_data_out.resource_common_data.status = status;
 
         let response_payload = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(
@@ -982,6 +985,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: Some(item.http_code),
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -1039,6 +1043,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 }),
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         };
 
         if refund_status == enums::RefundStatus::Failure {
@@ -1105,6 +1110,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 }),
             refund_status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         };
 
         if refund_status == enums::RefundStatus::Failure {

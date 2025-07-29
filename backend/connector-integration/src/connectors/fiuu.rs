@@ -1,18 +1,10 @@
 pub mod transformers;
 
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
-
-use crate::utils::xml_utils::flatten_json_structure;
-use bytes::Bytes;
-
-use serde::Deserialize;
-use serde_json::Value;
-
 use std::collections::HashMap;
 
-use tracing::{error, warn};
-
+use bytes::Bytes;
 use common_enums::CurrencyUnit;
+use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -25,23 +17,22 @@ use domain_types::{
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
     },
+    errors,
+    router_data::ErrorResponse,
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
     types::Connectors,
+    utils,
 };
 use error_stack::ResultExt;
-
-use hyperswitch_masking::Secret;
-
-use domain_types::{router_data::ErrorResponse, router_data_v2::RouterDataV2, utils};
-
-use hyperswitch_masking::Maskable;
-
-use domain_types::errors;
-use domain_types::router_response_types::Response;
+use hyperswitch_masking::{Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
-
+use serde::Deserialize;
+use serde_json::Value;
+use tracing::{error, warn};
 use transformers::{
     self as fiuu, FiuuPaymentCancelRequest, FiuuPaymentCancelResponse, FiuuPaymentResponse,
     FiuuPaymentSyncRequest, FiuuPaymentsRequest, FiuuPaymentsResponse, FiuuRefundRequest,
@@ -50,8 +41,10 @@ use transformers::{
 };
 
 use super::macros;
-use crate::types::ResponseRouterData;
-use crate::{with_error_response_body, with_response_body};
+use crate::{
+    types::ResponseRouterData, utils::xml_utils::flatten_json_structure, with_error_response_body,
+    with_response_body,
+};
 
 impl connector_types::ConnectorServiceTrait for Fiuu {}
 impl connector_types::PaymentAuthorizeV2 for Fiuu {}
@@ -113,8 +106,9 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        pub fn preprocess_response_bytes(
+        pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
         ) -> Result<Bytes, errors::ConnectorError> {
                 let response_str = String::from_utf8(response_bytes.to_vec()).map_err(|e| {
@@ -429,8 +423,7 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
             router_data: req.clone(),
         };
         let request = bridge.request_body(input_data)?;
-        let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request)
-            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request);
         Ok(Some(macro_types::RequestContent::FormData(form_data)))
     }
 

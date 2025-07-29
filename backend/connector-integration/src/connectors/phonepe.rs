@@ -2,7 +2,6 @@ pub mod constants;
 pub mod headers;
 pub mod transformers;
 
-use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use common_enums as enums;
 use common_utils::{
     errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::MinorUnit,
@@ -33,6 +32,7 @@ use interfaces::{
 };
 use transformers as phonepe;
 
+use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
 
@@ -56,8 +56,9 @@ macros::create_all_prerequisites!(
             req.resource_common_data.connectors.phonepe.base_url.to_string()
         }
 
-        fn preprocess_response_bytes(
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
             Ok(bytes)

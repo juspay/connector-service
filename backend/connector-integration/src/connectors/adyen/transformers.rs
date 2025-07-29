@@ -16,7 +16,7 @@ use domain_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType,
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId, SetupMandateRequestData, Status, SubmitEvidenceData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::{Card, PaymentMethodData, WalletData},
@@ -1073,7 +1073,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1105,7 +1105,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenPSyncResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1139,7 +1139,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = value;
         let status = AttemptStatus::Pending;
 
@@ -1152,12 +1152,13 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             incremental_authorization_allowed: None,
             mandate_reference: None,
             raw_connector_response: None,
+            status_code: Some(http_code),
         };
 
         Ok(Self {
             response: Ok(payment_void_response_data),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -1226,6 +1227,7 @@ pub fn get_adyen_response(
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
+        status_code: Some(status_code),
     };
     Ok((status, error, payments_response_data))
 }
@@ -1301,6 +1303,7 @@ pub fn get_redirection_response(
         incremental_authorization_allowed: None,
         mandate_reference: None,
         raw_connector_response: None,
+        status_code: Some(status_code),
     };
     Ok((status, error, payments_response_data))
 }
@@ -1868,7 +1871,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = value;
 
         let status = common_enums::RefundStatus::Pending;
@@ -1877,6 +1880,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
             connector_refund_id: response.psp_reference,
             refund_status: status,
             raw_connector_response: None,
+            status_code: Some(http_code),
         };
 
         Ok(Self {
@@ -1957,7 +1961,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = value;
         let is_multiple_capture_psync_flow = router_data.request.multiple_capture_data.is_some();
         let connector_transaction_id = if is_multiple_capture_psync_flow {
@@ -1976,9 +1980,10 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             }),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(AttemptStatus::Pending),
+                status: AttemptStatus::Pending,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -2174,7 +2179,7 @@ impl<F> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
         Ok(Self {
             response: error.map_or_else(|| Ok(payment_response_data), Err),
             resource_common_data: PaymentFlowData {
-                status: Status::Attempt(status),
+                status,
                 ..router_data.resource_common_data
             },
             ..router_data
@@ -2392,6 +2397,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                     .clone(),
                 connector_dispute_status: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             };
 
             Ok(Self {
@@ -2595,6 +2601,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                     .clone(),
                 connector_dispute_status: None,
                 raw_connector_response: None,
+                status_code: Some(http_code),
             };
 
             Ok(Self {
@@ -2726,6 +2733,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                             .connector_dispute_id
                             .clone(),
                         raw_connector_response: None,
+                        status_code: Some(http_code),
                     }),
                     ..router_data
                 })

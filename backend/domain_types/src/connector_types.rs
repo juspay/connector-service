@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use common_enums::{
-    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, MandateStatus,
-    PaymentMethod, PaymentMethodType,
+    AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
+    PaymentMethodType,
 };
 use common_utils::{
     errors,
@@ -51,6 +51,7 @@ pub enum ConnectorEnum {
     Phonepe,
     Cashfree,
     Fiuu,
+    Payu,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -70,6 +71,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
             grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
+            grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -213,12 +215,6 @@ impl PaymentsSyncData {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Status {
-    Attempt(AttemptStatus),
-    Mandate(MandateStatus),
-}
-
 #[derive(Debug, Clone)]
 pub struct PaymentFlowData {
     pub merchant_id: common_utils::id_type::MerchantId,
@@ -226,7 +222,7 @@ pub struct PaymentFlowData {
     pub connector_customer: Option<String>,
     pub payment_id: String,
     pub attempt_id: String,
-    pub status: Status,
+    pub status: AttemptStatus,
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
@@ -930,9 +926,11 @@ pub enum PaymentsResponseData {
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
         raw_connector_response: Option<String>,
+        status_code: Option<u16>,
     },
     SessionResponse {
         session_token: String,
+        status_code: Option<u16>,
     },
 }
 
@@ -972,6 +970,7 @@ pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
+    pub status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone)]
@@ -996,6 +995,7 @@ pub struct WebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone)]
@@ -1006,6 +1006,7 @@ pub struct RefundWebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone)]
@@ -1016,6 +1017,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1280,6 +1282,7 @@ pub struct DisputeResponseData {
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: Option<u16>,
 }
 
 #[derive(Debug, Clone, Default)]

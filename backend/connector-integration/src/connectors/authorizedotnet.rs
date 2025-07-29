@@ -112,7 +112,7 @@ impl ConnectorCommon for Authorizedotnet {
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 
@@ -176,8 +176,9 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        fn preprocess_response_bytes(
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
             // Check if the bytes begin with UTF-8 BOM (EF BB BF)
