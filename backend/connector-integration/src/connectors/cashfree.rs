@@ -17,8 +17,8 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenRequestData, SessionTokenResponseData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -305,18 +305,6 @@ impl connector_types::AcceptDispute for Cashfree {}
 impl connector_types::SubmitEvidenceV2 for Cashfree {}
 impl connector_types::DisputeDefend for Cashfree {}
 impl connector_types::IncomingWebhook for Cashfree {}
-impl connector_types::PaymentSessionToken for Cashfree {}
-
-// CreateSessionToken implementation (stub)
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Cashfree
-{
-}
 
 // Default ConnectorIntegrationV2 implementations for unsupported flows
 impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>

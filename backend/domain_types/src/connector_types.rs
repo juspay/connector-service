@@ -53,7 +53,6 @@ pub enum ConnectorEnum {
     Paytm,
     Fiuu,
     Payu,
-    Paytm,
     Cashtocode,
 }
 
@@ -71,7 +70,6 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
             grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
-            grpc_api_types::payments::Connector::Paytm => Ok(Self::Paytm),
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
             grpc_api_types::payments::Connector::Paytm => Ok(Self::Paytm),
@@ -966,16 +964,6 @@ pub struct PaymentCreateOrderResponse {
     pub order_id: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct SessionTokenRequestData {
-    pub amount: MinorUnit,
-    pub currency: Currency,
-}
-
-#[derive(Debug, Clone)]
-pub struct SessionTokenResponseData {
-    pub session_token: String,
-}
 #[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,

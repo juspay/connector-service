@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ucs.v2;
 
-import "google/protobuf/empty.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
