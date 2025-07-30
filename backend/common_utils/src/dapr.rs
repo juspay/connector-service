@@ -61,7 +61,7 @@ impl Event {
     }
 }
 
-/// Configuration for the generic events system
+/// Configuration for events system
 #[derive(Debug, Clone, Deserialize)]
 pub struct EventConfig {
     pub enabled: bool,
@@ -92,21 +92,11 @@ impl Default for EventConfig {
 #[derive(Debug, Clone)]
 pub struct EventContext {
     pub request_data: Option<serde_json::Value>,
-    pub response_data: Option<serde_json::Value>,
-    pub request_headers: Option<serde_json::Value>,
-    pub response_headers: Option<serde_json::Value>,
-    pub metadata: Option<serde_json::Value>,
 }
 
 impl Default for EventContext {
     fn default() -> Self {
-        Self {
-            request_data: None,
-            response_data: None,
-            request_headers: None,
-            response_headers: None,
-            metadata: None,
-        }
+        Self { request_data: None }
     }
 }
 
@@ -249,12 +239,14 @@ impl EventProcessor {
 
         let source = match path_parts[0] {
             "request_data" => context.request_data.as_ref()?,
-            "response_data" => context.response_data.as_ref()?,
-            "request_headers" => context.request_headers.as_ref()?,
-            "response_headers" => context.response_headers.as_ref()?,
-            "metadata" => context.metadata.as_ref()?,
+            "req" => context.request_data.as_ref()?, // Allow 'req' as alias for request_data
             _ => return None,
         };
+
+        // If the path is just "req" or "request_data", return the entire source
+        if path_parts.len() == 1 {
+            return Some(source.clone());
+        }
 
         let mut current = source;
         for part in &path_parts[1..] {
@@ -298,7 +290,7 @@ async fn publish_to_dapr(
     topic: &str,
 ) -> Result<()> {
     info!(
-        "Publishing generic event to Dapr: component={}, topic={}",
+        "Publishing event to Dapr: component={}, topic={}",
         pubsub_component, topic
     );
 
@@ -317,10 +309,10 @@ async fn publish_to_dapr(
             Some(metadata),
         )
         .await
-        .context("Failed to publish generic event through Dapr SDK")?;
+        .context("Failed to publish event through Dapr SDK")?;
 
     info!(
-        "Successfully published generic event to pubsub component: {}",
+        "Successfully published event to pubsub component: {}",
         pubsub_component
     );
     Ok(())
