@@ -49,8 +49,6 @@ topic = "audit-trail-events"
 
 # Euler-compatible configuration (backward compatibility)
 [events.transformations]
-"udf_txn_uuid" = "transaction_id"
-"x-request-id" = "request_id"
 "gateway" = "connector"
 "action" = "flow_type"
 "entity" = "flow_type"
@@ -71,7 +69,6 @@ topic = "audit-trail-events"
 "message.log_type" = "API"
 
 [events.extractions]
-"message.req_body" = "request_data"
-"message.res_body" = "response_data"
-"message.req_headers" = "request_headers"
-"message.res_headers" = "response_headers"
+"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
+"x-request-id" = "req.metadata.x-request-id"
+"message.req_body" = "req"
