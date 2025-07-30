@@ -76,6 +76,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     service_name: &str,
     flow_name: common_utils::dapr::FlowName,
     event_config: &EventConfig,
+    raw_request_data: Option<serde_json::Value>,
 ) -> CustomResult<
     RouterDataV2<F, ResourceCommonData, Req, Resp>,
     domain_types::errors::ConnectorError,
@@ -156,13 +157,7 @@ where
                 std::collections::HashMap::new(),
             );
 
-            let event_context = EventContext {
-                request_data,
-                response_data: None,
-                request_headers: None,
-                response_headers: None,
-                metadata: None,
-            };
+            let event_context = EventContext { request_data };
 
             match emit_event_with_config(event, event_context, &event_config).await {
                 Ok(_) => tracing::info!(
@@ -213,21 +208,6 @@ where
                 Ok(Ok(body)) => {
                     let res_body = serde_json::from_slice::<serde_json::Value>(&body.response).ok();
 
-                    let res_headers = body.headers.as_ref().map(|headers| {
-                        serde_json::Value::Object(headers.iter().fold(
-                            serde_json::Map::new(),
-                            |mut acc, (left, right)| {
-                                if let Ok(x) = right.to_str() {
-                                    acc.insert(
-                                        left.as_str().to_string(),
-                                        serde_json::Value::String(x.to_string()),
-                                    );
-                                }
-                                acc
-                            },
-                        ))
-                    });
-
                     let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
                     let status_code = body.status_code;
 
@@ -238,7 +218,6 @@ where
                         let event_config = event_config.clone();
                         let request_data = req.clone();
                         let response_data = res_body.clone();
-                        let response_headers = res_headers;
 
                         async move {
                             let event = Event::new(
@@ -259,11 +238,7 @@ where
                             );
 
                             let event_context = EventContext {
-                                request_data,
-                                response_data,
-                                request_headers: None,
-                                response_headers,
-                                metadata: None,
+                                request_data: raw_request_data,
                             };
 
                             match emit_event_with_config(event, event_context, &event_config).await
@@ -282,21 +257,6 @@ where
                 Ok(Err(error_body)) => {
                     let error_res_body =
                         serde_json::from_slice::<serde_json::Value>(&error_body.response).ok();
-
-                    let res_headers = error_body.headers.as_ref().map(|headers| {
-                        serde_json::Value::Object(headers.iter().fold(
-                            serde_json::Map::new(),
-                            |mut acc, (left, right)| {
-                                if let Ok(x) = right.to_str() {
-                                    acc.insert(
-                                        left.as_str().to_string(),
-                                        serde_json::Value::String(x.to_string()),
-                                    );
-                                }
-                                acc
-                            },
-                        ))
-                    });
 
                     let latency = external_service_elapsed as u64 * 1000;
                     let status_code = error_body.status_code;
@@ -328,7 +288,6 @@ where
                         let event_config = event_config.clone();
                         let request_data = req.clone();
                         let response_data = error_res_body.clone();
-                        let response_headers = res_headers;
 
                         async move {
                             let event = Event::new(
@@ -349,11 +308,7 @@ where
                             );
 
                             let event_context = EventContext {
-                                request_data,
-                                response_data,
-                                request_headers: None,
-                                response_headers,
-                                metadata: None,
+                                request_data: raw_request_data.clone(),
                             };
 
                             match emit_event_with_config(event, event_context, &event_config).await
@@ -405,11 +360,7 @@ where
                             );
 
                             let event_context = EventContext {
-                                request_data,
-                                response_data: None,
-                                request_headers: None,
-                                response_headers: None,
-                                metadata: None,
+                                request_data: raw_request_data.clone(),
                             };
 
                             match emit_event_with_config(event, event_context, &event_config).await
@@ -669,13 +620,7 @@ pub async fn call_connector_api(
                     std::collections::HashMap::new(),
                 );
 
-                let event_context = EventContext {
-                    request_data,
-                    response_data: None,
-                    request_headers: None,
-                    response_headers: None,
-                    metadata: None,
-                };
+                let event_context = EventContext { request_data };
 
                 match emit_event_with_config(event, event_context, &event_config).await {
                     Ok(_) => tracing::info!(

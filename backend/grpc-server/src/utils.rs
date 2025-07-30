@@ -392,6 +392,7 @@ macro_rules! implement_connector_operation {
                 &service_name,
                 flow_name,
                 &self.config.events,
+                Some(serde_json::to_value(&payload).unwrap_or_default()),
             )
             .await
             .switch()
