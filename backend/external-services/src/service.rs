@@ -135,6 +135,17 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+/// Extract the base URL from a full URL
+/// E.g., "https://api.example.com/v1/payments" -> "https://api.example.com"
+fn extract_base_url(url: &str) -> String {
+    if let Ok(parsed_url) = reqwest::Url::parse(url) {
+        format!("{}://{}", parsed_url.scheme(), parsed_url.host_str().unwrap_or(""))
+    } else {
+        // Fallback to original URL if parsing fails
+        url.to_string()
+    }
+}
+
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
 pub struct TestContext {
