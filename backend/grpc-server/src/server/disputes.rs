@@ -146,6 +146,7 @@ impl DisputeService for Disputes {
                 &service_name,
                 common_utils::dapr::FlowName::SubmitEvidence,
                 &self.config.events,
+                Some(serde_json::to_value(&payload).unwrap_or_default()),
             )
             .await
             .switch()
@@ -309,6 +310,7 @@ impl DisputeService for Disputes {
                 &service_name,
                 common_utils::dapr::FlowName::AcceptDispute,
                 &self.config.events,
+                Some(serde_json::to_value(&payload).unwrap_or_default()),
             )
             .await
             .switch()

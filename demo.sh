@@ -201,15 +201,23 @@ echo -e "${YELLOW}Using payment ID: $PAYMENT_ID${NC}"
 
 echo -e "\n${BLUE}Step 2a: Making payment authorization request...${NC}"
 
+# Generate unique IDs for metadata
+UDF_TXN_UUID="txn_$(date +%s)_$RANDOM"
+REQUEST_ID="req_$(date +%s)_$RANDOM"
+
+echo -e "${YELLOW}Using udf_txn_uuid: $UDF_TXN_UUID${NC}"
+echo -e "${YELLOW}Using x-request-id: $REQUEST_ID${NC}"
+
 RESPONSE=$(grpcurl -plaintext \
   -H "x-tenant-id: test_tenant" \
-  -H "x-request-id: $(date +%s)" \
+  -H "x-request-id: $REQUEST_ID" \
   -H "x-connector: checkout" \
   -H "x-merchant-id: test_merchant" \
   -H "x-auth: signature-key" \
   -H "x-api-key: $API_KEY" \
   -H "x-key1: $KEY1" \
   -H "x-api-secret: $API_SECRET" \
+  -H "udf-txn-uuid: $UDF_TXN_UUID" \
   -d '{
     "amount": 1000,
     "minor_amount": 1000,
@@ -237,7 +245,11 @@ RESPONSE=$(grpcurl -plaintext \
     },
     "enrolled_for_3ds": false,
     "request_incremental_authorization": false,
-    "capture_method": "AUTOMATIC"
+    "capture_method": "AUTOMATIC",
+    "metadata": {
+      "udf_txn_uuid": "'$UDF_TXN_UUID'",
+      "transaction_id": "'$PAYMENT_ID'"
+    }
   }' \
   localhost:$APP_PORT ucs.v2.PaymentService/Authorize)
 
@@ -269,7 +281,16 @@ MESSAGES=$(podman exec kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
 # Check if our test audit event is in the Kafka topic
 PAYMENT_MESSAGE_FOUND=false
 
-if echo "$MESSAGES" | grep -q "\"udf_txn_uuid\":.*\"pay_"; then
+# Check for the new extraction-based fields first
+if echo "$MESSAGES" | grep -q "\"udf_txn_uuid\":.*\"$UDF_TXN_UUID\""; then
+    echo -e "${GREEN}✓ Found payment audit event with extracted udf_txn_uuid in Kafka:${NC}"
+    echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"$UDF_TXN_UUID\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"$UDF_TXN_UUID\"" | tail -1
+    PAYMENT_MESSAGE_FOUND=true
+elif echo "$MESSAGES" | grep -q "\"x-request-id\":.*\"$REQUEST_ID\""; then
+    echo -e "${GREEN}✓ Found payment audit event with extracted x-request-id in Kafka:${NC}"
+    echo "$MESSAGES" | grep "\"x-request-id\":.*\"$REQUEST_ID\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"x-request-id\":.*\"$REQUEST_ID\"" | tail -1
+    PAYMENT_MESSAGE_FOUND=true
+elif echo "$MESSAGES" | grep -q "\"udf_txn_uuid\":.*\"pay_"; then
     echo -e "${GREEN}✓ Found payment audit event with connector transaction ID in Kafka:${NC}"
     echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"pay_" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"pay_" | tail -1
     PAYMENT_MESSAGE_FOUND=true
@@ -299,17 +320,23 @@ fi
 # Step 3: Make a refund request to test refund events
 echo -e "\n${BLUE}Step 3: Testing refund events...${NC}"
 REFUND_ID="refund_$(date +%s)_$RANDOM"
+REFUND_UDF_TXN_UUID="refund_txn_$(date +%s)_$RANDOM"
+REFUND_REQUEST_ID="refund_req_$(date +%s)_$RANDOM"
+
 echo -e "${YELLOW}Using refund ID: $REFUND_ID${NC}"
+echo -e "${YELLOW}Using refund udf_txn_uuid: $REFUND_UDF_TXN_UUID${NC}"
+echo -e "${YELLOW}Using refund x-request-id: $REFUND_REQUEST_ID${NC}"
 
 REFUND_RESPONSE=$(grpcurl -plaintext \
   -H "x-tenant-id: test_tenant" \
-  -H "x-request-id: refund_$(date +%s)" \
+  -H "x-request-id: $REFUND_REQUEST_ID" \
   -H "x-connector: checkout" \
   -H "x-merchant-id: test_merchant" \
   -H "x-auth: signature-key" \
   -H "x-api-key: $API_KEY" \
   -H "x-key1: $KEY1" \
   -H "x-api-secret: $API_SECRET" \
+  -H "udf-txn-uuid: $REFUND_UDF_TXN_UUID" \
   -d '{
     "request_ref_id": {"id": "refund_'$REFUND_ID'"},
     "refund_id": "'$REFUND_ID'",
@@ -319,7 +346,11 @@ REFUND_RESPONSE=$(grpcurl -plaintext \
     "refund_amount": 500,
     "minor_refund_amount": 500,
     "currency": "USD",
-    "reason": "Customer requested refund"
+    "reason": "Customer requested refund",
+    "metadata": {
+      "udf_txn_uuid": "'$REFUND_UDF_TXN_UUID'",
+      "transaction_id": "'$REFUND_ID'"
+    }
   }' \
   localhost:$APP_PORT ucs.v2.PaymentService/Refund)
 

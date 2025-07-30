@@ -158,9 +158,10 @@ impl Payments {
             router_data,
             None,
             &connector.to_string(),
-            service_name,
+            &service_name,
             common_utils::dapr::FlowName::Authorize,
             &self.config.events,
+            Some(serde_json::to_value(&payload).unwrap_or_default()),
         )
         .await;
 
@@ -300,6 +301,7 @@ impl Payments {
             service_name,
             common_utils::dapr::FlowName::CreateOrder,
             &self.config.events,
+            Some(serde_json::to_value(payload).unwrap_or_default()),
         )
         .await
         .map_err(
@@ -379,8 +381,9 @@ impl Payments {
             None,
             connector_name,
             service_name,
-            common_utils::dapr::FlowName::SetupMandate,
+            common_utils::dapr::FlowName::CreateOrder,
             &self.config.events,
+            Some(serde_json::to_value(payload).unwrap_or_default()),
         )
         .await
         .switch()
@@ -896,6 +899,7 @@ impl PaymentService for Payments {
                     &service_name,
                     common_utils::dapr::FlowName::SetupMandate,
                     &self.config.events,
+                    Some(serde_json::to_value(&payload).unwrap_or_default()),
                 )
                 .await
                 .switch()
@@ -994,6 +998,7 @@ impl PaymentService for Payments {
                     &service_name,
                     common_utils::dapr::FlowName::Authorize,
                     &self.config.events,
+                    Some(serde_json::to_value(&payload).unwrap_or_default()),
                 )
                 .await
                 .switch()
