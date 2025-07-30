@@ -44,6 +44,10 @@ enabled = true
 pubsub_component = "kafka-pubsub"
 topic = "audit-trail-events"
 
+[events.dapr]
+host = "127.0.0.1"
+grpc_port = 50001
+
 # Euler-compatible configuration (backward compatibility)
 [events.transformations]
 "gateway" = "connector"
@@ -67,10 +71,5 @@ topic = "audit-trail-events"
 
 [events.extractions]
 "udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"x-request-id" = "req.metadata.x-request-id"
 "message.req_body" = "req"
 
-# DAPR Configuration
-[dapr]
-host = "127.0.0.1"
-grpc_port = 50001
