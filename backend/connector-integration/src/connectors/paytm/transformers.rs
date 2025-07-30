@@ -1393,8 +1393,12 @@ impl
 
         // Get result code for status mapping
         let result_code = match &response.body {
-            PaytmProcessRespBodyTypes::SuccessBody(success_body) => &success_body.result_info.result_code,
-            PaytmProcessRespBodyTypes::FailureBody(failure_body) => &failure_body.result_info.result_code,
+            PaytmProcessRespBodyTypes::SuccessBody(success_body) => {
+                &success_body.result_info.result_code
+            }
+            PaytmProcessRespBodyTypes::FailureBody(failure_body) => {
+                &failure_body.result_info.result_code
+            }
         };
 
         // Map status using the result code
