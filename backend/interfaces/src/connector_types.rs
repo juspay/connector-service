@@ -6,20 +6,6 @@ use domain_types::{
     connector_flow,
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData,
-        DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-       
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-       
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-       
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
-        SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,,
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,

@@ -2,10 +2,7 @@ pub mod transformers;
 
 use common_enums::AttemptStatus;
 use common_utils::{
-    errors::CustomResult,
-    ext_traits::BytesExt,
-    request::RequestContent,
-    types::StringMajorUnit,
+    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::StringMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -35,9 +32,11 @@ use interfaces::{
 use paytm::constants;
 use transformers as paytm;
 
-use self::transformers::{PaytmInitiateTxnRequest, PaytmInitiateTxnResponse, PaytmAuthorizeRequest, PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse};
-use crate::connectors::macros;
-use crate::types::ResponseRouterData;
+use self::transformers::{
+    PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmInitiateTxnResponse,
+    PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
+};
+use crate::{connectors::macros, types::ResponseRouterData};
 
 // Define connector prerequisites using macros - following the exact pattern from other connectors
 macros::create_all_prerequisites!(

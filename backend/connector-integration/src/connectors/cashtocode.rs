@@ -4,9 +4,6 @@ use base64::Engine;
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::FloatMajorUnit,
 };
-
-use error_stack::ResultExt;
-
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -25,6 +22,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -90,6 +88,7 @@ impl connector_types::RefundV2 for Cashtocode {}
 impl connector_types::PaymentCapture for Cashtocode {}
 impl connector_types::ValidationTrait for Cashtocode {}
 impl connector_types::PaymentOrderCreate for Cashtocode {}
+impl connector_types::PaymentSessionToken for Cashtocode {}
 impl connector_types::SetupMandateV2 for Cashtocode {}
 impl connector_types::AcceptDispute for Cashtocode {}
 impl connector_types::SubmitEvidenceV2 for Cashtocode {}
@@ -340,8 +339,28 @@ impl
 {
 }
 
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::CreateSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::SessionTokenRequestData,
+        domain_types::connector_types::SessionTokenResponseData,
+    > for Cashtocode
+{
+}
+
 impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Cashtocode
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::SessionTokenRequestData,
+        domain_types::connector_types::SessionTokenResponseData,
+    > for Cashtocode
 {
 }
 
