@@ -54,7 +54,7 @@ function cleanup() {
 trap cleanup EXIT
 
 echo -e "${BLUE}=====================================================${NC}"
-echo -e "${BLUE}   Generic Events Implementation Demo                 ${NC}"
+echo -e "${BLUE}   Events Implementation Demo                        ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
 # Ensure dapr-net network exists
@@ -195,8 +195,8 @@ done
 echo -e "${YELLOW}Service detected! Giving Dapr a moment to initialize all components...${NC}"
 sleep 5
 
-# Step 2: Test the Generic Events Implementation
-echo -e "\n${BLUE}Step 2: Testing Generic Events Implementation...${NC}"
+# Step 2: Test the Events Implementation
+echo -e "\n${BLUE}Step 2: Testing Events Implementation...${NC}"
 echo -e "${YELLOW}Using payment ID: $PAYMENT_ID${NC}"
 
 echo -e "\n${BLUE}Step 2a: Making payment authorization request...${NC}"
@@ -377,60 +377,60 @@ echo -e "\n${BLUE}Step 5: Analyzing event structure...${NC}"
 SAMPLE_EVENTS=$(echo "$REFUND_MESSAGES" | tail -5)
 
 if [ -n "$SAMPLE_EVENTS" ]; then
-    echo -e "${YELLOW}Analyzing event structure for generic events implementation...${NC}"
+    echo -e "${YELLOW}Analyzing event structure for events implementation...${NC}"
     
-    # Check for key indicators of the new generic events system
-    GENERIC_EVENTS_INDICATORS=0
+    # Check for key indicators of the new events system
+    EVENTS_INDICATORS=0
     
     # Check for configuration-driven fields from development.toml
     if echo "$SAMPLE_EVENTS" | grep -q "\"hostname\":\"connector-service\""; then
         echo -e "${GREEN}✓ Found hostname field from static_values configuration${NC}"
-        GENERIC_EVENTS_INDICATORS=$((GENERIC_EVENTS_INDICATORS + 1))
+        EVENTS_INDICATORS=$((EVENTS_INDICATORS + 1))
     fi
     
     if echo "$SAMPLE_EVENTS" | grep -q "\"schema_version\":\"V2\""; then
         echo -e "${GREEN}✓ Found schema_version field from static_values configuration${NC}"
-        GENERIC_EVENTS_INDICATORS=$((GENERIC_EVENTS_INDICATORS + 1))
+        EVENTS_INDICATORS=$((EVENTS_INDICATORS + 1))
     fi
     
     if echo "$SAMPLE_EVENTS" | grep -q "\"category\":\"OUTGOING_API\""; then
         echo -e "${GREEN}✓ Found category field from static_values configuration${NC}"
-        GENERIC_EVENTS_INDICATORS=$((GENERIC_EVENTS_INDICATORS + 1))
+        EVENTS_INDICATORS=$((EVENTS_INDICATORS + 1))
     fi
     
     # Check for transformation mappings
     if echo "$SAMPLE_EVENTS" | grep -q "\"gateway\":\"CHECKOUT\""; then
         echo -e "${GREEN}✓ Found gateway field from transformations (connector → gateway)${NC}"
-        GENERIC_EVENTS_INDICATORS=$((GENERIC_EVENTS_INDICATORS + 1))
+        EVENTS_INDICATORS=$((EVENTS_INDICATORS + 1))
     fi
     
     # Check for extraction fields
     if echo "$SAMPLE_EVENTS" | grep -q "\"message\".*\"req_body\""; then
         echo -e "${GREEN}✓ Found extracted request body in message structure${NC}"
-        GENERIC_EVENTS_INDICATORS=$((GENERIC_EVENTS_INDICATORS + 1))
+        EVENTS_INDICATORS=$((EVENTS_INDICATORS + 1))
     fi
     
     if echo "$SAMPLE_EVENTS" | grep -q "\"message\".*\"res_body\""; then
         echo -e "${GREEN}✓ Found extracted response body in message structure${NC}"
-        GENERIC_EVENTS_INDICATORS=$((GENERIC_EVENTS_INDICATORS + 1))
+        EVENTS_INDICATORS=$((EVENTS_INDICATORS + 1))
     fi
     
-    echo -e "\n${BLUE}Generic Events Implementation Analysis:${NC}"
-    echo -e "Found ${GENERIC_EVENTS_INDICATORS}/6 indicators of the new generic events system"
+    echo -e "\n${BLUE}Events Implementation Analysis:${NC}"
+    echo -e "Found ${EVENTS_INDICATORS}/6 indicators of the new events system"
     
-    if [ $GENERIC_EVENTS_INDICATORS -ge 4 ]; then
-        echo -e "${GREEN}✓ Generic events implementation is working correctly!${NC}"
-        GENERIC_EVENTS_WORKING=true
-    elif [ $GENERIC_EVENTS_INDICATORS -ge 2 ]; then
-        echo -e "${YELLOW}⚠ Partial generic events implementation detected${NC}"
-        GENERIC_EVENTS_WORKING=true
+    if [ $EVENTS_INDICATORS -ge 4 ]; then
+        echo -e "${GREEN}✓ Events implementation is working correctly!${NC}"
+        EVENTS_WORKING=true
+    elif [ $EVENTS_INDICATORS -ge 2 ]; then
+        echo -e "${YELLOW}⚠ Partial events implementation detected${NC}"
+        EVENTS_WORKING=true
     else
-        echo -e "${YELLOW}⚠ Limited evidence of generic events implementation${NC}"
-        GENERIC_EVENTS_WORKING=false
+        echo -e "${YELLOW}⚠ Limited evidence of events implementation${NC}"
+        EVENTS_WORKING=false
     fi
 else
     echo -e "${YELLOW}⚠ No events found for analysis${NC}"
-    GENERIC_EVENTS_WORKING=false
+    EVENTS_WORKING=false
 fi
 
 # Set overall message found status
@@ -445,18 +445,18 @@ fi
 # Show summary based on test results
 echo -e "\n${BLUE}=====================================================${NC}"
 if [ "$MESSAGE_FOUND" = true ]; then
-    echo -e "${GREEN}Generic Events Implementation Demo Completed Successfully!${NC}"
+    echo -e "${GREEN}Events Implementation Demo Completed Successfully!${NC}"
     echo -e "${BLUE}=====================================================${NC}"
     echo -e "${YELLOW}Summary:${NC}"
     echo -e "1. ✓ Started the connector service with Dapr"
     echo -e "2. ✓ Sent payment authorization and refund requests"
     echo -e "3. ✓ Verified that audit events were published to Kafka"
     
-    if [ "$GENERIC_EVENTS_WORKING" = true ]; then
-        echo -e "4. ✓ Confirmed generic events implementation is working"
-        echo -e "${GREEN}The refactored generic events system is functioning correctly!${NC}"
+    if [ "$EVENTS_WORKING" = true ]; then
+        echo -e "4. ✓ Confirmed events implementation is working"
+        echo -e "${GREEN}The refactored events system is functioning correctly!${NC}"
     else
-        echo -e "4. ⚠ Generic events implementation needs verification"
+        echo -e "4. ⚠ Events implementation needs verification"
         echo -e "${YELLOW}Events are being published but may be using legacy implementation${NC}"
     fi
     

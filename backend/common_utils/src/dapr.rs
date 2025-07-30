@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GenericEvent {
+pub struct Event {
     pub timestamp: String,
     pub flow_type: String,
     pub connector: String,
@@ -290,11 +290,7 @@ impl EventProcessor {
         Self { config }
     }
 
-    pub fn process_event(
-        &self,
-        base_event: &GenericEvent,
-        context: &EventContext,
-    ) -> serde_json::Value {
+    pub fn process_event(&self, base_event: &Event, context: &EventContext) -> serde_json::Value {
         let mut result = serde_json::json!({});
 
         // 1. Apply transformations (field mappings)
@@ -321,7 +317,7 @@ impl EventProcessor {
     }
 
     /// Get a field value from the base event
-    fn get_field_value(&self, event: &GenericEvent, field_name: &str) -> Option<serde_json::Value> {
+    fn get_field_value(&self, event: &Event, field_name: &str) -> Option<serde_json::Value> {
         match field_name {
             "timestamp" => Some(serde_json::json!(event.timestamp)),
             "flow_type" => Some(serde_json::json!(event.flow_type)),
@@ -431,11 +427,11 @@ pub async fn publish_to_dapr(
     Ok(())
 }
 
-pub fn create_generic_event_from_legacy(event_data: &ConnectorEventData) -> GenericEvent {
+pub fn create_event_from_legacy(event_data: &ConnectorEventData) -> Event {
     let now = chrono::Utc::now();
     let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
-    GenericEvent {
+    Event {
         timestamp,
         flow_type: event_data.flow_name.to_api_tag().as_str().to_string(),
         connector: event_data.connector.clone(),
@@ -495,7 +491,7 @@ pub async fn emit_event(
         error_reason,
     };
 
-    let generic_event = create_generic_event_from_legacy(&event_data);
+    let event = create_event_from_legacy(&event_data);
     let context = create_event_context_from_legacy(&event_data);
 
     let config = EventConfig {
@@ -529,13 +525,13 @@ pub async fn emit_event(
     }
 
     let processor = EventProcessor::new(config.clone());
-    let processed_event = processor.process_event(&generic_event, &context);
+    let processed_event = processor.process_event(&event, &context);
 
     publish_to_dapr(processed_event, &config.pubsub_component, &config.topic).await
 }
 
 pub async fn emit_event_with_config(
-    base_event: GenericEvent,
+    base_event: Event,
     context: EventContext,
     config: &EventConfig,
 ) -> Result<()> {

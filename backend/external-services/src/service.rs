@@ -37,9 +37,7 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use common_utils::dapr::{
-    emit_event_with_config, EventConfig, EventContext, EventStage, GenericEvent,
-};
+use common_utils::dapr::{emit_event_with_config, Event, EventConfig, EventContext, EventStage};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -196,7 +194,7 @@ where
                         let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
                         let status_code = body.status_code;
 
-                        // Emit generic event
+                        // Emit event
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
@@ -206,11 +204,11 @@ where
 
                         let req_clone = req.clone();
                         tokio::spawn(async move {
-                            // Create generic event
+                            // Create event
                             let now = chrono::Utc::now();
                             let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
-                            let generic_event = GenericEvent {
+                            let event = Event {
                                 timestamp,
                                 flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
                                 connector: connector_name_clone.clone(),
@@ -233,12 +231,9 @@ where
                                 metadata: None,
                             };
 
-                            let result = emit_event_with_config(
-                                generic_event,
-                                event_context,
-                                &event_config_clone,
-                            )
-                            .await;
+                            let result =
+                                emit_event_with_config(event, event_context, &event_config_clone)
+                                    .await;
 
                             match result {
                                 Ok(_) => tracing::info!(
@@ -294,7 +289,7 @@ where
                             None
                         };
 
-                        // Emit generic error event
+                        // Emit error event
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
@@ -304,11 +299,11 @@ where
                         let req_clone = req.clone();
 
                         tokio::spawn(async move {
-                            // Create generic event
+                            // Create event
                             let now = chrono::Utc::now();
                             let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
-                            let generic_event = GenericEvent {
+                            let event = Event {
                                 timestamp,
                                 flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
                                 connector: connector_name_clone.clone(),
@@ -331,12 +326,9 @@ where
                                 metadata: None,
                             };
 
-                            let result = emit_event_with_config(
-                                generic_event,
-                                event_context,
-                                &event_config_clone,
-                            )
-                            .await;
+                            let result =
+                                emit_event_with_config(event, event_context, &event_config_clone)
+                                    .await;
 
                             match result {
                                 Ok(_) => tracing::info!(
@@ -369,11 +361,11 @@ where
                         let req_clone = req.clone();
 
                         tokio::spawn(async move {
-                            // Create generic event
+                            // Create event
                             let now = chrono::Utc::now();
                             let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
-                            let generic_event = GenericEvent {
+                            let event = Event {
                                 timestamp,
                                 flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
                                 connector: connector_name_clone.clone(),
@@ -396,12 +388,9 @@ where
                                 metadata: None,
                             };
 
-                            let result = emit_event_with_config(
-                                generic_event,
-                                event_context,
-                                &event_config_clone,
-                            )
-                            .await;
+                            let result =
+                                emit_event_with_config(event, event_context, &event_config_clone)
+                                    .await;
 
                             match result {
                                 Ok(_) => tracing::info!(
