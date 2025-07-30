@@ -1078,6 +1078,7 @@ pub fn generate_create_order_response(
                 error_code: None,
                 raw_connector_response: None,
                 status_code: Some(200),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
         Err(err) => {
@@ -1104,6 +1105,7 @@ pub fn generate_create_order_response(
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
                 status_code: Some(err.status_code as u32),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
     };
@@ -1127,7 +1129,7 @@ pub fn generate_payment_authorize_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -1185,6 +1187,14 @@ pub fn generate_payment_authorize_response(
                             }
                         }
                     ).transpose()?,
+                    connector_metadata: connector_metadata
+    .and_then(|value| value.as_object().cloned())
+    .map(|map| {
+        map.into_iter()
+            .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+            .collect::<HashMap<_, _>>()
+    })
+    .unwrap_or_default(),
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -1226,6 +1236,7 @@ pub fn generate_payment_authorize_response(
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
                 status_code: Some(err.status_code as u32),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
     };
