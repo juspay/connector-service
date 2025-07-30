@@ -131,15 +131,51 @@ where
         masked_request
     });
 
-    let result = match connector_request {
-        Some(request) => {
-            let ref_id = Some(
-                router_data
-                    .resource_common_data
-                    .get_connector_request_reference_id()
+    // Emit RequestReceived event with request data
+    tokio::spawn({
+        let connector_name = connector_name.to_string();
+        let flow_name = flow_name.as_str().to_string();
+        let event_config = event_config.clone();
+        let request_data = req.clone();
+
+        async move {
+            let event = Event::new(
+                Event::generate_event_uuid(),
+                chrono::Utc::now()
+                    .format("%Y-%m-%d %H:%M:%S%.3f")
                     .to_string(),
+                flow_name,
+                connector_name.clone(),
+                EventStage::RequestReceived.as_str().to_string(),
+                None,
+                None,
+                None,
+                None,
+                request_data.clone(),
+                None,
+                std::collections::HashMap::new(),
             );
 
+            let event_context = EventContext {
+                request_data,
+                response_data: None,
+                request_headers: None,
+                response_headers: None,
+                metadata: None,
+            };
+
+            match emit_event_with_config(event, event_context, &event_config).await {
+                Ok(_) => tracing::info!(
+                    "Successfully published request received event for {}",
+                    connector_name
+                ),
+                Err(e) => tracing::error!("Failed to publish request received event: {:?}", e),
+            }
+        }
+    });
+
+    let result = match connector_request {
+        Some(request) => {
             let url = request.url.clone();
             let method = request.method;
             metrics::EXTERNAL_SERVICE_TOTAL_API_CALLS
@@ -148,262 +184,247 @@ where
             let external_service_start_latency = tokio::time::Instant::now();
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
-            let response = call_connector_api(proxy, request, "execute_connector_processing_step")
-                .await
-                .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
-                .inspect_err(|err| {
-                    info_log(
-                        "NETWORK_ERROR",
-                        &json!(format!(
-                            "Failed getting response from connector. Error: {:?}",
-                            err
-                        )),
-                    );
-                });
+            let response = call_connector_api(
+                proxy,
+                request,
+                flow_name.as_str(),
+                Some(connector_name),
+                Some(event_config),
+                req.clone(),
+            )
+            .await
+            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
+            .inspect_err(|err| {
+                info_log(
+                    "NETWORK_ERROR",
+                    &json!(format!(
+                        "Failed getting response from connector. Error: {:?}",
+                        err
+                    )),
+                );
+            });
             let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[&method.to_string(), service_name, connector_name])
                 .observe(external_service_elapsed);
             tracing::info!(?response, "response from connector");
 
-            let ref_id_clone = ref_id.clone();
+            match &response {
+                Ok(Ok(body)) => {
+                    let res_body = serde_json::from_slice::<serde_json::Value>(&body.response).ok();
 
-            if let Some(ref_id) = ref_id_clone {
-                match &response {
-                    Ok(Ok(body)) => {
-                        let connector_txn_id = Some(ref_id.clone());
+                    let res_headers = body.headers.as_ref().map(|headers| {
+                        serde_json::Value::Object(headers.iter().fold(
+                            serde_json::Map::new(),
+                            |mut acc, (left, right)| {
+                                if let Ok(x) = right.to_str() {
+                                    acc.insert(
+                                        left.as_str().to_string(),
+                                        serde_json::Value::String(x.to_string()),
+                                    );
+                                }
+                                acc
+                            },
+                        ))
+                    });
 
-                        let res_body =
-                            serde_json::from_slice::<serde_json::Value>(&body.response).ok();
+                    let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
+                    let status_code = body.status_code;
 
-                        let res_headers = body.headers.as_ref().map(|headers| {
-                            serde_json::Value::Object(headers.iter().fold(
-                                serde_json::Map::new(),
-                                |mut acc, (left, right)| {
-                                    if let Ok(x) = right.to_str() {
-                                        acc.insert(
-                                            left.as_str().to_string(),
-                                            serde_json::Value::String(x.to_string()),
-                                        );
-                                    }
-                                    acc
-                                },
-                            ))
-                        });
+                    // Emit success response event
+                    tokio::spawn({
+                        let connector_name = connector_name.to_string();
+                        let flow_name = flow_name.as_str().to_string();
+                        let event_config = event_config.clone();
+                        let request_data = req.clone();
+                        let response_data = res_body.clone();
+                        let response_headers = res_headers;
 
-                        let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
-                        let status_code = body.status_code;
-
-                        // Emit event
-                        let connector_name_clone = connector_name.to_string();
-                        let url_clone = url.clone();
-                        let flow_name_clone = flow_name;
-                        let ref_id_for_event = ref_id.clone();
-                        let final_connector_txn_id = connector_txn_id.or(Some(ref_id.clone()));
-                        let event_config_clone = event_config.clone();
-
-                        let req_clone = req.clone();
-                        tokio::spawn(async move {
-                            // Create event
-                            let now = chrono::Utc::now();
-                            let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
-
-                            let event = Event {
-                                timestamp,
-                                flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
-                                connector: connector_name_clone.clone(),
-                                stage: EventStage::ResponseReceived.as_str().to_string(),
-                                url: url_clone,
-                                request_id: Some(ref_id_for_event),
-                                transaction_id: final_connector_txn_id,
-                                latency: Some(latency),
-                                status_code: Some(status_code),
-                                error_code: None,
-                                error_reason: None,
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                        async move {
+                            let event = Event::new(
+                                Event::generate_event_uuid(),
+                                chrono::Utc::now()
+                                    .format("%Y-%m-%d %H:%M:%S%.3f")
+                                    .to_string(),
+                                flow_name,
+                                connector_name.clone(),
+                                EventStage::ResponseReceived.as_str().to_string(),
+                                Some(latency),
+                                Some(status_code),
+                                None,
+                                None,
+                                request_data.clone(),
+                                response_data.clone(),
+                                std::collections::HashMap::new(),
+                            );
 
                             let event_context = EventContext {
-                                request_data: req_clone,
-                                response_data: res_body,
-                                request_headers: None, // Could be added if needed
-                                response_headers: res_headers,
+                                request_data,
+                                response_data,
+                                request_headers: None,
+                                response_headers,
                                 metadata: None,
                             };
 
-                            let result =
-                                emit_event_with_config(event, event_context, &event_config_clone)
-                                    .await;
-
-                            match result {
+                            match emit_event_with_config(event, event_context, &event_config).await
+                            {
                                 Ok(_) => tracing::info!(
-                                    "Successfully published generic outgoing response event for {}",
-                                    connector_name_clone
+                                    "Successfully published response event for {}",
+                                    connector_name
                                 ),
-                                Err(e) => tracing::error!(
-                                    "Failed to publish generic outgoing response event: {:?}",
-                                    e
-                                ),
+                                Err(e) => {
+                                    tracing::error!("Failed to publish response event: {:?}", e)
+                                }
                             }
-                        });
-                    }
-                    Ok(Err(error_body)) => {
-                        let error_res_body =
-                            serde_json::from_slice::<serde_json::Value>(&error_body.response).ok();
+                        }
+                    });
+                }
+                Ok(Err(error_body)) => {
+                    let error_res_body =
+                        serde_json::from_slice::<serde_json::Value>(&error_body.response).ok();
 
-                        let res_headers = error_body.headers.as_ref().map(|headers| {
-                            serde_json::Value::Object(headers.iter().fold(
-                                serde_json::Map::new(),
-                                |mut acc, (left, right)| {
-                                    if let Ok(x) = right.to_str() {
-                                        acc.insert(
-                                            left.as_str().to_string(),
-                                            serde_json::Value::String(x.to_string()),
-                                        );
-                                    }
-                                    acc
-                                },
-                            ))
-                        });
+                    let res_headers = error_body.headers.as_ref().map(|headers| {
+                        serde_json::Value::Object(headers.iter().fold(
+                            serde_json::Map::new(),
+                            |mut acc, (left, right)| {
+                                if let Ok(x) = right.to_str() {
+                                    acc.insert(
+                                        left.as_str().to_string(),
+                                        serde_json::Value::String(x.to_string()),
+                                    );
+                                }
+                                acc
+                            },
+                        ))
+                    });
 
-                        let latency = external_service_elapsed as u64 * 1000;
-                        let status_code = error_body.status_code;
+                    let latency = external_service_elapsed as u64 * 1000;
+                    let status_code = error_body.status_code;
 
-                        let error_code = if let Some(json_body) = &error_res_body {
-                            json_body
-                                .get("error_code")
-                                .or_else(|| json_body.get("code"))
-                                .and_then(|v| v.as_str())
-                                .map(String::from)
-                        } else {
-                            None
-                        };
+                    let error_code = if let Some(json_body) = &error_res_body {
+                        json_body
+                            .get("error_code")
+                            .or_else(|| json_body.get("code"))
+                            .and_then(|v| v.as_str())
+                            .map(String::from)
+                    } else {
+                        None
+                    };
 
-                        let error_reason = if let Some(json_body) = &error_res_body {
-                            json_body
-                                .get("message")
-                                .or_else(|| json_body.get("error_message"))
-                                .and_then(|v| v.as_str())
-                                .map(String::from)
-                        } else {
-                            None
-                        };
+                    let error_reason = if let Some(json_body) = &error_res_body {
+                        json_body
+                            .get("message")
+                            .or_else(|| json_body.get("error_message"))
+                            .and_then(|v| v.as_str())
+                            .map(String::from)
+                    } else {
+                        None
+                    };
 
-                        // Emit error event
-                        let connector_name_clone = connector_name.to_string();
-                        let url_clone = url.clone();
-                        let flow_name_clone = flow_name;
-                        let ref_id_for_event = ref_id.clone();
-                        let ref_id_clone = ref_id.clone();
-                        let event_config_clone = event_config.clone();
-                        let req_clone = req.clone();
+                    // Emit error response event
+                    tokio::spawn({
+                        let connector_name = connector_name.to_string();
+                        let flow_name = flow_name.as_str().to_string();
+                        let event_config = event_config.clone();
+                        let request_data = req.clone();
+                        let response_data = error_res_body.clone();
+                        let response_headers = res_headers;
 
-                        tokio::spawn(async move {
-                            // Create event
-                            let now = chrono::Utc::now();
-                            let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
-
-                            let event = Event {
-                                timestamp,
-                                flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
-                                connector: connector_name_clone.clone(),
-                                stage: EventStage::Error.as_str().to_string(),
-                                url: url_clone,
-                                request_id: Some(ref_id_for_event),
-                                transaction_id: Some(ref_id_clone),
-                                latency: Some(latency),
-                                status_code: Some(status_code),
+                        async move {
+                            let event = Event::new(
+                                Event::generate_event_uuid(),
+                                chrono::Utc::now()
+                                    .format("%Y-%m-%d %H:%M:%S%.3f")
+                                    .to_string(),
+                                flow_name,
+                                connector_name.clone(),
+                                EventStage::ResponseReceived.as_str().to_string(),
+                                Some(latency),
+                                Some(status_code),
                                 error_code,
                                 error_reason,
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                                request_data.clone(),
+                                response_data.clone(),
+                                std::collections::HashMap::new(),
+                            );
 
                             let event_context = EventContext {
-                                request_data: req_clone,
-                                response_data: error_res_body,
+                                request_data,
+                                response_data,
                                 request_headers: None,
-                                response_headers: res_headers,
+                                response_headers,
                                 metadata: None,
                             };
 
-                            let result =
-                                emit_event_with_config(event, event_context, &event_config_clone)
-                                    .await;
-
-                            match result {
+                            match emit_event_with_config(event, event_context, &event_config).await
+                            {
                                 Ok(_) => tracing::info!(
-                                    "Successfully published generic outgoing error response event for {}",
-                                    connector_name_clone
+                                    "Successfully published error response event for {}",
+                                    connector_name
                                 ),
                                 Err(e) => tracing::error!(
-                                    "Failed to publish generic outgoing error response event: {:?}",
+                                    "Failed to publish error response event: {:?}",
                                     e
                                 ),
                             }
-                        });
-                    }
-                    Err(network_error) => {
-                        tracing::error!(
-                            "Network error occurred while calling connector {}: {:?}",
-                            connector_name,
-                            network_error
-                        );
+                        }
+                    });
+                }
+                Err(network_error) => {
+                    tracing::error!(
+                        "Network error occurred while calling connector {}: {:?}",
+                        connector_name,
+                        network_error
+                    );
 
-                        // Emit generic network error event
-                        let connector_name_clone = connector_name.to_string();
-                        let url_clone = url.clone();
-                        let flow_name_clone = flow_name;
-                        let ref_id_for_event = ref_id.clone();
-                        let ref_id_clone = ref_id.clone();
+                    // Emit network error event
+                    tokio::spawn({
+                        let connector_name = connector_name.to_string();
+                        let flow_name = flow_name.as_str().to_string();
+                        let event_config = event_config.clone();
+                        let request_data = req.clone();
                         let error_message =
                             format!("Failed to get response from connector: {network_error:?}");
-                        let event_config_clone = event_config.clone();
-                        let req_clone = req.clone();
 
-                        tokio::spawn(async move {
-                            // Create event
-                            let now = chrono::Utc::now();
-                            let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
-
-                            let event = Event {
-                                timestamp,
-                                flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
-                                connector: connector_name_clone.clone(),
-                                stage: EventStage::Error.as_str().to_string(),
-                                url: url_clone,
-                                request_id: Some(ref_id_for_event),
-                                transaction_id: Some(ref_id_clone),
-                                latency: None,
-                                status_code: None,
-                                error_code: Some("NETWORK_ERROR".to_string()),
-                                error_reason: Some(error_message),
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                        async move {
+                            let event = Event::new(
+                                Event::generate_event_uuid(),
+                                chrono::Utc::now()
+                                    .format("%Y-%m-%d %H:%M:%S%.3f")
+                                    .to_string(),
+                                flow_name,
+                                connector_name.clone(),
+                                EventStage::ResponseReceived.as_str().to_string(),
+                                None,
+                                None,
+                                Some("NETWORK_ERROR".to_string()),
+                                Some(error_message),
+                                request_data.clone(),
+                                None,
+                                std::collections::HashMap::new(),
+                            );
 
                             let event_context = EventContext {
-                                request_data: req_clone,
+                                request_data,
                                 response_data: None,
                                 request_headers: None,
                                 response_headers: None,
                                 metadata: None,
                             };
 
-                            let result =
-                                emit_event_with_config(event, event_context, &event_config_clone)
-                                    .await;
-
-                            match result {
+                            match emit_event_with_config(event, event_context, &event_config).await
+                            {
                                 Ok(_) => tracing::info!(
-                                    "Successfully published generic outgoing network error event for {}",
-                                    connector_name_clone
+                                    "Successfully published network error event for {}",
+                                    connector_name
                                 ),
                                 Err(e) => tracing::error!(
-                                    "Failed to publish generic outgoing network error event: {:?}",
+                                    "Failed to publish network error event: {:?}",
                                     e
                                 ),
                             }
-                        });
-                    }
+                        }
+                    });
                 }
             }
 
@@ -564,7 +585,10 @@ pub type RouterResponse<T> = CustomResult<ApplicationResponse<T>, ApiErrorRespon
 pub async fn call_connector_api(
     proxy: &Proxy,
     request: Request,
-    _flow_name: &str,
+    flow_name: &str,
+    connector_name: Option<&str>,
+    event_config: Option<&EventConfig>,
+    request_data: Option<serde_json::Value>,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
@@ -618,6 +642,51 @@ pub async fn call_connector_api(
     };
 
     let response = send_request.await;
+
+    // Emit RequestSent event after the HTTP request is sent
+    if let (Some(connector_name), Some(event_config)) = (connector_name, event_config) {
+        tokio::spawn({
+            let connector_name = connector_name.to_string();
+            let flow_name = flow_name.to_string();
+            let event_config = event_config.clone();
+            let request_data = request_data.clone();
+
+            async move {
+                let event = Event::new(
+                    Event::generate_event_uuid(),
+                    chrono::Utc::now()
+                        .format("%Y-%m-%d %H:%M:%S%.3f")
+                        .to_string(),
+                    flow_name,
+                    connector_name.clone(),
+                    EventStage::RequestSent.as_str().to_string(),
+                    None,
+                    None,
+                    None,
+                    None,
+                    request_data.clone(),
+                    None,
+                    std::collections::HashMap::new(),
+                );
+
+                let event_context = EventContext {
+                    request_data,
+                    response_data: None,
+                    request_headers: None,
+                    response_headers: None,
+                    metadata: None,
+                };
+
+                match emit_event_with_config(event, event_context, &event_config).await {
+                    Ok(_) => tracing::info!(
+                        "Successfully published request sent event for {}",
+                        connector_name
+                    ),
+                    Err(e) => tracing::error!("Failed to publish request sent event: {:?}", e),
+                }
+            }
+        });
+    }
 
     handle_response(response).await
 }
