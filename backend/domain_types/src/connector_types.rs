@@ -277,6 +277,10 @@ pub struct PaymentFlowData {
 }
 
 impl PaymentFlowData {
+    pub fn set_status(&mut self, status: AttemptStatus) {
+        self.status = status;
+    }
+
     pub fn get_billing(&self) -> Result<&Address, Error> {
         self.address
             .get_payment_method_billing()

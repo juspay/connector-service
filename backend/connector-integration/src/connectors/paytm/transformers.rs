@@ -78,11 +78,12 @@ use cbc::{
 use common_enums::{AttemptStatus, Currency};
 use common_utils::{
     errors::CustomResult,
+    request::Method,
     types::{AmountConvertor, MinorUnit, StringMajorUnit},
 };
 use domain_types::{
-    connector_flow::PSync,
-    connector_types::{PaymentFlowData, PaymentsResponseData, PaymentsSyncData},
+    connector_flow::{Authorize, CreateSessionToken, PSync},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId, SessionTokenRequestData, SessionTokenResponseData},
     errors,
     payment_method_data::{PaymentMethodData, UpiData},
     router_data::ConnectorAuthType,
@@ -95,6 +96,10 @@ use ring::{
     rand::{SecureRandom, SystemRandom},
 };
 use serde::{Deserialize, Serialize};
+use serde_json;
+use url::Url;
+use domain_types::router_response_types::RedirectForm;
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
@@ -333,6 +338,14 @@ pub struct PaytmCallbackErrorBody {
 }
 
 // Authorize flow request structures
+
+// Enum to handle both UPI Intent and UPI Collect request types
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum PaytmAuthorizeRequest {
+    Intent(PaytmProcessTxnRequest),
+    Collect(PaytmNativeProcessTxnRequest),
+}
 
 #[derive(Debug, Serialize)]
 pub struct PaytmProcessTxnRequest {
@@ -895,7 +908,7 @@ impl PaytmProcessTxnRequest {
             mid: auth.merchant_id.peek().to_string(),
             order_id: item.payment_id.clone(),
             request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
-            payment_mode: "UPI_INTENT".to_string(), // UPI Intent flow
+            payment_mode: format!("{}_{}", constants::PAYMENT_MODE_UPI, "INTENT"), // "UPI_INTENT" for intent
             payment_flow: Some(constants::PAYMENT_FLOW_NONE.to_string()),
         };
 
@@ -975,6 +988,13 @@ pub struct PaytmTransactionStatusRespBody {
     pub txn_id: Option<String>,
     pub bank_txn_id: Option<String>,
     pub order_id: Option<String>,
+    pub txn_amount: Option<String>,
+    pub txn_type: Option<String>,
+    pub gateway_name: Option<String>,
+    pub mid: Option<String>,
+    pub payment_mode: Option<String>,
+    pub refund_amt: Option<String>,
+    pub txn_date: Option<String>,
 }
 
 // Helper struct for PSync RouterData transformation
@@ -1040,25 +1060,14 @@ impl PaytmTransactionStatusRequest {
 pub fn map_paytm_status_to_attempt_status(result_code: &str) -> AttemptStatus {
     match result_code {
         // Success
-        constants::TXN_SUCCESS_CODE => AttemptStatus::Charged,
-
-        // Failure cases
-        constants::TXN_FAILURE_CODE
-        | constants::WALLET_INSUFFICIENT_CODE
-        | constants::INVALID_UPI_CODE
-        | constants::BANK_DECLINED_CODE
-        | constants::TXN_FAILED_CODE
-        | constants::ACCOUNT_BLOCKED_CODE
-        | constants::MOBILE_CHANGED_CODE
-        | constants::MANDATE_GAP_CODE
-        | constants::INVALID_ORDER_ID_CODE
-        | constants::INVALID_MID_CODE
-        | constants::SERVER_DOWN_CODE => AttemptStatus::Failure,
+        "01" => AttemptStatus::Charged, // TXN_SUCCESS
 
         // Pending cases
-        constants::PENDING_CODE
-        | constants::PENDING_BANK_CONFIRM_CODE
-        | constants::NO_RECORD_FOUND_CODE => AttemptStatus::Pending,
+        "400" | "402" => AttemptStatus::Pending, // PENDING, PENDING_BANK_CONFIRM
+        "331" => AttemptStatus::Pending, // NO_RECORD_FOUND
+
+        // Failure cases
+        "227" | "235" | "295" | "334" | "335" | "401" | "501" | "810" | "843" | "820" | "267" => AttemptStatus::Failure,
 
         // Default to failure for unknown codes
         _ => AttemptStatus::Failure,
@@ -1126,4 +1135,230 @@ pub struct PaytmRedirectForm {
     pub action_url: String,
     pub method: String,
     pub content: std::collections::HashMap<String, String>,
+}
+
+// TryFrom implementations required by the macro framework
+// The macro expects TryFrom implementations that work with its generated PaytmRouterData<RouterDataV2<...>>
+
+// Since the macro generates PaytmRouterData<T> but our existing PaytmRouterData is not generic,
+// we need to implement TryFrom for the exact RouterDataV2 types the macro expects
+
+// PaytmInitiateTxnRequest TryFrom CreateSessionToken RouterData 
+// Using the macro-generated PaytmRouterData type from the paytm module
+impl TryFrom<crate::connectors::paytm::PaytmRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>> for PaytmInitiateTxnRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: crate::connectors::paytm::PaytmRouterData<RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>) -> Result<Self, Self::Error> {
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let intermediate_router_data = PaytmRouterData::try_from(&item.router_data)?;
+        PaytmInitiateTxnRequest::try_from_with_auth(&intermediate_router_data, &auth, item.connector.string_major_unit_for_connector)
+    }
+}
+
+// PaytmAuthorizeRequest TryFrom Authorize RouterData
+impl TryFrom<crate::connectors::paytm::PaytmRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>> for PaytmAuthorizeRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: crate::connectors::paytm::PaytmRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let intermediate_authorize_router_data = PaytmAuthorizeRouterData::try_from(&item.router_data)?;
+        
+        // Determine the UPI flow type based on payment method data
+        let upi_flow = determine_upi_flow(&item.router_data.request.payment_method_data)?;
+        
+        match upi_flow {
+            UpiFlowType::Intent => {
+                // UPI Intent flow - use PaytmProcessTxnRequest
+                let intent_request = PaytmProcessTxnRequest::try_from_with_auth(&intermediate_authorize_router_data, &auth)?;
+                Ok(PaytmAuthorizeRequest::Intent(intent_request))
+            }
+            UpiFlowType::Collect => {
+                // UPI Collect flow - use PaytmNativeProcessTxnRequest
+                let collect_request = PaytmNativeProcessTxnRequest::try_from_with_auth(&intermediate_authorize_router_data, &auth)?;
+                Ok(PaytmAuthorizeRequest::Collect(collect_request))
+            }
+        }
+    }
+}
+
+// PaytmTransactionStatusRequest TryFrom PSync RouterData
+impl TryFrom<crate::connectors::paytm::PaytmRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>> for PaytmTransactionStatusRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: crate::connectors::paytm::PaytmRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let intermediate_sync_router_data = PaytmSyncRouterData::try_from(&item.router_data)?;
+        PaytmTransactionStatusRequest::try_from_with_auth(&intermediate_sync_router_data, &auth)
+    }
+}
+
+// ResponseRouterData TryFrom implementations required by the macro framework
+
+// CreateSessionToken response transformation
+impl TryFrom<ResponseRouterData<PaytmInitiateTxnResponse, RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>> for RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<PaytmInitiateTxnResponse, RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let mut router_data = item.router_data;
+        
+        // Handle both success and failure cases from the enum body
+        let session_token = match &response.body {
+            PaytmResBodyTypes::SuccessBody(success_body) => {
+                Some(success_body.txn_token.clone())
+            }
+            PaytmResBodyTypes::FailureBody(_failure_body) => {
+                None
+            }
+        };
+
+        router_data.response = Ok(SessionTokenResponseData {
+            session_token: session_token.unwrap_or_default(),
+        });
+
+        Ok(router_data)
+    }
+}
+
+// Authorize response transformation  
+impl TryFrom<ResponseRouterData<PaytmProcessTxnResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<PaytmProcessTxnResponse, RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let mut router_data = item.router_data;
+        
+        // Handle both success and failure cases from the enum body
+        let (redirection_data, resource_id, connector_txn_id) = match &response.body {
+            PaytmProcessRespBodyTypes::SuccessBody(success_body) => {
+                // Extract redirection URL if present
+                let redirection_data = if !success_body.deep_link_info.deep_link.is_empty() {
+                    // Check if it's a UPI deep link (starts with upi://) or regular URL
+                    if success_body.deep_link_info.deep_link.starts_with("upi://") {
+                        // For UPI deep links, use them as-is
+                        Some(Box::new(RedirectForm::Uri {
+                            uri: success_body.deep_link_info.deep_link.clone(),
+                        }))
+                    } else {
+                        // For regular URLs, parse and convert
+                        let url = Url::parse(&success_body.deep_link_info.deep_link)
+                            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                        Some(Box::new(RedirectForm::from((url, Method::Get))))
+                    }
+                } else {
+                    None
+                };
+                
+                // Extract transaction IDs from deep_link_info
+                let resource_id = ResponseId::ConnectorTransactionId(success_body.deep_link_info.order_id.clone());
+                let connector_txn_id = Some(success_body.deep_link_info.trans_id.clone());
+                
+                (redirection_data, resource_id, connector_txn_id)
+            }
+            PaytmProcessRespBodyTypes::FailureBody(_failure_body) => {
+                let resource_id = ResponseId::ConnectorTransactionId(router_data.resource_common_data.connector_request_reference_id.clone());
+                (None, resource_id, None)
+            }
+        };
+
+        // Include raw connector response (serialize the parsed response back to JSON)
+        let raw_connector_response = Some(serde_json::to_string(&item.response).unwrap_or_default());
+
+        // Set status based on response type
+        match &response.body {
+            PaytmProcessRespBodyTypes::SuccessBody(_) => {
+                // If not failure, always return AuthenticationPending
+                router_data.resource_common_data.set_status(AttemptStatus::AuthenticationPending);
+            }
+            PaytmProcessRespBodyTypes::FailureBody(_) => {
+                // Set status to Failure for failure responses
+                router_data.resource_common_data.set_status(AttemptStatus::Failure);
+            }
+        }
+
+        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
+            resource_id,
+            redirection_data,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: connector_txn_id,
+            incremental_authorization_allowed: None,
+            raw_connector_response,
+            status_code: Some(item.http_code),
+        });
+
+        Ok(router_data)
+    }
+}
+
+// PSync response transformation
+impl TryFrom<ResponseRouterData<PaytmTransactionStatusResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>> for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: ResponseRouterData<PaytmTransactionStatusResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        let response = &item.response;
+        let mut router_data = item.router_data;
+        
+        // Handle both success and failure cases from the enum body
+        let (resource_id, connector_txn_id) = match &response.body {
+            PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => {
+                let order_id = success_body.order_id.clone()
+                    .unwrap_or_else(|| router_data.resource_common_data.connector_request_reference_id.clone());
+                let resource_id = ResponseId::ConnectorTransactionId(order_id);
+                let connector_txn_id = success_body.txn_id.clone();
+                (resource_id, connector_txn_id)
+            }
+            PaytmTransactionStatusRespBodyTypes::FailureBody(_failure_body) => {
+                let resource_id = ResponseId::ConnectorTransactionId(router_data.resource_common_data.connector_request_reference_id.clone());
+                (resource_id, None)
+            }
+        };
+
+        // Include raw connector response (serialize the parsed response back to JSON)
+        let raw_connector_response = Some(serde_json::to_string(&item.response).unwrap_or_default());
+
+        // Get result code for status mapping
+        let result_code = match &response.body {
+            PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => &success_body.result_info.result_code,
+            PaytmTransactionStatusRespBodyTypes::FailureBody(failure_body) => &failure_body.result_info.result_code,
+        };
+        
+        // Map status and set response accordingly
+        let attempt_status = map_paytm_status_to_attempt_status(result_code);
+        
+        // Update the status using the new setter function
+        router_data.resource_common_data.set_status(attempt_status);
+        
+        router_data.response = match attempt_status {
+            AttemptStatus::Failure => Err(domain_types::router_data::ErrorResponse {
+                code: result_code.clone(),
+                message: match &response.body {
+                    PaytmTransactionStatusRespBodyTypes::SuccessBody(body) => body.result_info.result_msg.clone(),
+                    PaytmTransactionStatusRespBodyTypes::FailureBody(body) => body.result_info.result_msg.clone(),
+                },
+                reason: None,
+                status_code: item.http_code,
+                attempt_status: Some(attempt_status),
+                connector_transaction_id: connector_txn_id.clone(),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                raw_connector_response: raw_connector_response.clone(),
+            }),
+            _ => Ok(PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: connector_txn_id,
+                incremental_authorization_allowed: None,
+                raw_connector_response,
+                status_code: Some(item.http_code),
+            }),
+        };
+
+        Ok(router_data)
+    }
 }
