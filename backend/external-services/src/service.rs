@@ -43,6 +43,7 @@ use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
+use masking::Secret;
 use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
@@ -152,7 +153,7 @@ where
                 None,
                 None,
                 None,
-                request_data.clone(),
+                request_data.clone().map(Secret::new),
                 None,
                 std::collections::HashMap::new(),
             );
@@ -232,8 +233,8 @@ where
                                 Some(status_code),
                                 None,
                                 None,
-                                request_data.clone(),
-                                response_data.clone(),
+                                request_data.clone().map(Secret::new),
+                                response_data.clone().map(Secret::new),
                                 std::collections::HashMap::new(),
                             );
 
@@ -302,8 +303,8 @@ where
                                 Some(status_code),
                                 error_code,
                                 error_reason,
-                                request_data.clone(),
-                                response_data.clone(),
+                                request_data.clone().map(Secret::new),
+                                response_data.clone().map(Secret::new),
                                 std::collections::HashMap::new(),
                             );
 
@@ -354,7 +355,7 @@ where
                                 None,
                                 Some("NETWORK_ERROR".to_string()),
                                 Some(error_message),
-                                request_data.clone(),
+                                request_data.clone().map(Secret::new),
                                 None,
                                 std::collections::HashMap::new(),
                             );
@@ -615,7 +616,7 @@ pub async fn call_connector_api(
                     None,
                     None,
                     None,
-                    request_data.clone(),
+                    request_data.clone().map(Secret::new),
                     None,
                     std::collections::HashMap::new(),
                 );
