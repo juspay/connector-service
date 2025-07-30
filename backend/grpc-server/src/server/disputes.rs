@@ -144,7 +144,8 @@ impl DisputeService for Disputes {
                 None,
                 &connector.to_string(),
                 &service_name,
-                common_utils::dapr::FlowName::AcceptDispute,
+                common_utils::dapr::FlowName::SubmitEvidence,
+                &self.config.events,
             )
             .await
             .switch()
@@ -307,6 +308,7 @@ impl DisputeService for Disputes {
                 &connector.to_string(),
                 &service_name,
                 common_utils::dapr::FlowName::AcceptDispute,
+                &self.config.events,
             )
             .await
             .switch()
