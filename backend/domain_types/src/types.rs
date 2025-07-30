@@ -59,8 +59,11 @@ pub struct Connectors {
     pub phonepe: ConnectorParams,
     #[serde(default)]
     pub cashfree: ConnectorParams,
+    #[serde(default)]
     pub fiuu: ConnectorParams,
+    #[serde(default)]
     pub payu: ConnectorParams,
+    #[serde(default)]
     pub cashtocode: ConnectorParams,
 }
 

@@ -458,7 +458,7 @@ impl
         if base_url.is_empty() {
             return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
         }
-        Ok(format!("{}v1/orders", base_url))
+        Ok(format!("{base_url}v1/orders"))
     }
 
     fn get_request_body(
@@ -561,7 +561,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
             return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
         }
         let refund_id = req.request.connector_refund_id.clone();
-        Ok(format!("{}v1/refunds/{}", base_url, refund_id))
+        Ok(format!("{base_url}v1/refunds/{refund_id}"))
     }
 
     fn handle_response_v2(
@@ -712,7 +712,9 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
             return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
         }
         let connector_payment_id = req.request.connector_transaction_id.clone();
-        Ok(format!("{}v1/payments/{}/refund", base_url, connector_payment_id))
+        Ok(format!(
+            "{base_url}v1/payments/{connector_payment_id}/refund"
+        ))
     }
 
     fn get_request_body(
@@ -804,7 +806,7 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
                 return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
             }
         };
-        Ok(format!("{}v1/payments/{}/capture", base_url, id))
+        Ok(format!("{base_url}v1/payments/{id}/capture"))
     }
 
     fn get_request_body(

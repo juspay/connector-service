@@ -243,7 +243,7 @@ macros::macro_connector_implementation!(
             if base_url.is_empty() {
                 Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
             } else {
-                Ok(format!("{}processxml.do", base_url))
+                Ok(format!("{base_url}processxml.do"))
             }
         }
     }
@@ -276,7 +276,7 @@ macros::macro_connector_implementation!(
             if base_url.is_empty() {
                 Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
             } else {
-                Ok(format!("{}processxml.do", base_url))
+                Ok(format!("{base_url}processxml.do"))
             }
         }
     }
@@ -319,7 +319,7 @@ macros::macro_connector_implementation!(
             if base_url.is_empty() {
                 Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
             } else {
-                Ok(format!("{}processxml.do", base_url))
+                Ok(format!("{base_url}processxml.do"))
             }
         }
     }
@@ -352,7 +352,7 @@ macros::macro_connector_implementation!(
             if base_url.is_empty() {
                 Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
             } else {
-                Ok(format!("{}processxml.do", base_url))
+                Ok(format!("{base_url}processxml.do"))
             }
         }
     }
@@ -385,7 +385,7 @@ macros::macro_connector_implementation!(
             if base_url.is_empty() {
                 Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into())
             } else {
-                Ok(format!("{}processxml.do", base_url))
+                Ok(format!("{base_url}processxml.do"))
             }
         }
     }
