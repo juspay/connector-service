@@ -1391,21 +1391,15 @@ impl
         let raw_connector_response =
             Some(serde_json::to_string(&item.response).unwrap_or_default());
 
-        // Set status based on response type
-        match &response.body {
-            PaytmProcessRespBodyTypes::SuccessBody(_) => {
-                // If not failure, always return AuthenticationPending
-                router_data
-                    .resource_common_data
-                    .set_status(AttemptStatus::AuthenticationPending);
-            }
-            PaytmProcessRespBodyTypes::FailureBody(_) => {
-                // Set status to Failure for failure responses
-                router_data
-                    .resource_common_data
-                    .set_status(AttemptStatus::Failure);
-            }
-        }
+        // Get result code for status mapping
+        let result_code = match &response.body {
+            PaytmProcessRespBodyTypes::SuccessBody(success_body) => &success_body.result_info.result_code,
+            PaytmProcessRespBodyTypes::FailureBody(failure_body) => &failure_body.result_info.result_code,
+        };
+
+        // Map status using the result code
+        let attempt_status = map_paytm_status_to_attempt_status(result_code);
+        router_data.resource_common_data.set_status(attempt_status);
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id,
