@@ -191,6 +191,7 @@ impl MinorUnit {
     }
 
     /// Convert the amount to its major denomination based on Currency and return String
+    /// This method now validates currency support and will error for unsupported currencies.
     /// Paypal Connector accepts Zero and Two decimal currency but not three decimal and it should be updated as required for 3 decimal currencies.
     /// Paypal Ref - https://developer.paypal.com/docs/reports/reference/paypal-supported-currencies/
     fn to_major_unit_as_string(
@@ -198,17 +199,26 @@ impl MinorUnit {
         currency: enums::Currency,
     ) -> Result<StringMajorUnit, error_stack::Report<ParsingError>> {
         let amount_f64 = self.to_major_unit_as_f64(currency)?;
-        let amount_string = if currency.is_zero_decimal_currency() {
+        let decimal_places = currency
+            .number_of_digits_after_decimal_point()
+            .change_context(ParsingError::StructParseFailure(
+                "currency decimal configuration",
+            ))?;
+
+        let amount_string = if decimal_places == 0 {
             amount_f64.0.to_string()
-        } else if currency.is_three_decimal_currency() {
+        } else if decimal_places == 3 {
             format!("{:.3}", amount_f64.0)
+        } else if decimal_places == 4 {
+            format!("{:.4}", amount_f64.0)
         } else {
-            format!("{:.2}", amount_f64.0)
+            format!("{:.2}", amount_f64.0) // 2 decimal places
         };
         Ok(StringMajorUnit::new(amount_string))
     }
 
     /// Convert the amount to its major denomination based on Currency and return f64
+    /// This method now validates currency support and will error for unsupported currencies.
     fn to_major_unit_as_f64(
         self,
         currency: enums::Currency,
@@ -216,13 +226,22 @@ impl MinorUnit {
         let amount_decimal =
             Decimal::from_i64(self.0).ok_or(ParsingError::I64ToDecimalConversionFailure)?;
 
-        let amount = if currency.is_zero_decimal_currency() {
+        let decimal_places = currency
+            .number_of_digits_after_decimal_point()
+            .change_context(ParsingError::StructParseFailure(
+                "currency decimal configuration",
+            ))?;
+
+        let amount = if decimal_places == 0 {
             amount_decimal
-        } else if currency.is_three_decimal_currency() {
+        } else if decimal_places == 3 {
             amount_decimal / Decimal::from(1000)
+        } else if decimal_places == 4 {
+            amount_decimal / Decimal::from(10000)
         } else {
-            amount_decimal / Decimal::from(100)
+            amount_decimal / Decimal::from(100) // 2 decimal places
         };
+
         let amount_f64 = amount
             .to_f64()
             .ok_or(ParsingError::FloatToDecimalConversionFailure)?;
