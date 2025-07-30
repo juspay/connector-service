@@ -6,7 +6,7 @@ use crate::{
     router_response_types,
 };
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, request::Method};
+use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -209,6 +209,14 @@ impl<
                         ),
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
+                    // UpiQr is not yet implemented, fallback to UpiIntent
+                    Ok(PaymentMethodData::Upi(
+                        crate::payment_method_data::UpiData::UpiIntent(
+                            crate::payment_method_data::UpiIntentData {},
+                        ),
+                    ))
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(_reward) => {
                     Ok(PaymentMethodData::Reward)
                 }
@@ -267,6 +275,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 },
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(_) => Ok(Some(PaymentMethodType::UpiCollect)),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_) => Ok(Some(PaymentMethodType::UpiIntent)),
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_) => Ok(Some(PaymentMethodType::UpiIntent)), // UpiQr not yet implemented, fallback to UpiIntent
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(reward) => {
                     match reward.reward_type() {
                         grpc_api_types::payments::RewardType::Classicreward => Ok(Some(PaymentMethodType::ClassicReward)),
@@ -279,19 +288,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         })))
                     }
                 },
-                // grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
-                //     Ok(PaymentMethodData::Upi(
-                //         crate::payment_method_data::UpiData::UpiQr(
-                //             crate::payment_method_data::UpiQrData {},
-                //         ),
-                //     ))
-                // }
-                _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Unsupported payment method".to_owned(),
-                    error_object: None,
-                }))),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1380,6 +1376,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_)),
+            } => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_)),
             } => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
