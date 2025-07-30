@@ -391,6 +391,7 @@ macro_rules! implement_connector_operation {
                 &connector.to_string(),
                 &service_name,
                 flow_name,
+                &self.config.events,
             )
             .await
             .switch()
