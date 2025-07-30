@@ -58,13 +58,14 @@ pub struct Payments{
 
 impl Payments
 {
-    async fn process_authorization_internal<T : PaymentMethodDataTypes + Default + Debug+ Send + Eq + PartialEq + serde::Serialize + serde::de::DeserializeOwned + Clone>(
+    async fn process_authorization_internal<T : PaymentMethodDataTypes + Default+ Eq + Debug+ Send + serde::Serialize + serde::de::DeserializeOwned + Clone+ Sync+ domain_types::types::CardConversionHelper<T>+ 'static>(
         &self,
         payload: PaymentServiceAuthorizeRequest,
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
-    ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+    ) 
+    -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -198,7 +199,7 @@ impl Payments
                         raw_connector_response: None,
                     }),
                 };
-                domain_types::types::generate_payment_authorize_response(error_router_data)
+                domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
                     .map_err(|err| {
                         tracing::error!(
                             "Failed to generate authorize response for connector error: {:?}",
@@ -217,9 +218,9 @@ impl Payments
         Ok(authorize_response)
     }
 
-    async fn handle_order_creation(
+    async fn handle_order_creation<T:PaymentMethodDataTypes + Default+ Eq + Debug+ Send + serde::Serialize + serde::de::DeserializeOwned + Clone+ Sync+ domain_types::types::CardConversionHelper<T>>(
         &self,
-        connector_data: ConnectorData,
+        connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceAuthorizeRequest,
@@ -300,9 +301,9 @@ impl Payments
             )),
         }
     }
-    async fn handle_order_creation_for_setup_mandate(
+    async fn handle_order_creation_for_setup_mandate<T:PaymentMethodDataTypes + Default+ Eq + Debug+ Send + serde::Serialize + serde::de::DeserializeOwned + Clone+ Sync+ domain_types::types::CardConversionHelper<T>>(
         &self,
-        connector_data: ConnectorData,
+        connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
         payload: &PaymentServiceRegisterRequest,
@@ -367,7 +368,7 @@ impl Payments
     }
 }
 
-impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde::Serialize + serde::de::DeserializeOwned + 'static + Clone> PaymentOperationsInternal for Payments<T> {
+impl PaymentOperationsInternal for Payments {
     implement_connector_operation!(
         fn_name: internal_payment_sync,
         log_prefix: "PAYMENT_SYNC",
@@ -430,7 +431,7 @@ impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde
 }
 
 #[tonic::async_trait]
-impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde::Serialize + serde::de::DeserializeOwned+ 'static + Clone> PaymentService for Payments<T> {
+impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_authorize",
         fields(
@@ -489,7 +490,7 @@ impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde
                                         }
                                     }
                                     _ => {
-                                        match Box::pin(self.process_authorization_internal(
+                                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                                             payload,
                                             connector,
                                             connector_auth_details,
@@ -651,7 +652,7 @@ impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde
                 .transpose()?;
 
             //get connector data
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector); //Should be generic for T
 
             let source_verified = connector_data
                 .connector
@@ -860,7 +861,7 @@ impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde
                     '_,
                     SetupMandate,
                     PaymentFlowData,
-                    SetupMandateRequestData,
+                    SetupMandateRequestData<DefaultPCIHolder>, //Should be genric for T
                     PaymentsResponseData,
                 > = connector_data.connector.get_connector_integration_v2();
 
@@ -898,7 +899,7 @@ impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde
                 let router_data: RouterDataV2<
                     SetupMandate,
                     PaymentFlowData,
-                    SetupMandateRequestData,
+                    SetupMandateRequestData<DefaultPCIHolder>, //Should be genric for T
                     PaymentsResponseData,
                 > = RouterDataV2 {
                     flow: std::marker::PhantomData,
@@ -931,8 +932,8 @@ impl<T: PaymentMethodDataTypes + Default + Debug + Send + Eq + PartialEq + serde
     }
 }
 
-async fn get_payments_webhook_content(
-    connector_data: ConnectorData,
+async fn get_payments_webhook_content<T: PaymentMethodDataTypes + Default + Eq + Debug + Send + serde::Serialize + serde::de::DeserializeOwned + Clone + Sync + domain_types::types::CardConversionHelper<T> + 'static>(
+    connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
@@ -959,8 +960,8 @@ async fn get_payments_webhook_content(
     })
 }
 
-async fn get_refunds_webhook_content(
-    connector_data: ConnectorData,
+async fn get_refunds_webhook_content<T: PaymentMethodDataTypes + Default + Eq + Debug + Send + serde::Serialize + serde::de::DeserializeOwned + Clone + Sync + domain_types::types::CardConversionHelper<T> + 'static>(
+    connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
@@ -987,8 +988,8 @@ async fn get_refunds_webhook_content(
     })
 }
 
-async fn get_disputes_webhook_content(
-    connector_data: ConnectorData,
+async fn get_disputes_webhook_content<T: PaymentMethodDataTypes + Default + Eq + Debug + Send + serde::Serialize + serde::de::DeserializeOwned + Clone + Sync + domain_types::types::CardConversionHelper<T> + 'static>(
+    connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,

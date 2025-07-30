@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
     errors::CustomResult,
@@ -304,7 +305,7 @@ macro_rules! implement_connector_operation {
             let payload = request.into_inner();
 
             // Get connector data
-            let connector_data = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
 
             // Get connector integration
             let connector_integration: interfaces::connector_integration_v2::BoxedConnectorIntegrationV2<

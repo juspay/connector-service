@@ -44,7 +44,7 @@ pub trait PaymentVoidV2:
 {
 }
 
-pub type BoxedConnector = Box<&'static (dyn ConnectorServiceTrait<domain_types::payment_method_data::DefaultPCIHolder> + Sync)>;
+pub type BoxedConnector<T> = Box<&'static (dyn ConnectorServiceTrait<T> + Sync)>;
 
 pub trait ValidationTrait {
     fn should_do_order_create(&self) -> bool {

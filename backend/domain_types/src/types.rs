@@ -210,7 +210,7 @@ impl<
 }
 
 // Helper trait for generic card conversion
-trait CardConversionHelper<T: PaymentMethodDataTypes> {
+pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
     fn convert_card_details(
         card: grpc_api_types::payments::CardDetails,
     ) -> Result<crate::payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;

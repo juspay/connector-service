@@ -170,16 +170,6 @@ impl<
 {
 }
 
-// type AuthorizeRouterData<T> = RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>;
-// type SetupMandateRouterData<T> = RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>;
-// type PSyncRouterData = RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>;
-// type CaptureRouterData = RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>;
-// type VoidRouterData = RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>;
-// type RefundRouterData = RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>;
-// type AcceptRouterData = RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>;
-// type SubmitEvidenceRouterData = RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>;
-// type DefendDisputeRouterData = RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>;
-
 macros::create_all_prerequisites!(
     connector_name: Adyen,
     generic_type: T,

@@ -3,7 +3,7 @@
 //! This module provides a comprehensive integrity checking system for payment operations.
 //! It ensures that request and response data remain consistent across connector interactions
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
-
+use std::fmt::Debug;
 use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
@@ -82,10 +82,36 @@ pub trait CheckIntegrity<Request, T> {
 /// 2. If yes, compares it with request integrity object
 /// 3. If no, passes the check (no integrity validation needed)
 macro_rules! impl_check_integrity {
+    ($data_type:ident <$generic:ident>) => {
+        impl<T, Request, $generic> CheckIntegrity<Request, T> for $data_type<$generic>
+        where
+            T: FlowIntegrity,
+            Request: GetIntegrityObject<T>,
+            $generic: PaymentMethodDataTypes,
+        {
+            fn check_integrity(
+                &self,
+                request: &Request,
+                connector_transaction_id: Option<String>,
+            ) -> Result<(), IntegrityCheckError> {
+                match request.get_response_integrity_object() {
+                    Some(res_integrity_object) => {
+                        let req_integrity_object = request.get_request_integrity_object();
+                        T::compare(
+                            req_integrity_object,
+                            res_integrity_object,
+                            connector_transaction_id,
+                        )
+                    }
+                    None => Ok(()),
+                }
+            }
+        }
+    };
     ($data_type:ty) => {
         impl<T, Request> CheckIntegrity<Request, T> for $data_type
         where
-            T: FlowIntegrity + PaymentMethodDataTypes,
+            T: FlowIntegrity,
             Request: GetIntegrityObject<T>,
         {
             fn check_integrity(
@@ -110,9 +136,9 @@ macro_rules! impl_check_integrity {
 }
 
 // Apply the macro to all payment flow data types
-impl_check_integrity!(PaymentsAuthorizeData<T>);
+impl_check_integrity!(PaymentsAuthorizeData<S>);
 impl_check_integrity!(PaymentCreateOrderData);
-impl_check_integrity!(SetupMandateRequestData<T>);
+impl_check_integrity!(SetupMandateRequestData<S>);
 impl_check_integrity!(PaymentsSyncData);
 impl_check_integrity!(PaymentVoidData);
 impl_check_integrity!(RefundsData);
