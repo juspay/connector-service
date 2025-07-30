@@ -14,6 +14,7 @@ use grpc_api_types::payments::{
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 use serde_json::json;
+use tonic;
 use utoipa::ToSchema;
 
 // Helper function for extracting connector request reference ID
@@ -1021,11 +1022,21 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
 
 // PhoneDetails conversion removed - phone info is now embedded in Address
 
-impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        PaymentServiceAuthorizeRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors): (PaymentServiceAuthorizeRequest, Connectors),
+        (value, connectors, metadata): (
+            PaymentServiceAuthorizeRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match &value.address {
             // Borrow value.address
@@ -1044,8 +1055,40 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                 }))?
             }
         };
+
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
         Ok(Self {
-            merchant_id: common_utils::id_type::MerchantId::default(),
+            merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
@@ -1096,11 +1139,208 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
         })
     }
 }
-impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData {
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors): (PaymentServiceVoidRequest, Connectors),
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // For repeat payment operations, address information is typically not available or required
+        let address: PaymentAddress = crate::payment_address::PaymentAddress::new(
+            None,        // shipping
+            None,        // billing
+            None,        // payment_method_billing
+            Some(false), // should_unify_address = false for repeat operations
+        );
+
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
+            attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, //TODO
+            address,
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
+            customer_id: None,
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceGetRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceGetRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // For sync operations, address information is typically not available or required
+        let address: PaymentAddress = crate::payment_address::PaymentAddress::new(
+            None,        // shipping
+            None,        // billing
+            None,        // payment_method_billing
+            Some(false), // should_unify_address = false for sync operations
+        );
+
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
+            attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, //TODO
+            address,
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: value
+                .transaction_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
+            customer_id: None,
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        PaymentServiceVoidRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            PaymentServiceVoidRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For void operations, address information is typically not available or required
         // Since this is a PaymentServiceVoidRequest, we use default address values
@@ -1110,8 +1350,40 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
             None,        // payment_method_billing
             Some(false), // should_unify_address = false for void operations
         );
+
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
         Ok(Self {
-            merchant_id: common_utils::id_type::MerchantId::default(),
+            merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
@@ -1882,6 +2154,57 @@ impl
 
 impl
     ForeignTryFrom<(
+        grpc_api_types::payments::RefundServiceGetRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for RefundFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (_value, connectors, _metadata): (
+            grpc_api_types::payments::RefundServiceGetRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(RefundFlowData {
+            status: common_enums::RefundStatus::Pending,
+            refund_id: None,
+            connectors,
+            raw_connector_response: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::RefundServiceGetRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for RefundFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (_value, connectors, _metadata): (
+            grpc_api_types::payments::RefundServiceGetRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(RefundFlowData {
+            status: common_enums::RefundStatus::Pending,
+            refund_id: None,
+            connectors,
+            raw_connector_response: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
         grpc_api_types::payments::PaymentServiceRefundRequest,
         Connectors,
     )> for RefundFlowData
@@ -1903,6 +2226,57 @@ impl
             ),
             raw_connector_response: None,
             connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceRefundRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for RefundFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::PaymentServiceRefundRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(RefundFlowData {
+            status: common_enums::RefundStatus::Pending,
+            refund_id: Some(value.refund_id),
+            connectors,
+            raw_connector_response: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceRefundRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for RefundFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::PaymentServiceRefundRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(RefundFlowData {
+            status: common_enums::RefundStatus::Pending,
+            refund_id: Some(value.refund_id),
+            connectors,
+            raw_connector_response: None,
         })
     }
 }
@@ -1997,6 +2371,59 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
     }
 }
 
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::AcceptDisputeRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::AcceptDisputeRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: None,
+            connectors,
+            connector_dispute_id: value.dispute_id,
+            defense_reason_code: None,
+            raw_connector_response: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::AcceptDisputeRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::AcceptDisputeRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: None,
+            connectors,
+            connector_dispute_id: value.dispute_id,
+            defense_reason_code: None,
+            raw_connector_response: None,
+        })
+    }
+}
+
 pub fn generate_submit_evidence_response(
     router_data_v2: RouterDataV2<
         SubmitEvidence,
@@ -2072,6 +2499,59 @@ impl
             ),
             raw_connector_response: None,
             connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: None,
+            connectors,
+            connector_dispute_id: value.dispute_id,
+            defense_reason_code: None,
+            raw_connector_response: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::DisputeServiceSubmitEvidenceRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: None,
+            connectors,
+            connector_dispute_id: value.dispute_id,
+            defense_reason_code: None,
+            raw_connector_response: None,
         })
     }
 }
@@ -2760,6 +3240,177 @@ impl
     }
 }
 
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceCaptureRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceCaptureRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "PAYMENT_ID".to_string(),
+            attempt_id: "ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default
+            address: payment_address::PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
+            customer_id: None,
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceCaptureRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceCaptureRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "PAYMENT_ID".to_string(),
+            attempt_id: "ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default
+            address: crate::payment_address::PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: value
+                .request_ref_id
+                .and_then(|id| id.id_type)
+                .and_then(|id_type| match id_type {
+                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                    _ => None,
+                })
+                .unwrap_or_default(),
+            customer_id: None,
+            connector_customer: None,
+            description: None,
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+        })
+    }
+}
+
 pub fn generate_payment_capture_response(
     router_data_v2: RouterDataV2<
         Capture,
@@ -2840,11 +3491,23 @@ pub fn generate_payment_capture_response(
     }
 }
 
-impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        PaymentServiceRegisterRequest,
+        Connectors,
+        String,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, environment): (PaymentServiceRegisterRequest, Connectors, String),
+        (value, connectors, environment, metadata): (
+            PaymentServiceRegisterRequest,
+            Connectors,
+            String,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match value.address {
             Some(address) => payment_address::PaymentAddress::foreign_try_from(address)?,
@@ -2862,8 +3525,40 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
             common_utils::consts::CONST_PRODUCTION => Some(false),
             _ => Some(true),
         };
+
+        let merchant_id_str = metadata
+            .get(common_utils::consts::X_MERCHANT_ID)
+            .ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing merchant ID in request metadata".to_owned(),
+                    error_object: None,
+                })
+            })?
+            .to_str()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                    error_object: None,
+                })
+            })?;
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
+            .map_err(|e| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: format!("Failed to parse merchant ID from header: {e}"),
+                    error_object: None,
+                })
+            })?;
+
         Ok(Self {
-            merchant_id: common_utils::id_type::MerchantId::default(),
+            merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
             attempt_id: "IRRELEVANT_ATTEMPT_ID".to_string(),
             status: common_enums::AttemptStatus::Pending,
@@ -3180,6 +3875,59 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
             ),
             raw_connector_response: None,
             connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        DisputeDefendRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            DisputeDefendRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: Some(value.dispute_id.clone()),
+            connectors,
+            connector_dispute_id: value.dispute_id,
+            defense_reason_code: Some(value.reason_code.unwrap_or_default()),
+            raw_connector_response: None,
+            connector_response_headers: None,
+        })
+    }
+}
+
+impl
+    ForeignTryFrom<(
+        DisputeDefendRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, _metadata): (
+            DisputeDefendRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(DisputeFlowData {
+            dispute_id: Some(value.dispute_id.clone()),
+            connectors,
+            connector_dispute_id: value.dispute_id,
+            defense_reason_code: Some(value.reason_code.unwrap_or_default()),
+            raw_connector_response: None,
         })
     }
 }

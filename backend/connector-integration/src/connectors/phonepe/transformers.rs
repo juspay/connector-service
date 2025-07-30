@@ -257,7 +257,16 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth: PhonepeAuthType = (&router_data.connector_auth_type).try_into()?;
+        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
+            &router_data.connector_auth_type,
+            Secret::new(
+                router_data
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ),
+        )?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = item
@@ -542,6 +551,26 @@ pub struct PhonepeAuthType {
     pub key_index: String,
 }
 
+impl PhonepeAuthType {
+    pub fn from_auth_type_and_merchant_id(
+        auth_type: &ConnectorAuthType,
+        merchant_id: Secret<String>,
+    ) -> Result<Self, Error> {
+        match auth_type {
+            ConnectorAuthType::SignatureKey {
+                api_key: _,
+                key1,
+                api_secret,
+            } => Ok(Self {
+                merchant_id,
+                salt_key: key1.clone(),
+                key_index: api_secret.peek().clone(), // Use api_secret for key index
+            }),
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
 impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
     type Error = Error;
 
@@ -630,7 +659,16 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth: PhonepeAuthType = (&router_data.connector_auth_type).try_into()?;
+        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
+            &router_data.connector_auth_type,
+            Secret::new(
+                router_data
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ),
+        )?;
 
         let merchant_transaction_id = router_data
             .request
@@ -705,7 +743,7 @@ impl
                             network_txn_id: Some(transaction_id.clone()),
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
-                            status_code: Some(item.http_code),
+                            status_code: None,
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),

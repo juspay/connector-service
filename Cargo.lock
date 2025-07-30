@@ -1243,6 +1243,7 @@ dependencies = [
  "strum",
  "thiserror 1.0.69",
  "time",
+ "tonic",
  "tracing",
  "url",
  "utoipa",
