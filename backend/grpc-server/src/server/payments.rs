@@ -160,6 +160,7 @@ impl Payments {
             &connector.to_string(),
             service_name,
             common_utils::dapr::FlowName::Authorize,
+            &self.config.events,
         )
         .await;
 
@@ -297,7 +298,8 @@ impl Payments {
             None,
             connector_name,
             service_name,
-            common_utils::dapr::FlowName::Authorize,
+            common_utils::dapr::FlowName::CreateOrder,
+            &self.config.events,
         )
         .await
         .map_err(
@@ -378,6 +380,7 @@ impl Payments {
             connector_name,
             service_name,
             common_utils::dapr::FlowName::SetupMandate,
+            &self.config.events,
         )
         .await
         .switch()
@@ -892,6 +895,7 @@ impl PaymentService for Payments {
                     &connector.to_string(),
                     &service_name,
                     common_utils::dapr::FlowName::SetupMandate,
+                    &self.config.events,
                 )
                 .await
                 .switch()
@@ -989,6 +993,7 @@ impl PaymentService for Payments {
                     &connector.to_string(),
                     &service_name,
                     common_utils::dapr::FlowName::Authorize,
+                    &self.config.events,
                 )
                 .await
                 .switch()

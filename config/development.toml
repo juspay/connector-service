@@ -37,3 +37,38 @@ fiuu.base_url = "https://sandbox.merchant.razer.com/"
 payu.base_url = "https://test.payu.in/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
 novalnet.base_url = "https://payport.novalnet.de/v2"
+
+# Generic Events Configuration
+[events]
+enabled = true
+pubsub_component = "kafka-pubsub"
+topic = "audit-trail-events"
+
+# Euler-compatible configuration (backward compatibility)
+[events.transformations]
+"udf_txn_uuid" = "transaction_id"
+"x-request-id" = "request_id"
+"gateway" = "connector"
+"action" = "flow_type"
+"entity" = "flow_type"
+"message.latency" = "latency"
+"message.request_time" = "timestamp"
+"message.res_code" = "status_code"
+"message.url" = "url"
+"message.stage" = "stage"
+
+[events.static_values]
+"hostname" = "connector-service"
+"schema_version" = "V2"
+"message_number" = "1"
+"category" = "OUTGOING_API"
+"error_code" = "null"
+"error_reason" = "null"
+"message.req_type" = "EXTERNAL"
+"message.log_type" = "API"
+
+[events.extractions]
+"message.req_body" = "request_data"
+"message.res_body" = "response_data"
+"message.req_headers" = "request_headers"
+"message.res_headers" = "response_headers"
