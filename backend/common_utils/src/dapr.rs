@@ -5,38 +5,71 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tracing::info;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AuditEvent {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenericEvent {
     pub timestamp: String,
-    pub hostname: String,
-    #[serde(rename = "x-request-id")]
-    pub x_request_id: String,
-    pub message_number: String,
-    pub message: Value,
-    pub action: String,
-    pub gateway: String,
-    pub category: String,
-    pub entity: String,
-    pub error_code: String,
-    pub error_reason: String,
-    pub schema_version: String,
-    pub udf_txn_uuid: String,
+    pub flow_type: String,
+    pub connector: String,
+    pub stage: String,
+    pub url: String,
+    pub request_id: Option<String>,
+    pub transaction_id: Option<String>,
+    pub latency: Option<u64>,
+    pub status_code: Option<u16>,
+    pub error_code: Option<String>,
+    pub error_reason: Option<String>,
+
+    #[serde(flatten)]
+    pub additional_fields: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OutgoingRequestMessage {
-    pub latency: Option<u64>,
-    pub request_time: String,
-    pub res_code: Option<u16>,
-    pub req_type: String,
-    pub url: String,
-    pub req_body: Option<Value>,
-    pub res_body: Option<Value>,
-    pub req_headers: Option<Value>,
-    pub res_headers: Option<Value>,
-    pub stage: String,
-    pub data: Option<Value>,
-    pub log_type: String,
+/// Configuration for the generic events system
+#[derive(Debug, Clone, Deserialize)]
+pub struct EventConfig {
+    pub enabled: bool,
+    pub pubsub_component: String,
+    pub topic: String,
+    #[serde(default)]
+    pub transformations: HashMap<String, String>, // target_path → source_field
+    #[serde(default)]
+    pub static_values: HashMap<String, String>, // target_path → static_value
+    #[serde(default)]
+    pub extractions: HashMap<String, String>, // target_path → extraction_path
+}
+
+impl Default for EventConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            pubsub_component: "kafka-pubsub".to_string(),
+            topic: "connector-events".to_string(),
+            transformations: HashMap::new(),
+            static_values: HashMap::new(),
+            extractions: HashMap::new(),
+        }
+    }
+}
+
+/// Context data available for event processing
+#[derive(Debug, Clone)]
+pub struct EventContext {
+    pub request_data: Option<serde_json::Value>,
+    pub response_data: Option<serde_json::Value>,
+    pub request_headers: Option<serde_json::Value>,
+    pub response_headers: Option<serde_json::Value>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+impl Default for EventContext {
+    fn default() -> Self {
+        Self {
+            request_data: None,
+            response_data: None,
+            request_headers: None,
+            response_headers: None,
+            metadata: None,
+        }
+    }
 }
 
 // Define FlowName enum locally to avoid circular dependency
@@ -230,41 +263,6 @@ pub async fn create_client() -> Result<Client<dapr::client::TonicClient>> {
     Ok(client)
 }
 
-pub async fn publish_event(event: AuditEvent) -> Result<()> {
-    info!("Request to publish audit event through Dapr SDK");
-    info!("Event details: {:?}", event);
-
-    let event_json = serde_json::to_string(&event)?;
-    let mut client = create_client().await?;
-
-    let pubsub_name =
-        std::env::var("DAPR_PUBSUB_NAME").unwrap_or_else(|_| "kafka-pubsub".to_string());
-    let topic = "audit-trail-events".to_string();
-    let content_type = "application/json".to_string();
-
-    let mut metadata = HashMap::<String, String>::new();
-    metadata.insert("action".to_string(), event.action.clone());
-    metadata.insert("category".to_string(), event.category.clone());
-    metadata.insert("gateway".to_string(), event.gateway.clone());
-
-    client
-        .publish_event(
-            &pubsub_name,
-            &topic,
-            &content_type,
-            event_json.into_bytes(),
-            Some(metadata),
-        )
-        .await
-        .context("Failed to publish audit event through Dapr SDK")?;
-
-    info!(
-        "Successfully published audit event to pubsub component: {}",
-        pubsub_name
-    );
-    Ok(())
-}
-
 #[derive(Debug, Clone)]
 pub struct ConnectorEventData {
     pub flow_name: FlowName,
@@ -283,49 +281,183 @@ pub struct ConnectorEventData {
     pub error_reason: Option<String>,
 }
 
-pub fn create_event_data(event_data: ConnectorEventData) -> AuditEvent {
+pub struct EventProcessor {
+    config: EventConfig,
+}
+
+impl EventProcessor {
+    pub fn new(config: EventConfig) -> Self {
+        Self { config }
+    }
+
+    pub fn process_event(
+        &self,
+        base_event: &GenericEvent,
+        context: &EventContext,
+    ) -> serde_json::Value {
+        let mut result = serde_json::json!({});
+
+        // 1. Apply transformations (field mappings)
+        for (target_path, source_field) in &self.config.transformations {
+            if let Some(value) = self.get_field_value(base_event, source_field) {
+                self.set_nested_value(&mut result, target_path, value);
+            }
+        }
+
+        // 2. Apply static values
+        for (target_path, static_value) in &self.config.static_values {
+            let value = serde_json::json!(static_value);
+            self.set_nested_value(&mut result, target_path, value);
+        }
+
+        // 3. Apply extractions
+        for (target_path, extraction_path) in &self.config.extractions {
+            if let Some(value) = self.extract_from_context(context, extraction_path) {
+                self.set_nested_value(&mut result, target_path, value);
+            }
+        }
+
+        result
+    }
+
+    /// Get a field value from the base event
+    fn get_field_value(&self, event: &GenericEvent, field_name: &str) -> Option<serde_json::Value> {
+        match field_name {
+            "timestamp" => Some(serde_json::json!(event.timestamp)),
+            "flow_type" => Some(serde_json::json!(event.flow_type)),
+            "connector" => Some(serde_json::json!(event.connector)),
+            "stage" => Some(serde_json::json!(event.stage)),
+            "url" => Some(serde_json::json!(event.url)),
+            "request_id" => event.request_id.as_ref().map(|v| serde_json::json!(v)),
+            "transaction_id" => event.transaction_id.as_ref().map(|v| serde_json::json!(v)),
+            "latency" => event.latency.map(|v| serde_json::json!(v)),
+            "status_code" => event.status_code.map(|v| serde_json::json!(v)),
+            "error_code" => event.error_code.as_ref().map(|v| serde_json::json!(v)),
+            "error_reason" => event.error_reason.as_ref().map(|v| serde_json::json!(v)),
+            _ => {
+                // Check additional fields
+                event.additional_fields.get(field_name).cloned()
+            }
+        }
+    }
+
+    /// Extract values from context using dot notation paths
+    fn extract_from_context(
+        &self,
+        context: &EventContext,
+        extraction_path: &str,
+    ) -> Option<serde_json::Value> {
+        let path_parts: Vec<&str> = extraction_path.split('.').collect();
+        if path_parts.is_empty() {
+            return None;
+        }
+
+        let source = match path_parts[0] {
+            "request_data" => context.request_data.as_ref()?,
+            "response_data" => context.response_data.as_ref()?,
+            "request_headers" => context.request_headers.as_ref()?,
+            "response_headers" => context.response_headers.as_ref()?,
+            "metadata" => context.metadata.as_ref()?,
+            _ => return None,
+        };
+
+        let mut current = source;
+        for part in &path_parts[1..] {
+            current = current.get(part)?;
+        }
+
+        Some(current.clone())
+    }
+
+    fn set_nested_value(
+        &self,
+        target: &mut serde_json::Value,
+        path: &str,
+        value: serde_json::Value,
+    ) {
+        let path_parts: Vec<&str> = path.split('.').collect();
+
+        if path_parts.len() == 1 {
+            target[path_parts[0]] = value;
+            return;
+        }
+
+        let mut current = target;
+        for (i, part) in path_parts.iter().enumerate() {
+            if i == path_parts.len() - 1 {
+                current[*part] = value;
+                break;
+            } else {
+                if !current[*part].is_object() {
+                    current[*part] = serde_json::json!({});
+                }
+                current = &mut current[*part];
+            }
+        }
+    }
+}
+
+pub async fn publish_to_dapr(
+    event: serde_json::Value,
+    pubsub_component: &str,
+    topic: &str,
+) -> Result<()> {
+    info!(
+        "Publishing generic event to Dapr: component={}, topic={}",
+        pubsub_component, topic
+    );
+
+    let event_json = serde_json::to_string(&event)?;
+    let mut client = create_client().await?;
+
+    let content_type = "application/json".to_string();
+    let metadata = HashMap::<String, String>::new();
+
+    client
+        .publish_event(
+            pubsub_component,
+            topic,
+            &content_type,
+            event_json.into_bytes(),
+            Some(metadata),
+        )
+        .await
+        .context("Failed to publish generic event through Dapr SDK")?;
+
+    info!(
+        "Successfully published generic event to pubsub component: {}",
+        pubsub_component
+    );
+    Ok(())
+}
+
+pub fn create_generic_event_from_legacy(event_data: &ConnectorEventData) -> GenericEvent {
     let now = chrono::Utc::now();
     let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
-    let request_time = now.to_rfc3339();
 
-    let hostname = "connector-service".to_string();
-
-    let message_number = "1".to_string();
-    let api_tag = event_data.flow_name.to_api_tag();
-
-    let outgoing_message = OutgoingRequestMessage {
-        latency: event_data.latency,
-        request_time,
-        res_code: event_data.res_code,
-        req_type: "EXTERNAL".to_string(),
-        url: event_data.url.clone(),
-        req_body: event_data.req_body,
-        res_body: event_data.res_body,
-        req_headers: event_data.req_headers,
-        res_headers: event_data.res_headers,
-        stage: event_data.stage.as_str().to_string(),
-        data: None,
-        log_type: "API_CALL".to_string(),
-    };
-
-    let message = serde_json::to_value(outgoing_message).unwrap_or_else(|_| serde_json::json!({}));
-
-    AuditEvent {
+    GenericEvent {
         timestamp,
-        hostname,
-        x_request_id: event_data.request_id.unwrap_or_else(|| "null".to_string()),
-        message_number,
-        message,
-        action: api_tag.as_str().to_string(),
-        gateway: event_data.connector.to_uppercase(),
-        category: "OUTGOING_API".to_string(),
-        entity: api_tag.as_str().to_string(),
-        error_code: event_data.error_code.unwrap_or_else(|| "null".to_string()),
-        error_reason: event_data
-            .error_reason
-            .unwrap_or_else(|| "null".to_string()),
-        schema_version: "V2".to_string(),
-        udf_txn_uuid: event_data.txn_uuid.unwrap_or_else(|| "null".to_string()),
+        flow_type: event_data.flow_name.to_api_tag().as_str().to_string(),
+        connector: event_data.connector.clone(),
+        stage: event_data.stage.as_str().to_string(),
+        url: event_data.url.clone(),
+        request_id: event_data.request_id.clone(),
+        transaction_id: event_data.txn_uuid.clone(),
+        latency: event_data.latency,
+        status_code: event_data.res_code,
+        error_code: event_data.error_code.clone(),
+        error_reason: event_data.error_reason.clone(),
+        additional_fields: HashMap::new(),
+    }
+}
+
+pub fn create_event_context_from_legacy(event_data: &ConnectorEventData) -> EventContext {
+    EventContext {
+        request_data: event_data.req_body.clone(),
+        response_data: event_data.res_body.clone(),
+        request_headers: event_data.req_headers.clone(),
+        response_headers: event_data.res_headers.clone(),
+        metadata: None,
     }
 }
 
@@ -363,6 +495,56 @@ pub async fn emit_event(
         error_reason,
     };
 
-    let audit_event = create_event_data(event_data);
-    publish_event(audit_event).await
+    let generic_event = create_generic_event_from_legacy(&event_data);
+    let context = create_event_context_from_legacy(&event_data);
+
+    let config = EventConfig {
+        enabled: true,
+        pubsub_component: "kafka-pubsub".to_string(),
+        topic: "audit-trail-events".to_string(),
+        transformations: [
+            ("gateway".to_string(), "connector".to_string()),
+            ("udf_txn_uuid".to_string(), "transaction_id".to_string()),
+            ("x-request-id".to_string(), "request_id".to_string()),
+        ]
+        .into_iter()
+        .collect(),
+        static_values: [
+            ("hostname".to_string(), "connector-service".to_string()),
+            ("schema_version".to_string(), "V2".to_string()),
+            ("category".to_string(), "OUTGOING_API".to_string()),
+        ]
+        .into_iter()
+        .collect(),
+        extractions: [
+            ("message.req_body".to_string(), "request_data".to_string()),
+            ("message.res_body".to_string(), "response_data".to_string()),
+        ]
+        .into_iter()
+        .collect(),
+    };
+
+    if !config.enabled {
+        return Ok(());
+    }
+
+    let processor = EventProcessor::new(config.clone());
+    let processed_event = processor.process_event(&generic_event, &context);
+
+    publish_to_dapr(processed_event, &config.pubsub_component, &config.topic).await
+}
+
+pub async fn emit_event_with_config(
+    base_event: GenericEvent,
+    context: EventContext,
+    config: &EventConfig,
+) -> Result<()> {
+    if !config.enabled {
+        return Ok(());
+    }
+
+    let processor = EventProcessor::new(config.clone());
+    let processed_event = processor.process_event(&base_event, &context);
+
+    publish_to_dapr(processed_event, &config.pubsub_component, &config.topic).await
 }

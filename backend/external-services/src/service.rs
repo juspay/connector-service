@@ -37,7 +37,9 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use common_utils::dapr::{emit_event, EventStage};
+use common_utils::dapr::{
+    emit_event_with_config, EventConfig, EventContext, EventStage, GenericEvent,
+};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -75,6 +77,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     connector_name: &str,
     service_name: &str,
     flow_name: common_utils::dapr::FlowName,
+    event_config: &EventConfig,
 ) -> CustomResult<
     RouterDataV2<F, ResourceCommonData, Req, Resp>,
     domain_types::errors::ConnectorError,
@@ -129,6 +132,7 @@ where
 
         masked_request
     });
+
     let result = match connector_request {
         Some(request) => {
             let ref_id = Some(
@@ -192,39 +196,57 @@ where
                         let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
                         let status_code = body.status_code;
 
-                        // Emit success response event
+                        // Emit generic event
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
                         let ref_id_for_event = ref_id.clone();
                         let final_connector_txn_id = connector_txn_id.or(Some(ref_id.clone()));
+                        let event_config_clone = event_config.clone();
 
+                        let req_clone = req.clone();
                         tokio::spawn(async move {
-                            let result = emit_event(
-                                flow_name_clone,
-                                &connector_name_clone,
-                                EventStage::ResponseReceived,
-                                &url_clone,
-                                Some(ref_id_for_event),
-                                final_connector_txn_id,
-                                None,
-                                res_body,
-                                None,
-                                res_headers,
-                                Some(latency),
-                                Some(status_code),
-                                None,
-                                None,
+                            // Create generic event
+                            let now = chrono::Utc::now();
+                            let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
+
+                            let generic_event = GenericEvent {
+                                timestamp,
+                                flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
+                                connector: connector_name_clone.clone(),
+                                stage: EventStage::ResponseReceived.as_str().to_string(),
+                                url: url_clone,
+                                request_id: Some(ref_id_for_event),
+                                transaction_id: final_connector_txn_id,
+                                latency: Some(latency),
+                                status_code: Some(status_code),
+                                error_code: None,
+                                error_reason: None,
+                                additional_fields: std::collections::HashMap::new(),
+                            };
+
+                            let event_context = EventContext {
+                                request_data: req_clone,
+                                response_data: res_body,
+                                request_headers: None, // Could be added if needed
+                                response_headers: res_headers,
+                                metadata: None,
+                            };
+
+                            let result = emit_event_with_config(
+                                generic_event,
+                                event_context,
+                                &event_config_clone,
                             )
                             .await;
 
                             match result {
                                 Ok(_) => tracing::info!(
-                                    "Successfully published outgoing response event for {}",
+                                    "Successfully published generic outgoing response event for {}",
                                     connector_name_clone
                                 ),
                                 Err(e) => tracing::error!(
-                                    "Failed to publish outgoing response event: {:?}",
+                                    "Failed to publish generic outgoing response event: {:?}",
                                     e
                                 ),
                             }
@@ -272,39 +294,57 @@ where
                             None
                         };
 
-                        // Emit error response event
+                        // Emit generic error event
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
                         let ref_id_for_event = ref_id.clone();
                         let ref_id_clone = ref_id.clone();
+                        let event_config_clone = event_config.clone();
+                        let req_clone = req.clone();
 
                         tokio::spawn(async move {
-                            let result = emit_event(
-                                flow_name_clone,
-                                &connector_name_clone,
-                                EventStage::Error,
-                                &url_clone,
-                                Some(ref_id_for_event),
-                                Some(ref_id_clone),
-                                None,
-                                error_res_body,
-                                None,
-                                res_headers,
-                                Some(latency),
-                                Some(status_code),
+                            // Create generic event
+                            let now = chrono::Utc::now();
+                            let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
+
+                            let generic_event = GenericEvent {
+                                timestamp,
+                                flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
+                                connector: connector_name_clone.clone(),
+                                stage: EventStage::Error.as_str().to_string(),
+                                url: url_clone,
+                                request_id: Some(ref_id_for_event),
+                                transaction_id: Some(ref_id_clone),
+                                latency: Some(latency),
+                                status_code: Some(status_code),
                                 error_code,
                                 error_reason,
+                                additional_fields: std::collections::HashMap::new(),
+                            };
+
+                            let event_context = EventContext {
+                                request_data: req_clone,
+                                response_data: error_res_body,
+                                request_headers: None,
+                                response_headers: res_headers,
+                                metadata: None,
+                            };
+
+                            let result = emit_event_with_config(
+                                generic_event,
+                                event_context,
+                                &event_config_clone,
                             )
                             .await;
 
                             match result {
                                 Ok(_) => tracing::info!(
-                                    "Successfully published outgoing error response event for {}",
+                                    "Successfully published generic outgoing error response event for {}",
                                     connector_name_clone
                                 ),
                                 Err(e) => tracing::error!(
-                                    "Failed to publish outgoing error response event: {:?}",
+                                    "Failed to publish generic outgoing error response event: {:?}",
                                     e
                                 ),
                             }
@@ -317,7 +357,7 @@ where
                             network_error
                         );
 
-                        // Emit network error event
+                        // Emit generic network error event
                         let connector_name_clone = connector_name.to_string();
                         let url_clone = url.clone();
                         let flow_name_clone = flow_name;
@@ -325,33 +365,51 @@ where
                         let ref_id_clone = ref_id.clone();
                         let error_message =
                             format!("Failed to get response from connector: {network_error:?}");
+                        let event_config_clone = event_config.clone();
+                        let req_clone = req.clone();
 
                         tokio::spawn(async move {
-                            let result = emit_event(
-                                flow_name_clone,
-                                &connector_name_clone,
-                                EventStage::Error,
-                                &url_clone,
-                                Some(ref_id_for_event),
-                                Some(ref_id_clone),
-                                None,
-                                None,
-                                None,
-                                None,
-                                None,
-                                None,
-                                Some("NETWORK_ERROR".to_string()),
-                                Some(error_message),
+                            // Create generic event
+                            let now = chrono::Utc::now();
+                            let timestamp = now.format("%Y-%m-%d %H:%M:%S%.3f").to_string();
+
+                            let generic_event = GenericEvent {
+                                timestamp,
+                                flow_type: flow_name_clone.to_api_tag().as_str().to_string(),
+                                connector: connector_name_clone.clone(),
+                                stage: EventStage::Error.as_str().to_string(),
+                                url: url_clone,
+                                request_id: Some(ref_id_for_event),
+                                transaction_id: Some(ref_id_clone),
+                                latency: None,
+                                status_code: None,
+                                error_code: Some("NETWORK_ERROR".to_string()),
+                                error_reason: Some(error_message),
+                                additional_fields: std::collections::HashMap::new(),
+                            };
+
+                            let event_context = EventContext {
+                                request_data: req_clone,
+                                response_data: None,
+                                request_headers: None,
+                                response_headers: None,
+                                metadata: None,
+                            };
+
+                            let result = emit_event_with_config(
+                                generic_event,
+                                event_context,
+                                &event_config_clone,
                             )
                             .await;
 
                             match result {
                                 Ok(_) => tracing::info!(
-                                    "Successfully published outgoing network error event for {}",
+                                    "Successfully published generic outgoing network error event for {}",
                                     connector_name_clone
                                 ),
                                 Err(e) => tracing::error!(
-                                    "Failed to publish outgoing network error event: {:?}",
+                                    "Failed to publish generic outgoing network error event: {:?}",
                                     e
                                 ),
                             }
