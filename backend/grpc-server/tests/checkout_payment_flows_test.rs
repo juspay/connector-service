@@ -7,7 +7,9 @@ use grpc_server::{app, configs};
 mod common;
 
 use std::{
-    env, str::FromStr, time::{SystemTime, UNIX_EPOCH}
+    env,
+    str::FromStr,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use grpc_api_types::{

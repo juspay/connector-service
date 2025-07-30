@@ -7,7 +7,10 @@ use grpc_server::{app, configs};
 mod common;
 
 use std::{
-    collections::HashMap, env, str::FromStr, time::{SystemTime, UNIX_EPOCH}
+    collections::HashMap,
+    env,
+    str::FromStr,
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use grpc_api_types::{
