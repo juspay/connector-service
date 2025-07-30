@@ -434,19 +434,36 @@ pub enum RegulatedName {
 }
 
 impl Currency {
+    /// Converts an amount in minor currency units to a formatted base unit string.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurrencyError::UnsupportedCurrency` if the currency is not supported.
     pub fn to_currency_base_unit(self, amount: i64) -> Result<String, CurrencyError> {
         let amount_f64 = self.to_currency_base_unit_asf64(amount)?;
         Ok(format!("{amount_f64:.2}"))
     }
 
+    /// Converts an amount in minor currency units to a base unit as f64.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurrencyError::UnsupportedCurrency` if the currency is not supported.
     pub fn to_currency_base_unit_asf64(self, amount: i64) -> Result<f64, CurrencyError> {
         let exponent = self.number_of_digits_after_decimal_point()?;
         let divisor = 10_u32.pow(exponent.into());
+        #[allow(clippy::cast_precision_loss)]
         let amount_f64 = amount as f64 / f64::from(divisor);
         Ok(amount_f64)
     }
 
-    pub fn to_currency_lower_unit(self, amount: String) -> Result<String, CurrencyError> {
+    /// Converts an amount in base currency units to minor units.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurrencyError::UnsupportedCurrency` if the currency is not supported
+    /// or if the amount format is invalid.
+    pub fn to_currency_lower_unit(self, amount: &str) -> Result<String, CurrencyError> {
         let amount_decimal =
             amount
                 .parse::<f64>()
@@ -459,6 +476,11 @@ impl Currency {
         Ok(final_amount.to_string())
     }
 
+    /// Converts an amount to base unit string with special handling for zero-decimal currencies.
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurrencyError::UnsupportedCurrency` if the currency is not supported.
     pub fn to_currency_base_unit_with_zero_decimal_check(
         self,
         amount: i64,
@@ -470,7 +492,10 @@ impl Currency {
         }
     }
 
-    pub fn iso_4217(self) -> &'static str {
+    /// Returns the ISO 4217 numeric code for this currency.
+    #[must_use]
+    #[allow(clippy::too_many_lines)]
+    pub const fn iso_4217(self) -> &'static str {
         match self {
             Self::AED => "784",
             Self::AFN => "971",
@@ -635,7 +660,8 @@ impl Currency {
         }
     }
 
-    pub fn is_zero_decimal_currency(self) -> bool {
+    #[must_use]
+    pub const fn is_zero_decimal_currency(self) -> bool {
         matches!(
             self,
             Self::BIF
@@ -657,14 +683,16 @@ impl Currency {
         )
     }
 
-    pub fn is_three_decimal_currency(self) -> bool {
+    #[must_use]
+    pub const fn is_three_decimal_currency(self) -> bool {
         matches!(
             self,
             Self::BHD | Self::JOD | Self::KWD | Self::OMR | Self::TND
         )
     }
 
-    pub fn is_four_decimal_currency(self) -> bool {
+    #[must_use]
+    pub const fn is_four_decimal_currency(self) -> bool {
         matches!(self, Self::CLF)
     }
 
@@ -673,6 +701,10 @@ impl Currency {
     /// **Reference**: <https://www.iso.org/iso-4217-currency-codes.html>
     ///
     /// **To add new currency**: Add to appropriate method (`is_zero_decimal_currency`, `is_two_decimal_currency`, etc.)
+    ///
+    /// # Errors
+    ///
+    /// Returns `CurrencyError::UnsupportedCurrency` if the currency is not supported.
     pub fn number_of_digits_after_decimal_point(self) -> Result<u8, CurrencyError> {
         if self.is_zero_decimal_currency() {
             Ok(0)
@@ -691,7 +723,9 @@ impl Currency {
 
     /// Checks if the currency uses 2 decimal places (most common case).
     /// This replaces the implicit default fallback with explicit validation.
-    pub fn is_two_decimal_currency(self) -> bool {
+    #[must_use]
+    #[allow(clippy::too_many_lines)]
+    pub const fn is_two_decimal_currency(self) -> bool {
         matches!(
             self,
             Self::AED
@@ -923,7 +957,7 @@ pub enum PaymentExperience {
     CollectOtp,
 }
 
-/// Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay' for wallets.
+/// Indicates the sub type of payment method. Eg: `google_pay` & `apple_pay` for wallets.
 #[derive(
     Clone,
     Copy,
@@ -1049,10 +1083,12 @@ pub enum PaymentMethodType {
 }
 
 impl PaymentMethodType {
-    pub fn should_check_for_customer_saved_payment_method_type(self) -> bool {
+    #[must_use]
+    pub const fn should_check_for_customer_saved_payment_method_type(self) -> bool {
         matches!(self, Self::Credit | Self::Debit)
     }
 
+    #[must_use]
     pub fn to_display_name(&self) -> String {
         match self {
             Self::ApplePay => "Apple Pay".to_string(),
@@ -1189,7 +1225,8 @@ impl TryFrom<u32> for AttemptStatus {
 }
 
 impl AttemptStatus {
-    pub fn is_terminal_status(self) -> bool {
+    #[must_use]
+    pub const fn is_terminal_status(self) -> bool {
         matches!(
             self,
             Self::Charged
@@ -1309,7 +1346,8 @@ pub enum CardNetwork {
 }
 
 impl CardNetwork {
-    pub fn is_global_network(&self) -> bool {
+    #[must_use]
+    pub const fn is_global_network(&self) -> bool {
         matches!(
             self,
             Self::Visa
@@ -1323,7 +1361,8 @@ impl CardNetwork {
         )
     }
 
-    pub fn is_us_local_network(&self) -> bool {
+    #[must_use]
+    pub const fn is_us_local_network(&self) -> bool {
         matches!(self, Self::Star | Self::Pulse | Self::Accel | Self::Nyce)
     }
 }
@@ -1456,7 +1495,7 @@ pub enum CountryAlpha2 {
     US
 }
 
-#[derive(Debug, thiserror::Error, PartialEq, Clone)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq, Clone)]
 pub enum ApiClientError {
     #[error("Header map construction failed")]
     HeaderMapConstructionFailed,
@@ -1498,9 +1537,11 @@ pub enum ApiClientError {
     UnexpectedServerResponse,
 }
 impl ApiClientError {
+    #[must_use]
     pub fn is_upstream_timeout(&self) -> bool {
         self == &Self::RequestTimeoutReceived
     }
+    #[must_use]
     pub fn is_connection_closed_before_message_could_complete(&self) -> bool {
         self == &Self::ConnectionClosedIncompleteMessage
     }
@@ -1547,7 +1588,7 @@ pub enum ProcessTrackerRunner {
 )]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
-/// RoutableConnectors are the subset of Connectors that are eligible for payments routing
+/// `RoutableConnectors` are the subset of Connectors that are eligible for payments routing
 pub enum RoutableConnectors {
     Adyenplatform,
     Aci,
@@ -1674,7 +1715,7 @@ pub enum TransactionStatus {
     #[default]
     #[serde(rename = "N")]
     Failure,
-    /// Authentication/ Account Verification Could Not Be Performed; Technical or other problem, as indicated in Authentication Response(ARes) or Result Request (RReq)
+    /// Authentication/ Account Verification Could Not Be Performed; Technical or other problem, as indicated in Authentication Response(ARes) or Result Request (`RReq`)
     #[serde(rename = "U")]
     VerificationNotPerformed,
     /// Attempts Processing Performed; Not Authenticated/Verified , but a proof of attempted authentication/verification is provided
@@ -1683,7 +1724,7 @@ pub enum TransactionStatus {
     /// Authentication/ Account Verification Rejected; Issuer is rejecting authentication/verification and request that authorisation not be attempted.
     #[serde(rename = "R")]
     Rejected,
-    /// Challenge Required; Additional authentication is required using the Challenge Request (CReq) / Challenge Response (CRes)
+    /// Challenge Required; Additional authentication is required using the Challenge Request (`CReq`) / Challenge Response (`CRes`)
     #[serde(rename = "C")]
     ChallengeRequired,
     /// Challenge Required; Decoupled Authentication confirmed.
