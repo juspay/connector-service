@@ -25,7 +25,12 @@ use crate::{configs, error::ConfigurationError, logger, utils};
 pub async fn server_builder(config: configs::Config) -> Result<(), ConfigurationError> {
     logger::info!("Checking Dapr connectivity...");
 
-    match dapr::create_client().await {
+    let dapr_client_config = dapr::DaprConfig {
+        host: config.dapr.host.clone(),
+        grpc_port: config.dapr.grpc_port,
+    };
+
+    match dapr::create_client(&dapr_client_config).await {
         Ok(_) => logger::info!("Dapr connection test successful"),
         Err(e) => logger::warn!(
             "Failed to connect to Dapr: {:?}. Events might not be published to Kafka.",

@@ -5,6 +5,9 @@ use std::collections::HashMap;
 use tracing::info;
 use uuid::Uuid;
 
+use crate::pii::SecretSerdeValue;
+use hyperswitch_masking::ExposeInterface;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub event_uuid: String,
@@ -16,11 +19,11 @@ pub struct Event {
     pub status_code: Option<u16>,
     pub error_code: Option<String>,
     pub error_reason: Option<String>,
-    pub request_data: Option<serde_json::Value>,
-    pub response_data: Option<serde_json::Value>,
+    pub request_data: Option<SecretSerdeValue>,
+    pub response_data: Option<SecretSerdeValue>,
 
     #[serde(flatten)]
-    pub additional_fields: HashMap<String, serde_json::Value>,
+    pub additional_fields: HashMap<String, SecretSerdeValue>,
 }
 
 impl Event {
@@ -40,9 +43,9 @@ impl Event {
         status_code: Option<u16>,
         error_code: Option<String>,
         error_reason: Option<String>,
-        request_data: Option<serde_json::Value>,
-        response_data: Option<serde_json::Value>,
-        additional_fields: HashMap<String, serde_json::Value>,
+        request_data: Option<SecretSerdeValue>,
+        response_data: Option<SecretSerdeValue>,
+        additional_fields: HashMap<String, SecretSerdeValue>,
     ) -> Self {
         Self {
             event_uuid,
@@ -67,6 +70,7 @@ pub struct EventConfig {
     pub enabled: bool,
     pub pubsub_component: String,
     pub topic: String,
+    pub dapr: DaprConfig,
     #[serde(default)]
     pub transformations: HashMap<String, String>, // target_path → source_field
     #[serde(default)]
@@ -80,7 +84,8 @@ impl Default for EventConfig {
         Self {
             enabled: false,
             pubsub_component: "kafka-pubsub".to_string(),
-            topic: "connector-events".to_string(),
+            topic: "events".to_string(),
+            dapr: DaprConfig::default(),
             transformations: HashMap::new(),
             static_values: HashMap::new(),
             extractions: HashMap::new(),
@@ -149,10 +154,24 @@ impl EventStage {
     }
 }
 
-/// Create a Dapr client connection
-pub async fn create_client() -> Result<Client<dapr::client::TonicClient>> {
-    let dapr_port = std::env::var("DAPR_GRPC_PORT").unwrap_or_else(|_| "50001".to_string());
-    let addr = format!("http://localhost:{dapr_port}");
+#[derive(Debug, Clone, Deserialize)]
+pub struct DaprConfig {
+    pub host: String,
+    pub grpc_port: u16,
+}
+
+impl Default for DaprConfig {
+    fn default() -> Self {
+        Self {
+            host: "127.0.0.1".to_string(),
+            grpc_port: 50001,
+        }
+    }
+}
+
+/// Create a Dapr client connection using configuration
+pub async fn create_client(config: &DaprConfig) -> Result<Client<dapr::client::TonicClient>> {
+    let addr = format!("http://{}:{}", config.host, config.grpc_port);
 
     info!("Connecting to Dapr sidecar at: {}", addr);
 
@@ -211,11 +230,20 @@ impl EventProcessor {
             "status_code" => event.status_code.map(|v| serde_json::json!(v)),
             "error_code" => event.error_code.as_ref().map(|v| serde_json::json!(v)),
             "error_reason" => event.error_reason.as_ref().map(|v| serde_json::json!(v)),
-            "request_data" => event.request_data.clone(),
-            "response_data" => event.response_data.clone(),
+            "request_data" => event
+                .request_data
+                .as_ref()
+                .map(|secret| secret.clone().expose().clone()),
+            "response_data" => event
+                .response_data
+                .as_ref()
+                .map(|secret| secret.clone().expose().clone()),
             _ => {
                 // Check additional fields
-                event.additional_fields.get(field_name).cloned()
+                event
+                    .additional_fields
+                    .get(field_name)
+                    .map(|secret| secret.clone().expose().clone())
             }
         }
     }
@@ -282,6 +310,7 @@ async fn publish_to_dapr(
     event: serde_json::Value,
     pubsub_component: &str,
     topic: &str,
+    dapr_config: &DaprConfig,
 ) -> Result<()> {
     info!(
         "Publishing event to Dapr: component={}, topic={}",
@@ -289,7 +318,7 @@ async fn publish_to_dapr(
     );
 
     let event_json = serde_json::to_string(&event)?;
-    let mut client = create_client().await?;
+    let mut client = create_client(dapr_config).await?;
 
     let content_type = "application/json".to_string();
     let metadata = HashMap::<String, String>::new();
@@ -324,5 +353,11 @@ pub async fn emit_event_with_config(
     let processor = EventProcessor::new(config.clone());
     let processed_event = processor.process_event(&base_event, &context);
 
-    publish_to_dapr(processed_event, &config.pubsub_component, &config.topic).await
+    publish_to_dapr(
+        processed_event,
+        &config.pubsub_component,
+        &config.topic,
+        &config.dapr,
+    )
+    .await
 }

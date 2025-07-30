@@ -72,3 +72,8 @@ topic = "audit-trail-events"
 "udf_txn_uuid" = "req.metadata.udf_txn_uuid"
 "x-request-id" = "req.metadata.x-request-id"
 "message.req_body" = "req"
+
+# DAPR Configuration
+[dapr]
+host = "127.0.0.1"
+grpc_port = 50001
