@@ -59,13 +59,19 @@ mod tests {
             Currency::VND,
         ];
 
+        let mut failed_currencies = Vec::new();
+
         for currency in currencies {
             let result = converter.convert(amount, currency);
-            assert!(
-                result.is_ok(),
-                "Currency {currency:?} should be supported and conversion should succeed"
-            );
+            if result.is_err() {
+                failed_currencies.push(currency);
+            }
         }
+
+        assert!(
+            failed_currencies.is_empty(),
+            "The following currencies failed conversion: {failed_currencies:?}"
+        );
     }
 
     #[test]
@@ -85,19 +91,26 @@ mod tests {
             (MinorUnit::new(12345), Currency::CLF, "1.2345"),
         ];
 
+        let mut failed_test_cases = Vec::new();
+
         for (amount, currency, expected) in test_cases {
             let result = converter.convert(amount, currency);
-            assert!(
-                result.is_ok(),
-                "Conversion should succeed for {currency:?} with amount {amount}"
-            );
-            let converted = result.unwrap();
-            assert_eq!(
-                converted.get_amount_as_string(),
-                expected,
-                "Amount {amount} with currency {currency:?} should convert to {expected}, got {}",
-                converted.get_amount_as_string()
-            );
+            match result {
+                Ok(converted) => {
+                    let actual = converted.get_amount_as_string();
+                    if actual != expected {
+                        failed_test_cases.push((amount, currency, expected, actual));
+                    }
+                }
+                Err(_) => {
+                    failed_test_cases.push((amount, currency, expected, "ERROR".to_string()));
+                }
+            }
         }
+
+        assert!(
+            failed_test_cases.is_empty(),
+            "The following test cases failed: {failed_test_cases:?}"
+        );
     }
 }

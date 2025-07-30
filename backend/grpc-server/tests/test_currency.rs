@@ -149,15 +149,24 @@ mod tests {
             Currency::RUB,
         ];
 
+        let mut failed_currencies = Vec::new();
+
         for currency in test_currencies {
             tested_currencies += 1;
             match currency.number_of_digits_after_decimal_point() {
                 Ok(_) => successful_classifications += 1,
                 Err(_) => {
+                    failed_currencies.push(currency);
                     println!("❌ Currency {currency:?} not properly classified");
                 }
             }
         }
+
+        // Fail the test if any currencies failed
+        assert!(
+            failed_currencies.is_empty(),
+            "The following currencies are not properly classified: {failed_currencies:?}"
+        );
 
         println!("✅ Tested {tested_currencies} currencies, {successful_classifications} successful classifications");
         assert_eq!(
