@@ -89,15 +89,9 @@ impl Default for EventConfig {
 }
 
 /// Context data available for event processing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct EventContext {
     pub request_data: Option<serde_json::Value>,
-}
-
-impl Default for EventContext {
-    fn default() -> Self {
-        Self { request_data: None }
-    }
 }
 
 // Define FlowName enum locally to avoid circular dependency
