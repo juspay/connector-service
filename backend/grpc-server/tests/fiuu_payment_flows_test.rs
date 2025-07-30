@@ -2,12 +2,12 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
+use cards::CardNumber;
 use grpc_server::{app, configs};
 mod common;
 
 use std::{
-    env,
-    time::{SystemTime, UNIX_EPOCH},
+    env, str::FromStr, time::{SystemTime, UNIX_EPOCH}
 };
 
 use grpc_api_types::{
@@ -115,7 +115,7 @@ fn extract_refund_id(response: &RefundResponse) -> &String {
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
         card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
         card_cvc: TEST_CARD_CVC.to_string(),

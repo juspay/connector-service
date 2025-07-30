@@ -2,13 +2,12 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
+use cards::CardNumber;
 use grpc_server::{app, configs};
 mod common;
 
 use std::{
-    collections::HashMap,
-    env,
-    time::{SystemTime, UNIX_EPOCH},
+    collections::HashMap, env, str::FromStr, time::{SystemTime, UNIX_EPOCH}
 };
 
 use base64::{engine::general_purpose, Engine};
@@ -141,7 +140,7 @@ fn create_payment_authorize_request(
     metadata.insert("connector_meta_data".to_string(), connector_metadata_json);
 
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
         card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
         card_cvc: TEST_CARD_CVC.to_string(),

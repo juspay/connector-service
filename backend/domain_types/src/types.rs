@@ -133,14 +133,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                     match card_type.card_type {
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => {
                             let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
+                            let card_number = card.card_number.ok_or(
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_CARD_NUMBER".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Invalid card number".to_owned(),
+                                    error_object: None,
+                                })
+                            )?;
                             Ok(PaymentMethodData::Card(crate::payment_method_data::Card {
-                                card_number: cards::CardNumber::from_str(&card.card_number)
-                                    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid card number".to_owned(),
-                                        error_object: None,
-                                    }))?,
+                                card_number,
                                 card_exp_month: card.card_exp_month.into(),
                                 card_exp_year: card.card_exp_year.into(),
                                 card_cvc: card.card_cvc.into(),
@@ -156,14 +158,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => {
                             let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
+                            let card_number = card.card_number.ok_or(
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "INVALID_CARD_NUMBER".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Invalid card number".to_owned(),
+                                    error_object: None,
+                                })
+                            )?;
                             Ok(PaymentMethodData::Card(crate::payment_method_data::Card {
-                                card_number: cards::CardNumber::from_str(&card.card_number)
-                                    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid card number".to_owned(),
-                                        error_object: None,
-                                    }))?,
+                                card_number,
                                 card_exp_month: card.card_exp_month.into(),
                                 card_exp_year: card.card_exp_year.into(),
                                 card_cvc: card.card_cvc.into(),
