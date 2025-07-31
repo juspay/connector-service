@@ -12,7 +12,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -24,9 +24,9 @@ use crate::{connectors::fiserv::FiservRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct FiservPaymentsRequest {
+pub struct FiservPaymentsRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
     pub amount: Amount,
-    pub source: Source,
+    pub source: Source<T>,
     pub transaction_details: TransactionDetails,
     pub merchant_details: MerchantDetails,
     pub transaction_interaction: TransactionInteraction,
@@ -34,9 +34,9 @@ pub struct FiservPaymentsRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "sourceType")]
-pub enum Source {
+pub enum Source<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
     PaymentCard {
-        card: CardData,
+        card: CardData<T>,
     },
     #[allow(dead_code)]
     GooglePay {
@@ -48,8 +48,8 @@ pub enum Source {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CardData {
-    pub card_data: cards::CardNumber,
+pub struct CardData<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+    pub card_data: RawCardNumber<T>,
     pub expiration_month: Secret<String>,
     pub expiration_year: Secret<String>,
     pub security_code: Secret<String>,
@@ -344,17 +344,19 @@ pub struct FiservRefundSyncRequest {
 }
 
 // Implementations for FiservRouterData - needed for the macro framework
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         FiservRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
-    > for FiservPaymentsRequest
+    > for FiservPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -443,10 +445,11 @@ impl
     }
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         FiservRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T
         >,
     > for FiservCaptureRequest
 {
@@ -454,6 +457,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -538,10 +542,11 @@ impl
     }
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         FiservRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T
         >,
     > for FiservSyncRequest
 {
@@ -549,6 +554,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -570,10 +576,11 @@ impl
 }
 
 // Implementation for the Void request
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         FiservRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T
         >,
     > for FiservVoidRequest
 {
@@ -581,6 +588,7 @@ impl
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -635,15 +643,16 @@ impl
 }
 
 // Implementation for the Refund request
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
-        FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        FiservRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for FiservRefundRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -702,15 +711,16 @@ impl
 }
 
 // Implementation for the RefundSync request
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
-        FiservRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        FiservRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     > for FiservRefundSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiservRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -730,8 +740,8 @@ impl
 // Response handling TryFrom implementations for macro framework
 
 // Standard payment response handling for Authorize flow
-impl<F> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<ResponseRouterData<FiservPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
 
