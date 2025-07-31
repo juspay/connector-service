@@ -135,48 +135,58 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
-/// Extract the base URL from a full URL
-/// E.g., "https://api.example.com/v1/payments" -> "https://api.example.com"
-fn extract_base_url(url: &str) -> String {
-    if let Ok(parsed_url) = reqwest::Url::parse(url) {
-        format!("{}://{}", parsed_url.scheme(), parsed_url.host_str().unwrap_or(""))
-    } else {
-        // Fallback to original URL if parsing fails
-        url.to_string()
-    }
-}
 
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
 pub struct TestContext {
-    pub session_id: Option<String>,
     pub mock_server_url: Option<String>,
     pub is_test_env: bool,
+    pub metadata: std::collections::HashMap<String, String>,
 }
 
 impl TestContext {
-    pub fn new(session_id: Option<String>, mock_server_url: Option<String>) -> Self {
+    pub fn new(mock_server_url: Option<String>, tonic_metadata: &tonic::metadata::MetadataMap) -> Self {
         let is_test_env = mock_server_url.is_some();
+        
+        // Extract metadata from tonic MetadataMap
+        let mut metadata = std::collections::HashMap::new();
+        
+        // Extract session ID
+        if let Some(session_id) = tonic_metadata.get(X_SESSION_ID) {
+            if let Ok(session_id_str) = session_id.to_str() {
+                metadata.insert(X_SESSION_ID.to_string(), session_id_str.to_string());
+            }
+        }
+        
+        // Extract API tag
+        if let Some(api_tag) = tonic_metadata.get(X_API_TAG) {
+            if let Ok(api_tag_str) = api_tag.to_str() {
+                metadata.insert(X_API_TAG.to_string(), api_tag_str.to_string());
+            }
+        }
+        
         Self {
-            session_id,
             mock_server_url,
             is_test_env,
+            metadata,
         }
     }
 
     /// Get test headers to be added to connector requests
-    pub fn get_test_headers(&self, original_url: &str, flow_name: &str) -> Vec<(String, Maskable<String>)> {
+    pub fn get_test_headers(&self, original_url: &str) -> Vec<(String, Maskable<String>)> {
         let mut headers = Vec::new();
 
         if self.is_test_env {
             // Add x-api-url header with original connector URL
             headers.push((X_API_URL.to_string(), original_url.to_string().into()));
 
-            // Add x-api-tag header with flow identification
-            headers.push((X_API_TAG.to_string(), flow_name.to_string().into()));
+            // Add x-api-tag header from metadata
+            if let Some(api_tag) = self.metadata.get(X_API_TAG) {
+                headers.push((X_API_TAG.to_string(), api_tag.clone().into()));
+            }
 
-            // Add x-session-id header if available
-            if let Some(ref session_id) = self.session_id {
+            // Add x-session-id header from metadata
+            if let Some(session_id) = self.metadata.get(X_SESSION_ID) {
                 headers.push((X_SESSION_ID.to_string(), session_id.clone().into()));
             }
         }
@@ -254,9 +264,8 @@ where
             // Replace URL with mock server URL
             request.url = test_ctx.get_request_url(request.url.clone());
             
-            // Add test headers using the flow type
-            let flow_name = F::get_flow_name();
-            let test_headers = test_ctx.get_test_headers(&original_url, flow_name);
+            // Add test headers from metadata
+            let test_headers = test_ctx.get_test_headers(&original_url);
             request.headers.extend(test_headers);
             
             tracing::info!("Test mode enabled: redirected {} to {}", original_url, request.url);
