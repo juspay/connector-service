@@ -1586,11 +1586,10 @@ pub fn generate_payment_sync_response(
                 let grpc_resource_id =
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
 
-                let mandate_reference_grpc = mandate_reference.and_then(|m| {
-                    Some(grpc_api_types::payments::MandateReference {
+                let mandate_reference_grpc =
+                    mandate_reference.map(|m| grpc_api_types::payments::MandateReference {
                         mandate_id: m.connector_mandate_id,
-                    })
-                });
+                    });
 
                 Ok(PaymentServiceGetResponse {
                     transaction_id: Some(grpc_resource_id),
