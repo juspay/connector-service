@@ -1309,11 +1309,36 @@ pub struct RepeatPaymentData {
     pub metadata: Option<HashMap<String, String>>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub browser_info: Option<BrowserInformation>,
+    pub email: Option<common_utils::pii::Email>,
 }
 
 impl RepeatPaymentData {
     pub fn get_mandate_reference(&self) -> &MandateReferenceId {
         &self.mandate_reference
+    }
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+        }
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_email(&self) -> Result<Email, Error> {
+        self.email.clone().ok_or_else(missing_field_err("email"))
     }
 }
 

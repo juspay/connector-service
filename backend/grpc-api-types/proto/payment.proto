@@ -1414,6 +1414,12 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 11; // Method for capturing the payment
+
+  // Customer Information
+  optional string email = 12; // Email address of the customer
 }
 
 // Response message for repeat payment operation.

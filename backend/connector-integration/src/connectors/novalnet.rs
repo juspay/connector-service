@@ -31,8 +31,10 @@ use interfaces::{
 use transformers::{
     self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest,
     NovalnetCaptureResponse, NovalnetPSyncResponse, NovalnetPaymentsRequest,
-    NovalnetPaymentsRequest as NovalnetPaymentsRequestMandate, NovalnetPaymentsResponse,
-    NovalnetPaymentsResponse as NovalnetPaymentsResponseMandate, NovalnetRefundRequest,
+    NovalnetPaymentsRequest as NovalnetPaymentsRequestMandate,
+    NovalnetPaymentsRequest as NovalnetRepeatPaymentsRequest, NovalnetPaymentsResponse,
+    NovalnetPaymentsResponse as NovalnetPaymentsResponseMandate,
+    NovalnetPaymentsResponse as NovalnetRepeatPaymentsResponse, NovalnetRefundRequest,
     NovalnetRefundResponse, NovalnetRefundSyncResponse, NovalnetSyncRequest,
     NovalnetSyncRequest as NovalnetRSyncRequest,
 };
@@ -93,6 +95,12 @@ macros::create_all_prerequisites!(
             request_body: NovalnetPaymentsRequestMandate,
             response_body: NovalnetPaymentsResponseMandate,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: NovalnetRepeatPaymentsRequest,
+            response_body: NovalnetRepeatPaymentsResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
         )
     ],
     amount_converters: [
@@ -407,6 +415,36 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Novalnet,
+    curl_request: Json(NovalnetRepeatPaymentsRequest),
+    curl_response: NovalnetRepeatPaymentsResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            match req.request.is_auto_capture()? {
+                true => Ok(format!("{}/payment",self.connector_base_url_payments(req))),
+                false => Ok(format!("{}/authorize",self.connector_base_url_payments(req))),
+            }
+        }
+    }
+);
+
 impl
     ConnectorIntegrationV2<
         CreateOrder,
@@ -551,10 +589,5 @@ impl
         RepeatPaymentData,
         PaymentsResponseData,
     > for Novalnet
-{
-}
-
-impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Novalnet
 {
 }

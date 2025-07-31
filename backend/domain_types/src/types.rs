@@ -1576,7 +1576,7 @@ pub fn generate_payment_sync_response(
                 network_txn_id: _,
                 connector_response_reference_id: _,
                 incremental_authorization_allowed: _,
-                mandate_reference: _,
+                mandate_reference,
                 raw_connector_response,
                 status_code,
             } => {
@@ -1586,7 +1586,11 @@ pub fn generate_payment_sync_response(
                 let grpc_resource_id =
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
 
-                let mandate_reference_grpc = None;
+                let mandate_reference_grpc = mandate_reference.and_then(|m| {
+                    Some(grpc_api_types::payments::MandateReference {
+                        mandate_id: m.connector_mandate_id,
+                    })
+                });
 
                 Ok(PaymentServiceGetResponse {
                     transaction_id: Some(grpc_resource_id),
@@ -2692,7 +2696,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
             off_session: Some(false),
             setup_mandate_details: Some(setup_mandate_details),
             router_return_url: value.return_url.clone(),
-            webhook_url: None,
+            webhook_url: value.webhook_url,
             browser_info: value.browser_info.map(|info| {
                 crate::router_request_types::BrowserInformation {
                     color_depth: None,
@@ -2808,12 +2812,18 @@ pub fn generate_setup_mandate_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method: _, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
-                                                method: 0,
+                                                method: match method {
+                                                    Method::Get => 1,
+                                                    Method::Post => 2,
+                                                    Method::Put => 3,
+                                                    Method::Delete => 4,
+                                                    _ => 0,
+                                                },
                                                 form_fields: HashMap::default(), //TODO
                                             }
                                         ))
@@ -3185,6 +3195,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
+        let capture_method = Some(common_enums::CaptureMethod::foreign_try_from(
+            value.capture_method(),
+        )?);
         let merchant_order_reference_id = value.merchant_order_reference_id;
         let metadata = value.metadata;
         let webhook_url = value.webhook_url;
@@ -3198,6 +3211,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                 error_object: None,
             })
         })?;
+
+        let email: Option<Email> = match value.email {
+            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
+                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                    error_identifier: 400,
+
+                    error_message: "Invalid email".to_owned(),
+                    error_object: None,
+                }))
+            })?),
+            None => None,
+        };
 
         // Convert mandate reference to domain type
         let mandate_ref = match mandate_reference.mandate_id {
@@ -3228,6 +3254,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             },
             webhook_url,
             integrity_object: None,
+            capture_method,
+            email,
+            browser_info: None,
         })
     }
 }
