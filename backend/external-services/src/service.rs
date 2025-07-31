@@ -37,7 +37,8 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use common_utils::dapr::{emit_event_with_config, Event, EventConfig, EventContext, EventStage};
+use common_utils::dapr::{emit_event_with_config, Event, EventConfig, EventStage};
+use common_utils::pii::SecretSerdeValue;
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -77,7 +78,8 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     service_name: &str,
     flow_name: common_utils::dapr::FlowName,
     event_config: &EventConfig,
-    raw_request_data: Option<serde_json::Value>,
+    raw_request_data: Option<SecretSerdeValue>,
+    request_id: &str,
 ) -> CustomResult<
     RouterDataV2<F, ResourceCommonData, Req, Resp>,
     domain_types::errors::ConnectorError,
@@ -133,43 +135,6 @@ where
         masked_request
     });
 
-    // Emit RequestReceived event with request data
-    tokio::spawn({
-        let connector_name = connector_name.to_string();
-        let flow_name = flow_name.as_str().to_string();
-        let event_config = event_config.clone();
-        let request_data = req.clone();
-
-        async move {
-            let event = Event::new(
-                Event::generate_event_uuid(),
-                chrono::Utc::now()
-                    .format("%Y-%m-%d %H:%M:%S%.3f")
-                    .to_string(),
-                flow_name,
-                connector_name.clone(),
-                EventStage::RequestReceived.as_str().to_string(),
-                None,
-                None,
-                None,
-                None,
-                request_data.clone().map(Secret::new),
-                None,
-                std::collections::HashMap::new(),
-            );
-
-            let event_context = EventContext { request_data };
-
-            match emit_event_with_config(event, event_context, &event_config).await {
-                Ok(_) => tracing::info!(
-                    "Successfully published request received event for {}",
-                    connector_name
-                ),
-                Err(e) => tracing::error!("Failed to publish request received event: {:?}", e),
-            }
-        }
-    });
-
     let result = match connector_request {
         Some(request) => {
             let url = request.url.clone();
@@ -180,25 +145,19 @@ where
             let external_service_start_latency = tokio::time::Instant::now();
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
-            let response = call_connector_api(
-                proxy,
-                request,
-                flow_name.as_str(),
-                Some(connector_name),
-                Some(event_config),
-                req.clone(),
-            )
-            .await
-            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
-            .inspect_err(|err| {
-                info_log(
-                    "NETWORK_ERROR",
-                    &json!(format!(
-                        "Failed getting response from connector. Error: {:?}",
-                        err
-                    )),
-                );
-            });
+            let request_id = request_id.to_string();
+            let response = call_connector_api(proxy, request, "execute_connector_processing_step")
+                .await
+                .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
+                .inspect_err(|err| {
+                    info_log(
+                        "NETWORK_ERROR",
+                        &json!(format!(
+                            "Failed getting response from connector. Error: {:?}",
+                            err
+                        )),
+                    );
+                });
             let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[&method.to_string(), service_name, connector_name])
@@ -215,35 +174,29 @@ where
                     // Emit success response event
                     tokio::spawn({
                         let connector_name = connector_name.to_string();
-                        let flow_name = flow_name.as_str().to_string();
                         let event_config = event_config.clone();
                         let request_data = req.clone();
                         let response_data = res_body.clone();
+                        let raw_request_data_clone = raw_request_data.clone();
+                        let url_clone = url.clone();
 
                         async move {
                             let event = Event::new(
-                                Event::generate_event_uuid(),
-                                chrono::Utc::now()
-                                    .format("%Y-%m-%d %H:%M:%S%.3f")
-                                    .to_string(),
+                                request_id.to_string(),
+                                chrono::Utc::now().timestamp(),
                                 flow_name,
                                 connector_name.clone(),
-                                EventStage::ResponseReceived.as_str().to_string(),
+                                Some(url_clone),
+                                EventStage::ConnectorCall,
                                 Some(latency),
                                 Some(status_code),
-                                None,
-                                None,
-                                request_data.clone().map(Secret::new),
-                                response_data.clone().map(Secret::new),
+                                raw_request_data_clone,
+                                request_data.map(Secret::new),
+                                response_data.map(Secret::new),
                                 std::collections::HashMap::new(),
                             );
 
-                            let event_context = EventContext {
-                                request_data: raw_request_data,
-                            };
-
-                            match emit_event_with_config(event, event_context, &event_config).await
-                            {
+                            match emit_event_with_config(event, &event_config).await {
                                 Ok(_) => tracing::info!(
                                     "Successfully published response event for {}",
                                     connector_name
@@ -262,58 +215,32 @@ where
                     let latency = external_service_elapsed as u64 * 1000;
                     let status_code = error_body.status_code;
 
-                    let error_code = if let Some(json_body) = &error_res_body {
-                        json_body
-                            .get("error_code")
-                            .or_else(|| json_body.get("code"))
-                            .and_then(|v| v.as_str())
-                            .map(String::from)
-                    } else {
-                        None
-                    };
-
-                    let error_reason = if let Some(json_body) = &error_res_body {
-                        json_body
-                            .get("message")
-                            .or_else(|| json_body.get("error_message"))
-                            .and_then(|v| v.as_str())
-                            .map(String::from)
-                    } else {
-                        None
-                    };
-
                     // Emit error response event
                     tokio::spawn({
                         let connector_name = connector_name.to_string();
-                        let flow_name = flow_name.as_str().to_string();
                         let event_config = event_config.clone();
                         let request_data = req.clone();
                         let response_data = error_res_body.clone();
+                        let raw_request_data_clone = raw_request_data.clone();
+                        let url_clone = url.clone();
 
                         async move {
                             let event = Event::new(
-                                Event::generate_event_uuid(),
-                                chrono::Utc::now()
-                                    .format("%Y-%m-%d %H:%M:%S%.3f")
-                                    .to_string(),
+                                request_id.to_string(),
+                                chrono::Utc::now().timestamp(),
                                 flow_name,
                                 connector_name.clone(),
-                                EventStage::ResponseReceived.as_str().to_string(),
+                                Some(url_clone),
+                                EventStage::ConnectorCall,
                                 Some(latency),
                                 Some(status_code),
-                                error_code,
-                                error_reason,
-                                request_data.clone().map(Secret::new),
-                                response_data.clone().map(Secret::new),
+                                raw_request_data_clone,
+                                request_data.map(Secret::new),
+                                response_data.map(Secret::new),
                                 std::collections::HashMap::new(),
                             );
 
-                            let event_context = EventContext {
-                                request_data: raw_request_data.clone(),
-                            };
-
-                            match emit_event_with_config(event, event_context, &event_config).await
-                            {
+                            match emit_event_with_config(event, &event_config).await {
                                 Ok(_) => tracing::info!(
                                     "Successfully published error response event for {}",
                                     connector_name
@@ -336,36 +263,28 @@ where
                     // Emit network error event
                     tokio::spawn({
                         let connector_name = connector_name.to_string();
-                        let flow_name = flow_name.as_str().to_string();
                         let event_config = event_config.clone();
                         let request_data = req.clone();
-                        let error_message =
-                            format!("Failed to get response from connector: {network_error:?}");
+                        let raw_request_data_clone = raw_request_data.clone();
+                        let url_clone = url.clone();
 
                         async move {
                             let event = Event::new(
-                                Event::generate_event_uuid(),
-                                chrono::Utc::now()
-                                    .format("%Y-%m-%d %H:%M:%S%.3f")
-                                    .to_string(),
+                                request_id.to_string(),
+                                chrono::Utc::now().timestamp(),
                                 flow_name,
                                 connector_name.clone(),
-                                EventStage::ResponseReceived.as_str().to_string(),
+                                Some(url_clone),
+                                EventStage::ConnectorCall,
                                 None,
                                 None,
-                                Some("NETWORK_ERROR".to_string()),
-                                Some(error_message),
-                                request_data.clone().map(Secret::new),
+                                raw_request_data_clone,
+                                request_data.map(Secret::new),
                                 None,
                                 std::collections::HashMap::new(),
                             );
 
-                            let event_context = EventContext {
-                                request_data: raw_request_data.clone(),
-                            };
-
-                            match emit_event_with_config(event, event_context, &event_config).await
-                            {
+                            match emit_event_with_config(event, &event_config).await {
                                 Ok(_) => tracing::info!(
                                     "Successfully published network error event for {}",
                                     connector_name
@@ -537,10 +456,7 @@ pub type RouterResponse<T> = CustomResult<ApplicationResponse<T>, ApiErrorRespon
 pub async fn call_connector_api(
     proxy: &Proxy,
     request: Request,
-    flow_name: &str,
-    connector_name: Option<&str>,
-    event_config: Option<&EventConfig>,
-    request_data: Option<serde_json::Value>,
+    _flow_name: &str,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
@@ -594,45 +510,6 @@ pub async fn call_connector_api(
     };
 
     let response = send_request.await;
-
-    // Emit RequestSent event after the HTTP request is sent
-    if let (Some(connector_name), Some(event_config)) = (connector_name, event_config) {
-        tokio::spawn({
-            let connector_name = connector_name.to_string();
-            let flow_name = flow_name.to_string();
-            let event_config = event_config.clone();
-            let request_data = request_data.clone();
-
-            async move {
-                let event = Event::new(
-                    Event::generate_event_uuid(),
-                    chrono::Utc::now()
-                        .format("%Y-%m-%d %H:%M:%S%.3f")
-                        .to_string(),
-                    flow_name,
-                    connector_name.clone(),
-                    EventStage::RequestSent.as_str().to_string(),
-                    None,
-                    None,
-                    None,
-                    None,
-                    request_data.clone().map(Secret::new),
-                    None,
-                    std::collections::HashMap::new(),
-                );
-
-                let event_context = EventContext { request_data };
-
-                match emit_event_with_config(event, event_context, &event_config).await {
-                    Ok(_) => tracing::info!(
-                        "Successfully published request sent event for {}",
-                        connector_name
-                    ),
-                    Err(e) => tracing::error!("Failed to publish request sent event: {:?}", e),
-                }
-            }
-        });
-    }
 
     handle_response(response).await
 }

@@ -8,14 +8,41 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Set script variables
-PAYMENT_ID="payment_$(date +%s)_$RANDOM"
+# Configuration Variables
+# ======================
+
+# Kafka Configuration
+KAFKA_CONTAINER_NAME="hyperswitch-kafka0-1"
+KAFKA_TOPIC="audit-trail-events"
+KAFKA_BOOTSTRAP_SERVER="localhost:9092"
+KAFKA_UI_PORT="8090"
+
+# Dapr Configuration
 APP_ID="connector-service"
 APP_PORT="8000"
 DAPR_GRPC_PORT="50001"
-DAPR_HTTP_PORT="3500"
+DAPR_HTTP_PORT="3501"
 COMPONENTS_PATH="./components"
-export DAPR_PUBSUB_NAME="kafka-pubsub" 
+export DAPR_PUBSUB_NAME="kafka-pubsub"
+
+# Network Configuration
+DAPR_NETWORK="dapr-net"
+
+# Test Configuration
+PAYMENT_ID="payment_$(date +%s)_$RANDOM"
+CONNECTOR_NAME="checkout"
+TENANT_ID="test_tenant"
+MERCHANT_ID="test_merchant"
+
+# Timeouts and Limits
+MAX_WAIT_TIME=120
+WAIT_INTERVAL=5
+KAFKA_MAX_MESSAGES=100
+KAFKA_TIMEOUT_MS=5000
+
+# Verbose logging flag
+VERBOSE=${VERBOSE:-true}
+LOG_FILE="demo_logs_$(date +%Y%m%d_%H%M%S).log"
 
 # Check for required API key environment variables
 if [[ -z "${CONNECTOR_API_KEY}" || -z "${CONNECTOR_KEY1}" || -z "${CONNECTOR_API_SECRET}" ]]; then
@@ -57,67 +84,67 @@ echo -e "${BLUE}=====================================================${NC}"
 echo -e "${BLUE}   Events Implementation Demo                        ${NC}"
 echo -e "${BLUE}=====================================================${NC}"
 
-# Ensure dapr-net network exists
-echo -e "\n${BLUE}Ensuring dapr-net network exists...${NC}"
-if ! podman network ls | grep -q dapr-net; then
-    echo -e "${YELLOW}Creating dapr-net network...${NC}"
-    podman network create dapr-net
+# Ensure dapr network exists
+echo -e "\n${BLUE}Ensuring $DAPR_NETWORK network exists...${NC}"
+if ! podman network ls | grep -q $DAPR_NETWORK; then
+    echo -e "${YELLOW}Creating $DAPR_NETWORK network...${NC}"
+    podman network create $DAPR_NETWORK
 fi
 
 # Check for existing Kafka and Zookeeper containers (both running and stopped) and remove them
-echo -e "\n${BLUE}Checking Kafka and Zookeeper container status...${NC}"
-if podman ps -a | grep -q kafka; then
-    echo -e "${YELLOW}Removing existing Kafka container...${NC}"
-    podman stop kafka >/dev/null 2>&1 || true
-    podman rm -f kafka >/dev/null 2>&1 || true
-fi
+# echo -e "\n${BLUE}Checking Kafka and Zookeeper container status...${NC}"
+# if podman ps -a | grep -q kafka; then
+#     echo -e "${YELLOW}Removing existing Kafka container...${NC}"
+#     podman stop kafka >/dev/null 2>&1 || true
+#     podman rm -f kafka >/dev/null 2>&1 || true
+# fi
 
-if podman ps -a | grep -q zookeeper; then
-    echo -e "${YELLOW}Removing existing Zookeeper container...${NC}"
-    podman stop zookeeper >/dev/null 2>&1 || true
-    podman rm -f zookeeper >/dev/null 2>&1 || true
-fi
+# if podman ps -a | grep -q zookeeper; then
+#     echo -e "${YELLOW}Removing existing Zookeeper container...${NC}"
+#     podman stop zookeeper >/dev/null 2>&1 || true
+#     podman rm -f zookeeper >/dev/null 2>&1 || true
+# fi
 
-echo -e "${YELLOW}Setting up Zookeeper and Kafka containers...${NC}"
-echo -e "${YELLOW}Starting Zookeeper...${NC}"
-podman run -d --name zookeeper \
-  --network dapr-net \
-  --platform linux/amd64 \
-  -e ALLOW_ANONYMOUS_LOGIN=yes \
-  -p 2181:2181 \
-  docker.io/bitnami/zookeeper:3.7
+# echo -e "${YELLOW}Setting up Zookeeper and Kafka containers...${NC}"
+# echo -e "${YELLOW}Starting Zookeeper...${NC}"
+# podman run -d --name zookeeper \
+#   --network dapr-net \
+#   --platform linux/amd64 \
+#   -e ALLOW_ANONYMOUS_LOGIN=yes \
+#   -p 2181:2181 \
+#   docker.io/bitnami/zookeeper:3.7
 
-# Wait for Zookeeper to start
-echo -e "${YELLOW}Waiting for Zookeeper to start...${NC}"
-sleep 10
+# # Wait for Zookeeper to start
+# echo -e "${YELLOW}Waiting for Zookeeper to start...${NC}"
+# sleep 10
     
-    echo -e "${YELLOW}Starting Kafka...${NC}"
-    podman run -d --name kafka \
-      --platform linux/amd64 \
-      -e KAFKA_BROKER_ID=1 \
-      -e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
-      -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092 \
-      -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://127.0.0.1:29092 \
-      -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT \
-      -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
-      -e ALLOW_PLAINTEXT_LISTENER=yes \
-      -p 9092:9092 \
-      -p 29092:29092 \
-      --network dapr-net \
-      docker.io/bitnami/kafka:2.8.1
+#     echo -e "${YELLOW}Starting Kafka...${NC}"
+#     podman run -d --name kafka \
+#       --platform linux/amd64 \
+#       -e KAFKA_BROKER_ID=1 \
+#       -e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
+#       -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092 \
+#       -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://127.0.0.1:29092 \
+#       -e KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT \
+#       -e KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT \
+#       -e ALLOW_PLAINTEXT_LISTENER=yes \
+#       -p 9092:9092 \
+#       -p 29092:29092 \
+#       --network dapr-net \
+#       docker.io/bitnami/kafka:2.8.1
     
-    # Wait for Kafka to start
-    echo -e "${YELLOW}Waiting for Kafka to start...${NC}"
-    sleep 20
+#     # Wait for Kafka to start
+#     echo -e "${YELLOW}Waiting for Kafka to start...${NC}"
+#     sleep 20
     
-    # Create payment events topic (used by kafka-pubsub component)
-    echo -e "${YELLOW}Creating Kafka topic 'audit-trail-events'...${NC}"
-    podman exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh \
-        --create --if-not-exists \
-        --bootstrap-server localhost:9092 \
-        --replication-factor 1 \
-        --partitions 1 \
-        --topic audit-trail-events
+#     # Create payment events topic (used by kafka-pubsub component)
+#     echo -e "${YELLOW}Creating Kafka topic 'audit-trail-events'...${NC}"
+#     podman exec kafka /opt/bitnami/kafka/bin/kafka-topics.sh \
+#         --create --if-not-exists \
+#         --bootstrap-server localhost:9092 \
+#         --replication-factor 1 \
+#         --partitions 1 \
+#         --topic audit-trail-events
 
 echo -e "${GREEN}Kafka is running.${NC}"
 
@@ -151,9 +178,8 @@ echo -e "${YELLOW}Waiting for service to start...${NC}"
 
 # Function to check if service is running on either port
 check_service_up() {
-    if nc -z localhost 8000 2>/dev/null; then
-        echo -e "${GREEN}Service is up and running on port 8000!${NC}"
-        APP_PORT=8000
+    if nc -z localhost $APP_PORT 2>/dev/null; then
+        echo -e "${GREEN}Service is up and running on port $APP_PORT!${NC}"
         return 0
     elif nc -z localhost 8080 2>/dev/null; then
         echo -e "${GREEN}Service is up and running on port 8080!${NC}"
@@ -165,11 +191,9 @@ check_service_up() {
 }
 
 # Wait for the build and service to start with timeout
-MAX_WAIT=120  # Maximum seconds to wait
 START_TIME=$(date +%s)
-WAIT_INTERVAL=5  # Check every 5 seconds
 
-echo -e "${YELLOW}Waiting for cargo build to complete and service to start (timeout: ${MAX_WAIT}s)...${NC}"
+echo -e "${YELLOW}Waiting for cargo build to complete and service to start (timeout: ${MAX_WAIT_TIME}s)...${NC}"
 
 while true; do
     # Check if the service is up
@@ -181,8 +205,8 @@ while true; do
     CURRENT_TIME=$(date +%s)
     ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
     
-    if [ $ELAPSED_TIME -ge $MAX_WAIT ]; then
-        echo -e "${YELLOW}Service ports not detected after ${MAX_WAIT} seconds.${NC}"
+    if [ $ELAPSED_TIME -ge $MAX_WAIT_TIME ]; then
+        echo -e "${YELLOW}Service ports not detected after ${MAX_WAIT_TIME} seconds.${NC}"
         echo -e "${YELLOW}Will try to continue anyway, but this might fail.${NC}"
         break
     fi
@@ -209,10 +233,10 @@ echo -e "${YELLOW}Using udf_txn_uuid: $UDF_TXN_UUID${NC}"
 echo -e "${YELLOW}Using x-request-id: $REQUEST_ID${NC}"
 
 RESPONSE=$(grpcurl -plaintext \
-  -H "x-tenant-id: test_tenant" \
+  -H "x-tenant-id: $TENANT_ID" \
   -H "x-request-id: $REQUEST_ID" \
-  -H "x-connector: checkout" \
-  -H "x-merchant-id: test_merchant" \
+  -H "x-connector: $CONNECTOR_NAME" \
+  -H "x-merchant-id: $MERCHANT_ID" \
   -H "x-auth: signature-key" \
   -H "x-api-key: $API_KEY" \
   -H "x-key1: $KEY1" \
@@ -265,54 +289,63 @@ echo -e "\n${BLUE}Step 2b: Checking Kafka for payment audit events...${NC}"
 echo -e "${YELLOW}Looking for events with payment ID: $PAYMENT_ID${NC}"
 
 # Check if Kafka container is running
-if ! podman ps | grep -q kafka; then
-    echo -e "${RED}Error: Kafka container not running. Please start it first.${NC}"
+if ! podman ps | grep -q $KAFKA_CONTAINER_NAME; then
+    echo -e "${RED}Error: Kafka container $KAFKA_CONTAINER_NAME not running. Please start it first.${NC}"
     exit 1
 fi
 
+# First, check if the topic exists and has messages
+echo -e "${YELLOW}Checking Kafka topic status...${NC}"
+TOPIC_INFO=$(podman exec $KAFKA_CONTAINER_NAME env JMX_PORT="" kafka-topics \
+    --bootstrap-server $KAFKA_BOOTSTRAP_SERVER \
+    --describe --topic $KAFKA_TOPIC 2>/dev/null || echo "Topic not found")
+
+if echo "$TOPIC_INFO" | grep -q "Topic not found"; then
+    echo -e "${YELLOW}Topic $KAFKA_TOPIC does not exist. Creating it...${NC}"
+    podman exec $KAFKA_CONTAINER_NAME env JMX_PORT="" kafka-topics \
+        --bootstrap-server $KAFKA_BOOTSTRAP_SERVER \
+        --create --topic $KAFKA_TOPIC \
+        --partitions 1 --replication-factor 1 || true
+    sleep 2
+fi
+
 # Run kafka-console-consumer in the Kafka container to verify audit events
-MESSAGES=$(podman exec kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
-    --bootstrap-server localhost:9092 \
-    --topic audit-trail-events \
-    --from-beginning \
-    --max-messages 100 \
-    --timeout-ms 5000 2>/dev/null || true)
+echo -e "${YELLOW}Fetching messages from Kafka topic: $KAFKA_TOPIC${NC}"
+if [ "$VERBOSE" = "true" ]; then
+    echo -e "${YELLOW}Running: podman exec $KAFKA_CONTAINER_NAME env JMX_PORT=\"\" kafka-console-consumer --bootstrap-server $KAFKA_BOOTSTRAP_SERVER --topic $KAFKA_TOPIC --from-beginning --max-messages $KAFKA_MAX_MESSAGES --timeout-ms $KAFKA_TIMEOUT_MS${NC}"
+    MESSAGES=$(podman exec $KAFKA_CONTAINER_NAME env JMX_PORT="" kafka-console-consumer \
+        --bootstrap-server $KAFKA_BOOTSTRAP_SERVER \
+        --topic $KAFKA_TOPIC \
+        --from-beginning \
+        --max-messages $KAFKA_MAX_MESSAGES \
+        --timeout-ms $KAFKA_TIMEOUT_MS 2>/dev/null || true)
+    echo -e "${YELLOW}Retrieved $(echo "$MESSAGES" | grep -v '^$' | wc -l) messages from Kafka${NC}"
+else
+    MESSAGES=$(podman exec $KAFKA_CONTAINER_NAME env JMX_PORT="" kafka-console-consumer \
+        --bootstrap-server $KAFKA_BOOTSTRAP_SERVER \
+        --topic $KAFKA_TOPIC \
+        --from-beginning \
+        --max-messages $KAFKA_MAX_MESSAGES \
+        --timeout-ms $KAFKA_TIMEOUT_MS 2>/dev/null || true)
+fi
 
 # Check if our test audit event is in the Kafka topic
 PAYMENT_MESSAGE_FOUND=false
 
-# Check for the new extraction-based fields first
-if echo "$MESSAGES" | grep -q "\"udf_txn_uuid\":.*\"$UDF_TXN_UUID\""; then
-    echo -e "${GREEN}✓ Found payment audit event with extracted udf_txn_uuid in Kafka:${NC}"
-    echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"$UDF_TXN_UUID\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"$UDF_TXN_UUID\"" | tail -1
-    PAYMENT_MESSAGE_FOUND=true
-elif echo "$MESSAGES" | grep -q "\"x-request-id\":.*\"$REQUEST_ID\""; then
-    echo -e "${GREEN}✓ Found payment audit event with extracted x-request-id in Kafka:${NC}"
-    echo "$MESSAGES" | grep "\"x-request-id\":.*\"$REQUEST_ID\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"x-request-id\":.*\"$REQUEST_ID\"" | tail -1
-    PAYMENT_MESSAGE_FOUND=true
-elif echo "$MESSAGES" | grep -q "\"udf_txn_uuid\":.*\"pay_"; then
-    echo -e "${GREEN}✓ Found payment audit event with connector transaction ID in Kafka:${NC}"
-    echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"pay_" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"udf_txn_uuid\":.*\"pay_" | tail -1
-    PAYMENT_MESSAGE_FOUND=true
-elif echo "$MESSAGES" | grep -q "\"action\":\"GW_INIT_TXN\""; then
-    echo -e "${GREEN}✓ Found Gateway INIT_TXN audit events in Kafka:${NC}"
-    echo "$MESSAGES" | grep "\"action\":\"GW_INIT_TXN\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"action\":\"GW_INIT_TXN\"" | tail -1
-    PAYMENT_MESSAGE_FOUND=true
-elif echo "$MESSAGES" | grep -q "\"schema_version\":\"V2\""; then
-    echo -e "${GREEN}✓ Found Euler V2 format payment audit events in Kafka:${NC}"
-    echo "$MESSAGES" | grep "\"schema_version\":\"V2\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"schema_version\":\"V2\"" | tail -1
-    PAYMENT_MESSAGE_FOUND=true
-elif echo "$MESSAGES" | grep -q "\"hostname\":\"connector-service\""; then
-    echo -e "${GREEN}✓ Found connector-service audit events in Kafka:${NC}"
-    echo "$MESSAGES" | grep "\"hostname\":\"connector-service\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"hostname\":\"connector-service\"" | tail -1
+# Search for the specific payment event by request_id (should contain the request ID)
+if echo "$MESSAGES" | grep -q "\"request_id\":.*\"$REQUEST_ID\""; then
+    echo -e "${GREEN}✓ Found payment audit event with request_id containing request ID in Kafka:${NC}"
+    echo "$MESSAGES" | grep "\"request_id\":.*\"$REQUEST_ID\"" | tail -1 | jq '.' || echo "$MESSAGES" | grep "\"request_id\":.*\"$REQUEST_ID\"" | tail -1
     PAYMENT_MESSAGE_FOUND=true
 else
-    echo -e "${YELLOW}⚠ No specific payment audit events found with expected patterns${NC}"
+    echo -e "${YELLOW}⚠ No payment audit event found with request_id containing request ID: $REQUEST_ID${NC}"
+    # Show the latest messages to help debug
     if [ -n "$MESSAGES" ]; then
-        echo -e "${YELLOW}But some messages were found in the audit-trail-events topic:${NC}"
-        echo "$MESSAGES" | head -3
-        PAYMENT_MESSAGE_FOUND=true
+        echo -e "${YELLOW}Latest messages in the $KAFKA_TOPIC topic:${NC}"
+        echo "$MESSAGES" | tail -3
+        PAYMENT_MESSAGE_FOUND=false
     else
+        echo -e "${YELLOW}No messages found in Kafka topic${NC}"
         PAYMENT_MESSAGE_FOUND=false
     fi
 fi
@@ -328,10 +361,10 @@ echo -e "${YELLOW}Using refund udf_txn_uuid: $REFUND_UDF_TXN_UUID${NC}"
 echo -e "${YELLOW}Using refund x-request-id: $REFUND_REQUEST_ID${NC}"
 
 REFUND_RESPONSE=$(grpcurl -plaintext \
-  -H "x-tenant-id: test_tenant" \
+  -H "x-tenant-id: $TENANT_ID" \
   -H "x-request-id: $REFUND_REQUEST_ID" \
-  -H "x-connector: checkout" \
-  -H "x-merchant-id: test_merchant" \
+  -H "x-connector: $CONNECTOR_NAME" \
+  -H "x-merchant-id: $MERCHANT_ID" \
   -H "x-auth: signature-key" \
   -H "x-api-key: $API_KEY" \
   -H "x-key1: $KEY1" \
@@ -366,37 +399,42 @@ echo -e "\n${BLUE}Step 4: Checking Kafka for refund audit events...${NC}"
 echo -e "${YELLOW}Looking for refund events with refund_id: $REFUND_ID${NC}"
 
 # Run kafka-console-consumer again to get latest messages including refund events
-REFUND_MESSAGES=$(podman exec kafka /opt/bitnami/kafka/bin/kafka-console-consumer.sh \
-    --bootstrap-server localhost:9092 \
-    --topic audit-trail-events \
-    --from-beginning \
-    --max-messages 200 \
-    --timeout-ms 5000 2>/dev/null || true)
+echo -e "${YELLOW}Fetching refund messages from Kafka topic: $KAFKA_TOPIC${NC}"
+if [ "$VERBOSE" = "true" ]; then
+    echo -e "${YELLOW}Running: podman exec $KAFKA_CONTAINER_NAME env JMX_PORT=\"\" kafka-console-consumer --bootstrap-server $KAFKA_BOOTSTRAP_SERVER --topic $KAFKA_TOPIC --from-beginning --max-messages $((KAFKA_MAX_MESSAGES * 2)) --timeout-ms $KAFKA_TIMEOUT_MS${NC}"
+    REFUND_MESSAGES=$(podman exec $KAFKA_CONTAINER_NAME env JMX_PORT="" kafka-console-consumer \
+        --bootstrap-server $KAFKA_BOOTSTRAP_SERVER \
+        --topic $KAFKA_TOPIC \
+        --from-beginning \
+        --max-messages $((KAFKA_MAX_MESSAGES * 2)) \
+        --timeout-ms $KAFKA_TIMEOUT_MS 2>/dev/null || true)
+    echo -e "${YELLOW}Retrieved $(echo "$REFUND_MESSAGES" | grep -v '^$' | wc -l) messages from Kafka${NC}"
+else
+    REFUND_MESSAGES=$(podman exec $KAFKA_CONTAINER_NAME env JMX_PORT="" kafka-console-consumer \
+        --bootstrap-server $KAFKA_BOOTSTRAP_SERVER \
+        --topic $KAFKA_TOPIC \
+        --from-beginning \
+        --max-messages $((KAFKA_MAX_MESSAGES * 2)) \
+        --timeout-ms $KAFKA_TIMEOUT_MS 2>/dev/null || true)
+fi
 
 # Check if our refund audit event is in the Kafka topic
 REFUND_MESSAGE_FOUND=false
 
-if echo "$REFUND_MESSAGES" | grep -q "\"action\":\"GW_INIT_REFUND\""; then
-    echo -e "${GREEN}✓ Found refund audit event (GW_INIT_REFUND) in Kafka:${NC}"
-    echo "$REFUND_MESSAGES" | grep "\"action\":\"GW_INIT_REFUND\"" | tail -1 | jq '.' || echo "$REFUND_MESSAGES" | grep "\"action\":\"GW_INIT_REFUND\"" | tail -1
-    REFUND_MESSAGE_FOUND=true
-elif echo "$REFUND_MESSAGES" | grep -q "refund"; then
-    echo -e "${GREEN}✓ Found refund-related audit events in Kafka:${NC}"
-    echo "$REFUND_MESSAGES" | grep -i "refund" | tail -1 | jq '.' || echo "$REFUND_MESSAGES" | grep -i "refund" | tail -1
-    REFUND_MESSAGE_FOUND=true
-elif echo "$REFUND_MESSAGES" | grep -q "$REFUND_ID"; then
-    echo -e "${GREEN}✓ Found audit event with refund ID in Kafka:${NC}"
-    echo "$REFUND_MESSAGES" | grep "$REFUND_ID" | jq '.' || echo "$REFUND_MESSAGES" | grep "$REFUND_ID"
+# Search for the specific refund event by request_id (should contain the refund request ID)
+if echo "$REFUND_MESSAGES" | grep -q "\"request_id\":.*\"$REFUND_REQUEST_ID\""; then
+    echo -e "${GREEN}✓ Found refund audit event with request_id containing refund request ID in Kafka:${NC}"
+    echo "$REFUND_MESSAGES" | grep "\"request_id\":.*\"$REFUND_REQUEST_ID\"" | tail -1 | jq '.' || echo "$REFUND_MESSAGES" | grep "\"request_id\":.*\"$REFUND_REQUEST_ID\"" | tail -1
     REFUND_MESSAGE_FOUND=true
 else
-    echo -e "${YELLOW}⚠ No specific refund audit events found, checking for general refund flow events...${NC}"
-    # Look for any recent messages that might be refund-related
-    RECENT_MESSAGES=$(echo "$REFUND_MESSAGES" | tail -10)
-    if [ -n "$RECENT_MESSAGES" ]; then
-        echo -e "${YELLOW}Recent messages in audit-trail-events topic:${NC}"
-        echo "$RECENT_MESSAGES" | head -3
-        REFUND_MESSAGE_FOUND=true
+    echo -e "${YELLOW}⚠ No refund audit event found with request_id containing refund request ID: $REFUND_REQUEST_ID${NC}"
+    # Show the latest messages to help debug
+    if [ -n "$REFUND_MESSAGES" ]; then
+        echo -e "${YELLOW}Latest messages in the $KAFKA_TOPIC topic:${NC}"
+        echo "$REFUND_MESSAGES" | tail -3
+        REFUND_MESSAGE_FOUND=false
     else
+        echo -e "${YELLOW}No messages found in Kafka topic${NC}"
         REFUND_MESSAGE_FOUND=false
     fi
 fi
@@ -521,5 +559,14 @@ else
     echo -e "4. Is the events configuration in development.toml correct?"
     echo -e "5. Are the event publishing functions being called?"
     echo -e "6. Check the application logs for any event publishing errors"
+    
+    if [ "$VERBOSE" = "true" ] && [ -f "$LOG_FILE" ]; then
+        echo -e "\n${YELLOW}Recent application logs from $LOG_FILE:${NC}"
+        echo -e "${YELLOW}===========================================${NC}"
+        tail -20 "$LOG_FILE" || echo "Could not read log file"
+        echo -e "${YELLOW}===========================================${NC}"
+        echo -e "${YELLOW}For full logs, run: cat $LOG_FILE${NC}"
+    fi
+    
     exit 1
 fi

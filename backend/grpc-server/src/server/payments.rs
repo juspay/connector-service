@@ -77,6 +77,7 @@ impl Payments {
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
+        request_id: &str,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -115,6 +116,7 @@ impl Payments {
                     &payload,
                     &connector.to_string(),
                     service_name,
+                    request_id,
                 )
                 .await?;
 
@@ -161,7 +163,10 @@ impl Payments {
             service_name,
             common_utils::dapr::FlowName::Authorize,
             &self.config.events,
-            Some(serde_json::to_value(&payload).unwrap_or_default()),
+            Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(&payload).unwrap_or_default(),
+            )),
+            &request_id,
         )
         .await;
 
@@ -245,6 +250,7 @@ impl Payments {
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
+        request_id: &str,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -301,7 +307,10 @@ impl Payments {
             service_name,
             common_utils::dapr::FlowName::CreateOrder,
             &self.config.events,
-            Some(serde_json::to_value(payload).unwrap_or_default()),
+            Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
+            request_id,
         )
         .await
         .map_err(
@@ -335,6 +344,7 @@ impl Payments {
         payload: &PaymentServiceRegisterRequest,
         connector_name: &str,
         service_name: &str,
+        request_id: &str,
     ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -383,7 +393,10 @@ impl Payments {
             service_name,
             common_utils::dapr::FlowName::CreateOrder,
             &self.config.events,
-            Some(serde_json::to_value(payload).unwrap_or_default()),
+            Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
+            request_id,
         )
         .await
         .switch()
@@ -496,7 +509,10 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -507,6 +523,7 @@ impl PaymentService for Payments {
                     connector,
                     connector_auth_details,
                     &service_name,
+                    &request_id,
                 ))
                 .await
                 {
@@ -827,7 +844,10 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -864,6 +884,7 @@ impl PaymentService for Payments {
                             &payload,
                             &connector.to_string(),
                             &service_name,
+                            &request_id,
                         )
                         .await?,
                     )
@@ -899,7 +920,10 @@ impl PaymentService for Payments {
                     &service_name,
                     common_utils::dapr::FlowName::SetupMandate,
                     &self.config.events,
-                    Some(serde_json::to_value(payload).unwrap_or_default()),
+                    Some(common_utils::pii::SecretSerdeValue::new(
+                        serde_json::to_value(payload).unwrap_or_default(),
+                    )),
+                    &request_id,
                 )
                 .await
                 .switch()
@@ -946,7 +970,10 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -998,7 +1025,10 @@ impl PaymentService for Payments {
                     &service_name,
                     common_utils::dapr::FlowName::Authorize,
                     &self.config.events,
-                    Some(serde_json::to_value(payload).unwrap_or_default()),
+                    Some(common_utils::pii::SecretSerdeValue::new(
+                        serde_json::to_value(payload).unwrap_or_default(),
+                    )),
+                    &request_id,
                 )
                 .await
                 .switch()

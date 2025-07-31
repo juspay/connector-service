@@ -58,18 +58,15 @@ grpc_port = 50001
 "message.res_code" = "status_code"
 "message.url" = "url"
 "message.stage" = "stage"
+"message.req_body" = "connector_request_data"
 
 [events.static_values]
 "hostname" = "connector-service"
 "schema_version" = "V2"
 "message_number" = "1"
 "category" = "OUTGOING_API"
-"error_code" = "null"
-"error_reason" = "null"
 "message.req_type" = "EXTERNAL"
 "message.log_type" = "API"
 
 [events.extractions]
 "udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"message.req_body" = "req"
-
