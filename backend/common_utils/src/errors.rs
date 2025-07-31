@@ -159,6 +159,16 @@ pub enum CryptoError {
     InvalidIvLength,
 }
 
+impl ErrorSwitchFrom<common_enums::CurrencyError> for ParsingError {
+    fn switch_from(error: &common_enums::CurrencyError) -> Self {
+        match error {
+            common_enums::CurrencyError::UnsupportedCurrency { .. } => {
+                ParsingError::StructParseFailure("currency decimal configuration")
+            }
+        }
+    }
+}
+
 /// Integrity check errors.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct IntegrityCheckError {

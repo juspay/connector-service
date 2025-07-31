@@ -2099,7 +2099,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
         } = value;
 
         let status = if response.messages.result_code == ResultCode::Ok {
-            AttemptStatus::Authorized
+            AttemptStatus::Charged
         } else {
             AttemptStatus::Failure
         };
