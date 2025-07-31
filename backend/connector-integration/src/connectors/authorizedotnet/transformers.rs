@@ -5,7 +5,6 @@ use common_utils::{
     ext_traits::{OptionExt, ValueExt},
     pii::Email,
 };
-use domain_types::errors::ConnectorError;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
@@ -14,6 +13,7 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
+    errors::ConnectorError,
     payment_method_data::PaymentMethodData,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,

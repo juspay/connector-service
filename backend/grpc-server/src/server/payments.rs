@@ -76,6 +76,7 @@ impl Payments {
         payload: PaymentServiceAuthorizeRequest,
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
+        metadata: &tonic::metadata::MetadataMap,
         service_name: &str,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
@@ -92,7 +93,7 @@ impl Payments {
 
         // Create common request data
         let payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
+            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone(), metadata))
                 .map_err(|err| {
                     tracing::error!("Failed to process payment flow data: {:?}", err);
                     PaymentAuthorizationError::new(
@@ -490,12 +491,14 @@ impl PaymentService for Payments {
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
                 let authorize_response = match Box::pin(self.process_authorization_internal(
                     payload,
                     connector,
                     connector_auth_details,
+                    &metadata,
                     &service_name,
                 ))
                 .await
@@ -821,6 +824,7 @@ impl PaymentService for Payments {
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
                 //get connector data
@@ -840,6 +844,7 @@ impl PaymentService for Payments {
                     payload.clone(),
                     self.config.connectors.clone(),
                     self.config.common.environment.clone(),
+                    &metadata,
                 ))
                 .map_err(|e| e.into_grpc_status())?;
 
@@ -937,6 +942,7 @@ impl PaymentService for Payments {
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
                 //get connector data
@@ -955,6 +961,7 @@ impl PaymentService for Payments {
                 let payment_flow_data = PaymentFlowData::foreign_try_from((
                     payload.clone(),
                     self.config.connectors.clone(),
+                    &metadata,
                 ))
                 .map_err(|e| e.into_grpc_status())?;
 
