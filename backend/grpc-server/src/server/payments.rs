@@ -78,6 +78,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
         session_id: Option<String>,
+        request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -116,6 +117,7 @@ impl Payments {
                     &connector.to_string(),
                     service_name,
                     session_id.clone(),
+                    request_metadata,
                 )
                 .await?;
 
@@ -151,11 +153,11 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Create test context for mock server integration  
+        // Create test context for mock server integration
         let test_context = if self.config.test.enabled {
             Some(external_services::service::TestContext::new(
-                session_id,
                 self.config.test.mock_server_url.clone(),
+                request_metadata,
             ))
         } else {
             None
@@ -251,6 +253,7 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         session_id: Option<String>,
+        request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -296,11 +299,11 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Create test context for mock server integration  
+        // Create test context for mock server integration
         let test_context = if self.config.test.enabled {
             Some(external_services::service::TestContext::new(
-                session_id,
                 self.config.test.mock_server_url.clone(),
+                request_metadata,
             ))
         } else {
             None
@@ -505,11 +508,13 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
                 let metadata = request.metadata();
-                let connector = connector_from_metadata(metadata)
-                    .map_err(|e| e.into_grpc_status())?;
+                let connector =
+                    connector_from_metadata(metadata).map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(metadata).map_err(|e| e.into_grpc_status())?;
                 let session_id = crate::utils::session_id_from_metadata(metadata);
+                // Clone metadata before moving request
+                let metadata_clone = metadata.clone();
                 let payload = request.into_inner();
 
                 let authorize_response = match Box::pin(self.process_authorization_internal(
@@ -518,6 +523,7 @@ impl PaymentService for Payments {
                     connector_auth_details,
                     &service_name,
                     session_id,
+                    &metadata_clone,
                 ))
                 .await
                 {
