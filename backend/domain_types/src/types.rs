@@ -15,6 +15,7 @@ use hyperswitch_masking::Secret;
 use serde::Serialize;
 use serde_json::json;
 use tonic;
+use tracing::info;
 use utoipa::ToSchema;
 
 // Helper function for extracting connector request reference ID
@@ -1022,13 +1023,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
 
 // PhoneDetails conversion removed - phone info is now embedded in Address
 
-impl
-    ForeignTryFrom<(
-        PaymentServiceAuthorizeRequest,
-        Connectors,
-        &tonic::metadata::MetadataMap,
-    )> for PaymentFlowData
-{
+impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &tonic::metadata::MetadataMap)> for PaymentFlowData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -1517,6 +1512,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
+    info!("Payment authorize response status: {:?}", status);
     let order_id = router_data_v2.resource_common_data.reference_id.clone();
     let raw_connector_response = router_data_v2
         .resource_common_data
@@ -2382,9 +2378,13 @@ impl
 
     fn foreign_try_from(
         (value, connectors, _metadata): (
+            
             grpc_api_types::payments::AcceptDisputeRequest,
+           
             Connectors,
+           
             &tonic::metadata::MetadataMap,
+        ,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
@@ -3890,9 +3890,13 @@ impl
 
     fn foreign_try_from(
         (value, connectors, _metadata): (
+            
             DisputeDefendRequest,
+           
             Connectors,
+           
             &tonic::metadata::MetadataMap,
+        ,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
