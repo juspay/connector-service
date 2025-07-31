@@ -102,9 +102,10 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(request, &service_name, |request| async {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
-            let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-            let connector_data: ConnectorData<DefaultPCIHolder> =
-                ConnectorData::get_connector_by_name(&connector);
+            let (connector, _merchant_id, _tenant_id, request_id) =
+                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+                    .map_err(|e| e.into_grpc_status())?;
+            let connector_data = ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -148,7 +149,10 @@ impl DisputeService for Disputes {
                 &service_name,
                 common_utils::dapr::FlowName::SubmitEvidence,
                 &self.config.events,
-                Some(serde_json::to_value(&payload).unwrap_or_default()),
+                Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&payload).unwrap_or_default(),
+                )),
+                &request_id,
             )
             .await
             .switch()
@@ -266,7 +270,9 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(request, &service_name, |request| async {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
-            let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+            let (connector, _merchant_id, _tenant_id, request_id) =
+                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+                    .map_err(|e| e.into_grpc_status())?;
 
             let connector_data: ConnectorData<DefaultPCIHolder> =
                 ConnectorData::get_connector_by_name(&connector);
@@ -313,7 +319,10 @@ impl DisputeService for Disputes {
                 &service_name,
                 common_utils::dapr::FlowName::AcceptDispute,
                 &self.config.events,
-                Some(serde_json::to_value(&payload).unwrap_or_default()),
+                Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&payload).unwrap_or_default(),
+                )),
+                &request_id,
             )
             .await
             .switch()
