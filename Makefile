@@ -9,7 +9,7 @@ ifeq ($(CI),true)
 	CLIPPY_EXTRA := -- -D warnings
 endif
 
-.PHONY: all fmt check clippy test ci help proto-format proto-generate proto-build proto-lint proto-clean
+.PHONY: all fmt check clippy test ci help proto-format proto-generate proto-build proto-lint proto-clean regenerate-sdks
 
 ## Run all checks: fmt → check → clippy → test
 all: fmt check clippy test
@@ -68,6 +68,11 @@ proto-clean:
 	@echo "Cleaning generated files..."
 	rm -rf gen
 
+## Regenerate SDK clients from proto files
+regenerate-sdks:
+	@echo "▶ Regenerating SDK clients from proto files..."
+	@./scripts/regenerate-sdks.sh
+
 ## Show this help
 help:
 	@echo "Usage: make [TARGET]"
@@ -86,6 +91,7 @@ help:
 	@echo "  proto-build      Build/validate proto files"
 	@echo "  proto-lint       Lint proto files"
 	@echo "  proto-clean      Clean generated proto files"
+	@echo "  regenerate-sdks  Regenerate SDK clients from proto files"
 	@echo
 	@echo "Other Targets:"
 	@echo "  help     Show this help message"

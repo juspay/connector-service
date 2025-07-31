@@ -1,7 +1,17 @@
 [package]
-name = "rust-grpc-client"
+name = "connector-service-client"
 version = "0.1.0"
 edition = "2021"
+description = "Pre-compiled gRPC client for Connector Service"
+license = "MIT"
 
 [dependencies]
-grpc-api-types = { path = "../../backend/grpc-api-types" }
+tonic = "0.11"
+prost = "0.12"
+prost-types = "0.12"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+default = []
