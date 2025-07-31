@@ -3,62 +3,56 @@ use dapr::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::info;
-use uuid::Uuid;
 
 use crate::pii::SecretSerdeValue;
 use hyperswitch_masking::ExposeInterface;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
-    pub event_uuid: String,
-    pub timestamp: String,
-    pub flow_type: String,
+    pub request_id: String,
+    pub timestamp: i64,
+    pub flow_type: FlowName,
     pub connector: String,
-    pub stage: String,
+    pub url: Option<String>,
+    pub stage: EventStage,
     pub latency: Option<u64>,
     pub status_code: Option<u16>,
-    pub error_code: Option<String>,
-    pub error_reason: Option<String>,
     pub request_data: Option<SecretSerdeValue>,
-    pub response_data: Option<SecretSerdeValue>,
+    pub connector_request_data: Option<SecretSerdeValue>,
+    pub connector_response_data: Option<SecretSerdeValue>,
 
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
 }
 
 impl Event {
-    /// Generate a new unique event UUID using UUID v7 (time-ordered)
-    pub fn generate_event_uuid() -> String {
-        Uuid::now_v7().to_string()
-    }
-
     /// Create a new Event with all parameters
     pub fn new(
-        event_uuid: String,
-        timestamp: String,
-        flow_type: String,
+        request_id: String,
+        timestamp: i64,
+        flow_type: FlowName,
         connector: String,
-        stage: String,
+        url: Option<String>,
+        stage: EventStage,
         latency: Option<u64>,
         status_code: Option<u16>,
-        error_code: Option<String>,
-        error_reason: Option<String>,
         request_data: Option<SecretSerdeValue>,
-        response_data: Option<SecretSerdeValue>,
+        connector_request_data: Option<SecretSerdeValue>,
+        connector_response_data: Option<SecretSerdeValue>,
         additional_fields: HashMap<String, SecretSerdeValue>,
     ) -> Self {
         Self {
-            event_uuid,
+            request_id,
             timestamp,
             flow_type,
             connector,
+            url,
             stage,
             latency,
             status_code,
-            error_code,
-            error_reason,
             request_data,
-            response_data,
+            connector_request_data,
+            connector_response_data,
             additional_fields,
         }
     }
@@ -93,14 +87,8 @@ impl Default for EventConfig {
     }
 }
 
-/// Context data available for event processing
-#[derive(Debug, Clone, Default)]
-pub struct EventContext {
-    pub request_data: Option<serde_json::Value>,
-}
-
 // Define FlowName enum locally to avoid circular dependency
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FlowName {
     Authorize,
     Refund,
@@ -137,19 +125,15 @@ impl FlowName {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventStage {
-    RequestReceived,
-    RequestSent,
-    ResponseReceived,
+    ConnectorCall,
 }
 
 impl EventStage {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::RequestReceived => "RequestReceived",
-            Self::RequestSent => "RequestSent",
-            Self::ResponseReceived => "ResponseReceived",
+            Self::ConnectorCall => "CONNECTOR_CALL",
         }
     }
 }
@@ -192,25 +176,22 @@ impl EventProcessor {
         Self { config }
     }
 
-    fn process_event(&self, base_event: &Event, context: &EventContext) -> serde_json::Value {
-        let mut result = serde_json::json!({});
+    fn process_event(&self, base_event: &Event) -> serde_json::Value {
+        let mut result = serde_json::to_value(base_event).unwrap_or_default();
 
-        // 1. Apply transformations (field mappings)
         for (target_path, source_field) in &self.config.transformations {
-            if let Some(value) = self.get_field_value(base_event, source_field) {
+            if let Some(value) = result.get(source_field).cloned() {
                 self.set_nested_value(&mut result, target_path, value);
             }
         }
 
-        // 2. Apply static values
         for (target_path, static_value) in &self.config.static_values {
             let value = serde_json::json!(static_value);
             self.set_nested_value(&mut result, target_path, value);
         }
 
-        // 3. Apply extractions
         for (target_path, extraction_path) in &self.config.extractions {
-            if let Some(value) = self.extract_from_context(context, extraction_path) {
+            if let Some(value) = self.extract_from_request(base_event, extraction_path) {
                 self.set_nested_value(&mut result, target_path, value);
             }
         }
@@ -218,40 +199,9 @@ impl EventProcessor {
         result
     }
 
-    /// Get a field value from the base event
-    fn get_field_value(&self, event: &Event, field_name: &str) -> Option<serde_json::Value> {
-        match field_name {
-            "event_uuid" => Some(serde_json::json!(event.event_uuid)),
-            "timestamp" => Some(serde_json::json!(event.timestamp)),
-            "flow_type" => Some(serde_json::json!(event.flow_type)),
-            "connector" => Some(serde_json::json!(event.connector)),
-            "stage" => Some(serde_json::json!(event.stage)),
-            "latency" => event.latency.map(|v| serde_json::json!(v)),
-            "status_code" => event.status_code.map(|v| serde_json::json!(v)),
-            "error_code" => event.error_code.as_ref().map(|v| serde_json::json!(v)),
-            "error_reason" => event.error_reason.as_ref().map(|v| serde_json::json!(v)),
-            "request_data" => event
-                .request_data
-                .as_ref()
-                .map(|secret| secret.clone().expose().clone()),
-            "response_data" => event
-                .response_data
-                .as_ref()
-                .map(|secret| secret.clone().expose().clone()),
-            _ => {
-                // Check additional fields
-                event
-                    .additional_fields
-                    .get(field_name)
-                    .map(|secret| secret.clone().expose().clone())
-            }
-        }
-    }
-
-    /// Extract values from context using dot notation paths
-    fn extract_from_context(
+    fn extract_from_request(
         &self,
-        context: &EventContext,
+        event: &Event,
         extraction_path: &str,
     ) -> Option<serde_json::Value> {
         let path_parts: Vec<&str> = extraction_path.split('.').collect();
@@ -260,17 +210,15 @@ impl EventProcessor {
         }
 
         let source = match path_parts[0] {
-            "request_data" => context.request_data.as_ref()?,
-            "req" => context.request_data.as_ref()?, // Allow 'req' as alias for request_data
+            "request_data" | "req" => event.request_data.as_ref()?.clone().expose().clone(),
             _ => return None,
         };
 
-        // If the path is just "req" or "request_data", return the entire source
         if path_parts.len() == 1 {
-            return Some(source.clone());
+            return Some(source);
         }
 
-        let mut current = source;
+        let mut current = &source;
         for part in &path_parts[1..] {
             current = current.get(part)?;
         }
@@ -321,7 +269,14 @@ async fn publish_to_dapr(
     let mut client = create_client(dapr_config).await?;
 
     let content_type = "application/json".to_string();
-    let metadata = HashMap::<String, String>::new();
+    let mut metadata = HashMap::<String, String>::new();
+
+    if let Some(request_id) = event.get("request_id").and_then(|v| v.as_str()) {
+        metadata.insert("partitionKey".to_string(), request_id.to_string());
+        info!("Setting Kafka message key to request_id: {}", request_id);
+    } else {
+        info!("Warning: request_id not found in event, message will be published without key");
+    }
 
     client
         .publish_event(
@@ -341,17 +296,13 @@ async fn publish_to_dapr(
     Ok(())
 }
 
-pub async fn emit_event_with_config(
-    base_event: Event,
-    context: EventContext,
-    config: &EventConfig,
-) -> Result<()> {
+pub async fn emit_event_with_config(base_event: Event, config: &EventConfig) -> Result<()> {
     if !config.enabled {
         return Ok(());
     }
 
     let processor = EventProcessor::new(config.clone());
-    let processed_event = processor.process_event(&base_event, &context);
+    let processed_event = processor.process_event(&base_event);
 
     publish_to_dapr(
         processed_event,

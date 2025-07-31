@@ -7,12 +7,12 @@ spec:
   version: v1
   metadata:
     - name: brokers
-      value: 127.0.0.1:29092
+      value: 127.0.0.1:9092
     - name: authRequired
       value: "false"
     - name: consumerGroup
       value: connector-service-group
     - name: publishTopic
-      value: payment-events
+      value: audit-trail-events
     - name: subscribeTopics
-      value: payment-events
+      value: audit-trail-events
