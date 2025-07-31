@@ -340,7 +340,7 @@ macro_rules! implement_connector_operation {
             $crate::utils::log_before_initialization(&request, service_name.as_str()).into_grpc_status()?;
             let start_time = tokio::time::Instant::now();
             let result = Box::pin(async{
-            let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
+            let (connector, _merchant_id, _tenant_id, request_id) = $crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
 
@@ -392,7 +392,8 @@ macro_rules! implement_connector_operation {
                 &service_name,
                 flow_name,
                 &self.config.events,
-                Some(serde_json::to_value(&payload).unwrap_or_default()),
+                Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+                &request_id,
             )
             .await
             .switch()
