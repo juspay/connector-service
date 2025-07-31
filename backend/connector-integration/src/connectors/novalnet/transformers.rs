@@ -1363,7 +1363,10 @@ impl
             tariff: auth.tariff_id,
         };
 
-        let enforce_3d = None; //todo add it remember
+        let enforce_3d = match item.router_data.resource_common_data.auth_type {
+            common_enums::AuthenticationType::ThreeDs => Some(1),
+            common_enums::AuthenticationType::NoThreeDs => None,
+        };
         let test_mode = get_test_mode(item.router_data.resource_common_data.test_mode);
         let req_address = item.router_data.resource_common_data.get_optional_billing();
 
