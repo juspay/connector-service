@@ -19,8 +19,8 @@ pub use self::razorpayv2::RazorpayV2;
 pub mod elavon;
 pub use self::elavon::Elavon;
 
-// pub mod xendit;
-// pub use self::xendit::Xendit;
+pub mod xendit;
+pub use self::xendit::Xendit;
 
 pub mod macros;
 

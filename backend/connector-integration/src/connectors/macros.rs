@@ -301,7 +301,7 @@ macro_rules! macro_connector_implementation {
             $($function_def: tt)*
         }
     ) => {
-        impl
+        impl <$generic_type: $($bounds)*>
             ConnectorIntegrationV2<
                 $flow,
                 $resource_common_data,
