@@ -14,6 +14,7 @@ use grpc_api_types::payments::{
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 use tonic;
+use tracing::info;
 use utoipa::ToSchema;
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
@@ -822,11 +823,21 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
 
 // PhoneDetails conversion removed - phone info is now embedded in Address
 
-impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &tonic::metadata::MetadataMap)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        PaymentServiceAuthorizeRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, metadata): (PaymentServiceAuthorizeRequest, Connectors, &tonic::metadata::MetadataMap),
+        (value, connectors, metadata): (
+            PaymentServiceAuthorizeRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match &value.address {
             // Borrow value.address
@@ -845,7 +856,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &tonic::metadat
                 }))?
             }
         };
-        
+
         let merchant_id_str = metadata
             .get(common_utils::consts::X_MERCHANT_ID)
             .ok_or_else(|| {
@@ -865,8 +876,9 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &tonic::metadat
                     error_object: None,
                 })
             })?;
-        
-        let merchant_id_from_header = merchant_id_str.parse::<common_utils::id_type::MerchantId>()
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
             .map_err(|e| {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_MERCHANT_ID".to_owned(),
@@ -875,7 +887,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &tonic::metadat
                     error_object: None,
                 })
             })?;
-        
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -923,11 +935,21 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &tonic::metadat
     }
 }
 
-impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceRepeatEverythingRequest, Connectors, &tonic::metadata::MetadataMap)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, metadata): (grpc_api_types::payments::PaymentServiceRepeatEverythingRequest, Connectors, &tonic::metadata::MetadataMap),
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceRepeatEverythingRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For repeat payment operations, address information is typically not available or required
         let address: PaymentAddress = crate::payment_address::PaymentAddress::new(
@@ -936,7 +958,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceRepeatEverythingReq
             None,        // payment_method_billing
             Some(false), // should_unify_address = false for repeat operations
         );
-        
+
         let merchant_id_str = metadata
             .get(common_utils::consts::X_MERCHANT_ID)
             .ok_or_else(|| {
@@ -956,8 +978,9 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceRepeatEverythingReq
                     error_object: None,
                 })
             })?;
-        
-        let merchant_id_from_header = merchant_id_str.parse::<common_utils::id_type::MerchantId>()
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
             .map_err(|e| {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_MERCHANT_ID".to_owned(),
@@ -966,7 +989,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceRepeatEverythingReq
                     error_object: None,
                 })
             })?;
-        
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1005,11 +1028,21 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceRepeatEverythingReq
     }
 }
 
-impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceGetRequest, Connectors, &tonic::metadata::MetadataMap)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::PaymentServiceGetRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, metadata): (grpc_api_types::payments::PaymentServiceGetRequest, Connectors, &tonic::metadata::MetadataMap),
+        (value, connectors, metadata): (
+            grpc_api_types::payments::PaymentServiceGetRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For sync operations, address information is typically not available or required
         let address: PaymentAddress = crate::payment_address::PaymentAddress::new(
@@ -1018,7 +1051,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceGetRequest, Connect
             None,        // payment_method_billing
             Some(false), // should_unify_address = false for sync operations
         );
-        
+
         let merchant_id_str = metadata
             .get(common_utils::consts::X_MERCHANT_ID)
             .ok_or_else(|| {
@@ -1038,8 +1071,9 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceGetRequest, Connect
                     error_object: None,
                 })
             })?;
-        
-        let merchant_id_from_header = merchant_id_str.parse::<common_utils::id_type::MerchantId>()
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
             .map_err(|e| {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_MERCHANT_ID".to_owned(),
@@ -1048,7 +1082,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceGetRequest, Connect
                     error_object: None,
                 })
             })?;
-        
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1087,11 +1121,21 @@ impl ForeignTryFrom<(grpc_api_types::payments::PaymentServiceGetRequest, Connect
     }
 }
 
-impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &tonic::metadata::MetadataMap)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        PaymentServiceVoidRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, metadata): (PaymentServiceVoidRequest, Connectors, &tonic::metadata::MetadataMap),
+        (value, connectors, metadata): (
+            PaymentServiceVoidRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For void operations, address information is typically not available or required
         // Since this is a PaymentServiceVoidRequest, we use default address values
@@ -1101,7 +1145,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &tonic::metadata::Me
             None,        // payment_method_billing
             Some(false), // should_unify_address = false for void operations
         );
-        
+
         let merchant_id_str = metadata
             .get(common_utils::consts::X_MERCHANT_ID)
             .ok_or_else(|| {
@@ -1121,8 +1165,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &tonic::metadata::Me
                     error_object: None,
                 })
             })?;
-        
-        let merchant_id_from_header = merchant_id_str.parse::<common_utils::id_type::MerchantId>()
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
             .map_err(|e| {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_MERCHANT_ID".to_owned(),
@@ -1131,7 +1176,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &tonic::metadata::Me
                     error_object: None,
                 })
             })?;
-        
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1261,6 +1306,7 @@ pub fn generate_payment_authorize_response(
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
+    info!("Payment authorize response status: {:?}", status);
     let order_id = router_data_v2.resource_common_data.reference_id;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
     let response = match transaction_response {
@@ -1983,13 +2029,21 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
     }
 }
 
-impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors, &tonic::metadata::MetadataMap)>
-    for DisputeFlowData
+impl
+    ForeignTryFrom<(
+        grpc_api_types::payments::AcceptDisputeRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (grpc_api_types::payments::AcceptDisputeRequest, Connectors, &tonic::metadata::MetadataMap),
+        (value, connectors, _metadata): (
+            grpc_api_types::payments::AcceptDisputeRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
             dispute_id: None,
@@ -2744,8 +2798,9 @@ impl
                     error_object: None,
                 })
             })?;
-        
-        let merchant_id_from_header = merchant_id_str.parse::<common_utils::id_type::MerchantId>()
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
             .map_err(|e| {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_MERCHANT_ID".to_owned(),
@@ -2754,7 +2809,7 @@ impl
                     error_object: None,
                 })
             })?;
-        
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -2868,11 +2923,23 @@ pub fn generate_payment_capture_response(
     }
 }
 
-impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String, &tonic::metadata::MetadataMap)> for PaymentFlowData {
+impl
+    ForeignTryFrom<(
+        PaymentServiceRegisterRequest,
+        Connectors,
+        String,
+        &tonic::metadata::MetadataMap,
+    )> for PaymentFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, environment, metadata): (PaymentServiceRegisterRequest, Connectors, String, &tonic::metadata::MetadataMap),
+        (value, connectors, environment, metadata): (
+            PaymentServiceRegisterRequest,
+            Connectors,
+            String,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match value.address {
             Some(address) => crate::payment_address::PaymentAddress::foreign_try_from(address)?,
@@ -2890,7 +2957,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String, &tonic::
             common_utils::consts::CONST_PRODUCTION => Some(false),
             _ => Some(true),
         };
-        
+
         let merchant_id_str = metadata
             .get(common_utils::consts::X_MERCHANT_ID)
             .ok_or_else(|| {
@@ -2910,8 +2977,9 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String, &tonic::
                     error_object: None,
                 })
             })?;
-        
-        let merchant_id_from_header = merchant_id_str.parse::<common_utils::id_type::MerchantId>()
+
+        let merchant_id_from_header = merchant_id_str
+            .parse::<common_utils::id_type::MerchantId>()
             .map_err(|e| {
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_MERCHANT_ID".to_owned(),
@@ -2920,7 +2988,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String, &tonic::
                     error_object: None,
                 })
             })?;
-        
+
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -3226,11 +3294,21 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
     }
 }
 
-impl ForeignTryFrom<(DisputeDefendRequest, Connectors, &tonic::metadata::MetadataMap)> for DisputeFlowData {
+impl
+    ForeignTryFrom<(
+        DisputeDefendRequest,
+        Connectors,
+        &tonic::metadata::MetadataMap,
+    )> for DisputeFlowData
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (DisputeDefendRequest, Connectors, &tonic::metadata::MetadataMap),
+        (value, connectors, _metadata): (
+            DisputeDefendRequest,
+            Connectors,
+            &tonic::metadata::MetadataMap,
+        ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
             dispute_id: Some(value.dispute_id.clone()),
