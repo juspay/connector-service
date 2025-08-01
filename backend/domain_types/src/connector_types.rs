@@ -930,11 +930,11 @@ pub enum PaymentsResponseData {
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
         raw_connector_response: Option<String>,
-        status_code: Option<u16>,
+        status_code: u16,
     },
     SessionResponse {
         session_token: String,
-        status_code: Option<u16>,
+        status_code: u16,
     },
 }
 
@@ -974,7 +974,7 @@ pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -999,7 +999,7 @@ pub struct WebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -1010,7 +1010,7 @@ pub struct RefundWebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -1021,7 +1021,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1286,7 +1286,7 @@ pub struct DisputeResponseData {
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone, Default)]
