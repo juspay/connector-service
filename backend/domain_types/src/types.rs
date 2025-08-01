@@ -51,6 +51,7 @@ pub struct Connectors {
     pub cashfree: ConnectorParams,
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
+    pub stripe: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -475,6 +476,8 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             integrity_object: None,
             merchant_config_currency: None,
             all_keys_required: None, // Field not available in new proto structure
+            customer_acceptance: None,
+            setup_mandate_details: None,
         })
     }
 }
@@ -887,6 +890,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -938,6 +942,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -1272,6 +1277,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -2383,6 +2389,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -2518,6 +2525,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }
@@ -3078,7 +3086,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         let minor_amount = value.minor_amount;
         let currency = value.currency();
         let merchant_order_reference_id = value.merchant_order_reference_id;
-        let metadata = value.metadata;
         let webhook_url = value.webhook_url;
 
         // Extract mandate reference
@@ -3094,7 +3101,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         // Convert mandate reference to domain type
         let mandate_ref = match mandate_reference.mandate_id {
             Some(id) => crate::connector_types::MandateReferenceId::ConnectorMandateId(
-                crate::connector_types::ConnectorMandateReferenceId::new(Some(id), None, None),
+                crate::connector_types::ConnectorMandateReferenceId::new(
+                    Some(id),
+                    None,
+                    None,
+                    None,
+                ),
             ),
             None => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3113,13 +3125,21 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             minor_amount: common_utils::types::MinorUnit::new(minor_amount),
             currency: common_enums::Currency::foreign_try_from(currency)?,
             merchant_order_reference_id,
-            metadata: if metadata.is_empty() {
+            metadata: if value.metadata.is_empty() {
                 None
             } else {
-                Some(metadata)
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
             },
             webhook_url,
             integrity_object: None,
+            browser_info: None,
+            capture_method: None,
         })
     }
 }
@@ -3174,6 +3194,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            recurring_mandate_payment_data: None,
         })
     }
 }

@@ -43,5 +43,21 @@ pub fn missing_field_err(
     })
 }
 
+#[macro_export]
+macro_rules! unimplemented_payment_method {
+    ($payment_method:expr, $connector:expr) => {
+        domain_types::errors::ConnectorError::NotImplemented(format!(
+            "{} through {}",
+            $payment_method, $connector
+        ))
+    };
+    ($payment_method:expr, $flow:expr, $connector:expr) => {
+        domain_types::errors::ConnectorError::NotImplemented(format!(
+            "{} {} through {}",
+            $payment_method, $flow, $connector
+        ))
+    };
+}
+
 pub mod xml_utils;
 pub use xml_utils::preprocess_xml_response_bytes;

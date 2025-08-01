@@ -112,3 +112,20 @@ mod id_type {
         };
     }
 }
+
+/// Collects names of all optional fields that are `None`.
+/// This is typically useful for constructing error messages including a list of all missing fields.
+#[macro_export]
+macro_rules! collect_missing_value_keys {
+    [$(($key:literal, $option:expr)),+] => {
+        {
+            let mut keys: Vec<&'static str> = Vec::new();
+            $(
+                if $option.is_none() {
+                    keys.push($key);
+                }
+            )*
+            keys
+        }
+    };
+}

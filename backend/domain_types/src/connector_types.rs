@@ -18,10 +18,11 @@ use strum::{Display, EnumString};
 
 use crate::{
     errors::{ApiError, ApplicationErrorResponse},
+    mandates::{CustomerAcceptance, MandateData},
     payment_address::{Address, AddressDetails, PhoneDetails},
     payment_method_data,
     payment_method_data::{Card, PaymentMethodData},
-    router_data::PaymentMethodToken,
+    router_data::{PaymentMethodToken, RecurringMandatePaymentData},
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
@@ -52,6 +53,7 @@ pub enum ConnectorEnum {
     Cashfree,
     Fiuu,
     Payu,
+    Stripe,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -72,6 +74,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
             grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
             grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
+            grpc_api_types::payments::Connector::Stripe => Ok(Self::Stripe),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -107,6 +110,7 @@ pub struct ConnectorMandateReferenceId {
     connector_mandate_id: Option<String>,
     payment_method_id: Option<String>,
     update_history: Option<Vec<UpdateHistory>>,
+    mandate_metadata: Option<SecretSerdeValue>,
 }
 
 impl ConnectorMandateReferenceId {
@@ -114,11 +118,13 @@ impl ConnectorMandateReferenceId {
         connector_mandate_id: Option<String>,
         payment_method_id: Option<String>,
         update_history: Option<Vec<UpdateHistory>>,
+        mandate_metadata: Option<SecretSerdeValue>,
     ) -> Self {
         Self {
             connector_mandate_id,
             payment_method_id,
             update_history,
+            mandate_metadata,
         }
     }
 
@@ -132,6 +138,10 @@ impl ConnectorMandateReferenceId {
 
     pub fn get_update_history(&self) -> Option<&Vec<UpdateHistory>> {
         self.update_history.as_ref()
+    }
+
+    pub fn get_mandate_metadata(&self) -> Option<SecretSerdeValue> {
+        self.mandate_metadata.clone()
     }
 }
 
@@ -246,6 +256,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    pub recurring_mandate_payment_data: Option<RecurringMandatePaymentData>,
 }
 
 impl PaymentFlowData {
@@ -332,6 +343,12 @@ impl PaymentFlowData {
                 .address
                 .and_then(|shipping_details| shipping_details.state)
         })
+    }
+
+    pub fn get_optional_shipping_full_name(&self) -> Option<Secret<String>> {
+        self.get_optional_shipping()
+            .and_then(|shipping_details| shipping_details.address.as_ref())
+            .and_then(|shipping_address| shipping_address.get_optional_full_name())
     }
 
     pub fn get_optional_shipping_country(&self) -> Option<common_enums::CountryAlpha2> {
@@ -716,6 +733,8 @@ pub struct PaymentsAuthorizeData {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
+    pub setup_mandate_details: Option<MandateData>,
 }
 
 impl PaymentsAuthorizeData {
@@ -857,10 +876,10 @@ impl PaymentsAuthorizeData {
     //     })
     // }
 
-    // fn is_customer_initiated_mandate_payment(&self) -> bool {
-    //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
-    // }
+    pub fn is_customer_initiated_mandate_payment(&self) -> bool {
+        (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
+            && self.setup_future_usage == Some(common_enums::FutureUsage::OffSession)
+    }
 
     pub fn get_metadata_as_object(&self) -> Option<SecretSerdeValue> {
         self.metadata.clone().and_then(|meta_data| match meta_data {
@@ -1244,9 +1263,11 @@ pub struct RepeatPaymentData {
     pub minor_amount: MinorUnit,
     pub currency: Currency,
     pub merchant_order_reference_id: Option<String>,
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: Option<serde_json::Value>,
     pub webhook_url: Option<String>,
     pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
 }
 
 impl RepeatPaymentData {

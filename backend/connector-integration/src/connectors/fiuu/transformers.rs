@@ -38,6 +38,7 @@ use url::Url;
 use crate::{
     connectors::{fiuu::FiuuRouterData, macros::GetFormData},
     types::ResponseRouterData,
+    unimplemented_payment_method,
 };
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
@@ -2284,24 +2285,6 @@ impl
         }
     }
 }
-
-#[macro_export]
-macro_rules! unimplemented_payment_method {
-    ($payment_method:expr, $connector:expr) => {
-        errors::ConnectorError::NotImplemented(format!(
-            "{} through {}",
-            $payment_method, $connector
-        ))
-    };
-    ($payment_method:expr, $flow:expr, $connector:expr) => {
-        errors::ConnectorError::NotImplemented(format!(
-            "{} {} through {}",
-            $payment_method, $flow, $connector
-        ))
-    };
-}
-
-use crate::unimplemented_payment_method;
 
 pub const DUIT_NOW_BRAND_COLOR: &str = "#ED2E67";
 

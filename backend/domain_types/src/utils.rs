@@ -244,6 +244,17 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
     }
 }
 
+pub fn is_refund_failure(status: common_enums::RefundStatus) -> bool {
+    match status {
+        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
+            true
+        }
+        common_enums::RefundStatus::ManualReview
+        | common_enums::RefundStatus::Pending
+        | common_enums::RefundStatus::Success => false,
+    }
+}
+
 pub fn get_card_details(
     payment_method_data: PaymentMethodData,
     connector_name: &'static str,
