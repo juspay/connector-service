@@ -36,3 +36,6 @@ pub use self::payu::Payu;
 
 pub mod cashtocode;
 pub use self::cashtocode::Cashtocode;
+
+pub mod noon;
+pub use self::noon::Noon;

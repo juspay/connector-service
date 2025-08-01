@@ -52,6 +52,7 @@ pub struct Connectors {
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
+    pub noon: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -514,7 +515,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             setup_future_usage: None,
             mandate_id: None,
             off_session: None,
-            order_category: None,
+            order_category: value.order_category,
             session_token: None,
             enrolled_for_3ds: false,
             related_transaction_id: None,
@@ -549,6 +550,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             integrity_object: None,
             merchant_config_currency: None,
             all_keys_required: None, // Field not available in new proto structure
+            setup_mandate_details: None,
         })
     }
 }
@@ -951,7 +953,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                     error_object: None,
                 }))?,
             connector_customer: value.connector_customer_id,
-            description: None,
+            description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
