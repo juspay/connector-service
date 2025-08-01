@@ -1227,7 +1227,7 @@ pub fn get_adyen_response(
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
-        status_code: status_code,
+        status_code,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1303,7 +1303,7 @@ pub fn get_redirection_response(
         incremental_authorization_allowed: None,
         mandate_reference: None,
         raw_connector_response: None,
-        status_code: status_code,
+        status_code,
     };
     Ok((status, error, payments_response_data))
 }
