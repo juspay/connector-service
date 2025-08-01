@@ -140,19 +140,23 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name: common_utils::dapr::FlowName::SubmitEvidence,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&payload).unwrap_or_default(),
+                )),
+                request_id: &request_id,
+            };
+
             let response = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 None,
-                &connector.to_string(),
-                &service_name,
-                common_utils::dapr::FlowName::SubmitEvidence,
-                &self.config.events,
-                Some(common_utils::pii::SecretSerdeValue::new(
-                    serde_json::to_value(&payload).unwrap_or_default(),
-                )),
-                &request_id,
+                event_params,
             )
             .await
             .switch()
@@ -310,19 +314,23 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name: common_utils::dapr::FlowName::AcceptDispute,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&payload).unwrap_or_default(),
+                )),
+                request_id: &request_id,
+            };
+
             let response = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 None,
-                &connector.to_string(),
-                &service_name,
-                common_utils::dapr::FlowName::AcceptDispute,
-                &self.config.events,
-                Some(common_utils::pii::SecretSerdeValue::new(
-                    serde_json::to_value(&payload).unwrap_or_default(),
-                )),
-                &request_id,
+                event_params,
             )
             .await
             .switch()
