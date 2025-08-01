@@ -1152,7 +1152,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             incremental_authorization_allowed: None,
             mandate_reference: None,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         };
 
         Ok(Self {
@@ -1227,7 +1227,7 @@ pub fn get_adyen_response(
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
-        status_code: Some(status_code),
+        status_code: status_code,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1303,7 +1303,7 @@ pub fn get_redirection_response(
         incremental_authorization_allowed: None,
         mandate_reference: None,
         raw_connector_response: None,
-        status_code: Some(status_code),
+        status_code: status_code,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1880,7 +1880,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
             connector_refund_id: response.psp_reference,
             refund_status: status,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         };
 
         Ok(Self {
@@ -1980,7 +1980,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending,
@@ -2397,7 +2397,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                     .clone(),
                 connector_dispute_status: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             };
 
             Ok(Self {
@@ -2601,7 +2601,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                     .clone(),
                 connector_dispute_status: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             };
 
             Ok(Self {
@@ -2733,7 +2733,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                             .connector_dispute_id
                             .clone(),
                         raw_connector_response: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     }),
                     ..router_data
                 })
