@@ -200,6 +200,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
         email: None,
+        browser_info: None,
     }
 }
 
@@ -404,6 +405,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
         metadata: HashMap::new(),
+        browser_info: None,
     }
 }
 
@@ -422,6 +424,7 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         request_ref_id: Some(request_ref_id),
         cancellation_reason: None,
         all_keys_required: None,
+        browser_info: None,
     }
 }
 
@@ -482,6 +485,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         request_ref_id: Some(request_ref_id),
         transaction_id: Some(transaction_id_obj),
         refund_id: refund_id.to_string(),
+        browser_info: None,
         refund_reason: None,
     }
 }
