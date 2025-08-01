@@ -9,15 +9,15 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -87,8 +87,9 @@ macros::create_all_prerequisites!(
             req.resource_common_data.connectors.cashfree.base_url.to_string()
         }
 
-        fn preprocess_response_bytes(
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
             Ok(bytes)
@@ -286,10 +287,17 @@ impl connector_types::RefundSyncV2 for Cashfree {}
 impl connector_types::RefundV2 for Cashfree {}
 impl connector_types::PaymentCapture for Cashfree {}
 impl connector_types::SetupMandateV2 for Cashfree {}
+impl connector_types::RepeatPaymentV2 for Cashfree {}
 impl connector_types::AcceptDispute for Cashfree {}
 impl connector_types::SubmitEvidenceV2 for Cashfree {}
 impl connector_types::DisputeDefend for Cashfree {}
 impl connector_types::IncomingWebhook for Cashfree {}
+
+// Default ConnectorIntegrationV2 implementations for unsupported flows
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Cashfree
+{
+}
 
 // SourceVerification implementations for all flows
 macro_rules! impl_source_verification_stub {
@@ -371,6 +379,12 @@ impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(

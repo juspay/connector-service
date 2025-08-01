@@ -757,13 +757,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                     resource_id: DomainResponseId::ConnectorTransactionId(
                         payment_resp_struct.ssl_txn_id.clone(),
                     ),
-                    redirection_data: Box::new(None),
+                    redirection_data: None,
                     connector_metadata: None,
                     network_txn_id: payment_resp_struct.ssl_approval_code.clone(),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
+                    mandate_reference: None,
                     raw_connector_response: None,
+                    status_code: http_code,
                 })
             }
             (_, Some(err_resp)) => Err(err_resp),
@@ -987,7 +988,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     resource_id: DomainResponseId::ConnectorTransactionId(
                         payment_resp_struct.ssl_txn_id.clone(),
                     ),
-                    redirection_data: Box::new(None),
+                    redirection_data: None,
                     connector_metadata: Some(
                         serde_json::to_value(payment_resp_struct.clone())
                             .unwrap_or(serde_json::Value::Null),
@@ -995,8 +996,9 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: payment_resp_struct.ssl_approval_code.clone(),
                     incremental_authorization_allowed: None,
-                    mandate_reference: Box::new(None),
+                    mandate_reference: None,
                     raw_connector_response: None,
+                    status_code: http_code,
                 })
             }
             (_, Some(err_resp)) => Err(err_resp),
@@ -1146,6 +1148,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 connector_refund_id: payment_resp_struct.ssl_txn_id.clone(),
                 refund_status,
                 raw_connector_response: None,
+                status_code: http_code,
             }),
             (_, Some(err_resp)) => Err(err_resp),
             (ElavonResult::Error(error_payload), None) => Err(ErrorResponse {
@@ -1292,6 +1295,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRSyncResponse, Self>>
             connector_refund_id: response.ssl_txn_id.clone(),
             refund_status,
             raw_connector_response: None,
+            status_code: value.http_code,
         };
 
         Ok(Self {
@@ -1371,13 +1375,14 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: DomainResponseId::ConnectorTransactionId(response.ssl_txn_id.clone()),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: Some(serde_json::json!(response)),
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             raw_connector_response: None,
+            status_code: value.http_code,
         };
 
         Ok(RouterDataV2 {

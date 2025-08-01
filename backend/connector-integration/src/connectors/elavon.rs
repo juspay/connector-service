@@ -6,15 +6,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -55,6 +55,7 @@ impl connector_types::RefundV2 for Elavon {}
 impl connector_types::ValidationTrait for Elavon {}
 impl connector_types::PaymentCapture for Elavon {}
 impl connector_types::SetupMandateV2 for Elavon {}
+impl connector_types::RepeatPaymentV2 for Elavon {}
 impl connector_types::AcceptDispute for Elavon {}
 impl connector_types::SubmitEvidenceV2 for Elavon {}
 impl connector_types::DisputeDefend for Elavon {}
@@ -195,8 +196,9 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        pub fn preprocess_response_bytes(
+        pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
         ) -> Result<Bytes, errors::ConnectorError> {
             // Use the utility function to preprocess XML response bytes
@@ -537,5 +539,20 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Elavon
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Elavon
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Elavon
 {
 }

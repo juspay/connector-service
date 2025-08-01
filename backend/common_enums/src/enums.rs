@@ -1,7 +1,13 @@
-use std::num::ParseFloatError;
-
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+/// Currency related errors.
+#[derive(Debug, thiserror::Error)]
+pub enum CurrencyError {
+    /// The provided currency is not supported for amount conversion
+    #[error("Unsupported currency: {currency}. Please add this currency to the supported currency list with appropriate decimal configuration.")]
+    UnsupportedCurrency { currency: String },
+}
 
 /// The three-letter ISO 4217 currency code (e.g., "USD", "EUR") for the payment amount. This field is mandatory for creating a payment.
 #[allow(clippy::upper_case_acronyms)]
@@ -428,21 +434,26 @@ pub enum RegulatedName {
 }
 
 impl Currency {
-    pub fn to_currency_base_unit(self, amount: i64) -> Result<String, std::convert::Infallible> {
+    pub fn to_currency_base_unit(self, amount: i64) -> Result<String, CurrencyError> {
         let amount_f64 = self.to_currency_base_unit_asf64(amount)?;
         Ok(format!("{amount_f64:.2}"))
     }
 
-    pub fn to_currency_base_unit_asf64(self, amount: i64) -> Result<f64, std::convert::Infallible> {
-        let exponent = self.number_of_digits_after_decimal_point();
+    pub fn to_currency_base_unit_asf64(self, amount: i64) -> Result<f64, CurrencyError> {
+        let exponent = self.number_of_digits_after_decimal_point()?;
         let divisor = 10_u32.pow(exponent.into());
         let amount_f64 = amount as f64 / f64::from(divisor);
         Ok(amount_f64)
     }
 
-    pub fn to_currency_lower_unit(self, amount: String) -> Result<String, ParseFloatError> {
-        let amount_decimal = amount.parse::<f64>()?;
-        let exponent = self.number_of_digits_after_decimal_point();
+    pub fn to_currency_lower_unit(self, amount: String) -> Result<String, CurrencyError> {
+        let amount_decimal =
+            amount
+                .parse::<f64>()
+                .map_err(|_| CurrencyError::UnsupportedCurrency {
+                    currency: format!("Invalid amount format: {amount}"),
+                })?;
+        let exponent = self.number_of_digits_after_decimal_point()?;
         let multiplier = 10_u32.pow(exponent.into());
         let final_amount = amount_decimal * f64::from(multiplier);
         Ok(final_amount.to_string())
@@ -451,7 +462,7 @@ impl Currency {
     pub fn to_currency_base_unit_with_zero_decimal_check(
         self,
         amount: i64,
-    ) -> Result<String, std::convert::Infallible> {
+    ) -> Result<String, CurrencyError> {
         if self.is_zero_decimal_currency() {
             Ok(amount.to_string())
         } else {
@@ -657,16 +668,171 @@ impl Currency {
         matches!(self, Self::CLF)
     }
 
-    pub fn number_of_digits_after_decimal_point(self) -> u8 {
+    /// Returns the number of decimal places for the currency based on ISO 4217 standard.
+    ///
+    /// **Reference**: <https://www.iso.org/iso-4217-currency-codes.html>
+    ///
+    /// **To add new currency**: Add to appropriate method (`is_zero_decimal_currency`, `is_two_decimal_currency`, etc.)
+    pub fn number_of_digits_after_decimal_point(self) -> Result<u8, CurrencyError> {
         if self.is_zero_decimal_currency() {
-            0
+            Ok(0)
         } else if self.is_three_decimal_currency() {
-            3
+            Ok(3)
         } else if self.is_four_decimal_currency() {
-            4
+            Ok(4)
+        } else if self.is_two_decimal_currency() {
+            Ok(2)
         } else {
-            2
+            Err(CurrencyError::UnsupportedCurrency {
+                currency: format!("{self:?}"),
+            })
         }
+    }
+
+    /// Checks if the currency uses 2 decimal places (most common case).
+    /// This replaces the implicit default fallback with explicit validation.
+    pub fn is_two_decimal_currency(self) -> bool {
+        matches!(
+            self,
+            Self::AED
+                | Self::AFN
+                | Self::ALL
+                | Self::AMD
+                | Self::ANG
+                | Self::AOA
+                | Self::ARS
+                | Self::AUD
+                | Self::AWG
+                | Self::AZN
+                | Self::BAM
+                | Self::BBD
+                | Self::BDT
+                | Self::BGN
+                | Self::BMD
+                | Self::BND
+                | Self::BOB
+                | Self::BRL
+                | Self::BSD
+                | Self::BTN
+                | Self::BWP
+                | Self::BYN
+                | Self::BZD
+                | Self::CAD
+                | Self::CDF
+                | Self::CHF
+                | Self::CNY
+                | Self::COP
+                | Self::CRC
+                | Self::CUC
+                | Self::CUP
+                | Self::CVE
+                | Self::CZK
+                | Self::DKK
+                | Self::DOP
+                | Self::DZD
+                | Self::EGP
+                | Self::ERN
+                | Self::ETB
+                | Self::EUR
+                | Self::FJD
+                | Self::FKP
+                | Self::GBP
+                | Self::GEL
+                | Self::GHS
+                | Self::GIP
+                | Self::GMD
+                | Self::GTQ
+                | Self::GYD
+                | Self::HKD
+                | Self::HNL
+                | Self::HRK
+                | Self::HTG
+                | Self::HUF
+                | Self::IDR
+                | Self::ILS
+                | Self::INR
+                | Self::IQD
+                | Self::IRR
+                | Self::ISK
+                | Self::JMD
+                | Self::KES
+                | Self::KGS
+                | Self::KHR
+                | Self::KPW
+                | Self::KYD
+                | Self::KZT
+                | Self::LAK
+                | Self::LBP
+                | Self::LKR
+                | Self::LRD
+                | Self::LSL
+                | Self::LYD
+                | Self::MAD
+                | Self::MDL
+                | Self::MKD
+                | Self::MMK
+                | Self::MNT
+                | Self::MOP
+                | Self::MRU
+                | Self::MUR
+                | Self::MVR
+                | Self::MWK
+                | Self::MXN
+                | Self::MYR
+                | Self::MZN
+                | Self::NAD
+                | Self::NGN
+                | Self::NIO
+                | Self::NOK
+                | Self::NPR
+                | Self::NZD
+                | Self::PAB
+                | Self::PEN
+                | Self::PGK
+                | Self::PHP
+                | Self::PKR
+                | Self::PLN
+                | Self::QAR
+                | Self::RON
+                | Self::RSD
+                | Self::RUB
+                | Self::SAR
+                | Self::SBD
+                | Self::SCR
+                | Self::SDG
+                | Self::SEK
+                | Self::SGD
+                | Self::SHP
+                | Self::SLE
+                | Self::SLL
+                | Self::SOS
+                | Self::SRD
+                | Self::SSP
+                | Self::STD
+                | Self::STN
+                | Self::SVC
+                | Self::SYP
+                | Self::SZL
+                | Self::THB
+                | Self::TJS
+                | Self::TMT
+                | Self::TOP
+                | Self::TRY
+                | Self::TTD
+                | Self::TWD
+                | Self::TZS
+                | Self::UAH
+                | Self::USD
+                | Self::UYU
+                | Self::UZS
+                | Self::VES
+                | Self::WST
+                | Self::XCD
+                | Self::YER
+                | Self::ZAR
+                | Self::ZMW
+                | Self::ZWL
+        )
     }
 }
 
@@ -1249,7 +1415,6 @@ pub enum EventClass {
     Payments,
     Refunds,
     Disputes,
-    Mandates,
 }
 
 #[derive(

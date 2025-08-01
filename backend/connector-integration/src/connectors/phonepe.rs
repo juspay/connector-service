@@ -2,22 +2,21 @@ pub mod constants;
 pub mod headers;
 pub mod transformers;
 
-use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use common_enums as enums;
 use common_utils::{
     errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -33,6 +32,7 @@ use interfaces::{
 };
 use transformers as phonepe;
 
+use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
 
@@ -56,8 +56,9 @@ macros::create_all_prerequisites!(
             req.resource_common_data.connectors.phonepe.base_url.to_string()
         }
 
-        fn preprocess_response_bytes(
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
             Ok(bytes)
@@ -120,6 +121,7 @@ impl connector_types::IncomingWebhook for Phonepe {}
 impl connector_types::RefundV2 for Phonepe {}
 impl connector_types::PaymentCapture for Phonepe {}
 impl connector_types::SetupMandateV2 for Phonepe {}
+impl connector_types::RepeatPaymentV2 for Phonepe {}
 impl connector_types::AcceptDispute for Phonepe {}
 impl connector_types::RefundSyncV2 for Phonepe {}
 impl connector_types::DisputeDefend for Phonepe {}
@@ -213,6 +215,10 @@ impl
         SetupMandateRequestData,
         PaymentsResponseData,
     > for Phonepe
+{
+}
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Phonepe
 {
 }
 impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
@@ -334,6 +340,12 @@ impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
     PaymentsResponseData
 );
 impl_source_verification_stub!(

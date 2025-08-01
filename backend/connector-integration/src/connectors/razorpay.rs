@@ -78,6 +78,7 @@ impl connector_types::RefundSyncV2 for Razorpay {}
 impl connector_types::RefundV2 for Razorpay {}
 impl connector_types::PaymentCapture for Razorpay {}
 impl connector_types::SetupMandateV2 for Razorpay {}
+impl connector_types::RepeatPaymentV2 for Razorpay {}
 impl connector_types::AcceptDispute for Razorpay {}
 impl connector_types::SubmitEvidenceV2 for Razorpay {}
 impl connector_types::DisputeDefend for Razorpay {}
@@ -571,7 +572,7 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone()))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
@@ -637,6 +638,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             error_code: notif.entity.error_code,
             error_message: notif.entity.error_reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 
@@ -666,6 +668,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 }
@@ -733,7 +736,7 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone()))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
@@ -827,7 +830,7 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone()))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
@@ -1095,4 +1098,24 @@ impl ConnectorSpecifications for Razorpay {
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
         Some(&RAZORPAY_SUPPORTED_PAYMENT_METHODS)
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Razorpay
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Razorpay
+{
 }

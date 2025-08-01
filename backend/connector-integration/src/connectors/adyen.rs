@@ -66,6 +66,7 @@ impl connector_types::RefundSyncV2 for Adyen {}
 impl connector_types::RefundV2 for Adyen {}
 impl connector_types::PaymentCapture for Adyen {}
 impl connector_types::SetupMandateV2 for Adyen {}
+impl connector_types::RepeatPaymentV2 for Adyen {}
 impl connector_types::AcceptDispute for Adyen {}
 impl connector_types::SubmitEvidenceV2 for Adyen {}
 impl connector_types::DisputeDefend for Adyen {}
@@ -519,6 +520,7 @@ impl connector_types::IncomingWebhook for Adyen {
             error_code: notif.reason.clone(),
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 
@@ -545,6 +547,7 @@ impl connector_types::IncomingWebhook for Adyen {
             error_code: notif.reason.clone(),
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 
@@ -577,6 +580,7 @@ impl connector_types::IncomingWebhook for Adyen {
                 raw_connector_response: Some(
                     String::from_utf8_lossy(&request_body_copy).to_string(),
                 ),
+                status_code: 200,
             },
         )
     }
@@ -797,4 +801,24 @@ impl ConnectorValidation for Adyen {
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Adyen
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Adyen
+{
 }

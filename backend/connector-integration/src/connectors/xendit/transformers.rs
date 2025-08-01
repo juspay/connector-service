@@ -381,32 +381,31 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
                 redirection_data: match response.actions {
-                    Some(actions) if !actions.is_empty() => {
-                        actions.first().map_or(Box::new(None), |single_action| {
-                            Box::new(Some(RedirectForm::Form {
-                                endpoint: single_action.url.clone(),
-                                method: match single_action.method {
-                                    MethodType::Get => Method::Get,
-                                    MethodType::Post => Method::Post,
-                                },
-                                form_fields: HashMap::new(),
-                            }))
+                    Some(actions) if !actions.is_empty() => actions.first().map(|single_action| {
+                        Box::new(RedirectForm::Form {
+                            endpoint: single_action.url.clone(),
+                            method: match single_action.method {
+                                MethodType::Get => Method::Get,
+                                MethodType::Post => Method::Post,
+                            },
+                            form_fields: HashMap::new(),
                         })
-                    }
-                    _ => Box::new(None),
+                    }),
+                    _ => None,
                 },
                 mandate_reference: match is_mandate_payment(&router_data.request) {
-                    true => Box::new(Some(MandateReference {
+                    true => Some(Box::new(MandateReference {
                         connector_mandate_id: Some(response.payment_method.id.expose()),
                         payment_method_id: None,
                     })),
-                    false => Box::new(None),
+                    false => None,
                 },
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: http_code,
             })
         };
 
@@ -463,13 +462,14 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::NoResponseId,
-                        redirection_data: Box::new(None),
-                        mandate_reference: Box::new(None),
+                        redirection_data: None,
+                        mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
+                        status_code: http_code,
                     })
                 };
                 Ok(Self {
@@ -575,13 +575,14 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::NoResponseId,
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: http_code,
             })
         };
         Ok(Self {
@@ -650,13 +651,14 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
+                status_code: http_code,
             }),
             ..router_data
         })
@@ -681,13 +683,14 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _http_code,
+            http_code,
         } = item;
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
+                status_code: http_code,
             }),
             ..router_data
         })

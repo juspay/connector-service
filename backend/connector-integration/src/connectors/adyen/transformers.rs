@@ -1139,19 +1139,20 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = value;
         let status = AttemptStatus::Pending;
 
         let payment_void_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.payment_psp_reference),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             raw_connector_response: None,
+            status_code: http_code,
         };
 
         Ok(Self {
@@ -1219,13 +1220,14 @@ pub fn get_adyen_response(
 
     let payments_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::ConnectorTransactionId(response.psp_reference),
-        redirection_data: Box::new(None),
+        redirection_data: None,
         connector_metadata: None,
         network_txn_id,
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
-        mandate_reference: Box::new(mandate_reference),
+        mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
+        status_code,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1291,7 +1293,7 @@ pub fn get_redirection_response(
             Some(psp) => ResponseId::ConnectorTransactionId(psp.to_string()),
             None => ResponseId::NoResponseId,
         },
-        redirection_data: Box::new(redirection_data),
+        redirection_data: redirection_data.map(Box::new),
         connector_metadata,
         network_txn_id: None,
         connector_response_reference_id: response
@@ -1299,8 +1301,9 @@ pub fn get_redirection_response(
             .clone()
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
-        mandate_reference: Box::new(None),
+        mandate_reference: None,
         raw_connector_response: None,
+        status_code,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1868,7 +1871,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = value;
 
         let status = common_enums::RefundStatus::Pending;
@@ -1877,6 +1880,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
             connector_refund_id: response.psp_reference,
             refund_status: status,
             raw_connector_response: None,
+            status_code: http_code,
         };
 
         Ok(Self {
@@ -1957,7 +1961,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = value;
         let is_multiple_capture_psync_flow = router_data.request.multiple_capture_data.is_some();
         let connector_transaction_id = if is_multiple_capture_psync_flow {
@@ -1969,13 +1973,14 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-                redirection_data: Box::new(None),
+                redirection_data: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
-                mandate_reference: Box::new(None),
+                mandate_reference: None,
                 raw_connector_response: None,
+                status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending,
@@ -2392,6 +2397,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                     .clone(),
                 connector_dispute_status: None,
                 raw_connector_response: None,
+                status_code: http_code,
             };
 
             Ok(Self {
@@ -2595,6 +2601,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                     .clone(),
                 connector_dispute_status: None,
                 raw_connector_response: None,
+                status_code: http_code,
             };
 
             Ok(Self {
@@ -2726,6 +2733,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                             .connector_dispute_id
                             .clone(),
                         raw_connector_response: None,
+                        status_code: http_code,
                     }),
                     ..router_data
                 })

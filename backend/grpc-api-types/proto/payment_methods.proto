@@ -46,6 +46,7 @@ message PaymentMethod {
     // CashVoucherPaymentMethodType cash_voucher = 11;      // Cash and voucher payment methods - TODO: Not yet supported
     // DirectDebitPaymentMethodType direct_debit = 12;      // Direct debit payment methods - TODO: Not yet supported
     // OtherPaymentMethodType other = 13;                   // Other payment methods - TODO: Not yet supported
+    RewardPaymentMethodType reward = 14;
   }
 }
 
@@ -941,3 +942,13 @@ message RedPagos {
   // Fields will be added as needed for RedPagos integration
 }
 */
+
+message RewardPaymentMethodType {
+  RewardType reward_type = 1;
+}
+
+enum RewardType {
+  REWARD_TYPE_UNSPECIFIED = 0;
+  CLASSICREWARD = 1;
+  E_VOUCHER = 2;
+}

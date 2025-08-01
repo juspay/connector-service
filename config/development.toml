@@ -1,3 +1,6 @@
+[common]
+environment = "development"
+
 [log.console]
 enabled = true
 level = "TRACE"
@@ -30,4 +33,7 @@ checkout.base_url = "https://api.sandbox.checkout.com/"
 authorizedotnet.base_url = "https://apitest.authorize.net/xml/v1/request.api"
 phonepe.base_url = "https://api.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
+fiuu.base_url = "https://sandbox.merchant.razer.com/"
+payu.base_url = "https://test.payu.in/"
+cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
 mifinity.base_url = "https://demo.mifinity.com/"

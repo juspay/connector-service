@@ -51,6 +51,9 @@ pub enum ConnectorEnum {
     Mifinity,
     Phonepe,
     Cashfree,
+    Fiuu,
+    Payu,
+    Cashtocode,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -69,6 +72,9 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
+            grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
+            grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
+            grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -916,16 +922,18 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data: Box<Option<crate::router_response_types::RedirectForm>>,
+        redirection_data: Option<Box<crate::router_response_types::RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
-        mandate_reference: Box<Option<MandateReference>>,
+        mandate_reference: Option<Box<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
         raw_connector_response: Option<String>,
+        status_code: u16,
     },
     SessionResponse {
         session_token: String,
+        status_code: u16,
     },
 }
 
@@ -965,6 +973,7 @@ pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -989,6 +998,7 @@ pub struct WebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -999,6 +1009,7 @@ pub struct RefundWebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -1009,6 +1020,7 @@ pub struct DisputeWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1229,6 +1241,24 @@ impl SetupMandateRequestData {
 }
 
 #[derive(Debug, Clone)]
+pub struct RepeatPaymentData {
+    pub mandate_reference: MandateReferenceId,
+    pub amount: i64,
+    pub minor_amount: MinorUnit,
+    pub currency: Currency,
+    pub merchant_order_reference_id: Option<String>,
+    pub metadata: Option<HashMap<String, String>>,
+    pub webhook_url: Option<String>,
+    pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+}
+
+impl RepeatPaymentData {
+    pub fn get_mandate_reference(&self) -> &MandateReferenceId {
+        &self.mandate_reference
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct AcceptDisputeData {
     pub connector_dispute_id: String,
     pub integrity_object: Option<AcceptDisputeIntegrityObject>,
@@ -1255,6 +1285,7 @@ pub struct DisputeResponseData {
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone, Default)]

@@ -65,29 +65,7 @@ enum PaymentStatus {
   UNRESOLVED = 19;    // Status could not be determined
 }
 
-// Status of a mandate setup attempt.
-enum MandateStatus {
-  MANDATE_STATUS_UNSPECIFIED = 0; // Default value
-
-  // Initial states
-  MANDATE_INITIATED = 1;           // Mandate setup has been initiated
-  MANDATE_PENDING = 2;             // Mandate setup is pending (waiting for processing)
-  
-  // Authentication flow
-  MANDATE_AUTHENTICATION_PENDING = 3;      // Waiting for customer authentication
-  MANDATE_AUTHENTICATION_SUCCESSFUL = 4;   // Customer authentication successful
-  MANDATE_AUTHENTICATION_FAILED = 5;       // Customer authentication failed
-
-  // Setup completion states
-  MANDATE_ESTABLISHED = 6;         // Mandate has been successfully established
-  MANDATE_FAILED = 7;              // Mandate setup failed
-  MANDATE_CANCELLED = 8;           // Mandate setup was cancelled
-  MANDATE_EXPIRED = 9;             // Mandate setup expired
-
-  // Terminal/fallback states
-  MANDATE_ROUTER_DECLINED = 10;    // Mandate declined by router
-  MANDATE_UNRESOLVED = 11;         // Status could not be determined
-}
+// Note: MandateStatus enum removed - mandate setup now uses PaymentStatus with optional sub_status for detailed information
 
 // Status of a refund.
 enum RefundStatus {
@@ -1111,6 +1089,7 @@ message PaymentServiceAuthorizeResponse {
   PaymentStatus status = 2; // Status of the payment attempt
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
+  uint32 status_code = 10; // HTTP status code from the connector
   
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
@@ -1142,6 +1121,7 @@ message PaymentServiceGetResponse {
   PaymentStatus status = 2; // Current status of the payment attempt
   optional string error_code = 3; // Error code if synchronization encountered an issue
   optional string error_message = 4; // Error message if synchronization encountered an issue
+  uint32 status_code = 26; // HTTP status code from the connector
   
   // Transaction Details
   optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
@@ -1195,6 +1175,7 @@ message PaymentServiceVoidResponse {
   PaymentStatus status = 2; // Status of the payment attempt after voiding
   optional string error_code = 3; // Error code if the void operation failed
   optional string error_message = 4; // Error message if the void operation failed
+  uint32 status_code = 6; // HTTP status code from the connector
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
@@ -1226,6 +1207,7 @@ message PaymentServiceCaptureResponse {
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
+  uint32 status_code = 6; // HTTP status code from the connector
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from response_reference_id
@@ -1269,6 +1251,7 @@ message RefundResponse {
   RefundStatus status = 3; // Current status of the refund
   optional string error_code = 4; // Error code if synchronization encountered an issue
   optional string error_message = 5; // Error message if synchronization encountered an issue
+  uint32 status_code = 22; // HTTP status code from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1317,6 +1300,7 @@ message DisputeResponse {
   optional string connector_status_code = 5; // Connector status code
   optional string error_code = 6; // Error code if retrieval failed
   optional string error_message = 7; // Error message if retrieval failed
+  uint32 status_code = 18; // HTTP status code from the connector
   
   // Dispute Details
   optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
@@ -1396,9 +1380,10 @@ message PaymentServiceRegisterResponse {
   Identifier registration_id = 1; // Identifier for the mandate registration
   
   // Status Information
-  MandateStatus status = 2; // Status of the mandate setup attempt
+  PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
   optional string error_code = 3; // Error code if the mandate setup failed
   optional string error_message = 4; // Error message if the mandate setup failed
+  uint32 status_code = 10; // HTTP status code from the connector
   
   // Mandate Details
   MandateReference mandate_reference = 5; // Reference to the created mandate
@@ -1410,6 +1395,44 @@ message PaymentServiceRegisterResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+}
+
+// Request message for repeat payment (MIT - Merchant Initiated Transaction).
+message PaymentServiceRepeatEverythingRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Mandate Information (required for MIT)
+  MandateReference mandate_reference = 2; // Reference to existing mandate
+  
+  // Amount Information
+  int64 amount = 3; // The amount for the payment in major currency units
+  Currency currency = 4; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 5; // The minor amount for the payment (e.g., cents)
+  
+  // Optional fields
+  optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
+  map<string, string> metadata = 7; // Additional metadata for the connector
+  optional string webhook_url = 8; // URL for webhook notifications
+}
+
+// Response message for repeat payment operation.
+message PaymentServiceRepeatEverythingResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the payment attempt
+  optional string error_code = 3; // Error code if the payment failed
+  optional string error_message = 4; // Error message if the payment failed
+  uint32 status_code = 8; // HTTP status code from the connector
+  
+  // Transaction Details
+  optional string network_txn_id = 5; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 6; // Reference ID from the connector response
+  
+  // Raw Response
+  optional string raw_connector_response = 7; // Raw response from the connector for debugging
 }
 
 // Request message for PaymentService.Transform RPC
@@ -1581,6 +1604,7 @@ message DisputeServiceSubmitEvidenceResponse {
   optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
   optional string error_code = 5; // Error code if submitting evidence failed
   optional string error_message = 6; // Error message if submitting evidence failed
+  uint32 status_code = 8; // HTTP status code from the connector
   
   // Reference
   optional Identifier response_ref_id = 7; // Response reference ID for tracking
@@ -1710,6 +1734,7 @@ message DisputeDefendResponse {
   optional string connector_status_code = 3; // Connector status code
   optional string error_code = 4; // Error code if defending failed
   optional string error_message = 5; // Error message if defending failed
+  uint32 status_code = 7; // HTTP status code from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1733,6 +1758,7 @@ message AcceptDisputeResponse {
   optional string connector_status_code = 3; // Connector status code
   optional string error_code = 4; // Error code if accepting failed
   optional string error_message = 5; // Error message if accepting failed
+  uint32 status_code = 7; // HTTP status code from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking

@@ -607,13 +607,14 @@ impl
                         .map(|id| id.to_string())
                         .unwrap_or_default(),
                 ),
-                redirection_data: redirection_data.unwrap_or_default(),
-                mandate_reference: Box::new(None),
+                redirection_data: redirection_data.and_then(|data| *data).map(Box::new),
+                mandate_reference: None,
                 connector_metadata: None,
                 network_txn_id: None,
                 connector_response_reference_id: response.cf_payment_id.map(|id| id.to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: item.http_code,
             }),
             resource_common_data: PaymentFlowData {
                 status,
