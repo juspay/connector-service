@@ -164,7 +164,7 @@ impl<
 }
 
 macros::create_all_prerequisites!(
-    connector_name: Xendit,
+    connector_name:  Xendit,
     generic_type: T,
     api: [
         (

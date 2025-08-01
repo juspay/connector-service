@@ -110,7 +110,7 @@ pub trait BridgeRequestResponse: Send + Sync {
 pub struct Bridge<Q, S, T>(pub PhantomData<(Q, S, T)>);
 
 macro_rules! expand_fn_get_request_body {
-    ($connector: ty, $curl_res: ident, $flow: ident, $resource_common_data: ty, $request: ident, $response: ty) => {
+    ($connector: ident, $curl_res: ty, $flow: ident, $resource_common_data: ty, $request: ident, $response: ty) => {
         paste::paste! {
             fn get_request_body(
                 &self,
@@ -390,7 +390,6 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response
-
             );
             macros::expand_fn_handle_response!(
                 $connector,
@@ -445,7 +444,6 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response
-
             );
             macros::expand_fn_handle_response!(
                 $connector,
@@ -501,7 +499,6 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response
-
             );
             macros::expand_fn_handle_response!(
                 $connector,

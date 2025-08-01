@@ -4,7 +4,8 @@ pub use self::adyen::Adyen;
 pub mod razorpay;
 pub use self::razorpay::Razorpay;
 
-// pub mod authorizedotnet;
+pub mod authorizedotnet;
+pub use self::authorizedotnet::Authorizedotnet;
 pub mod fiserv;
 pub use self::fiserv::Fiserv;
 pub mod razorpayv2;
