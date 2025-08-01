@@ -405,7 +405,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             })
         };
 
@@ -469,7 +469,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     })
                 };
                 Ok(Self {
@@ -582,7 +582,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             })
         };
         Ok(Self {
@@ -658,7 +658,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             }),
             ..router_data
         })
@@ -690,7 +690,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             }),
             ..router_data
         })
