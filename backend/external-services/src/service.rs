@@ -183,7 +183,7 @@ where
                         async move {
                             let event = Event::new(
                                 request_id.to_string(),
-                                chrono::Utc::now().timestamp(),
+                                chrono::Utc::now().timestamp() as i128,
                                 flow_name,
                                 connector_name.clone(),
                                 Some(url_clone),
@@ -227,7 +227,7 @@ where
                         async move {
                             let event = Event::new(
                                 request_id.to_string(),
-                                chrono::Utc::now().timestamp(),
+                                chrono::Utc::now().timestamp() as i128,
                                 flow_name,
                                 connector_name.clone(),
                                 Some(url_clone),
@@ -271,7 +271,7 @@ where
                         async move {
                             let event = Event::new(
                                 request_id.to_string(),
-                                chrono::Utc::now().timestamp(),
+                                chrono::Utc::now().timestamp() as i128,
                                 flow_name,
                                 connector_name.clone(),
                                 Some(url_clone),

@@ -10,7 +10,7 @@ use hyperswitch_masking::ExposeInterface;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
     pub request_id: String,
-    pub timestamp: i64,
+    pub timestamp: i128,
     pub flow_type: FlowName,
     pub connector: String,
     pub url: Option<String>,
@@ -29,7 +29,7 @@ impl Event {
     /// Create a new Event with all parameters
     pub fn new(
         request_id: String,
-        timestamp: i64,
+        timestamp: i128,
         flow_type: FlowName,
         connector: String,
         url: Option<String>,
@@ -65,6 +65,7 @@ pub struct EventConfig {
     pub pubsub_component: String,
     pub topic: String,
     pub dapr: DaprConfig,
+    pub partition_key_field: String,
     #[serde(default)]
     pub transformations: HashMap<String, String>, // target_path → source_field
     #[serde(default)]
@@ -80,6 +81,7 @@ impl Default for EventConfig {
             pubsub_component: "kafka-pubsub".to_string(),
             topic: "events".to_string(),
             dapr: DaprConfig::default(),
+            partition_key_field: "request_id".to_string(),
             transformations: HashMap::new(),
             static_values: HashMap::new(),
             extractions: HashMap::new(),
@@ -259,6 +261,7 @@ async fn publish_to_dapr(
     pubsub_component: &str,
     topic: &str,
     dapr_config: &DaprConfig,
+    partition_key_field: &str,
 ) -> Result<()> {
     info!(
         "Publishing event to Dapr: component={}, topic={}",
@@ -273,11 +276,13 @@ async fn publish_to_dapr(
 
     metadata.insert("rawPayload".to_string(), "true".to_string());
 
-    if let Some(request_id) = event.get("request_id").and_then(|v| v.as_str()) {
-        metadata.insert("partitionKey".to_string(), request_id.to_string());
-        info!("Setting Kafka message key to request_id: {}", request_id);
+    if let Some(partition_key_value) = event.get(partition_key_field).and_then(|v| v.as_str()) {
+        metadata.insert("partitionKey".to_string(), partition_key_value.to_string());
     } else {
-        info!("Warning: request_id not found in event, message will be published without key");
+        info!(
+            "Warning: {} not found in event, message will be published without key",
+            partition_key_field
+        );
     }
 
     client
@@ -311,6 +316,7 @@ pub async fn emit_event_with_config(base_event: Event, config: &EventConfig) -> 
         &config.pubsub_component,
         &config.topic,
         &config.dapr,
+        &config.partition_key_field,
     )
     .await
 }
