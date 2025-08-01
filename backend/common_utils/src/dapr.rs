@@ -271,6 +271,8 @@ async fn publish_to_dapr(
     let content_type = "application/json".to_string();
     let mut metadata = HashMap::<String, String>::new();
 
+    metadata.insert("rawPayload".to_string(), "true".to_string());
+
     if let Some(request_id) = event.get("request_id").and_then(|v| v.as_str()) {
         metadata.insert("partitionKey".to_string(), request_id.to_string());
         info!("Setting Kafka message key to request_id: {}", request_id);
