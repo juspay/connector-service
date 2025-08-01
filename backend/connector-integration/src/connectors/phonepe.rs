@@ -8,15 +8,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -126,6 +127,7 @@ impl connector_types::AcceptDispute for Phonepe {}
 impl connector_types::RefundSyncV2 for Phonepe {}
 impl connector_types::DisputeDefend for Phonepe {}
 impl connector_types::SubmitEvidenceV2 for Phonepe {}
+impl connector_types::PaymentSessionToken for Phonepe {}
 
 // Implement ConnectorServiceTrait by virtue of implementing all required traits
 impl connector_types::ConnectorServiceTrait for Phonepe {}
@@ -308,7 +310,24 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
+// Stub implementations for missing flows
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Phonepe
+{
+}
+
 // Apply to all flows
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
 impl_source_verification_stub!(
     Authorize,
     PaymentFlowData,

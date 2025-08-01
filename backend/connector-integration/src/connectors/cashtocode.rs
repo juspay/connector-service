@@ -88,6 +88,7 @@ impl connector_types::RefundV2 for Cashtocode {}
 impl connector_types::PaymentCapture for Cashtocode {}
 impl connector_types::ValidationTrait for Cashtocode {}
 impl connector_types::PaymentOrderCreate for Cashtocode {}
+impl connector_types::PaymentSessionToken for Cashtocode {}
 impl connector_types::SetupMandateV2 for Cashtocode {}
 impl connector_types::AcceptDispute for Cashtocode {}
 impl connector_types::SubmitEvidenceV2 for Cashtocode {}
@@ -338,8 +339,28 @@ impl
 {
 }
 
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::CreateSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::SessionTokenRequestData,
+        domain_types::connector_types::SessionTokenResponseData,
+    > for Cashtocode
+{
+}
+
 impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Cashtocode
+{
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::SessionTokenRequestData,
+        domain_types::connector_types::SessionTokenResponseData,
+    > for Cashtocode
 {
 }
 

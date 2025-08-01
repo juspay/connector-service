@@ -7,15 +7,16 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -180,6 +181,7 @@ impl ConnectorCommon for Payu {
 // Core service traits
 impl connector_types::ConnectorServiceTrait for Payu {}
 impl connector_types::PaymentAuthorizeV2 for Payu {}
+impl connector_types::PaymentSessionToken for Payu {}
 
 // **STUB IMPLEMENTATIONS**: Source Verification Framework stubs for main development
 // These will be replaced with actual implementations in Phase 10
@@ -370,6 +372,25 @@ impl
     > for Payu
 {
 }
+
+// Add stub implementation for CreateSessionToken
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Payu
+{
+}
+
+// Add source verification stub for CreateSessionToken
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
 
 // Trait aliases (required for compilation)
 impl connector_types::RefundV2 for Payu {}
