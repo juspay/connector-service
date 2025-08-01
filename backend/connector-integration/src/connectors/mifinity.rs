@@ -7,14 +7,14 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        SubmitEvidence, Void, RepeatPayment,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        SubmitEvidenceData, RepeatPaymentData,
     },
     errors::{self, ConnectorError},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -51,6 +51,7 @@ impl connector_types::RefundV2 for Mifinity {}
 impl connector_types::PaymentCapture for Mifinity {}
 impl connector_types::ValidationTrait for Mifinity {}
 impl connector_types::SetupMandateV2 for Mifinity {}
+impl connector_types::RepeatPaymentV2 for Mifinity {}
 impl connector_types::AcceptDispute for Mifinity {}
 impl connector_types::SubmitEvidenceV2 for Mifinity {}
 impl connector_types::DisputeDefend for Mifinity {}
@@ -320,6 +321,21 @@ impl
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Mifinity
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Mifinity
+{
+}
+
+impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Mifinity
 {
 }
 

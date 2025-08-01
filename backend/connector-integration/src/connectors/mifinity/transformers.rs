@@ -292,15 +292,16 @@ impl<F> TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
                 Ok(Self {
                     response: Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(trace_id.clone()),
-                        redirection_data: Box::new(Some(RedirectForm::Mifinity {
+                        redirection_data: Some(Box::new(RedirectForm::Mifinity {
                             initialization_token,
                         })),
-                        mandate_reference: Box::new(None),
+                        mandate_reference: None,
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: Some(trace_id),
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
+                        status_code: 200,
                     }),
                     resource_common_data: PaymentFlowData {
                         status: enums::AttemptStatus::AuthenticationPending,
@@ -312,13 +313,14 @@ impl<F> TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
             None => Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::NoResponseId,
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(None),
+                    redirection_data: None,
+                    mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     raw_connector_response: None,
+                    status_code: 400,
                 }),
                 resource_common_data: PaymentFlowData {
                     status: enums::AttemptStatus::AuthenticationPending,
@@ -384,13 +386,14 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                                 resource_id: ResponseId::ConnectorTransactionId(
                                     transaction_reference,
                                 ),
-                                redirection_data: Box::new(None),
-                                mandate_reference: Box::new(None),
+                                redirection_data: None,
+                                mandate_reference: None,
                                 connector_metadata: None,
                                 network_txn_id: None,
                                 connector_response_reference_id: None,
                                 incremental_authorization_allowed: None,
                                 raw_connector_response: None,
+                                status_code: 200,
                             }),
                             resource_common_data: PaymentFlowData {
                                 status: enums::AttemptStatus::from(status),
@@ -402,13 +405,14 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     None => Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::NoResponseId,
-                            redirection_data: Box::new(None),
-                            mandate_reference: Box::new(None),
+                            redirection_data: None,
+                            mandate_reference: None,
                             connector_metadata: None,
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
                             raw_connector_response: None,
+                            status_code: 400,
                         }),
                         resource_common_data: PaymentFlowData {
                             status: enums::AttemptStatus::from(status),
@@ -421,13 +425,14 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
             None => Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
                     resource_id: ResponseId::NoResponseId,
-                    redirection_data: Box::new(None),
-                    mandate_reference: Box::new(None),
+                    redirection_data: None,
+                    mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     raw_connector_response: None,
+                    status_code: 400,
                 }),
                 resource_common_data: PaymentFlowData {
                     status: item.router_data.resource_common_data.status,
