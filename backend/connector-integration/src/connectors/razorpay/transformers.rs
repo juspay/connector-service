@@ -652,7 +652,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
-            status_code: Some(http_code),
+            status_code: http_code,
         };
 
         Ok(Self {
@@ -688,7 +688,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
-            status_code: Some(http_code),
+            status_code: http_code,
         };
 
         Ok(Self {
@@ -761,7 +761,7 @@ impl<F, Req>
                         .resource_common_data
                         .raw_connector_response
                         .clone(),
-                    status_code: Some(_http_code),
+                    status_code: _http_code,
                 };
                 let error = None;
 
@@ -789,7 +789,7 @@ impl<F, Req>
                         .resource_common_data
                         .raw_connector_response
                         .clone(),
-                    status_code: Some(_http_code),
+                    status_code: _http_code,
                 };
                 let error = None;
 
@@ -1275,7 +1275,7 @@ impl<F, Req>
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
                 raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
-                status_code: Some(http_code),
+                status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1607,7 +1607,7 @@ impl<F, Req>
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
-            status_code: Some(_status_code),
+            status_code: _status_code,
         };
 
         Ok(RouterDataV2 {

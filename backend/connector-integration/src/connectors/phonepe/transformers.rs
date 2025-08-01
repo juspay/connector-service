@@ -336,7 +336,7 @@ impl
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
-                            status_code: Some(item.http_code),
+                            status_code: item.http_code,
                         }),
                         ..item.router_data
                     })
@@ -358,7 +358,7 @@ impl
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
-                            status_code: Some(item.http_code),
+                            status_code: item.http_code,
                         }),
                         ..item.router_data
                     })

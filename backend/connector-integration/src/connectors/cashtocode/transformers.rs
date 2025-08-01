@@ -292,7 +292,7 @@ impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
-                        status_code: Some(http_code),
+                        status_code: http_code,
                     }),
                 )
             }
