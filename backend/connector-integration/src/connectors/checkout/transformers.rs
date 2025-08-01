@@ -492,7 +492,7 @@ impl<F>
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             });
         }
 
@@ -679,7 +679,7 @@ impl<F>
             connector_response_reference_id: response.reference,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -731,7 +731,7 @@ impl<F>
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -808,7 +808,7 @@ impl<F>
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             });
         }
 
@@ -852,7 +852,7 @@ impl<F>
             connector_refund_id: checkout_refund_response.response.action_id,
             refund_status,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -889,7 +889,7 @@ impl<F>
             connector_refund_id: response.action_id,
             refund_status,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -962,7 +962,7 @@ impl<F>
             connector_refund_id: response.action_id.clone(),
             refund_status,
             raw_connector_response: None,
-            status_code: Some(http_code),
+            status_code: http_code,
         });
 
         Ok(router_data)
