@@ -139,6 +139,18 @@ impl Address {
             .as_ref()
             .and_then(|billing_address| billing_address.get_optional_full_name())
     }
+
+    pub fn get_optional_first_name(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|billing_address| billing_address.get_optional_first_name())
+    }
+
+    pub fn get_optional_last_name(&self) -> Option<Secret<String>> {
+        self.address
+            .as_ref()
+            .and_then(|billing_address| billing_address.get_optional_last_name())
+    }
 }
 
 // used by customers also, could be moved outside
@@ -185,6 +197,14 @@ impl AddressDetails {
             (Some(name), None) | (None, Some(name)) => Some(name.to_owned()),
             _ => None,
         }
+    }
+
+    pub fn get_optional_first_name(&self) -> Option<Secret<String>> {
+        self.first_name.clone()
+    }
+
+    pub fn get_optional_last_name(&self) -> Option<Secret<String>> {
+        self.last_name.clone()
     }
 
     pub fn unify_address_details(self, other: Option<&Self>) -> Self {
