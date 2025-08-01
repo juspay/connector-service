@@ -43,12 +43,13 @@ novalnet.base_url = "https://payport.novalnet.de/v2"
 enabled = true
 pubsub_component = "kafka-pubsub"
 topic = "audit-trail-events"
+partition_key_field = "timestamp"
 
 [events.dapr]
 host = "127.0.0.1"
 grpc_port = 50001
 
-# Euler-compatible configuration (backward compatibility)
+# Euler-compatible configuration
 [events.transformations]
 "gateway" = "connector"
 "action" = "flow_type"
@@ -59,14 +60,15 @@ grpc_port = 50001
 "message.url" = "url"
 "message.stage" = "stage"
 "message.req_body" = "connector_request_data"
+"message.res_body" = "connector_response_data"
 
 [events.static_values]
 "hostname" = "connector-service"
 "schema_version" = "V2"
-"message_number" = "1"
 "category" = "OUTGOING_API"
 "message.req_type" = "EXTERNAL"
-"message.log_type" = "API"
+"message.log_type" = "API_CALL"
 
 [events.extractions]
 "udf_txn_uuid" = "req.metadata.udf_txn_uuid"
+"x-request-id" = "req.metadata.x-request-id"
