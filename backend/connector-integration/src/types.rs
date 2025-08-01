@@ -3,17 +3,18 @@ use interfaces::connector_types::BoxedConnector;
 use std::fmt::Debug;
 
 use crate::connectors::{
-    Adyen,
-    //  Authorizedotnet, Checkout, Elavon, Fiserv, Razorpay, RazorpayV2, Xendit,
+    Adyen, Authorizedotnet, Checkout, Elavon, Fiserv, Razorpay, RazorpayV2, Xendit,
 };
 
 #[derive(Clone)]
-pub struct ConnectorData<T: PaymentMethodDataTypes+ Debug + Default + Send + Sync + 'static> {
+pub struct ConnectorData<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static> {
     pub connector: BoxedConnector<T>,
     pub connector_name: ConnectorEnum,
 }
 
-impl<T: PaymentMethodDataTypes+ Debug + Default + Send + Sync + 'static + serde::Serialize> ConnectorData<T> {
+impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>
+    ConnectorData<T>
+{
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
         let connector = Self::convert_connector(connector_name.clone());
         Self {
@@ -25,13 +26,13 @@ impl<T: PaymentMethodDataTypes+ Debug + Default + Send + Sync + 'static + serde:
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
             ConnectorEnum::Adyen => Box::new(Adyen::new()),
-            // ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
-            // ConnectorEnum::RazorpayV2 => Box::new(RazorpayV2::new()),
-            // ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
-            // ConnectorEnum::Elavon => Box::new(Elavon::new()),
-            // ConnectorEnum::Xendit => Box::new(Xendit::new()),
-            // ConnectorEnum::Checkout => Box::new(Checkout::new()),
-            // ConnectorEnum::Authorizedotnet => Box::new(Authorizedotnet::new()),
+            ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
+            ConnectorEnum::RazorpayV2 => Box::new(RazorpayV2::new()),
+            ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
+            ConnectorEnum::Elavon => Box::new(Elavon::new()),
+            ConnectorEnum::Xendit => Box::new(Xendit::new()),
+            ConnectorEnum::Checkout => Box::new(Checkout::new()),
+            ConnectorEnum::Authorizedotnet => Box::new(Authorizedotnet::new()),
         }
     }
 }

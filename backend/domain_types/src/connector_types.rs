@@ -40,13 +40,13 @@ use crate::{
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
-    // Razorpay,
-    // RazorpayV2,
-    // Fiserv,
-    // Elavon,
-    // Xendit,
-    // Checkout,
-    // Authorizedotnet,
+    Razorpay,
+    RazorpayV2,
+    Fiserv,
+    Elavon,
+    Xendit,
+    Checkout,
+    Authorizedotnet,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -57,12 +57,12 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match connector {
             grpc_api_types::payments::Connector::Adyen => Ok(Self::Adyen),
-            // grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
-            // grpc_api_types::payments::Connector::Fiserv => Ok(Self::Fiserv),
-            // grpc_api_types::payments::Connector::Elavon => Ok(Self::Elavon),
-            // grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
-            // grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
-            // grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
+            grpc_api_types::payments::Connector::Razorpay => Ok(Self::Razorpay),
+            grpc_api_types::payments::Connector::Fiserv => Ok(Self::Fiserv),
+            grpc_api_types::payments::Connector::Elavon => Ok(Self::Elavon),
+            grpc_api_types::payments::Connector::Xendit => Ok(Self::Xendit),
+            grpc_api_types::payments::Connector::Checkout => Ok(Self::Checkout),
+            grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
