@@ -1,8 +1,7 @@
-use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{
     consts,
-    ext_traits::{OptionExt, ValueExt},
+    ext_traits::OptionExt,
     pii::Email,
 };
 use domain_types::{
