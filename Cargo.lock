@@ -2452,6 +2452,7 @@ dependencies = [
  "once_cell",
  "prometheus",
  "rand 0.8.5",
+ "reqwest",
  "rustc-hash",
  "serde",
  "serde_json",
