@@ -237,10 +237,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            match req.request.is_auto_capture()? {
-                true => Ok(format!("{}/payment",self.connector_base_url_payments(req))),
-                false => Ok(format!("{}/authorize",self.connector_base_url_payments(req))),
+            let url = if req.request.is_auto_capture()? {
+                format!("{}/payment",self.connector_base_url_payments(req))
             }
+            else {
+                format!("{}/authorize",self.connector_base_url_payments(req))
+            };
+
+            Ok(url)
         }
     }
 );
@@ -437,10 +441,14 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            match req.request.is_auto_capture()? {
-                true => Ok(format!("{}/payment",self.connector_base_url_payments(req))),
-                false => Ok(format!("{}/authorize",self.connector_base_url_payments(req))),
+            let url = if req.request.is_auto_capture()? {
+                format!("{}/payment",self.connector_base_url_payments(req))
             }
+            else {
+                format!("{}/authorize",self.connector_base_url_payments(req))
+            };
+
+            Ok(url)
         }
     }
 );

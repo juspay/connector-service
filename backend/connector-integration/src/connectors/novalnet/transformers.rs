@@ -846,7 +846,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct NovolnetRedirectionResponse {
+pub struct NovalnetRedirectionResponse {
     status: NovalnetTransactionStatus,
     tid: Secret<String>,
 }
@@ -880,7 +880,7 @@ impl
                 .get_required_value("encoded_data")
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
             let novalnet_redirection_response =
-                serde_urlencoded::from_str::<NovolnetRedirectionResponse>(encoded_data.as_str())
+                serde_urlencoded::from_str::<NovalnetRedirectionResponse>(encoded_data.as_str())
                     .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
             NovalnetSyncTransaction {
                 tid: novalnet_redirection_response.tid.expose(),
