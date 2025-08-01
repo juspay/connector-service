@@ -25,39 +25,6 @@ pub struct Event {
     pub additional_fields: HashMap<String, SecretSerdeValue>,
 }
 
-impl Event {
-    /// Create a new Event with all parameters
-    pub fn new(
-        request_id: String,
-        timestamp: i128,
-        flow_type: FlowName,
-        connector: String,
-        url: Option<String>,
-        stage: EventStage,
-        latency: Option<u64>,
-        status_code: Option<u16>,
-        request_data: Option<SecretSerdeValue>,
-        connector_request_data: Option<SecretSerdeValue>,
-        connector_response_data: Option<SecretSerdeValue>,
-        additional_fields: HashMap<String, SecretSerdeValue>,
-    ) -> Self {
-        Self {
-            request_id,
-            timestamp,
-            flow_type,
-            connector,
-            url,
-            stage,
-            latency,
-            status_code,
-            request_data,
-            connector_request_data,
-            connector_response_data,
-            additional_fields,
-        }
-    }
-}
-
 /// Configuration for events system
 #[derive(Debug, Clone, Deserialize)]
 pub struct EventConfig {

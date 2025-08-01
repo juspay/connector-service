@@ -383,17 +383,20 @@ macro_rules! implement_connector_operation {
                 .ok_or_else(|| {
                     tonic::Status::internal("Unknown flow marker type")
                 })?;
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+                request_id: &request_id,
+            };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,
-                &connector.to_string(),
-                &service_name,
-                flow_name,
-                &self.config.events,
-                Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
-                &request_id,
+                event_params,
             )
             .await
             .switch()
