@@ -13,7 +13,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
+    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -31,6 +31,42 @@ use serde_with::skip_serializing_none;
 use super::AuthorizedotnetRouterData;
 
 type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+
+// Helper functions for creating RawCardNumber from string
+fn create_raw_card_number_for_default_pci(card_string: String) -> Result<RawCardNumber<DefaultPCIHolder>, Error> {
+    let card_number = cards::CardNumber::from_str(&card_string)
+        .change_context(ConnectorError::RequestEncodingFailed)?;
+    Ok(RawCardNumber(card_number))
+}
+
+fn create_raw_card_number_for_vault_token(card_string: String) -> RawCardNumber<VaultTokenHolder> {
+    RawCardNumber(card_string)
+}
+
+// Wrapper for RawCardNumber to provide construction methods
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizedotnetRawCardNumber<T: PaymentMethodDataTypes>(pub RawCardNumber<T>);
+
+impl AuthorizedotnetRawCardNumber<DefaultPCIHolder> {
+    pub fn from_card_number_string(card_number: String) -> Result<Self, Error> {
+        let card_number = cards::CardNumber::from_str(&card_number)
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+        Ok(AuthorizedotnetRawCardNumber(RawCardNumber(card_number)))
+    }
+}
+
+impl AuthorizedotnetRawCardNumber<VaultTokenHolder> {
+    pub fn from_token_string(token: String) -> Self {
+        AuthorizedotnetRawCardNumber(RawCardNumber(token))
+    }
+}
+
+// Implement From to convert back to RawCardNumber
+impl<T: PaymentMethodDataTypes> From<AuthorizedotnetRawCardNumber<T>> for RawCardNumber<T> {
+    fn from(wrapper: AuthorizedotnetRawCardNumber<T>) -> Self {
+        wrapper.0
+    }
+}
 
 // Re-export common enums for use in this file
 pub mod api_enums {
@@ -88,7 +124,7 @@ impl ForeignTryFrom<serde_json::Value> for Vec<UserField> {
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct CreditCardDetails<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
     card_number: RawCardNumber<T>,
     expiration_date: Secret<String>, // YYYY-MM
     card_code: Option<Secret<String>>,
@@ -96,7 +132,7 @@ pub struct CreditCardDetails<T:PaymentMethodDataTypes + std::fmt::Debug + std::m
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub enum PaymentDetails<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub enum PaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
 }
 
@@ -237,7 +273,7 @@ struct PaymentProfileDetails {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetTransactionRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     // General structure for transaction details in Authorize
     transaction_type: TransactionType,
     amount: Option<String>,
@@ -270,7 +306,7 @@ pub struct TransactionSetting {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateTransactionRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct CreateTransactionRequest<T: PaymentMethodDataTypes> {
     // Used by Authorize Flow, wraps the general transaction request
     merchant_authentication: AuthorizedotnetAuthType,
     transaction_request: AuthorizedotnetTransactionRequest<T>,
@@ -278,7 +314,7 @@ pub struct CreateTransactionRequest<T:PaymentMethodDataTypes + std::fmt::Debug +
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetPaymentsRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct AuthorizedotnetPaymentsRequest<T: PaymentMethodDataTypes> {
     // Top-level wrapper for Authorize Flow
     create_transaction_request: CreateTransactionRequest<T>,
 }
@@ -759,14 +795,14 @@ pub struct AuthorizedotnetRefundCardDetails {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-enum AuthorizedotnetRefundPaymentDetails<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRefundTransactionDetails<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct AuthorizedotnetRefundTransactionDetails<T: PaymentMethodDataTypes> {
     transaction_type: TransactionType,
     amount: String,
     payment: PaymentDetails<T>,
@@ -776,14 +812,14 @@ pub struct AuthorizedotnetRefundTransactionDetails<T:PaymentMethodDataTypes + st
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRefundRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct AuthorizedotnetRefundRequest<T: PaymentMethodDataTypes> {
     create_transaction_request: CreateTransactionRefundRequest<T>,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateTransactionRefundRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct CreateTransactionRefundRequest<T: PaymentMethodDataTypes> {
     merchant_authentication: AuthorizedotnetAuthType,
     ref_id: Option<String>,
     transaction_request: AuthorizedotnetRefundTransactionDetails<T>,
@@ -804,20 +840,20 @@ pub struct CreditCardInfo {
     expiration_date: String,
 }
 
-impl <T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<
+// Specific implementation for DefaultPCIHolder
+impl TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T
+            DefaultPCIHolder
         >,
-    > for AuthorizedotnetRefundRequest<T>
+    > for AuthorizedotnetRefundRequest<DefaultPCIHolder>
 {
     type Error = Error;
 
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T
+            DefaultPCIHolder
         >,
     ) -> Result<Self, Self::Error> {
         // Get connector metadata which contains payment details
@@ -836,11 +872,9 @@ impl <T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mar
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         // Handle the payment details which might be a JSON string or a serde_json::Value
-        // We need to peek into the Secret to get the actual Value
         let payment_details_inner = payment_details.peek();
         let payment_details_value = match payment_details_inner {
             serde_json::Value::String(s) => {
-                // If it's a string, try to parse it as JSON first
                 serde_json::from_str::<serde_json::Value>(s.as_str())
                     .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
             }
@@ -848,7 +882,6 @@ impl <T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mar
         };
 
         // For refunds, we need to reconstruct the payment details from the metadata
-        // Since we can't deserialize the generic type, we'll create a simple payment structure
         let payment_details = match payment_details_value.get("payment") {
             Some(payment_obj) => {
                 if let Some(credit_card) = payment_obj.get("creditCard") {
@@ -861,9 +894,11 @@ impl <T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mar
                         .unwrap_or("YYYY-MM")
                         .to_string();
                     
-                    // Create a simple credit card details structure for refund
+                    // For DefaultPCIHolder, create a proper CardNumber
+                    let raw_card_number = create_raw_card_number_for_default_pci(card_number)?;
+                    
                     let credit_card_details = CreditCardDetails {
-                        card_number: RawCardNumber::new(card_number),
+                        card_number: raw_card_number,
                         expiration_date: Secret::new(expiration_date),
                         card_code: None, // Not needed for refunds
                     };
@@ -904,6 +939,107 @@ impl <T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mar
         })
     }
 }
+
+// Specific implementation for VaultTokenHolder
+impl TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            VaultTokenHolder
+        >,
+    > for AuthorizedotnetRefundRequest<VaultTokenHolder>
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            VaultTokenHolder
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Get connector metadata which contains payment details
+        let payment_details = item
+            .router_data
+            .request
+            .refund_connector_metadata
+            .as_ref()
+            .get_required_value("refund_connector_metadata")
+            .change_context(HsInterfacesConnectorError::MissingRequiredField {
+                field_name: "refund_connector_metadata",
+            })?
+            .clone();
+
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        // Handle the payment details which might be a JSON string or a serde_json::Value
+        let payment_details_inner = payment_details.peek();
+        let payment_details_value = match payment_details_inner {
+            serde_json::Value::String(s) => {
+                serde_json::from_str::<serde_json::Value>(s.as_str())
+                    .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
+            }
+            _ => payment_details_inner.clone(),
+        };
+
+        // For refunds, we need to reconstruct the payment details from the metadata
+        let payment_details = match payment_details_value.get("payment") {
+            Some(payment_obj) => {
+                if let Some(credit_card) = payment_obj.get("creditCard") {
+                    let card_number = credit_card.get("cardNumber")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("****")
+                        .to_string();
+                    let expiration_date = credit_card.get("expirationDate")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("YYYY-MM")
+                        .to_string();
+                    
+                    // For VaultTokenHolder, use the string directly as a token
+                    let raw_card_number = create_raw_card_number_for_vault_token(card_number);
+                    
+                    let credit_card_details = CreditCardDetails {
+                        card_number: raw_card_number,
+                        expiration_date: Secret::new(expiration_date),
+                        card_code: None, // Not needed for refunds
+                    };
+                    PaymentDetails::CreditCard(credit_card_details)
+                } else {
+                    return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "credit_card_details",
+                    }));
+                }
+            }
+            None => {
+                return Err(error_stack::report!(HsInterfacesConnectorError::MissingRequiredField {
+                    field_name: "payment_details",
+                }));
+            }
+        };
+
+        // Build the refund transaction request with parsed payment details
+        let transaction_request = AuthorizedotnetRefundTransactionDetails {
+            transaction_type: TransactionType::RefundTransaction,
+            amount: item.router_data.request.minor_refund_amount.to_string(),
+            payment: payment_details,
+            ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
+        };
+
+        Ok(Self {
+            create_transaction_request: CreateTransactionRefundRequest {
+                merchant_authentication,
+                ref_id: Some(format!(
+                    "refund_{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                )),
+                transaction_request,
+            },
+        })
+    }
+}
+
 
 // Refund request struct is fully implemented above
 
