@@ -117,7 +117,7 @@ impl ConnectorCommon for RazorpayV2 {
                 (
                     "ROUTE_ERROR".to_string(),
                     message.clone(),
-                    AttemptStatus::Unknown,
+                    AttemptStatus::Failure,
                 )
             }
         };
