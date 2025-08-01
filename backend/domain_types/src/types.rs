@@ -1687,7 +1687,10 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             .unwrap_or_default();
 
         Ok(RefundSyncData {
-            browser_info: None,
+            browser_info: value
+                .browser_info
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
+                .transpose()?,
             connector_transaction_id,
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
@@ -2018,7 +2021,10 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
         value: PaymentServiceVoidRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            browser_info: None,
+            browser_info: value
+                .browser_info
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
+                .transpose()?,
             connector_transaction_id: value
                 .transaction_id
                 .and_then(|id| id.id_type)
@@ -2132,7 +2138,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
         Ok(RefundsData {
             refund_id: value.refund_id.to_string(),
             connector_transaction_id,
-            browser_info: None,
             connector_refund_id: None, // refund_id field is used as refund_id, not connector_refund_id
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             payment_amount: value.payment_amount,
@@ -2166,6 +2171,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRefundRequest> for R
                         grpc_api_types::payments::CaptureMethod::try_from(cm).unwrap_or_default(),
                     )
                 })
+                .transpose()?,
+            browser_info: value
+                .browser_info
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
                 .transpose()?,
             integrity_object: None,
         })
@@ -2426,7 +2435,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
         Ok(Self {
             amount_to_capture: value.amount_to_capture,
             minor_amount_to_capture: minor_amount,
-            browser_info: None,
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             connector_transaction_id,
             multiple_capture_data,
@@ -2441,6 +2449,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceCaptureRequest>
                     })
                     .transpose()? // Converts Option<Result<T, E>> to Result<Option<T>, E> and propagates E if it's an Err
             },
+            browser_info: value
+                .browser_info
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
+                .transpose()?,
             integrity_object: None,
         })
     }
@@ -3255,7 +3267,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             integrity_object: None,
             capture_method,
             email,
-            browser_info: None,
+            browser_info: value
+                .browser_info
+                .map(crate::router_request_types::BrowserInformation::foreign_try_from)
+                .transpose()?,
         })
     }
 }
