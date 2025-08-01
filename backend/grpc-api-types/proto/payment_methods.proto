@@ -34,7 +34,7 @@ enum CardNetwork {
 message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
-    // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
+    WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: SUPPORTED
     UpiCollect upi_collect = 3;                          // UPI Collect payment method - SUPPORTED
     UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
     TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
@@ -68,9 +68,10 @@ message CardPaymentMethodType {
 
 // Digital wallet payment methods category - TODO: Not yet supported
 // Includes mobile wallets and digital payment platforms
-/*
+
 message WalletPaymentMethodType {
   oneof wallet_type {
+    /*
     AppleWallet apple_pay = 1;             // Apple Pay
     GoogleWallet google_pay = 2;           // Google Pay
     SamsungWallet samsung_pay = 3;         // Samsung Pay
@@ -81,9 +82,10 @@ message WalletPaymentMethodType {
     CashAppWallet cash_app = 8;            // Cash App
     AmazonPayWallet amazon_pay = 9;        // Amazon Pay
     PazeWallet paze = 10;                  // Paze
+    */
+    MifinityWallet mifinity = 11;          // Mifinity
   }
 }
-*/
 
 // Real-time payment methods category - TODO: Not yet supported
 // Includes instant payment systems and QR code-based payments
@@ -292,7 +294,7 @@ message CardRedirect {
 }
 
 // ============================================================================
-// WALLET PAYMENT METHODS - TODO: Not yet supported
+// WALLET PAYMENT METHODS - TODO: SUPPORTED
 // ============================================================================
 
 /*
@@ -430,6 +432,14 @@ message PazeWallet {
   string complete_response = 1;
 }
 */
+
+// Mifinity - Online payment service by Mifinity
+message MifinityWallet {
+  // Date of birth from Mifinity
+  string date_of_birth = 1;
+  // Language preference
+  optional string language_preference = 2;
+}
 
 // ============================================================================
 // REAL-TIME PAYMENT METHODS

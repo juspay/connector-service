@@ -161,14 +161,11 @@ impl
                             .connector_request_reference_id
                             .clone()
                     );
-                    let client_reference = item
-                        .router_data
-                        .resource_common_data
-                        .customer_id
-                        .clone()
-                        .ok_or(ConnectorError::MissingRequiredField {
+                    let client_reference = item.router_data.request.customer_id.clone().ok_or(
+                        ConnectorError::MissingRequiredField {
                             field_name: "client_reference",
-                        })?;
+                        },
+                    )?;
                     let destination_account_number = metadata.destination_account_number;
                     let trace_id = item
                         .router_data

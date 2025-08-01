@@ -213,6 +213,32 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                         ),
                     ))
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
+                            Ok(PaymentMethodData::Wallet(crate::payment_method_data::WalletData::Mifinity(
+                                crate::payment_method_data::MifinityData {
+                                    date_of_birth: hyperswitch_masking::Secret::new(
+                                        time::Date::parse(&mifinity_data.date_of_birth, &time::format_description::well_known::Iso8601::DATE)
+                                            .map_err(|_| ApplicationErrorResponse::BadRequest(ApiError {
+                                                sub_code: "INVALID_DATE_FORMAT".to_owned(),
+                                                error_identifier: 400,
+                                                error_message: "Invalid date format for date_of_birth".to_owned(),
+                                                error_object: None,
+                                            }))?
+                                    ),
+                                    language_preference: mifinity_data.language_preference,
+                                }
+                            )))
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_WALLET_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Wallet type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1068,6 +1094,15 @@ pub fn generate_payment_authorize_response(
                                         ))
                                     })
                                 },
+                                crate::router_response_types::RedirectForm::Mifinity { initialization_token } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
+                                            grpc_api_types::payments::UriData {
+                                                uri: initialization_token,
+                                            }
+                                        ))
+                                    })
+                                },
                                 _ => Err(
                                     ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_RESPONSE".to_owned(),
@@ -1146,6 +1181,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_)),
             } => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Wallet(_)),
+            } => Ok(Self::Wallet),
             _ => Ok(Self::Card), // Default fallback
         }
     }

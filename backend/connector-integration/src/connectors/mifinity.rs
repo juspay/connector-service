@@ -57,6 +57,8 @@ impl connector_types::DisputeDefend for Mifinity {}
 impl connector_types::IncomingWebhook for Mifinity {}
 impl connector_types::PaymentOrderCreate for Mifinity {}
 
+const API_VERSION: &str = "1";
+
 macros::create_all_prerequisites!(
     connector_name: Mifinity,
     api: [
@@ -83,7 +85,12 @@ macros::create_all_prerequisites!(
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
-            )];
+            ),
+            (
+                "api-version".to_string(),
+                API_VERSION.to_string().into(),
+            ),
+            ];
             let mut auth_header = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut auth_header);
             Ok(header)
@@ -119,7 +126,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+            Ok(format!("{}pegasus-ci/api/gateway/init-iframe", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -369,7 +376,9 @@ impl ConnectorCommon for Mifinity {
 
             match response {
                 Ok(response) => {
-                    event_builder.map(|i| i.set_response_body(&response));
+                    if let Some(i) = event_builder {
+                        i.set_response_body(&response);
+                    }
                     Ok(ErrorResponse {
                         status_code: res.status_code,
                         code: response
@@ -402,7 +411,9 @@ impl ConnectorCommon for Mifinity {
                 }
 
                 Err(_error_msg) => {
-                    event_builder.map(|event| event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
+                    if let Some(event) = event_builder {
+                        event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}));
+                    }
                     crate::utils::handle_json_response_deserialization_failure(res, "mifinity")
                 }
             }

@@ -1,6 +1,6 @@
 pub mod xml_utils;
-use common_utils::{errors::ReportSwitchExt, ext_traits::ValueExt, CustomResult};
-use error_stack::ResultExt;
+use common_utils::CustomResult;
+use error_stack::{Report, ResultExt};
 pub use xml_utils::preprocess_xml_response_bytes;
 
 use domain_types::{
@@ -65,8 +65,22 @@ where
 {
     let connector_meta_secret =
         connector_meta.ok_or_else(missing_field_err("connector_meta_data"))?;
-    let json = connector_meta_secret.expose();
-    json.parse_value(std::any::type_name::<T>()).switch()
+
+    let json_value = connector_meta_secret.expose();
+
+    let json_str = json_value.as_str().ok_or_else(|| {
+        Report::new(errors::ConnectorError::InvalidConnectorConfig {
+            config: "merchant_connector_account.metadata",
+        })
+    })?;
+
+    let parsed: T = serde_json::from_str(json_str)
+        .map_err(Report::from)
+        .change_context(errors::ConnectorError::InvalidConnectorConfig {
+            config: "merchant_connector_account.metadata",
+        })?;
+
+    Ok(parsed)
 }
 
 pub(crate) fn handle_json_response_deserialization_failure(
