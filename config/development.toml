@@ -46,7 +46,7 @@ noon.base_url = "https://api-test.noonpayments.com/"
 enabled = true
 pubsub_component = "kafka-pubsub"
 topic = "audit-trail-events"
-partition_key_field = "timestamp"
+partition_key_field = "request_id"
 
 [events.dapr]
 host = "127.0.0.1"
