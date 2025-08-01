@@ -1,5 +1,6 @@
 pub(super) mod customer;
 pub(super) mod payment;
+pub use payment::GlobalPaymentId;
 pub(super) mod payment_methods;
 pub(super) mod refunds;
 pub(super) mod token;
@@ -48,6 +49,15 @@ impl GlobalEntity {
 /// Cell identifier for an instance / deployment of application
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct CellId(LengthId<CELL_IDENTIFIER_LENGTH, CELL_IDENTIFIER_LENGTH>);
+
+impl Default for CellId {
+    fn default() -> Self {
+        Self::from_str("cell1").unwrap_or_else(|_| {
+            let id = AlphaNumericId::new_unchecked("cell1".to_string());
+            Self(LengthId::new_unchecked(id))
+        })
+    }
+}
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum CellIdError {

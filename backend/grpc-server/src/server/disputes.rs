@@ -101,7 +101,9 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(request, &service_name, |request| async {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
-            let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+            let (connector, _merchant_id, _tenant_id, request_id) =
+                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+                    .map_err(|e| e.into_grpc_status())?;
             let connector_data = ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
@@ -137,13 +139,23 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name: common_utils::dapr::FlowName::SubmitEvidence,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&payload).unwrap_or_default(),
+                )),
+                request_id: &request_id,
+            };
+
             let response = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 None,
-                &connector.to_string(),
-                &service_name,
+                event_params,
             )
             .await
             .switch()
@@ -261,7 +273,9 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(request, &service_name, |request| async {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
-            let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+            let (connector, _merchant_id, _tenant_id, request_id) =
+                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+                    .map_err(|e| e.into_grpc_status())?;
 
             let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -298,13 +312,23 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name: common_utils::dapr::FlowName::AcceptDispute,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    serde_json::to_value(&payload).unwrap_or_default(),
+                )),
+                request_id: &request_id,
+            };
+
             let response = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 None,
-                &connector.to_string(),
-                &service_name,
+                event_params,
             )
             .await
             .switch()
