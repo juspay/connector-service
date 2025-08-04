@@ -49,14 +49,14 @@ reviews:
     ast-grep:
       rule_dirs: []
       util_dirs: []
-      essential_rules: true
+      essential_rules: false
       packages: []
     shellcheck:
       enabled: false
     ruff:
       enabled: false
     markdownlint:
-      enabled: true
+      enabled: false
     github-checks:
       enabled: true
       timeout_ms: 90000
@@ -71,7 +71,7 @@ reviews:
     biome:
       enabled: false
     hadolint:
-      enabled: true
+      enabled: false
     swiftlint:
       enabled: false
       config_file: ""
@@ -82,7 +82,7 @@ reviews:
       enabled: false
       config_file: ""
     yamllint:
-      enabled: true
+      enabled: false
     gitleaks:
       enabled: true
     checkov:
@@ -97,11 +97,11 @@ reviews:
     rubocop:
       enabled: false
     buf:
-      enabled: true
+      enabled: false
     regal:
       enabled: false
     actionlint:
-      enabled: true
+      enabled: false
     pmd:
       enabled: false
       config_file: ""
@@ -112,12 +112,12 @@ reviews:
     cppcheck:
       enabled: false
     semgrep:
-      enabled: true
+      enabled: false
       config_file: ""
     circleci:
       enabled: false
     clippy:
-      enabled: true
+      enabled: false
     sqlfluff:
       enabled: false
     prismaLint:
