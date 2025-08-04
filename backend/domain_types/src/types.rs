@@ -238,6 +238,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                                 error_message: "Card redirect payments are not yet supported".to_owned(),
                                 error_object: None,
                             }))),
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) => {
+                            Ok(Some(PaymentMethodType::Credit))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
+                            Ok(Some(PaymentMethodType::Debit))
+                        },
                         None =>
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "INVALID_PAYMENT_METHOD".to_owned(),

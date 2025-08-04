@@ -135,7 +135,14 @@ impl<
     > SetupMandateV2<T> for Authorizedotnet<T>
 {
 }
-impl RepeatPaymentV2 for Authorizedotnet {}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > RepeatPaymentV2 for Authorizedotnet<T> {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -196,15 +203,6 @@ impl<
     > PaymentCapture for Authorizedotnet<T>
 {
 }
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > RepeatPaymentV2 for Authorizedotnet<T> {}
 
 // Basic connector implementation
 impl<
@@ -560,21 +558,23 @@ macros::macro_connector_implementation!(
     curl_response: CreateCustomerProfileResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
-    flow_request: SetupMandateRequestData,
+    flow_request: SetupMandateRequestData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             self.build_headers(req)
         }
 
         fn get_url(
             &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(self.connector_base_url_payments(req).to_string())
         }
@@ -592,6 +592,8 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,

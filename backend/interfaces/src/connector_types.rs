@@ -123,16 +123,6 @@ pub trait RepeatPaymentV2:
 {
 }
 
-pub trait RepeatPaymentV2:
-    ConnectorIntegrationV2<
-    connector_flow::RepeatPayment,
-    PaymentFlowData,
-    RepeatPaymentData,
-    PaymentsResponseData,
->
-{
-}
-
 pub trait AcceptDispute:
     ConnectorIntegrationV2<
     connector_flow::Accept,

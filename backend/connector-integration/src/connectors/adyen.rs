@@ -1064,22 +1064,36 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + Sync
+            + Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
         domain_types::connector_types::RepeatPaymentData,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + Sync
+            + Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
         domain_types::connector_types::RepeatPaymentData,
         PaymentsResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
