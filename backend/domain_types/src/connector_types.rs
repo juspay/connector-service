@@ -17,8 +17,9 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 use crate::{
-    errors::{ApiError, ApplicationErrorResponse},
-    payment_address::{Address, AddressDetails, PhoneDetails},
+    errors::{ApiError, ApplicationErrorResponse, ConnectorError},
+    mandates::{CustomerAcceptance, MandateData},
+    payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data,
     payment_method_data::{Card, PaymentMethodData},
     router_data::PaymentMethodToken,
@@ -26,9 +27,10 @@ use crate::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
-        SyncRequestType,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject, SyncRequestType,
     },
+    router_response_types::RedirectForm,
     types::{
         ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
         PaymentMethodTypeMetadata, SupportedPaymentMethods,
@@ -202,19 +204,17 @@ impl PaymentsSyncData {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+            Some(_) => Err(ConnectorError::CaptureMethodNotSupported.into()),
         }
     }
-    pub fn get_connector_transaction_id(
-        &self,
-    ) -> CustomResult<String, crate::errors::ConnectorError> {
+    pub fn get_connector_transaction_id(&self) -> CustomResult<String, ConnectorError> {
         match self.connector_transaction_id.clone() {
             ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
             _ => Err(errors::ValidationError::IncorrectValueProvided {
                 field_name: "connector_transaction_id",
             })
             .attach_printable("Expected connector transaction ID not found")
-            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)?,
+            .change_context(ConnectorError::MissingConnectorTransactionID)?,
         }
     }
 }
@@ -230,7 +230,7 @@ pub struct PaymentFlowData {
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
-    pub address: crate::payment_address::PaymentAddress,
+    pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
     pub connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
     pub amount_captured: Option<i64>,
@@ -584,7 +584,7 @@ impl PaymentFlowData {
     {
         self.get_connector_meta()?
             .parse_value(std::any::type_name::<T>())
-            .change_context(crate::errors::ConnectorError::NoConnectorMetaData)
+            .change_context(ConnectorError::NoConnectorMetaData)
     }
 
     pub fn is_three_ds(&self) -> bool {
@@ -680,7 +680,7 @@ impl PaymentVoidData {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData {
-    pub payment_method_data: crate::payment_method_data::PaymentMethodData,
+    pub payment_method_data: payment_method_data::PaymentMethodData,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
     /// ```text
@@ -705,7 +705,7 @@ pub struct PaymentsAuthorizeData {
     pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
-    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub browser_info: Option<BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
     pub enrolled_for_3ds: bool,
@@ -735,7 +735,7 @@ impl PaymentsAuthorizeData {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+            Some(_) => Err(ConnectorError::CaptureMethodNotSupported.into()),
         }
     }
     pub fn get_email(&self) -> Result<Email, Error> {
@@ -933,7 +933,7 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data: Option<Box<crate::router_response_types::RedirectForm>>,
+        redirection_data: Option<Box<RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
         mandate_reference: Option<Box<MandateReference>>,
         network_txn_id: Option<String>,
@@ -1179,7 +1179,7 @@ impl RefundsData {
         self.connector_refund_id
             .clone()
             .get_required_value("connector_refund_id")
-            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)
+            .change_context(ConnectorError::MissingConnectorTransactionID)
     }
     pub fn get_webhook_url(&self) -> Result<String, Error> {
         self.webhook_url
@@ -1220,16 +1220,14 @@ impl PaymentsCaptureData {
     pub fn is_multiple_capture(&self) -> bool {
         self.multiple_capture_data.is_some()
     }
-    pub fn get_connector_transaction_id(
-        &self,
-    ) -> CustomResult<String, crate::errors::ConnectorError> {
+    pub fn get_connector_transaction_id(&self) -> CustomResult<String, ConnectorError> {
         match self.connector_transaction_id.clone() {
             ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
             _ => Err(errors::ValidationError::IncorrectValueProvided {
                 field_name: "connector_transaction_id",
             })
             .attach_printable("Expected connector transaction ID not found")
-            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)?,
+            .change_context(ConnectorError::MissingConnectorTransactionID)?,
         }
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
@@ -1242,19 +1240,19 @@ impl PaymentsCaptureData {
 #[derive(Debug, Clone)]
 pub struct SetupMandateRequestData {
     pub currency: Currency,
-    pub payment_method_data: crate::payment_method_data::PaymentMethodData,
+    pub payment_method_data: payment_method_data::PaymentMethodData,
     pub amount: Option<i64>,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
-    pub customer_acceptance: Option<crate::mandates::CustomerAcceptance>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
     pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
-    pub setup_mandate_details: Option<crate::mandates::MandateData>,
+    pub setup_mandate_details: Option<MandateData>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
-    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
     pub return_url: Option<String>,
@@ -1308,7 +1306,7 @@ pub struct RepeatPaymentData {
     pub merchant_order_reference_id: Option<String>,
     pub metadata: Option<HashMap<String, String>>,
     pub webhook_url: Option<String>,
-    pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+    pub integrity_object: Option<RepeatPaymentIntegrityObject>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
@@ -1324,7 +1322,7 @@ impl RepeatPaymentData {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+            Some(_) => Err(ConnectorError::CaptureMethodNotSupported.into()),
         }
     }
     pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
