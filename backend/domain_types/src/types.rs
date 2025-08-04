@@ -23,12 +23,13 @@ use crate::{
         SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        DisputeWebhookDetailsResponse, MultipleCaptureRequestData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorResponseHeaders, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, MultipleCaptureRequestData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
@@ -36,6 +37,7 @@ use crate::{
     router_data_v2::RouterDataV2,
     utils::{ForeignFrom, ForeignTryFrom},
 };
+
 #[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
@@ -971,6 +973,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1022,6 +1025,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1075,6 +1079,9 @@ pub fn generate_create_order_response(
                 error_code: None,
                 raw_connector_response: None,
                 status_code: 200,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             }
         }
         Err(err) => {
@@ -1101,6 +1108,9 @@ pub fn generate_create_order_response(
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             }
         }
     };
@@ -1117,7 +1127,10 @@ pub fn generate_payment_authorize_response(
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
-    let order_id = router_data_v2.resource_common_data.reference_id;
+    let order_id = router_data_v2.resource_common_data.reference_id.clone();
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
     let response = match transaction_response {
         Ok(response) => match response {
@@ -1192,6 +1205,7 @@ pub fn generate_payment_authorize_response(
                     error_code: None,
                     raw_connector_response,
                     status_code: status_code as u32,
+                    response_headers,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1223,6 +1237,7 @@ pub fn generate_payment_authorize_response(
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
+                response_headers,
             }
         }
     };
@@ -1366,6 +1381,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1506,6 +1522,9 @@ pub fn generate_payment_void_response(
                     error_code: None,
                     error_message: None,
                     status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1537,6 +1556,9 @@ pub fn generate_payment_void_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             })
         }
     }
@@ -1605,6 +1627,9 @@ pub fn generate_payment_sync_response(
                     metadata: std::collections::HashMap::new(),
                     raw_connector_response,
                     status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1652,6 +1677,9 @@ pub fn generate_payment_sync_response(
                 metadata: std::collections::HashMap::new(),
                 raw_connector_response: None,
                 status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             })
         }
     }
@@ -1704,6 +1732,7 @@ impl
             refund_id: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1727,6 +1756,7 @@ impl
             refund_id: Some(value.refund_id),
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1749,6 +1779,9 @@ pub fn generate_accept_dispute_response(
     router_data_v2: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
 ) -> Result<AcceptDisputeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let dispute_response = router_data_v2.response;
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
 
     match dispute_response {
         Ok(response) => {
@@ -1763,6 +1796,7 @@ pub fn generate_accept_dispute_response(
                 error_code: None,
                 response_ref_id: None,
                 status_code: response.status_code as u32,
+                response_headers,
             })
         }
         Err(e) => {
@@ -1776,6 +1810,7 @@ pub fn generate_accept_dispute_response(
                 error_code: Some(e.code),
                 response_ref_id: None,
                 status_code: e.status_code as u32,
+                response_headers,
             })
         }
     }
@@ -1795,6 +1830,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1808,6 +1844,9 @@ pub fn generate_submit_evidence_response(
     >,
 ) -> Result<DisputeServiceSubmitEvidenceResponse, error_stack::Report<ApplicationErrorResponse>> {
     let dispute_response = router_data_v2.response;
+    let response_headers = router_data_v2
+        .resource_common_data
+        .get_connector_response_headers_as_map();
 
     match dispute_response {
         Ok(response) => {
@@ -1823,6 +1862,7 @@ pub fn generate_submit_evidence_response(
                 error_code: None,
                 response_ref_id: None,
                 status_code: response.status_code as u32,
+                response_headers,
             })
         }
         Err(e) => {
@@ -1840,6 +1880,7 @@ pub fn generate_submit_evidence_response(
                 error_code: Some(e.code),
                 response_ref_id: None,
                 status_code: e.status_code as u32,
+                response_headers,
             })
         }
     }
@@ -1865,6 +1906,7 @@ impl
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -1878,7 +1920,9 @@ pub fn generate_refund_sync_response(
         Ok(response) => {
             let status = response.refund_status;
             let grpc_status = grpc_api_types::payments::RefundStatus::foreign_from(status);
-
+            let response_headers = router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map();
             Ok(RefundResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier::default()),
                 refund_id: response.connector_refund_id.clone(),
@@ -1906,6 +1950,7 @@ pub fn generate_refund_sync_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: response.raw_connector_response,
                 status_code: response.status_code as u32,
+                response_headers,
             })
         }
         Err(e) => {
@@ -1913,6 +1958,9 @@ pub fn generate_refund_sync_response(
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default();
+            let response_headers = router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map();
 
             Ok(RefundResponse {
                 transaction_id: Some(
@@ -1950,6 +1998,7 @@ pub fn generate_refund_sync_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: e.raw_connector_response,
                 status_code: e.status_code as u32,
+                response_headers,
             })
         }
     }
@@ -1961,6 +2010,20 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
         value: WebhookDetailsResponse,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let status = grpc_api_types::payments::PaymentStatus::foreign_from(value.status);
+        let response_headers = value
+            .response_headers
+            .map(|headers| {
+                headers
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         Ok(Self {
             transaction_id: value
                 .resource_id
@@ -1993,6 +2056,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             metadata: std::collections::HashMap::new(),
             raw_connector_response: value.raw_connector_response,
             status_code: value.status_code as u32,
+            response_headers,
         })
     }
 }
@@ -2026,6 +2090,20 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
         value: RefundWebhookDetailsResponse,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let status = grpc_api_types::payments::RefundStatus::foreign_from(value.status);
+        let response_headers = value
+            .response_headers
+            .map(|headers| {
+                headers
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
 
         Ok(Self {
             transaction_id: Some(grpc_api_types::payments::Identifier::default()),
@@ -2054,6 +2132,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             refund_metadata: std::collections::HashMap::new(),
             raw_connector_response: value.raw_connector_response,
             status_code: value.status_code as u32,
+            response_headers,
         })
     }
 }
@@ -2066,6 +2145,20 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let grpc_status = grpc_api_types::payments::DisputeStatus::foreign_from(value.status);
         let grpc_stage = grpc_api_types::payments::DisputeStage::foreign_from(value.stage);
+        let response_headers = value
+            .response_headers
+            .map(|headers| {
+                headers
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
         Ok(Self {
             dispute_id: Some(value.dispute_id),
             transaction_id: None,
@@ -2089,6 +2182,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
                 }
             }),
             status_code: value.status_code as u32,
+            response_headers,
         })
     }
 }
@@ -2334,6 +2428,9 @@ pub fn generate_refund_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: response.raw_connector_response,
                 status_code: response.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             })
         }
         Err(e) => {
@@ -2371,6 +2468,9 @@ pub fn generate_refund_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: e.raw_connector_response,
                 status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             })
         }
     }
@@ -2477,6 +2577,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -2520,6 +2621,9 @@ pub fn generate_payment_capture_response(
                     error_message: None,
                     status: grpc_status.into(),
                     status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2551,6 +2655,9 @@ pub fn generate_payment_capture_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
             })
         }
     }
@@ -2612,6 +2719,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -2836,6 +2944,9 @@ pub fn generate_setup_mandate_response(
                     error_message: None,
                     error_code: None,
                     status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map()
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -2862,6 +2973,9 @@ pub fn generate_setup_mandate_response(
             error_message: Some(err.message),
             error_code: Some(err.code),
             status_code: err.status_code as u32,
+            response_headers: router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map(),
         },
     };
     Ok(response)
@@ -2879,6 +2993,7 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
             connector_dispute_id: value.dispute_id,
             defense_reason_code: Some(value.reason_code.unwrap_or_default()),
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -2917,6 +3032,9 @@ pub fn generate_defend_dispute_response(
             error_code: None,
             response_ref_id: None,
             status_code: response.status_code as u32,
+            response_headers: router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map(),
         }),
         Err(e) => Ok(DisputeDefendResponse {
             dispute_id: e
@@ -2928,6 +3046,9 @@ pub fn generate_defend_dispute_response(
             error_code: Some(e.code),
             response_ref_id: None,
             status_code: e.status_code as u32,
+            response_headers: router_data_v2
+                .resource_common_data
+                .get_connector_response_headers_as_map(),
         }),
     }
 }
@@ -3268,6 +3389,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            connector_response_headers: None,
         })
     }
 }
@@ -3312,6 +3434,9 @@ pub fn generate_repeat_payment_response(
                     }),
                     raw_connector_response,
                     status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3344,6 +3469,9 @@ pub fn generate_repeat_payment_response(
                     }),
                     raw_connector_response: err.raw_connector_response,
                     status_code: err.status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                 },
             )
         }
