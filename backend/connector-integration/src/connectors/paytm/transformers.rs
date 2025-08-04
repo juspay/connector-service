@@ -850,14 +850,7 @@ impl
         let last_name = item.resource_common_data.get_optional_billing_last_name();
 
         // Extract session token from previous session token response
-        let session_token = item
-            .request
-            .session_token
-            .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "session_token",
-            })?
-            .clone();
+        let session_token = item.resource_common_data.get_session_token()?;
 
         Ok(Self {
             amount: amount_minor_units,
