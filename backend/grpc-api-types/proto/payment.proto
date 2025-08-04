@@ -1090,6 +1090,7 @@ message PaymentServiceAuthorizeResponse {
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
   uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
@@ -1100,7 +1101,7 @@ message PaymentServiceAuthorizeResponse {
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
   
   // Metadata
-  map<string, string> connector_metadata = 11; // Connector-specific metadata for the transaction
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
   
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
@@ -1125,6 +1126,7 @@ message PaymentServiceGetResponse {
   optional string error_code = 3; // Error code if synchronization encountered an issue
   optional string error_message = 4; // Error message if synchronization encountered an issue
   uint32 status_code = 26; // HTTP status code from the connector
+  map<string, string> response_headers = 27; // Optional HTTP response headers from the connector
   
   // Transaction Details
   optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
@@ -1167,6 +1169,9 @@ message PaymentServiceVoidRequest {
   // Void Details
   optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment
   optional bool all_keys_required = 4;
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5; // Information about the customer's browser
 }
 
 // Response message for a payment void operation.
@@ -1179,6 +1184,7 @@ message PaymentServiceVoidResponse {
   optional string error_code = 3; // Error code if the void operation failed
   optional string error_message = 4; // Error message if the void operation failed
   uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
@@ -1199,6 +1205,9 @@ message PaymentServiceCaptureRequest {
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
+
+  // Browser Information
+  optional BrowserInformation browser_info = 7; // Browser information, if relevant
 }
 
 // Response message for a payment capture operation.
@@ -1211,6 +1220,7 @@ message PaymentServiceCaptureResponse {
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
   uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from response_reference_id
@@ -1255,6 +1265,7 @@ message RefundResponse {
   optional string error_code = 4; // Error code if synchronization encountered an issue
   optional string error_message = 5; // Error message if synchronization encountered an issue
   uint32 status_code = 22; // HTTP status code from the connector
+  map<string, string> response_headers = 23; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1304,6 +1315,7 @@ message DisputeResponse {
   optional string error_code = 6; // Error code if retrieval failed
   optional string error_message = 7; // Error message if retrieval failed
   uint32 status_code = 18; // HTTP status code from the connector
+  map<string, string> response_headers = 19; // Optional HTTP response headers from the connector
   
   // Dispute Details
   optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
@@ -1387,6 +1399,7 @@ message PaymentServiceRegisterResponse {
   optional string error_code = 3; // Error code if the mandate setup failed
   optional string error_message = 4; // Error message if the mandate setup failed
   uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
   // Mandate Details
   MandateReference mandate_reference = 5; // Reference to the created mandate
@@ -1417,6 +1430,15 @@ message PaymentServiceRepeatEverythingRequest {
   optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
   map<string, string> metadata = 7; // Additional metadata for the connector
   optional string webhook_url = 8; // URL for webhook notifications
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 11; // Method for capturing the payment
+
+  // Customer Information
+  optional string email = 12; // Email address of the customer
+
+  // Browser Information
+  optional BrowserInformation browser_info = 13; // Browser information, if relevant
 }
 
 // Response message for repeat payment operation.
@@ -1429,6 +1451,7 @@ message PaymentServiceRepeatEverythingResponse {
   optional string error_code = 3; // Error code if the payment failed
   optional string error_message = 4; // Error message if the payment failed
   uint32 status_code = 8; // HTTP status code from the connector
+  map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
   
   // Transaction Details
   optional string network_txn_id = 5; // Transaction ID from the payment network
@@ -1478,6 +1501,9 @@ message RefundServiceGetRequest {
   
   // Refund Details
   optional string refund_reason = 4; // Reason for the refund, if provided during sync
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5; // Information about the customer's browser
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -1608,6 +1634,7 @@ message DisputeServiceSubmitEvidenceResponse {
   optional string error_code = 5; // Error code if submitting evidence failed
   optional string error_message = 6; // Error message if submitting evidence failed
   uint32 status_code = 8; // HTTP status code from the connector
+  map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 7; // Response reference ID for tracking
@@ -1738,6 +1765,7 @@ message DisputeDefendResponse {
   optional string error_code = 4; // Error code if defending failed
   optional string error_message = 5; // Error message if defending failed
   uint32 status_code = 7; // HTTP status code from the connector
+  map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1762,6 +1790,7 @@ message AcceptDisputeResponse {
   optional string error_code = 4; // Error code if accepting failed
   optional string error_message = 5; // Error message if accepting failed
   uint32 status_code = 7; // HTTP status code from the connector
+  map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking

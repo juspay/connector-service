@@ -238,6 +238,7 @@ fn create_refund_sync_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
+        browser_info: None,
     }
 }
 

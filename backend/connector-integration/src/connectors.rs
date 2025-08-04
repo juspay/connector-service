@@ -37,5 +37,8 @@ pub use self::payu::Payu;
 pub mod cashtocode;
 pub use self::cashtocode::Cashtocode;
 
+pub mod novalnet;
+pub use self::novalnet::Novalnet;
+
 pub mod nexinets;
 pub use self::nexinets::Nexinets;
