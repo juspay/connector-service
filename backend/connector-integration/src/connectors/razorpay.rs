@@ -647,7 +647,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             error_code: notif.entity.error_code,
             error_message: notif.entity.error_reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
-            status_code: Some(200),
+            status_code: 200,
         })
     }
 
@@ -677,7 +677,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
-            status_code: Some(200),
+            status_code: 200,
         })
     }
 }
