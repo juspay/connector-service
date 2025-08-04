@@ -80,6 +80,7 @@ use common_utils::{
     errors::CustomResult,
     request::Method,
     types::{AmountConvertor, MinorUnit, StringMajorUnit},
+    Email,
 };
 use domain_types::{
     connector_flow::{Authorize, CreateSessionToken, PSync},
@@ -217,12 +218,12 @@ pub struct PaytmAmount {
 pub struct PaytmUserInfo {
     #[serde(rename = "custId")]
     pub cust_id: String,
-    pub mobile: Option<String>,
-    pub email: Option<String>,
+    pub mobile: Option<Secret<String>>,
+    pub email: Option<Email>,
     #[serde(rename = "firstName")]
-    pub first_name: Option<String>,
+    pub first_name: Option<Secret<String>>,
     #[serde(rename = "lastName")]
-    pub last_name: Option<String>,
+    pub last_name: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -691,10 +692,10 @@ pub struct PaytmRouterData {
     pub currency: Currency,
     pub payment_id: String,
     pub customer_id: Option<String>,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
+    pub email: Option<Email>,
+    pub phone: Option<Secret<String>>,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
     pub return_url: Option<String>,
 }
 
@@ -707,10 +708,10 @@ pub struct PaytmAuthorizeRouterData {
     pub session_token: String,
     pub payment_method_data: PaymentMethodData,
     pub customer_id: Option<String>,
-    pub email: Option<String>,
-    pub phone: Option<String>,
-    pub first_name: Option<String>,
-    pub last_name: Option<String>,
+    pub email: Option<Email>,
+    pub phone: Option<Secret<String>>,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
     pub return_url: Option<String>,
 }
 
@@ -741,22 +742,12 @@ impl
             .get_customer_id()
             .ok()
             .map(|id| id.get_string_repr().to_string());
-        let email = item
-            .resource_common_data
-            .get_optional_billing_email()
-            .map(|e| e.peek().to_string());
+        let email = item.resource_common_data.get_optional_billing_email();
         let phone = item
             .resource_common_data
-            .get_optional_billing_phone_number()
-            .map(|p| p.peek().to_string());
-        let first_name = item
-            .resource_common_data
-            .get_optional_billing_first_name()
-            .map(|name| name.peek().to_string());
-        let last_name = item
-            .resource_common_data
-            .get_optional_billing_last_name()
-            .map(|name| name.peek().to_string());
+            .get_optional_billing_phone_number();
+        let first_name = item.resource_common_data.get_optional_billing_first_name();
+        let last_name = item.resource_common_data.get_optional_billing_last_name();
 
         Ok(Self {
             amount: amount_minor_units,
@@ -851,22 +842,12 @@ impl
             .get_customer_id()
             .ok()
             .map(|id| id.get_string_repr().to_string());
-        let email = item
-            .resource_common_data
-            .get_optional_billing_email()
-            .map(|e| e.peek().to_string());
+        let email = item.resource_common_data.get_optional_billing_email();
         let phone = item
             .resource_common_data
-            .get_optional_billing_phone_number()
-            .map(|p| p.peek().to_string());
-        let first_name = item
-            .resource_common_data
-            .get_optional_billing_first_name()
-            .map(|name| name.peek().to_string());
-        let last_name = item
-            .resource_common_data
-            .get_optional_billing_last_name()
-            .map(|name| name.peek().to_string());
+            .get_optional_billing_phone_number();
+        let first_name = item.resource_common_data.get_optional_billing_first_name();
+        let last_name = item.resource_common_data.get_optional_billing_last_name();
 
         // Extract session token from previous session token response
         let session_token = item
