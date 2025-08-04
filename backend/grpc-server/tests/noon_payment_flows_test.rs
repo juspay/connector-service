@@ -211,6 +211,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
         }),
         all_keys_required: None,
+        browser_info: None,
     }
 }
 
@@ -247,6 +248,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
+        browser_info: None,
     }
 }
 

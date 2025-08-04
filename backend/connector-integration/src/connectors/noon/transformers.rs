@@ -647,7 +647,7 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
                         connector_response_reference_id,
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
-                        status_code: None,
+                        status_code: item.http_code,
                     })
                 }
             },
@@ -870,7 +870,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 connector_refund_id: item.response.result.transaction.id,
                 refund_status,
                 raw_connector_response: None,
-                status_code: None,
+                status_code: item.http_code,
             })
         };
         Ok(Self {
@@ -937,7 +937,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
                 connector_refund_id: noon_transaction.id.to_owned(),
                 refund_status,
                 raw_connector_response: None,
-                status_code: None,
+                status_code: item.http_code,
             })
         };
         Ok(Self {

@@ -17,9 +17,10 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 use crate::{
-    errors::{ApiError, ApplicationErrorResponse},
+    errors::{ApiError, ApplicationErrorResponse, ConnectorError},
     mandates,
-    payment_address::{Address, AddressDetails, PhoneDetails},
+    mandates::{CustomerAcceptance, MandateData},
+    payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data,
     payment_method_data::{Card, PaymentMethodData},
     router_data::PaymentMethodToken,
@@ -27,9 +28,10 @@ use crate::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
-        SyncRequestType,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject, SyncRequestType,
     },
+    router_response_types::RedirectForm,
     types::{
         ConnectorInfo, Connectors, PaymentMethodDataType, PaymentMethodDetails,
         PaymentMethodTypeMetadata, SupportedPaymentMethods,
@@ -54,6 +56,7 @@ pub enum ConnectorEnum {
     Fiuu,
     Payu,
     Cashtocode,
+    Novalnet,
     Noon,
 }
 
@@ -76,6 +79,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
             grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
+            grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -144,6 +148,26 @@ pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
 }
 
+pub trait ConnectorResponseHeaders {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>);
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap>;
+    fn get_connector_response_headers_as_map(&self) -> std::collections::HashMap<String, String> {
+        self.get_connector_response_headers()
+            .map(|headers| {
+                headers
+                    .iter()
+                    .filter_map(|(name, value)| {
+                        value
+                            .to_str()
+                            .ok()
+                            .map(|v| (name.to_string(), v.to_string()))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+}
+
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Eq, PartialEq)]
 pub struct NetworkTokenWithNTIRef {
     pub network_transaction_id: String,
@@ -203,19 +227,17 @@ impl PaymentsSyncData {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+            Some(_) => Err(ConnectorError::CaptureMethodNotSupported.into()),
         }
     }
-    pub fn get_connector_transaction_id(
-        &self,
-    ) -> CustomResult<String, crate::errors::ConnectorError> {
+    pub fn get_connector_transaction_id(&self) -> CustomResult<String, ConnectorError> {
         match self.connector_transaction_id.clone() {
             ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
             _ => Err(errors::ValidationError::IncorrectValueProvided {
                 field_name: "connector_transaction_id",
             })
             .attach_printable("Expected connector transaction ID not found")
-            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)?,
+            .change_context(ConnectorError::MissingConnectorTransactionID)?,
         }
     }
 }
@@ -231,7 +253,7 @@ pub struct PaymentFlowData {
     pub payment_method: PaymentMethod,
     pub description: Option<String>,
     pub return_url: Option<String>,
-    pub address: crate::payment_address::PaymentAddress,
+    pub address: payment_address::PaymentAddress,
     pub auth_type: AuthenticationType,
     pub connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
     pub amount_captured: Option<i64>,
@@ -248,6 +270,7 @@ pub struct PaymentFlowData {
     pub connector_request_reference_id: String,
     pub test_mode: Option<bool>,
     pub connector_http_status_code: Option<u16>,
+    pub connector_response_headers: Option<http::HeaderMap>,
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
@@ -585,7 +608,7 @@ impl PaymentFlowData {
     {
         self.get_connector_meta()?
             .parse_value(std::any::type_name::<T>())
-            .change_context(crate::errors::ConnectorError::NoConnectorMetaData)
+            .change_context(ConnectorError::NoConnectorMetaData)
     }
 
     pub fn is_three_ds(&self) -> bool {
@@ -646,12 +669,23 @@ impl RawConnectorResponse for PaymentFlowData {
     }
 }
 
+impl ConnectorResponseHeaders for PaymentFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentVoidData {
     pub connector_transaction_id: String,
     pub cancellation_reason: Option<String>,
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
 }
 
 impl PaymentVoidData {
@@ -671,11 +705,16 @@ impl PaymentVoidData {
     //         .clone()
     //         .ok_or_else(missing_field_err("browser_info"))
     // }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData {
-    pub payment_method_data: crate::payment_method_data::PaymentMethodData,
+    pub payment_method_data: payment_method_data::PaymentMethodData,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
     /// ```text
@@ -700,7 +739,7 @@ pub struct PaymentsAuthorizeData {
     pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
-    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub browser_info: Option<BrowserInformation>,
     pub order_category: Option<String>,
     pub session_token: Option<String>,
     pub enrolled_for_3ds: bool,
@@ -731,7 +770,7 @@ impl PaymentsAuthorizeData {
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
             Some(common_enums::CaptureMethod::Manual) => Ok(false),
-            Some(_) => Err(crate::errors::ConnectorError::CaptureMethodNotSupported.into()),
+            Some(_) => Err(ConnectorError::CaptureMethodNotSupported.into()),
         }
     }
     pub fn get_email(&self) -> Result<Email, Error> {
@@ -744,6 +783,11 @@ impl PaymentsAuthorizeData {
         self.browser_info
             .clone()
             .ok_or_else(missing_field_err("browser_info"))
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
     // pub fn get_order_details(&self) -> Result<Vec<OrderDetailsWithAmount>, Error> {
     //     self.order_details
@@ -790,15 +834,14 @@ impl PaymentsAuthorizeData {
             })
     }
 
-    // pub fn is_mandate_payment(&self) -> bool {
-    //     ((self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
-    //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession))
-    //         || self
-    //             .mandate_id
-    //             .as_ref()
-    //             .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
-    //             .is_some()
-    // }
+    pub fn is_mandate_payment(&self) -> bool {
+        (self.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
+            || self
+                .mandate_id
+                .as_ref()
+                .and_then(|mandate_ids| mandate_ids.mandate_reference_id.as_ref())
+                .is_some()
+    }
     // fn is_cit_mandate_payment(&self) -> bool {
     //     (self.customer_acceptance.is_some() || self.setup_mandate_details.is_some())
     //         && self.setup_future_usage == Some(storage_enums::FutureUsage::OffSession)
@@ -925,18 +968,18 @@ impl ResponseId {
 pub enum PaymentsResponseData {
     TransactionResponse {
         resource_id: ResponseId,
-        redirection_data: Option<Box<crate::router_response_types::RedirectForm>>,
+        redirection_data: Option<Box<RedirectForm>>,
         connector_metadata: Option<serde_json::Value>,
         mandate_reference: Option<Box<MandateReference>>,
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
         raw_connector_response: Option<String>,
-        status_code: Option<u16>,
+        status_code: u16,
     },
     SessionResponse {
         session_token: String,
-        status_code: Option<u16>,
+        status_code: u16,
     },
 }
 
@@ -969,6 +1012,15 @@ pub struct RefundSyncData {
     pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<RefundSyncIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl RefundSyncData {
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -976,7 +1028,7 @@ pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -985,11 +1037,22 @@ pub struct RefundFlowData {
     pub refund_id: Option<String>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    pub connector_response_headers: Option<http::HeaderMap>,
 }
 
 impl RawConnectorResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+}
+
+impl ConnectorResponseHeaders for RefundFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
     }
 }
 
@@ -1001,7 +1064,8 @@ pub struct WebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
+    pub response_headers: Option<http::HeaderMap>,
 }
 
 #[derive(Debug, Clone)]
@@ -1012,7 +1076,8 @@ pub struct RefundWebhookDetailsResponse {
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
+    pub response_headers: Option<http::HeaderMap>,
 }
 
 #[derive(Debug, Clone)]
@@ -1023,7 +1088,8 @@ pub struct DisputeWebhookDetailsResponse {
     pub connector_response_reference_id: Option<String>,
     pub dispute_message: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
+    pub response_headers: Option<http::HeaderMap>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1153,6 +1219,7 @@ pub struct RefundsData {
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub integrity_object: Option<RefundIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
 }
 
 impl RefundsData {
@@ -1161,7 +1228,7 @@ impl RefundsData {
         self.connector_refund_id
             .clone()
             .get_required_value("connector_refund_id")
-            .change_context(crate::errors::ConnectorError::MissingConnectorTransactionID)
+            .change_context(ConnectorError::MissingConnectorTransactionID)
     }
     pub fn get_webhook_url(&self) -> Result<String, Error> {
         self.webhook_url
@@ -1172,6 +1239,11 @@ impl RefundsData {
         self.connector_metadata
             .clone()
             .ok_or_else(missing_field_err("connector_metadata"))
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
     }
 }
 
@@ -1190,30 +1262,46 @@ pub struct PaymentsCaptureData {
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
 }
 
 impl PaymentsCaptureData {
     pub fn is_multiple_capture(&self) -> bool {
         self.multiple_capture_data.is_some()
     }
+    pub fn get_connector_transaction_id(&self) -> CustomResult<String, ConnectorError> {
+        match self.connector_transaction_id.clone() {
+            ResponseId::ConnectorTransactionId(txn_id) => Ok(txn_id),
+            _ => Err(errors::ValidationError::IncorrectValueProvided {
+                field_name: "connector_transaction_id",
+            })
+            .attach_printable("Expected connector transaction ID not found")
+            .change_context(ConnectorError::MissingConnectorTransactionID)?,
+        }
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct SetupMandateRequestData {
     pub currency: Currency,
-    pub payment_method_data: crate::payment_method_data::PaymentMethodData,
+    pub payment_method_data: payment_method_data::PaymentMethodData,
     pub amount: Option<i64>,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
     pub statement_descriptor: Option<String>,
-    pub customer_acceptance: Option<crate::mandates::CustomerAcceptance>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
     pub mandate_id: Option<MandateIds>,
     pub setup_future_usage: Option<common_enums::FutureUsage>,
     pub off_session: Option<bool>,
-    pub setup_mandate_details: Option<crate::mandates::MandateData>,
+    pub setup_mandate_details: Option<MandateData>,
     pub router_return_url: Option<String>,
     pub webhook_url: Option<String>,
-    pub browser_info: Option<crate::router_request_types::BrowserInformation>,
+    pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
     pub customer_name: Option<String>,
     pub return_url: Option<String>,
@@ -1241,6 +1329,21 @@ impl SetupMandateRequestData {
     pub fn is_card(&self) -> bool {
         matches!(self.payment_method_data, PaymentMethodData::Card(_))
     }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_router_return_url(&self) -> Result<String, Error> {
+        self.router_return_url
+            .clone()
+            .ok_or_else(missing_field_err("return_url"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1252,12 +1355,37 @@ pub struct RepeatPaymentData {
     pub merchant_order_reference_id: Option<String>,
     pub metadata: Option<HashMap<String, String>>,
     pub webhook_url: Option<String>,
-    pub integrity_object: Option<crate::router_request_types::RepeatPaymentIntegrityObject>,
+    pub integrity_object: Option<RepeatPaymentIntegrityObject>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub browser_info: Option<BrowserInformation>,
+    pub email: Option<common_utils::pii::Email>,
 }
 
 impl RepeatPaymentData {
     pub fn get_mandate_reference(&self) -> &MandateReferenceId {
         &self.mandate_reference
+    }
+    pub fn is_auto_capture(&self) -> Result<bool, Error> {
+        match self.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => Ok(true),
+            Some(common_enums::CaptureMethod::Manual) => Ok(false),
+            Some(_) => Err(ConnectorError::CaptureMethodNotSupported.into()),
+        }
+    }
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_webhook_url(&self) -> Result<String, Error> {
+        self.webhook_url
+            .clone()
+            .ok_or_else(missing_field_err("webhook_url"))
+    }
+    pub fn get_email(&self) -> Result<Email, Error> {
+        self.email.clone().ok_or_else(missing_field_err("email"))
     }
 }
 
@@ -1274,11 +1402,22 @@ pub struct DisputeFlowData {
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub connector_response_headers: Option<http::HeaderMap>,
 }
 
 impl RawConnectorResponse for DisputeFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+}
+
+impl ConnectorResponseHeaders for DisputeFlowData {
+    fn set_connector_response_headers(&mut self, headers: Option<http::HeaderMap>) {
+        self.connector_response_headers = headers;
+    }
+
+    fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
+        self.connector_response_headers.as_ref()
     }
 }
 
@@ -1288,7 +1427,7 @@ pub struct DisputeResponseData {
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
     pub raw_connector_response: Option<String>,
-    pub status_code: Option<u16>,
+    pub status_code: u16,
 }
 
 #[derive(Debug, Clone, Default)]
