@@ -1,58 +1,96 @@
 # Connector Integration Coding Guidelines
 
-This document outlines the coding guidelines and best practices for integrating new connectors into the connector-service.
+This document outlines the coding guidelines and best practices for integrating new connectors into the connector-service, with a focus on the macro-driven framework.
 
-## 1. Directory Structure
+## 1. Directory and File Structure
 
 Each new connector, named `my_connector`, should follow this directory structure:
 
 ```
 backend/connector-integration/src/connectors/
-├── my_connector.rs
+├── my_connector.rs                 # Main connector logic and macro invocations
 └── my_connector/
-    ├── transformers.rs
-    └── test.rs
+    └── transformers.rs             # Request/Response structs and TryFrom implementations
+
+backend/grpc-server/tests/
+└── my_connector_payment_flows_test.rs # End-to-end tests for the connector
 ```
 
-- **`my_connector.rs`**: This is the main file for the connector. It defines the connector's struct, implements the required traits, and handles the high-level logic for each payment flow.
-- **`my_connector/transformers.rs`**: This file contains the data transformation logic. It defines the structs that represent the connector's API requests and responses, and it implements the `TryFrom` trait to convert between the router's data structures and the connector's.
-- **`my_connector/test.rs`**: This file contains the unit tests for the connector.
+- **`my_connector.rs`**: This is the main file for the connector. It uses the macro framework to define the connector's structure, supported flows, and flow-specific logic like URL and header generation.
+- **`my_connector/transformers.rs`**: This file contains the data transformation logic. It defines the structs that represent the connector's native API requests and responses, and implements the `TryFrom` traits to convert between the router's generic data structures and the connector's specific formats.
+- **`my_connector_payment_flows_test.rs`**: This file contains the end-to-end tests for the connector, which are executed via the gRPC server.
 
-## 2. `my_connector.rs`
+## 2. The Macro-Driven Workflow
 
-### 2.1. Connector Struct
+Connector integration is primarily achieved through a set of powerful macros that generate the necessary boilerplate code. The main steps are:
+1.  Define the connector's capabilities using `create_all_prerequisites!`.
+2.  Implement the `ConnectorCommon` trait for basic connector information.
+3.  Implement marker traits for each supported flow (e.g., `PaymentAuthorizeV2`).
+4.  Use `macro_connector_implementation!` for each flow to specify its implementation details.
+5.  Create the necessary request/response structs and `TryFrom` implementations in the `transformers.rs` file.
 
-Define a struct for your connector. If the connector requires an amount converter, include it in the struct.
+---
+
+## 3. Implementing `my_connector.rs`
+
+### 3.1. Step 1: Define Prerequisites with `create_all_prerequisites!`
+
+This is the first and most important macro call. It sets up the connector's struct and defines all the API flows it supports.
 
 ```rust
-#[derive(Clone)]
-pub struct MyConnector {
-    pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
-}
+macros::create_all_prerequisites!(
+    // 1. The name of your connector struct
+    connector_name: MyConnector,
 
-impl MyConnector {
-    pub const fn new() -> &'static Self {
-        &Self {
-            amount_converter: &common_utils::types::MinorUnitForConnector,
+    // 2. A list of all supported API flows
+    api: [
+        (
+            flow: Authorize,
+            request_body: MyConnectorAuthRequest,
+            response_body: MyConnectorAuthResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+        ),
+        (
+            flow: PSync,
+            request_body: MyConnectorPSyncRequest,
+            response_body: MyConnectorPSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+        ),
+        (
+            flow: Capture,
+            request_body: MyConnectorCaptureRequest,
+            response_body: MyConnectorCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+        ),
+        // ... other flows: Void, Refund, SetupMandate, etc.
+    ],
+
+    // 3. (Optional) Amount converters if not using MinorUnit directly
+    amount_converters: [],
+
+    // 4. Common helper functions for the connector
+    member_functions: {
+        // Example: A common function to build authentication headers
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            let mut header = vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
         }
+        // Other helpers like getting base URLs can go here
     }
-}
+);
 ```
 
-### 2.2. Trait Implementations
+### 3.2. Step 2: Implement `ConnectorCommon`
 
-Your connector must implement several traits from `connector_types`. At a minimum, you should implement `ConnectorServiceTrait`. Then, for each payment flow your connector supports, you must implement the corresponding trait (e.g., `PaymentAuthorizeV2`, `PaymentSyncV2`, `RefundV2`, etc.).
-
-```rust
-impl connector_types::ConnectorServiceTrait for MyConnector {}
-impl connector_types::PaymentAuthorizeV2 for MyConnector {}
-impl connector_types::PaymentSyncV2 for MyConnector {}
-// ... other trait implementations
-```
-
-### 2.3. `ConnectorCommon` Implementation
-
-Implement the `ConnectorCommon` trait to provide essential information about your connector.
+This trait provides the basic, essential information about the connector.
 
 ```rust
 impl ConnectorCommon for MyConnector {
@@ -61,18 +99,19 @@ impl ConnectorCommon for MyConnector {
     }
 
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        // ...
+        common_enums::CurrencyUnit::Minor
     }
 
     fn get_auth_header(
         &self,
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        // ...
+        // Logic to convert the generic ConnectorAuthType into the specific
+        // headers required by the connector.
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        // ...
+        connectors.my_connector.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -80,220 +119,162 @@ impl ConnectorCommon for MyConnector {
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        // ...
+        // 1. Deserialize the raw response into your connector's error struct
+        let response: my_connector::transformers::MyConnectorErrorResponse = res
+            .response
+            .parse_struct("MyConnectorErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        // 2. Map the fields to the standard ErrorResponse struct
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.error_code,
+            message: response.error_message,
+            reason: response.error_reason,
+            // ... other fields
+        })
     }
 }
 ```
 
-### 2.4. `ConnectorIntegrationV2` Implementation
+### 3.3. Step 3: Implement Flow Marker Traits
 
-For each payment flow, implement the `ConnectorIntegrationV2` trait. This is where you'll define the HTTP method, headers, URL, and request body for the connector's API calls. You'll also handle the response from the connector.
+For each flow defined in `create_all_prerequisites!`, add an empty "marker" trait implementation. This signals that your connector supports the flow.
 
 ```rust
-impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-    for MyConnector
-{
-    fn get_headers(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        // ...
-    }
-
-    fn get_url(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<String, errors::ConnectorError> {
-        // ...
-    }
-
-    fn get_request_body(
-        &self,
-        req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        // ...
-    }
-
-    fn handle_response_v2(
-        &self,
-        data: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >,
-        event_builder: Option<&mut ConnectorEvent>,
-        res: Response,
-    ) -> CustomResult<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        errors::ConnectorError,
-    > {
-        // ...
-    }
-}
+impl connector_types::PaymentAuthorizeV2 for MyConnector {}
+impl connector_types::PaymentSyncV2 for MyConnector {}
+impl connector_types::PaymentCapture for MyConnector {}
+// ... and so on for all supported flows.
 ```
 
-### 2.5. Webhook Handling
+### 3.4. Step 4: Implement Flows with `macro_connector_implementation!`
 
-If your connector supports webhooks, implement the `IncomingWebhook` trait.
+For each flow, use this macro to generate the `ConnectorIntegrationV2` trait implementation.
 
 ```rust
-impl connector_types::IncomingWebhook for MyConnector {
-    fn get_event_type(
-        &self,
-        request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<EventType, error_stack::Report<errors::ConnectorError>> {
-        // ...
-    }
+// Implementation for the Authorize flow
+macros::macro_connector_implementation!(
+    // 1. List of default functions to use from the framework
+    connector_default_implementations: [get_content_type, get_error_response_v2],
 
-    fn process_payment_webhook(
-        &self,
-        request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<WebhookDetailsResponse, error_stack::Report<errors::ConnectorError>> {
-        // ...
-    }
+    // 2. Connector and flow details
+    connector: MyConnector,
+    flow_name: Authorize,
+    http_method: Post,
 
-    // ... other webhook processing functions
-}
+    // 3. Request and Response structs (must match those in create_all_prerequisites!)
+    curl_request: Json(MyConnectorAuthRequest),
+    curl_response: MyConnectorAuthResponse,
+
+    // 4. RouterDataV2 generic types for this flow
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData,
+    flow_response: PaymentsResponseData,
+
+    // 5. Flow-specific functions (get_url is almost always required)
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            // You can call a common helper from member_functions
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            // Construct the specific endpoint URL for this flow
+            Ok(format!("{}{}", self.base_url(_req.resource_common_data.connectors), "/payments"))
+        }
+    }
+);
+
+// Repeat macro_connector_implementation! for every other flow (PSync, Capture, etc.)
 ```
 
-### 2.6. Connector Specifications and Validation
+---
 
-Implement the `ConnectorSpecifications` and `ConnectorValidation` traits to provide metadata and validation logic for your connector.
+## 4. Implementing `my_connector/transformers.rs`
 
-```rust
-impl ConnectorSpecifications for MyConnector {
-    // ...
-}
+This file is the heart of the data mapping logic.
 
-impl ConnectorValidation for MyConnector {
-    // ...
-}
-```
+### 4.1. Request and Response Structs
 
-## 3. `my_connector/transformers.rs`
-
-### 3.1. Connector-Specific Structs
-
-Define structs that represent the request and response bodies of the connector's API. Use `serde` to serialize and deserialize these structs to and from JSON.
+Define Rust structs that exactly match the JSON (or other format) structure of the connector's API.
 
 ```rust
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MyConnectorPaymentRequest {
+// Request for the Authorize flow
+#[derive(Debug, Serialize)]
+pub struct MyConnectorAuthRequest {
     // ... fields for the request
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MyConnectorPaymentResponse {
+// Response for the Authorize flow
+#[derive(Debug, Deserialize)]
+pub struct MyConnectorAuthResponse {
     // ... fields for the response
+}
+
+// Error response
+#[derive(Debug, Deserialize)]
+pub struct MyConnectorErrorResponse {
+    // ... fields for the error response
 }
 ```
 
-### 3.2. `TryFrom` Implementations
+### 4.2. `TryFrom` Implementations
 
-Implement the `TryFrom` trait to convert between the router's `RouterDataV2` struct and your connector-specific structs.
+This is where you map data between the application's generic `RouterDataV2` and your connector-specific structs.
 
 **Request Transformation:**
+Convert `RouterDataV2` into your request struct.
 
 ```rust
-impl
-    TryFrom<
-        &MyConnectorRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        >,
-    > for MyConnectorPaymentRequest
+impl TryFrom<MyConnectorRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>>
+    for MyConnectorAuthRequest
 {
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: &MyConnectorRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        >,
+        item: MyConnectorRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        // ... transformation logic
+        // Extract data from item.router_data.request, item.router_data.resource_common_data, etc.
+        // and build the MyConnectorAuthRequest struct.
     }
 }
 ```
 
 **Response Transformation:**
+Update `RouterDataV2` based on the connector's response struct.
 
 ```rust
-impl<F, Req>
-    ForeignTryFrom<(
-        MyConnectorPaymentResponse,
-        RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-        u16,
-    )> for RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>
+impl<F> TryFrom<ResponseRouterData<MyConnectorAuthResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
 {
-    type Error = domain_types::errors::ConnectorError;
+    type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn foreign_try_from(
-        (response, data, http_code): (
-            MyConnectorPaymentResponse,
-            RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
-            u16,
-        ),
+    fn try_from(
+        value: ResponseRouterData<MyConnectorAuthResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        // ... transformation logic
+        let ResponseRouterData { response, mut router_data, .. } = value;
+
+        // 1. Map the connector's status to the application's AttemptStatus
+        // 2. Populate router_data.response with either Ok(PaymentsResponseData) or Err(ErrorResponse)
+        // 3. Update router_data.resource_common_data.status
+        // 4. Return the updated router_data
     }
 }
 ```
 
-### 3.3. Enums and Helper Functions
+---
 
-Use enums to represent statuses, types, and other categorical data from the connector's API. Create helper functions to encapsulate reusable logic, such as building authentication headers or handling specific payment methods.
+## 5. Other Key Guidelines
 
-## 4. Error Handling
-
-Use `CustomResult` and `error_stack` for robust error handling. When building error responses, parse the connector's error response and map it to the router's `ErrorResponse` struct.
-
-## 5. Testing
-
-Write comprehensive unit tests for your connector in `my_connector/test.rs`. Test all payment flows, webhook handling, and data transformations.
-
-## 6. General Best Practices
-
-*   **Follow Rust best practices:** Write clean, idiomatic, and well-documented Rust code.
-*   **Use macros for boilerplate:** Leverage the existing macros (`create_all_prerequisites!`, `macro_connector_implementation!`, `with_error_response_body!`, `with_response_body!`) to reduce boilerplate code.
-*   **Keep transformers clean:** The `transformers.rs` file should only contain data transformation logic. Keep business logic in `my_connector.rs`.
-*   **Handle all payment methods:** If your connector supports multiple payment methods, ensure that you have the necessary logic to handle each one.
-*   **Be consistent:** Follow the patterns and conventions established in the existing connectors.
-
-## 7. Connector Registration
-
-When adding a new connector, it must be added to the `ConnectorEnum` in `domain_types/src/connector_types.rs` and to the `convert_connector` function in `backend/connector-integration/src/types.rs`.
-
-## 8. Handling XML Responses
-
-If your connector returns XML responses, use the `preprocess_xml_response_bytes` function in `backend/connector-integration/src/utils/xml_utils.rs` to convert the XML to a flattened JSON structure. This will make it easier to parse the response in your `handle_response_v2` function.
-
-## 9. Utility Functions
-
-The `backend/connector-integration/src/utils.rs` file contains several useful utility functions, such as `missing_field_err` for creating "missing field" errors. Use these functions to reduce boilerplate and improve code consistency.
-
-## 10. Authentication
-
-The `ConnectorAuthType` enum in `backend/domain_types/src/router_data.rs` defines the supported authentication methods. Your connector's `get_auth_header` function should handle the appropriate authentication method for your connector.
-
-The supported authentication methods are:
-
-*   `HeaderKey`: For connectors that use a single API key in the request header.
-*   `BodyKey`: For connectors that use an API key and another key in the request body.
-*   `SignatureKey`: For connectors that use an API key, another key, and an API secret to generate a signature.
-*   `MultiAuthKey`: For connectors that use multiple keys for authentication.
-*   `CertificateAuth`: For connectors that use client certificates for authentication.
-
-## 11. Core Data Structures
-
-The `backend/domain_types/src/connector_types.rs` file defines many of the core data structures used in connector integrations. Familiarize yourself with these structs, especially:
-
-*   **`PaymentsAuthorizeData`**: Contains the data for an authorization request.
-*   **`PaymentsSyncData`**: Contains the data for a payment sync request.
-*   **`RefundsData`**: Contains the data for a refund request.
-*   **`PaymentFlowData`**: Contains the common data available for all payment flows.
-*   **`ResponseId`**: Represents the different types of response IDs a connector can return.
-*   **`PaymentsResponseData`**: Represents the different types of responses a connector can return for a payment.
+*   **Authentication**: In your `ConnectorCommon::get_auth_header` implementation, correctly handle the `ConnectorAuthType` enum variant that corresponds to your connector's authentication scheme.
+*   **Connector Registration**: Add your new connector to the `ConnectorEnum` in `backend/domain_types/src/connector_types.rs` and to the `convert_connector` function in `backend/connector-integration/src/types.rs`.
+*   **XML Responses**: If the connector uses XML, use the `preprocess_xml_response_bytes` utility to convert it to JSON before deserializing.
+*   **Error Handling**: Use `error_stack` for error propagation. Your `build_error_response` function is the primary place to map connector errors to the standard `ErrorResponse` struct.
+*   **Testing**: Write thorough end-to-end tests in `backend/grpc-server/tests/` to cover all supported payment flows, including success and failure scenarios.
