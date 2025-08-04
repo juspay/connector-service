@@ -210,8 +210,8 @@ pub struct PaytmInitiateReqBody {
 
 #[derive(Debug, Serialize)]
 pub struct PaytmAmount {
-    pub value: String,    // Decimal amount (e.g., "10.50")
-    pub currency: String, // "INR"
+    pub value: StringMajorUnit, // Decimal amount (e.g., "10.50")
+    pub currency: String,       // "INR"
 }
 
 #[derive(Debug, Serialize)]
@@ -688,7 +688,7 @@ pub fn create_paytm_header(
 // Helper struct for RouterData transformation
 #[derive(Debug, Clone)]
 pub struct PaytmRouterData {
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub currency: Currency,
     pub payment_id: String,
     pub customer_id: Option<String>,
@@ -702,7 +702,7 @@ pub struct PaytmRouterData {
 // Helper struct for Authorize flow RouterData transformation
 #[derive(Debug, Clone)]
 pub struct PaytmAuthorizeRouterData {
-    pub amount: i64,
+    pub amount: MinorUnit,
     pub currency: String,
     pub payment_id: String,
     pub session_token: String,
@@ -736,7 +736,7 @@ impl
             domain_types::connector_types::SessionTokenResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount_minor_units = item.request.amount.get_amount_as_i64();
+        let amount_minor_units = item.request.amount;
         let customer_id = item
             .resource_common_data
             .get_customer_id()
@@ -774,7 +774,7 @@ impl PaytmInitiateTxnRequest {
         amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
     ) -> CustomResult<Self, errors::ConnectorError> {
         let amount_value = amount_converter
-            .convert(MinorUnit::new(item.amount), item.currency)
+            .convert(item.amount, item.currency)
             .change_context(errors::ConnectorError::AmountConversionFailed)?;
         let body = PaytmInitiateReqBody {
             request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
@@ -782,7 +782,7 @@ impl PaytmInitiateTxnRequest {
             order_id: item.payment_id.clone(),
             website_name: auth.website.peek().to_string(),
             txn_amount: PaytmAmount {
-                value: amount_value.get_amount_as_string(),
+                value: amount_value,
                 currency: item.currency.to_string(),
             },
             user_info: PaytmUserInfo {
@@ -836,7 +836,7 @@ impl
             domain_types::connector_types::PaymentsResponseData,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount_minor_units = item.request.amount;
+        let amount_minor_units = item.request.minor_amount;
         let customer_id = item
             .resource_common_data
             .get_customer_id()
@@ -1167,7 +1167,7 @@ impl
         PaytmInitiateTxnRequest::try_from_with_auth(
             &intermediate_router_data,
             &auth,
-            item.connector.string_major_unit_for_connector,
+            item.connector.amount_converter,
         )
     }
 }

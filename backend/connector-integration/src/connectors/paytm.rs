@@ -61,7 +61,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
         )
     ],
-    amount_converters: [string_major_unit_for_connector: StringMajorUnit],
+    amount_converters: [amount_converter: StringMajorUnit],
     member_functions: {
         pub fn connector_base_url<F, Req, Res>(
             &self,
