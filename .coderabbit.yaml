@@ -151,7 +151,8 @@ knowledge_base:
     enabled: true
   code_guidelines:
     enabled: true
-    filePatterns: []
+    filePatterns:
+      - memory-bank/coderabbit/**
   learnings:
     scope: local
   issues:
