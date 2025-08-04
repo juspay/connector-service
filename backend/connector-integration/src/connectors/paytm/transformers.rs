@@ -1011,14 +1011,18 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
                     .clone()
             });
 
+        let connector_transaction_id = item
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .map_err(|_| {
+                error_stack::Report::new(errors::ConnectorError::MissingConnectorTransactionID)
+            })?;
+
         Ok(Self {
             payment_id: transaction_id,
-            connector_transaction_id: item
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .ok(),
-            txn_type: None, // Set to None as per requirement
+            connector_transaction_id: Some(connector_transaction_id),
+            txn_type: None,
         })
     }
 }
