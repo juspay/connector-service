@@ -156,7 +156,7 @@ impl IncomingWebhook for Authorizedotnet {
         Ok(WebhookDetailsResponse {
             resource_id: Some(ResponseId::ConnectorTransactionId(transaction_id.clone())),
             status: common_enums::AttemptStatus::from(status),
-            status_code: None,
+            status_code: 200,
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
@@ -181,7 +181,7 @@ impl IncomingWebhook for Authorizedotnet {
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(transaction_id.clone()),
             status: common_enums::RefundStatus::Success, // Authorize.Net only sends successful refund webhooks
-            status_code: None,
+            status_code: 200,
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
