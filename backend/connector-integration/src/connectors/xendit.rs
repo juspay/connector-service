@@ -11,15 +11,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -162,6 +162,15 @@ impl<
     > connector_types::DisputeDefend for Xendit<T>
 {
 }
+
+impll<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Xendit<T> {}
 
 macros::create_all_prerequisites!(
     connector_name:  Xendit,
@@ -754,6 +763,32 @@ impl<
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Xendit<T>
+{}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Xendit<T>
+{}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Xendit<T>
 {
 }
 
@@ -764,6 +799,6 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::IncomingWebhook for Xendit<T>
-{
-}
+    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Xendit<T>
+{} 

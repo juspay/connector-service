@@ -5,15 +5,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -133,6 +133,7 @@ impl<
     > connector_types::SetupMandateV2<T> for Checkout<T>
 {
 }
+impl connector_types::RepeatPaymentV2 for Checkout {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -183,6 +184,14 @@ impl<
     > connector_types::PaymentOrderCreate for Checkout<T>
 {
 }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Checkout<T> {}
 
 macros::create_all_prerequisites!(
     connector_name: Checkout,
@@ -775,5 +784,34 @@ impl<
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Checkout<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Checkout<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Checkout<T>
 {
 }

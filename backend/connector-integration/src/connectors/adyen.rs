@@ -170,6 +170,15 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + Debug
+            + Sync
+            + Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Adyen<T> {}
+
 macros::create_all_prerequisites!(
     connector_name: Adyen,
     generic_type: T,
@@ -761,6 +770,7 @@ impl<
             error_code: notif.reason.clone(),
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 
@@ -787,6 +797,7 @@ impl<
             error_code: notif.reason.clone(),
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 
@@ -819,6 +830,7 @@ impl<
                 raw_connector_response: Some(
                     String::from_utf8_lossy(&request_body_copy).to_string(),
                 ),
+                status_code: 200,
             },
         )
     }
@@ -1050,4 +1062,24 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
     fn is_webhook_source_verification_mandatory(&self) -> bool {
         false
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Adyen
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Adyen
+{
 }

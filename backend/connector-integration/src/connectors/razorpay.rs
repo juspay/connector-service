@@ -170,6 +170,7 @@ impl<
     > connector_types::SetupMandateV2<T> for Razorpay<T>
 {
 }
+impl connector_types::RepeatPaymentV2 for Razorpay {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -200,6 +201,14 @@ impl<
     > connector_types::DisputeDefend for Razorpay<T>
 {
 }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Razorpay<T>{}
 
 impl<T> Razorpay<T> {
     pub const fn new() -> &'static Self {
@@ -252,9 +261,17 @@ impl<
 
         with_error_response_body!(event_builder, response);
 
-        let (code, message, reason) = match response {
+        let (code, message, reason, attempt_status) = match response {
             razorpay::RazorpayErrorResponse::StandardError { error } => {
-                (error.code, error.description, error.reason)
+                let attempt_status = match error.code.as_str() {
+                    "BAD_REQUEST_ERROR" => AttemptStatus::Failure,
+                    "GATEWAY_ERROR" => AttemptStatus::Failure,
+                    "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
+                    "AUTHORIZATION_ERROR" => AttemptStatus::AuthorizationFailed,
+                    "SERVER_ERROR" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Pending,
+                };
+                (error.code, error.description, error.reason, attempt_status)
             }
             razorpay::RazorpayErrorResponse::SimpleError { message } => {
                 // For simple error messages like "no Route matched with those values"
@@ -263,6 +280,7 @@ impl<
                     "ROUTE_ERROR".to_string(),
                     message.clone(),
                     Some(message.clone()),
+                    AttemptStatus::Failure,
                 )
             }
         };
@@ -272,7 +290,7 @@ impl<
             code,
             message: message.clone(),
             reason,
-            attempt_status: None,
+            attempt_status: Some(attempt_status),
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
@@ -752,7 +770,7 @@ impl<
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone()))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
@@ -826,6 +844,7 @@ impl<
             error_code: notif.entity.error_code,
             error_message: notif.entity.error_reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 
@@ -855,6 +874,7 @@ impl<
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            status_code: 200,
         })
     }
 }
@@ -938,7 +958,7 @@ impl<
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone()))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
@@ -1039,7 +1059,7 @@ impl<
 
         with_response_body!(event_builder, response);
 
-        RouterDataV2::foreign_try_from((response, data.clone()))
+        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
@@ -1421,4 +1441,24 @@ impl<
     fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
         Some(&RAZORPAY_SUPPORTED_PAYMENT_METHODS)
     }
+}
+
+impl
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Razorpay
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RepeatPayment,
+        PaymentFlowData,
+        domain_types::connector_types::RepeatPaymentData,
+        PaymentsResponseData,
+    > for Razorpay
+{
 }

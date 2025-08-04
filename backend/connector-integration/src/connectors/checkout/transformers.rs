@@ -487,13 +487,14 @@ impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::ma
             // Handle successful response
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: http_code,
             });
         }
 
@@ -679,13 +680,14 @@ impl<F>
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(resource_id),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: Some(connector_meta),
             network_txn_id: None,
             connector_response_reference_id: response.reference,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -730,13 +732,14 @@ impl<F>
 
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.action_id.clone()),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: Some(connector_meta),
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -806,13 +809,14 @@ impl<F>
 
             router_data.response = Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
-                redirection_data: Box::new(None),
-                mandate_reference: Box::new(None),
+                redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: Some(connector_meta),
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
+                status_code: http_code,
             });
         }
 
@@ -856,6 +860,7 @@ impl<F>
             connector_refund_id: checkout_refund_response.response.action_id,
             refund_status,
             raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -881,7 +886,7 @@ impl<F>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
 
         // Get the refund status using the From implementation
@@ -892,6 +897,7 @@ impl<F>
             connector_refund_id: response.action_id,
             refund_status,
             raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)
@@ -957,7 +963,7 @@ impl<F>
         let ResponseRouterData {
             response,
             router_data,
-            http_code: _,
+            http_code,
         } = item;
 
         // Get the refund status using the From implementation
@@ -968,6 +974,7 @@ impl<F>
             connector_refund_id: response.action_id.clone(),
             refund_status,
             raw_connector_response: None,
+            status_code: http_code,
         });
 
         Ok(router_data)

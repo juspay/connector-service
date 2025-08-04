@@ -773,8 +773,8 @@ impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::ma
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -782,6 +782,7 @@ impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::ma
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -842,8 +843,8 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -851,6 +852,7 @@ impl<F> TryFrom<ResponseRouterData<FiservCaptureResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -909,8 +911,8 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -918,6 +920,7 @@ impl<F> TryFrom<ResponseRouterData<FiservVoidResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure {
@@ -983,8 +986,8 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
                             .clone()
                     }),
             ),
-            redirection_data: Box::new(None),
-            mandate_reference: Box::new(None),
+            redirection_data: None,
+            mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
             connector_response_reference_id: Some(
@@ -992,6 +995,7 @@ impl<F> TryFrom<ResponseRouterData<FiservSyncResponse, Self>>
             ),
             incremental_authorization_allowed: None,
             raw_connector_response: None,
+            status_code: item.http_code,
         };
 
         if status == enums::AttemptStatus::Failure || status == enums::AttemptStatus::Voided {
@@ -1049,6 +1053,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundResponse, Self>>
                 }),
             refund_status,
             raw_connector_response: None,
+            status_code: http_code,
         };
 
         if refund_status == enums::RefundStatus::Failure {
@@ -1115,6 +1120,7 @@ impl<F> TryFrom<ResponseRouterData<FiservRefundSyncResponse, Self>>
                 }),
             refund_status,
             raw_connector_response: None,
+            status_code: http_code,
         };
 
         if refund_status == enums::RefundStatus::Failure {

@@ -151,6 +151,16 @@ pub struct SetupMandateIntegrityObject {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct RepeatPaymentIntegrityObject {
+    /// Payment amount
+    pub amount: i64,
+    /// Payment currency
+    pub currency: Currency,
+    /// Mandate reference
+    pub mandate_reference: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PaymentSynIntegrityObject {
     /// Authorise amount
     pub amount: MinorUnit,

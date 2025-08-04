@@ -467,6 +467,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: _status_code,
         };
 
         Ok(RouterDataV2 {
@@ -510,6 +511,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: _status_code,
         };
 
         Ok(RouterDataV2 {
@@ -565,13 +567,14 @@ impl
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: _status_code,
         };
 
         Ok(RouterDataV2 {
@@ -631,13 +634,14 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: transaction_id,
-            redirection_data: Box::new(redirection_data),
+            redirection_data: redirection_data.map(Box::new),
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: _status_code,
         };
 
         Ok(RouterDataV2 {
@@ -671,13 +675,14 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     ) -> Result<Self, Self::Error> {
         let payments_response_data = PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(response.id),
-            redirection_data: Box::new(None),
+            redirection_data: None,
             connector_metadata: None,
-            mandate_reference: Box::new(None),
+            mandate_reference: None,
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
+            status_code: _status_code,
         };
 
         Ok(RouterDataV2 {

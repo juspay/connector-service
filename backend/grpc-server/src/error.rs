@@ -280,6 +280,7 @@ pub struct PaymentAuthorizationError {
     pub error_message: Option<String>,
     pub error_code: Option<String>,
     pub raw_connector_response: Option<String>,
+    pub status_code: Option<u32>,
 }
 
 impl PaymentAuthorizationError {
@@ -288,12 +289,14 @@ impl PaymentAuthorizationError {
         error_message: Option<String>,
         error_code: Option<String>,
         raw_connector_response: Option<String>,
+        status_code: Option<u32>,
     ) -> Self {
         Self {
             status,
             error_message,
             error_code,
             raw_connector_response,
+            status_code,
         }
     }
 }
@@ -310,6 +313,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             error_message: error.error_message,
             error_code: error.error_code,
             raw_connector_response: error.raw_connector_response,
+            status_code: error.status_code.unwrap_or(500),
         }
     }
 }

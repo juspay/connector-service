@@ -6,15 +6,15 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -138,6 +138,7 @@ impl<
     > connector_types::SetupMandateV2<T> for Elavon<T>
 {
 }
+impl connector_types::RepeatPaymentV2 for Elavon {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -188,6 +189,15 @@ impl<
     > connector_types::PaymentOrderCreate for Elavon<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Elavon<T>{}
 
 impl<
         T: PaymentMethodDataTypes
@@ -330,8 +340,9 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        pub fn preprocess_response_bytes(
+        pub fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
             response_bytes: Bytes,
         ) -> Result<Bytes, errors::ConnectorError> {
             // Use the utility function to preprocess XML response bytes
@@ -801,6 +812,32 @@ impl<
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Elavon<T>
+{}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorSpecifications for Elavon<T>
+{}
+
+impl <
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        RepeatPayment,
+        PaymentFlowData,
+        RepeatPaymentData,
+        PaymentsResponseData,
+    > for Elavon<T>
 {
 }
 
@@ -811,6 +848,6 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorSpecifications for Elavon<T>
-{
-}
+    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Elavon<T>
+{} 

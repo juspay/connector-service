@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 
 use common_utils::{
-    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_KEY1, X_KEY2},
+    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
 };
 use domain_types::{
@@ -10,7 +10,7 @@ use domain_types::{
     errors::{ApiError, ApplicationErrorResponse},
     router_data::ConnectorAuthType,
 };
-use error_stack::Report;
+use error_stack::{Report, ResultExt};
 use http::request::Request;
 use tonic::metadata;
 
@@ -133,14 +133,29 @@ pub fn auth_from_metadata(
         }),
         "no-key" => Ok(ConnectorAuthType::NoKey),
         "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
-        "currency-auth-key" | "certificate-auth" | _ => Err(Report::new(
-            ApplicationErrorResponse::BadRequest(ApiError {
+        "currency-auth-key" => {
+            let auth_key_map_str = parse_metadata(metadata, X_AUTH_KEY_MAP)?;
+            let auth_key_map: std::collections::HashMap<
+                common_enums::enums::Currency,
+                common_utils::pii::SecretSerdeValue,
+            > = serde_json::from_str(auth_key_map_str).change_context(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_AUTH_KEY_MAP".to_string(),
+                    error_identifier: 400,
+                    error_message: "Invalid auth-key-map format".to_string(),
+                    error_object: None,
+                }),
+            )?;
+            Ok(ConnectorAuthType::CurrencyAuthKey { auth_key_map })
+        }
+        "certificate-auth" | _ => Err(Report::new(ApplicationErrorResponse::BadRequest(
+            ApiError {
                 sub_code: "INVALID_AUTH_TYPE".to_string(),
                 error_identifier: 400,
                 error_message: format!("Invalid auth type: {auth}"),
                 error_object: None,
-            }),
-        )),
+            },
+        ))),
     }
 }
 
@@ -183,7 +198,9 @@ where
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "MISSING_FIELD".to_string(),
                     error_identifier: 400,
-                    error_message: format!("Missing Field x-merchant-id {e}"),
+                    error_message: format!(
+                        "Missing/Incorrect Field x-merchant-id or x-connector{e}"
+                    ),
                     error_object: None,
                 }))
             },

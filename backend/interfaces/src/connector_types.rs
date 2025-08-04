@@ -10,8 +10,8 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RequestDetails, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RefundsResponseData, RepeatPaymentData, RequestDetails, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -32,6 +32,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + RefundV2
     + PaymentCapture
     + SetupMandateV2<T>
+    + RepeatPaymentV2
     + AcceptDispute
     + RefundSyncV2
     + DisputeDefend
@@ -107,6 +108,26 @@ pub trait SetupMandateV2<T: PaymentMethodDataTypes>:
     connector_flow::SetupMandate,
     PaymentFlowData,
     SetupMandateRequestData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait RepeatPaymentV2:
+    ConnectorIntegrationV2<
+    connector_flow::RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait RepeatPaymentV2:
+    ConnectorIntegrationV2<
+    connector_flow::RepeatPayment,
+    PaymentFlowData,
+    RepeatPaymentData,
     PaymentsResponseData,
 >
 {
