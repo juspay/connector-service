@@ -193,6 +193,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(generate_unique_id("fiuu_void"))),
         }),
         all_keys_required: None,
+        browser_info: None,
     }
 }
 
@@ -229,6 +230,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_id: refund_id.to_string(),
         refund_reason: None,
         request_ref_id: None,
+        browser_info: None,
     }
 }
 
