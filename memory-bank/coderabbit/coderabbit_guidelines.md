@@ -275,6 +275,22 @@ impl<F> TryFrom<ResponseRouterData<MyConnectorAuthResponse, RouterDataV2<F, Paym
 
 *   **Authentication**: In your `ConnectorCommon::get_auth_header` implementation, correctly handle the `ConnectorAuthType` enum variant that corresponds to your connector's authentication scheme.
 *   **Connector Registration**: Add your new connector to the `ConnectorEnum` in `backend/domain_types/src/connector_types.rs` and to the `convert_connector` function in `backend/connector-integration/src/types.rs`.
-*   **XML Responses**: If the connector uses XML, use the `preprocess_xml_response_bytes` utility to convert it to JSON before deserializing.
+*   **Response Preprocessing**: If a connector's response needs to be modified before deserialization (e.g., converting XML to JSON, or other transformations), use the `preprocess_response` mechanism.
+    1.  In the `member_functions` block of `create_all_prerequisites!`, define a `preprocess_response_bytes` function. This function will receive the raw response bytes and should return the processed bytes.
+        ```rust
+        // In member_functions
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+            // For XML, call the utility function
+            // return crate::utils::preprocess_xml_response_bytes(bytes);
+
+            // For no preprocessing, just return the bytes
+            Ok(bytes)
+        }
+        ```
+    2.  In the `macro_connector_implementation!` for the relevant flow, add the `preprocess_response: true` flag. This tells the macro to call the function you defined. If this flag is `false` or omitted, the function will not be called.
 *   **Error Handling**: Use `error_stack` for error propagation. Your `build_error_response` function is the primary place to map connector errors to the standard `ErrorResponse` struct.
 *   **Testing**: Write thorough end-to-end tests in `backend/grpc-server/tests/` to cover all supported payment flows, including success and failure scenarios.
