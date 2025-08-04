@@ -1,5 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 use common_enums;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -52,12 +51,11 @@ trait PaymentOperationsInternal {
 }
 
 #[derive(Clone)]
-pub struct Payments{
+pub struct Payments {
     pub config: Arc<Config>,
 }
 
-impl Payments
-{
+impl Payments {
     async fn process_authorization_internal<T : PaymentMethodDataTypes + Default+ Eq + Debug+ Send + serde::Serialize + serde::de::DeserializeOwned + Clone+ Sync+ domain_types::types::CardConversionHelper<T>+ 'static>(
         &self,
         payload: PaymentServiceAuthorizeRequest,
@@ -124,7 +122,6 @@ impl Payments
             })?;
 
         // Construct router data
-        //
         let router_data = RouterDataV2::<
             Authorize,
             PaymentFlowData,
@@ -652,7 +649,7 @@ impl PaymentService for Payments {
                 .transpose()?;
 
             //get connector data
-            let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector); //Should be generic for T
+            let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector);
 
             let source_verified = connector_data
                 .connector
@@ -861,7 +858,7 @@ impl PaymentService for Payments {
                     '_,
                     SetupMandate,
                     PaymentFlowData,
-                    SetupMandateRequestData<DefaultPCIHolder>, //Should be genric for T
+                    SetupMandateRequestData<DefaultPCIHolder>,
                     PaymentsResponseData,
                 > = connector_data.connector.get_connector_integration_v2();
 
@@ -899,7 +896,7 @@ impl PaymentService for Payments {
                 let router_data: RouterDataV2<
                     SetupMandate,
                     PaymentFlowData,
-                    SetupMandateRequestData<DefaultPCIHolder>, //Should be genric for T
+                    SetupMandateRequestData<DefaultPCIHolder>,
                     PaymentsResponseData,
                 > = RouterDataV2 {
                     flow: std::marker::PhantomData,

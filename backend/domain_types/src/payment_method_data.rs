@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
-pub struct Card<T: PaymentMethodDataTypes> { //
+pub struct Card<T: PaymentMethodDataTypes> {
     pub card_number: RawCardNumber<T>,
     pub card_exp_month: Secret<String>,
     pub card_exp_year: Secret<String>,

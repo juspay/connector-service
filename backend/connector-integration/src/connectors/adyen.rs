@@ -1,7 +1,7 @@
-//half working
+
 mod test;
 pub mod transformers;
-use std::sync::LazyLock;
+use std::{sync::LazyLock, fmt::Debug, marker::{Sync, Send}};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -61,9 +61,9 @@ pub(crate) mod headers {
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::ConnectorServiceTrait<T> for Adyen<T>
@@ -71,9 +71,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::PaymentAuthorizeV2<T> for Adyen<T>
@@ -81,9 +81,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::PaymentSyncV2 for Adyen<T>
@@ -91,9 +91,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::PaymentVoidV2 for Adyen<T>
@@ -101,9 +101,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::RefundSyncV2 for Adyen<T>
@@ -111,9 +111,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::RefundV2 for Adyen<T>
@@ -121,9 +121,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::PaymentCapture for Adyen<T>
@@ -131,9 +131,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::SetupMandateV2<T> for Adyen<T>
@@ -141,9 +141,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::AcceptDispute for Adyen<T>
@@ -151,9 +151,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::SubmitEvidenceV2 for Adyen<T>
@@ -161,9 +161,9 @@ impl<
 }
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::DisputeDefend for Adyen<T>
@@ -271,9 +271,9 @@ macros::create_all_prerequisites!(
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > ConnectorCommon for Adyen<T>
@@ -339,7 +339,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize ],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
     other_functions: {
         fn get_headers(
             &self,
@@ -367,7 +367,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize ],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize ],
     other_functions: {
         fn get_headers(
             &self,
@@ -395,7 +395,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -419,9 +419,9 @@ macros::macro_connector_implementation!(
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::ValidationTrait for Adyen<T>
@@ -430,9 +430,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::PaymentOrderCreate for Adyen<T>
@@ -441,9 +441,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -467,7 +467,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -496,7 +496,7 @@ macros::macro_connector_implementation!(
     flow_response: DisputeResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -518,9 +518,9 @@ macros::macro_connector_implementation!(
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
@@ -531,9 +531,9 @@ impl<
 // SourceVerification implementations for all flows
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -548,9 +548,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -565,9 +565,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -582,9 +582,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -599,9 +599,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -616,9 +616,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -633,9 +633,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -650,9 +650,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -667,9 +667,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -684,9 +684,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -701,9 +701,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     >
@@ -718,9 +718,9 @@ impl<
 
 impl<
         T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
+            + Debug
+            + Sync
+            + Send
             + 'static
             + Serialize,
     > connector_types::IncomingWebhook for Adyen<T>
@@ -835,7 +835,7 @@ macros::macro_connector_implementation!(
     flow_response: RefundsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -865,7 +865,7 @@ macros::macro_connector_implementation!(
     flow_response: PaymentsResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -894,7 +894,7 @@ macros::macro_connector_implementation!(
     flow_response: DisputeResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -924,7 +924,7 @@ macros::macro_connector_implementation!(
     flow_response: DisputeResponseData,
     http_method: Post,
     generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,

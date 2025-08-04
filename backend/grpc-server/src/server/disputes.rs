@@ -403,7 +403,7 @@ impl DisputeService for Disputes {
 }
 
 async fn get_disputes_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>, //Should be generic for T
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,

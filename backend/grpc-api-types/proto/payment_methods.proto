@@ -31,7 +31,7 @@ enum CardNetwork {
 
 // PaymentMethod represents a payment instrument used to process a payment
 // It contains a oneof field with all possible payment method categories
-message PaymentMethod { //
+message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
     // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported

@@ -6,7 +6,6 @@ use common_utils::{
     // consts::BASE64_ENGINE,
     request::{Method, Request, RequestContent},
 };
-use domain_types::payment_method_data::PaymentMethodDataTypes;
 use domain_types::{
     connector_types::RawConnectorResponse,
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},

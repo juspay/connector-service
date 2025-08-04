@@ -1,6 +1,5 @@
 use core::result::Result;
-use std::fmt::Debug;
-use std::{borrow::Cow, collections::HashMap, str::FromStr};
+use std::{fmt::Debug, borrow::Cow, collections::HashMap, str::FromStr};
 
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email};
@@ -135,7 +134,6 @@ impl<
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        //do we have to do match here?
         value: grpc_api_types::payments::PaymentMethod,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         tracing::info!("PaymentMethod data received: {:?}", value);
@@ -243,7 +241,7 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
             bank_code: card.bank_code,
             nick_name: card.nick_name.map(|name| name.into()),
             card_holder_name: card.card_holder_name.map(Secret::new),
-            co_badged_card_data: None, // TODO: Handle co-badged card data
+            co_badged_card_data: None,
         })
     }
 }
@@ -265,7 +263,7 @@ impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
             bank_code: card.bank_code,
             nick_name: card.nick_name.map(|name| name.into()),
             card_holder_name: card.card_holder_name.map(Secret::new),
-            co_badged_card_data: None, // TODO: Handle co-badged card data
+            co_badged_card_data: None,
         })
     }
 }
@@ -470,7 +468,6 @@ impl<
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        // hereeeee??
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {

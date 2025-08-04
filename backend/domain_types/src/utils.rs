@@ -22,7 +22,6 @@ use crate::{
 
 pub type Error = error_stack::Report<errors::ConnectorError>;
 
-
 /// Trait for converting from one foreign type to another
 pub trait ForeignTryFrom<F>: Sized {
     /// Custom error for conversion failure

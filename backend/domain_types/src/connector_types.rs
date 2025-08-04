@@ -661,7 +661,7 @@ impl PaymentVoidData {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
-    pub payment_method_data: crate::payment_method_data::PaymentMethodData<T>, //
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
     /// ```text
