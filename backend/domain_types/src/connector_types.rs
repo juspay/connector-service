@@ -671,6 +671,10 @@ impl PaymentFlowData {
         }
         self
     }
+
+    pub fn get_return_url(&self) -> Option<String> {
+        self.return_url.clone()
+    }
 }
 
 impl RawConnectorResponse for PaymentFlowData {

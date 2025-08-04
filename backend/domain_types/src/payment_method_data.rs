@@ -290,7 +290,6 @@ pub enum VoucherData {
 pub enum UpiData {
     UpiCollect(UpiCollectData),
     UpiIntent(UpiIntentData),
-    // UpiQr(UpiQrData),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -301,9 +300,6 @@ pub struct UpiCollectData {
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct UpiIntentData {}
-
-// #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
-// pub struct UpiQrData {}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RealTimePaymentData {

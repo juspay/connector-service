@@ -761,7 +761,7 @@ impl
             phone,
             first_name,
             last_name,
-            return_url: item.resource_common_data.return_url.clone(),
+            return_url: item.resource_common_data.get_return_url(),
         })
     }
 }
@@ -873,7 +873,7 @@ impl
             phone,
             first_name,
             last_name,
-            return_url: item.resource_common_data.return_url.clone(),
+            return_url: item.resource_common_data.get_return_url(),
         })
     }
 }
@@ -1395,7 +1395,7 @@ impl
             connector_response_reference_id: connector_txn_id,
             incremental_authorization_allowed: None,
             raw_connector_response,
-            status_code: Some(item.http_code),
+            status_code: item.http_code,
         });
 
         Ok(router_data)
@@ -1495,7 +1495,7 @@ impl
                 connector_response_reference_id: connector_txn_id,
                 incremental_authorization_allowed: None,
                 raw_connector_response,
-                status_code: Some(item.http_code),
+                status_code: item.http_code,
             }),
         };
 
