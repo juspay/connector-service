@@ -125,9 +125,17 @@ impl ConnectorCommon for Razorpay {
 
         with_error_response_body!(event_builder, response);
 
-        let (code, message, reason) = match response {
+        let (code, message, reason, attempt_status) = match response {
             razorpay::RazorpayErrorResponse::StandardError { error } => {
-                (error.code, error.description, error.reason)
+                let attempt_status = match error.code.as_str() {
+                    "BAD_REQUEST_ERROR" => AttemptStatus::Failure,
+                    "GATEWAY_ERROR" => AttemptStatus::Failure,
+                    "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
+                    "AUTHORIZATION_ERROR" => AttemptStatus::AuthorizationFailed,
+                    "SERVER_ERROR" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Pending,
+                };
+                (error.code, error.description, error.reason, attempt_status)
             }
             razorpay::RazorpayErrorResponse::SimpleError { message } => {
                 // For simple error messages like "no Route matched with those values"
@@ -136,6 +144,7 @@ impl ConnectorCommon for Razorpay {
                     "ROUTE_ERROR".to_string(),
                     message.clone(),
                     Some(message.clone()),
+                    AttemptStatus::Failure,
                 )
             }
         };
@@ -145,7 +154,7 @@ impl ConnectorCommon for Razorpay {
             code,
             message: message.clone(),
             reason,
-            attempt_status: None,
+            attempt_status: Some(attempt_status),
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
