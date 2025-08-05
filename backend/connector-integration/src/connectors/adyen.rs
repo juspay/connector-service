@@ -520,7 +520,8 @@ impl connector_types::IncomingWebhook for Adyen {
             error_code: notif.reason.clone(),
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
-            status_code: Some(200),
+            status_code: 200,
+            response_headers: None,
         })
     }
 
@@ -547,7 +548,8 @@ impl connector_types::IncomingWebhook for Adyen {
             error_code: notif.reason.clone(),
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
-            status_code: Some(200),
+            status_code: 200,
+            response_headers: None,
         })
     }
 
@@ -580,7 +582,8 @@ impl connector_types::IncomingWebhook for Adyen {
                 raw_connector_response: Some(
                     String::from_utf8_lossy(&request_body_copy).to_string(),
                 ),
-                status_code: Some(200),
+                status_code: 200,
+                response_headers: None,
             },
         )
     }
