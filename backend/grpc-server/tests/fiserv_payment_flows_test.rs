@@ -215,6 +215,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         multiple_capture_data: None,
         metadata,
         request_ref_id: None, // all_keys_required: None,
+        browser_info: None,
     }
 }
 
@@ -263,6 +264,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_id: refund_id.to_string(),
         refund_reason: None,
         request_ref_id: None, // all_keys_required: None,
+        browser_info: None,
     }
 }
 
