@@ -161,6 +161,7 @@ impl IncomingWebhook for Authorizedotnet {
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            response_headers: None,
         })
     }
 
@@ -186,6 +187,7 @@ impl IncomingWebhook for Authorizedotnet {
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            response_headers: None,
         })
     }
 }
