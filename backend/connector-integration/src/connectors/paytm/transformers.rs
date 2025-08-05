@@ -688,7 +688,7 @@ pub fn create_paytm_header(
 // Helper struct for RouterData transformation
 #[derive(Debug, Clone)]
 pub struct PaytmRouterData {
-    pub amount: MinorUnit,
+    pub amount: StringMajorUnit,
     pub currency: Currency,
     pub payment_id: String,
     pub customer_id: Option<String>,
@@ -716,27 +716,19 @@ pub struct PaytmAuthorizeRouterData {
 }
 
 // Request transformation for CreateSessionToken flow
-impl
-    TryFrom<
-        &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::CreateSessionToken,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::SessionTokenRequestData,
-            domain_types::connector_types::SessionTokenResponseData,
-        >,
-    > for PaytmRouterData
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
+impl PaytmRouterData {
+    pub fn try_from_with_converter(
         item: &domain_types::router_data_v2::RouterDataV2<
             domain_types::connector_flow::CreateSessionToken,
             domain_types::connector_types::PaymentFlowData,
             domain_types::connector_types::SessionTokenRequestData,
             domain_types::connector_types::SessionTokenResponseData,
         >,
-    ) -> Result<Self, Self::Error> {
-        let amount_minor_units = item.request.amount;
+        amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
+    ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
+        let amount = amount_converter
+            .convert(item.request.amount, item.request.currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
         let customer_id = item
             .resource_common_data
             .get_customer_id()
@@ -750,7 +742,7 @@ impl
         let last_name = item.resource_common_data.get_optional_billing_last_name();
 
         Ok(Self {
-            amount: amount_minor_units,
+            amount,
             currency: item.request.currency,
             payment_id: item
                 .resource_common_data
@@ -771,18 +763,14 @@ impl PaytmInitiateTxnRequest {
     pub fn try_from_with_auth(
         item: &PaytmRouterData,
         auth: &PaytmAuthType,
-        amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
     ) -> CustomResult<Self, errors::ConnectorError> {
-        let amount_value = amount_converter
-            .convert(item.amount, item.currency)
-            .change_context(errors::ConnectorError::AmountConversionFailed)?;
         let body = PaytmInitiateReqBody {
             request_type: constants::REQUEST_TYPE_PAYMENT.to_string(),
             mid: auth.merchant_id.peek().to_string(),
             order_id: item.payment_id.clone(),
             website_name: auth.website.peek().to_string(),
             txn_amount: PaytmAmount {
-                value: amount_value,
+                value: item.amount.clone(),
                 currency: item.currency.to_string(),
             },
             user_info: PaytmUserInfo {
@@ -1163,12 +1151,11 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let intermediate_router_data = PaytmRouterData::try_from(&item.router_data)?;
-        PaytmInitiateTxnRequest::try_from_with_auth(
-            &intermediate_router_data,
-            &auth,
+        let intermediate_router_data = PaytmRouterData::try_from_with_converter(
+            &item.router_data,
             item.connector.amount_converter,
-        )
+        )?;
+        PaytmInitiateTxnRequest::try_from_with_auth(&intermediate_router_data, &auth)
     }
 }
 
