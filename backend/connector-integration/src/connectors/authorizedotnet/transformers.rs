@@ -46,6 +46,49 @@ fn create_raw_card_number_for_vault_token(card_string: String) -> RawCardNumber<
     RawCardNumber(card_string)
 }
 
+// Helper traits for working with generic types
+trait RawCardNumberExt<T: PaymentMethodDataTypes> {
+    fn peek(&self) -> &str;
+}
+
+trait CardExt<T: PaymentMethodDataTypes> {
+    fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String>;
+}
+
+// Implementations for DefaultPCIHolder
+impl RawCardNumberExt<DefaultPCIHolder> for RawCardNumber<DefaultPCIHolder> {
+    fn peek(&self) -> &str {
+        self.0.peek()
+    }
+}
+
+impl CardExt<DefaultPCIHolder> for domain_types::payment_method_data::Card<DefaultPCIHolder> {
+    fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+        Secret::new(format!("{}{}{}", 
+            self.card_exp_year.peek(), 
+            separator,
+            self.card_exp_month.peek()
+        ))
+    }
+}
+
+// Implementations for VaultTokenHolder
+impl RawCardNumberExt<VaultTokenHolder> for RawCardNumber<VaultTokenHolder> {
+    fn peek(&self) -> &str {
+        &self.0
+    }
+}
+
+impl CardExt<VaultTokenHolder> for domain_types::payment_method_data::Card<VaultTokenHolder> {
+    fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+        Secret::new(format!("{}{}{}", 
+            self.card_exp_year.peek(), 
+            separator,
+            self.card_exp_month.peek()
+        ))
+    }
+}
+
 // Wrapper for RawCardNumber to provide construction methods
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AuthorizedotnetRawCardNumber<T: PaymentMethodDataTypes>(pub RawCardNumber<T>);
@@ -1420,8 +1463,8 @@ pub struct AuthorizedotnetRefundResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateCustomerProfileRequest {
-    create_customer_profile_request: AuthorizedotnetZeroMandateRequest<DefaultPCIHolder>,
+pub struct CreateCustomerProfileRequest<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+    create_customer_profile_request: AuthorizedotnetZeroMandateRequest<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -2282,8 +2325,8 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
 }
 
 // SetupMandate (Zero Mandate) implementation
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
-    TryFrom<
+// Generic implementation for all PaymentMethodDataTypes
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
                 SetupMandate,
@@ -2293,7 +2336,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             >,
             T
         >,
-    > for CreateCustomerProfileRequest
+    > for CreateCustomerProfileRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -2317,6 +2360,16 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             Some(true) | None => ValidationMode::TestMode,
             Some(false) => ValidationMode::LiveMode,
         };
+        // Create expiry date manually since we can't use the trait method generically
+        let expiry_month = ccard.card_exp_month.peek().clone();
+        let year = ccard.card_exp_year.peek().clone();
+        let expiry_year = if year.len() == 2 {
+            format!("20{year}")
+        } else {
+            year
+        };
+        let expiration_date = format!("{expiry_year}-{expiry_month}");
+
         let profile = Profile {
             merchant_customer_id: item
                 .router_data
@@ -2338,10 +2391,8 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             payment_profiles: vec![PaymentProfiles {
                 customer_type: CustomerType::Individual,
                 payment: PaymentDetails::CreditCard(CreditCardDetails {
-                    card_number: StrongSecret::new(ccard.card_number.peek().to_string()),
-                    expiration_date: Secret::new(
-                        ccard.get_expiry_date_as_yyyymm("-").peek().clone(),
-                    ),
+                    card_number: ccard.card_number.clone(),
+                    expiration_date: Secret::new(expiration_date),
                     card_code: Some(ccard.card_cvc.clone()),
                 }),
             }],

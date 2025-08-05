@@ -171,7 +171,7 @@ macro_rules! expand_fn_get_request_body {
                     router_data: req.clone(),
                 };
                 let request = bridge.request_body(input_data)?;
-                Ok(Some(RequestContent::$content_type(Box::new(request))))
+                Ok(Some(macro_types::RequestContent::$content_type(Box::new(request))))
             }
         }
     };

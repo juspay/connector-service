@@ -991,9 +991,8 @@ impl PaymentService for Payments {
         })
         .await
     }
-}
 
-#[tracing::instrument(
+    #[tracing::instrument(
         name = "repeat_payment",
         fields(
             name = common_utils::consts::NAME,
@@ -1012,85 +1011,86 @@ impl PaymentService for Payments {
         ),
         skip(self, request)
     )]
-async fn repeat_everything(
-    &self,
-    request: tonic::Request<PaymentServiceRepeatEverythingRequest>,
-) -> Result<tonic::Response<PaymentServiceRepeatEverythingResponse>, tonic::Status> {
-    info!("REPEAT_PAYMENT_FLOW: initiated");
-    let service_name = request
-        .extensions()
-        .get::<String>()
-        .cloned()
-        .unwrap_or_else(|| "unknown_service".to_string());
-    grpc_logging_wrapper(request, &service_name, |request| {
-        Box::pin(async {
-            let connector =
-                connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let connector_auth_details =
-                auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let payload = request.into_inner();
+    async fn repeat_everything(
+        &self,
+        request: tonic::Request<PaymentServiceRepeatEverythingRequest>,
+    ) -> Result<tonic::Response<PaymentServiceRepeatEverythingResponse>, tonic::Status> {
+        info!("REPEAT_PAYMENT_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
+        grpc_logging_wrapper(request, &service_name, |request| {
+            Box::pin(async {
+                let connector = connector_from_metadata(request.metadata())
+                    .map_err(|e| e.into_grpc_status())?;
+                let connector_auth_details =
+                    auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let payload = request.into_inner();
 
-            //get connector data
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+                //get connector data
+                let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector);
 
-            // Get connector integration
-            let connector_integration: BoxedConnectorIntegrationV2<
-                '_,
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData,
-                PaymentsResponseData,
-            > = connector_data.connector.get_connector_integration_v2();
+                // Get connector integration
+                let connector_integration: BoxedConnectorIntegrationV2<
+                    '_,
+                    RepeatPayment,
+                    PaymentFlowData,
+                    RepeatPaymentData,
+                    PaymentsResponseData,
+                > = connector_data.connector.get_connector_integration_v2();
 
-            // Create payment flow data
-            let payment_flow_data = PaymentFlowData::foreign_try_from((
-                payload.clone(),
-                self.config.connectors.clone(),
-            ))
-            .map_err(|e| e.into_grpc_status())?;
-
-            // Create repeat payment data
-            let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                // Create payment flow data
+                let payment_flow_data = PaymentFlowData::foreign_try_from((
+                    payload.clone(),
+                    self.config.connectors.clone(),
+                ))
                 .map_err(|e| e.into_grpc_status())?;
 
-            // Create router data
-            let router_data: RouterDataV2<
-                RepeatPayment,
-                PaymentFlowData,
-                RepeatPaymentData,
-                PaymentsResponseData,
-            > = RouterDataV2 {
-                flow: std::marker::PhantomData,
-                resource_common_data: payment_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: repeat_payment_data,
-                response: Err(ErrorResponse::default()),
-            };
+                // Create repeat payment data
+                let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                    .map_err(|e| e.into_grpc_status())?;
 
-            let response = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                None,
-                &connector.to_string(),
-                &service_name,
-            )
-            .await
-            .switch()
-            .map_err(|e| e.into_grpc_status())?;
+                // Create router data
+                let router_data: RouterDataV2<
+                    RepeatPayment,
+                    PaymentFlowData,
+                    RepeatPaymentData,
+                    PaymentsResponseData,
+                > = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: repeat_payment_data,
+                    response: Err(ErrorResponse::default()),
+                };
 
-            // Generate response
-            let repeat_payment_response =
-                generate_repeat_payment_response(response).map_err(|e| e.into_grpc_status())?;
+                let response = external_services::service::execute_connector_processing_step(
+                    &self.config.proxy,
+                    connector_integration,
+                    router_data,
+                    None,
+                    &connector.to_string(),
+                    &service_name,
+                )
+                .await
+                .switch()
+                .map_err(|e| e.into_grpc_status())?;
 
-            Ok(tonic::Response::new(repeat_payment_response))
+                // Generate response
+                let repeat_payment_response =
+                    generate_repeat_payment_response(response).map_err(|e| e.into_grpc_status())?;
+
+                Ok(tonic::Response::new(repeat_payment_response))
+            })
         })
-    })
-    .await
+        .await
+    }
 }
 
 async fn get_payments_webhook_content(
-    connector_data: ConnectorData,
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,

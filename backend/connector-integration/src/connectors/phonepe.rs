@@ -4,7 +4,7 @@ pub mod transformers;
 
 use common_enums as enums;
 use common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, types::MinorUnit,
+    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{

@@ -53,8 +53,6 @@ pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
 
-
-// Implement all required traits for ConnectorServiceTrait
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -62,9 +60,17 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorServiceTrait<T> for Authorizedotnet<T>
-{
-}
+    > ConnectorServiceTrait<T> for Authorizedotnet<T> {}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > SetupMandateV2<T> for Authorizedotnet<T> {}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -123,16 +129,6 @@ impl<
             + 'static
             + Serialize,
     > AcceptDispute for Authorizedotnet<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > SetupMandateV2<T> for Authorizedotnet<T>
 {
 }
 impl<
@@ -307,16 +303,16 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
         (
-            flow: SetupMandate,
-            request_body: CreateCustomerProfileRequest,
-            response_body: CreateCustomerProfileResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
             flow: RepeatPayment,
             request_body: AuthorizedotnetRepeatPaymentRequest,
             response_body: AuthorizedotnetRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: CreateCustomerProfileRequest<T>,
+            response_body: CreateCustomerProfileResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -551,6 +547,7 @@ macros::macro_connector_implementation!(
     }
 );
 
+// Use macro implementation for SetupMandate
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Authorizedotnet,
@@ -579,7 +576,7 @@ macros::macro_connector_implementation!(
             Ok(self.connector_base_url_payments(req).to_string())
         }
     }
-); 
+);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -624,22 +621,6 @@ impl<
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Authorizedotnet<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
     > for Authorizedotnet<T>
 {
 }
