@@ -15,9 +15,14 @@ pub struct Config {
     pub connectors: Connectors,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct Common {
+    #[serde(default = "default_environment")]
     pub environment: String,
+}
+
+fn default_environment() -> String {
+    "development".to_string()
 }
 
 impl Common {

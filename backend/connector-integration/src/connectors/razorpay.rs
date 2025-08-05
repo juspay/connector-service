@@ -193,6 +193,9 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
 
         // For UPI payments, use the specific UPI endpoint
         match &req.request.payment_method_data {
@@ -358,6 +361,9 @@ impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRe
         req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
         // Check if request_ref_id is provided to determine URL pattern
         let request_ref_id = &req.resource_common_data.connector_request_reference_id;
 
@@ -457,10 +463,11 @@ impl
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        Ok(format!(
-            "{}v1/orders",
-            req.resource_common_data.connectors.razorpay.base_url
-        ))
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
+        Ok(format!("{base_url}v1/orders"))
     }
 
     fn get_request_body(
@@ -558,11 +565,12 @@ impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsRespon
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
         let refund_id = req.request.connector_refund_id.clone();
-        Ok(format!(
-            "{}v1/refunds/{}",
-            req.resource_common_data.connectors.razorpay.base_url, refund_id
-        ))
+        Ok(format!("{base_url}v1/refunds/{refund_id}"))
     }
 
     fn handle_response_v2(
@@ -710,10 +718,13 @@ impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponse
         &self,
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
         let connector_payment_id = req.request.connector_transaction_id.clone();
         Ok(format!(
-            "{}v1/payments/{}/refund",
-            req.resource_common_data.connectors.razorpay.base_url, connector_payment_id
+            "{base_url}v1/payments/{connector_payment_id}/refund"
         ))
     }
 
@@ -796,16 +807,17 @@ impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, Payme
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
+        let base_url = &req.resource_common_data.connectors.razorpay.base_url;
+        if base_url.is_empty() {
+            return Err(errors::ConnectorError::FailedToObtainIntegrationUrl.into());
+        }
         let id = match &req.request.connector_transaction_id {
             ResponseId::ConnectorTransactionId(id) => id,
             _ => {
                 return Err(errors::ConnectorError::MissingConnectorTransactionID.into());
             }
         };
-        Ok(format!(
-            "{}v1/payments/{}/capture",
-            req.resource_common_data.connectors.razorpay.base_url, id
-        ))
+        Ok(format!("{base_url}v1/payments/{id}/capture"))
     }
 
     fn get_request_body(
