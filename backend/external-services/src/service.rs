@@ -94,7 +94,11 @@ where
     T: FlowIntegrity,
     Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,
     Resp: Clone + 'static + std::fmt::Debug,
-    ResourceCommonData: Clone + 'static + RawConnectorResponse + ConnectorResponseHeaders + ConnectorRequestReference,
+    ResourceCommonData: Clone
+        + 'static
+        + RawConnectorResponse
+        + ConnectorResponseHeaders
+        + ConnectorRequestReference,
 {
     let start = tokio::time::Instant::now();
     let connector_request = connector.build_request_v2(&router_data)?;
