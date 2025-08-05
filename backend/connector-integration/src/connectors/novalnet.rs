@@ -5,7 +5,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund,
         RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
@@ -13,7 +13,7 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -206,6 +206,30 @@ macros::create_all_prerequisites!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Novalnet<T>
 {
+//marker traits
+impl connector_types::ConnectorServiceTrait for Novalnet {}
+impl connector_types::PaymentAuthorizeV2 for Novalnet {}
+impl connector_types::PaymentSyncV2 for Novalnet {}
+impl connector_types::PaymentVoidV2 for Novalnet {}
+impl connector_types::RefundSyncV2 for Novalnet {}
+impl connector_types::RefundV2 for Novalnet {}
+impl connector_types::PaymentCapture for Novalnet {}
+impl connector_types::ValidationTrait for Novalnet {}
+impl connector_types::PaymentOrderCreate for Novalnet {}
+impl connector_types::SetupMandateV2 for Novalnet {}
+impl connector_types::RepeatPaymentV2 for Novalnet {}
+impl connector_types::AcceptDispute for Novalnet {}
+impl connector_types::SubmitEvidenceV2 for Novalnet {}
+impl connector_types::DisputeDefend for Novalnet {}
+impl connector_types::IncomingWebhook for Novalnet {}
+
+// Stub implementation for CreateSessionToken
+impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for Novalnet {}
+
+// After adding the ConnectorIntegrationV2 implementation, we can now implement PaymentSessionToken
+impl connector_types::PaymentSessionToken for Novalnet {}
+
+impl ConnectorCommon for Novalnet {
     fn id(&self) -> &'static str {
         "novalnet"
     }
@@ -664,5 +688,25 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RepeatPaymentData,
         PaymentsResponseData,
     > for Novalnet<T>
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Novalnet
+{
+}
+
+impl
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Novalnet
 {
 }
