@@ -386,7 +386,11 @@ let order_id = req.request
             .as_str()
             .map(|s| s.to_string())
     })
-    .unwrap_or_else(|| "missing-order-id".to_string());
+    .ok_or(
+        errors::ConnectorError::MissingConnectorRelatedTransactionID {
+            id: "order_id".to_string(),
+        },
+    )?;
         Ok(format!(
             "{}/orders/{order_id}/transactions/{transaction_id}",
             self.connector_base_url_refunds(req),
