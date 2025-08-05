@@ -128,14 +128,12 @@ impl KafkaLayerBuilder {
     }
 
     /// Sets the batch size for buffering messages before sending.
-    /// If not set, uses Kafka's default (16384 bytes).
     pub fn batch_size(mut self, size: usize) -> Self {
         self.batch_size = Some(size);
         self
     }
 
     /// Sets the flush interval for sending buffered messages.
-    /// If not set, uses Kafka's default (0ms - immediate send).
     pub fn flush_interval(mut self, interval: Duration) -> Self {
         self.flush_interval = Some(interval);
         self
@@ -175,7 +173,7 @@ impl KafkaLayerBuilder {
 
     /// Builds the KafkaLayer with the configured settings.
     pub fn build(self) -> Result<KafkaLayer, KafkaLayerError> {
-        let brokers = self.brokers.ok_or(KafkaLayerError::MissingBrokers)?;
+        let brokers: Vec<String> = self.brokers.ok_or(KafkaLayerError::MissingBrokers)?;
         let topic = self.topic.ok_or(KafkaLayerError::MissingTopic)?;
 
         // Convert flush_interval to milliseconds for Kafka's linger.ms setting if provided

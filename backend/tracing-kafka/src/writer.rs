@@ -94,18 +94,13 @@ impl Write for KafkaWriter {
             eprintln!("[KAFKA WARNING] Queue nearly full: {}/100000", queue_size);
         }
 
-        // Kafka expects string payloads for JSON logs
-        let message =
-            std::str::from_utf8(buf).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
         // Attach timestamp for event ordering in Kafka
-        let record: BaseRecord<'_, (), str> =
-            BaseRecord::to(&self.topic).payload(message).timestamp(
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map(|d| d.as_millis() as i64)
-                    .unwrap_or(0),
-            );
+        let record: BaseRecord<'_, (), [u8]> = BaseRecord::to(&self.topic).payload(buf).timestamp(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0),
+        );
 
         match self.producer.send(record) {
             Ok(_) => {
