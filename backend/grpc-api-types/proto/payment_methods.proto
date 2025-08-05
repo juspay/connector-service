@@ -446,6 +446,8 @@ message UpiCollect {
 
 message UpiIntent {
   // No additional fields required for UPI Intent
+    optional string app_name = 1;
+
 }
 
 message UpiQr {
