@@ -44,6 +44,7 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 // Local headers module
 mod headers {
     pub const CONTENT_TYPE: &str = "Content-Type";
+    
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
