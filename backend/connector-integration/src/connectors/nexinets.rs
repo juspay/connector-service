@@ -56,14 +56,11 @@ impl ConnectorCommon for Nexinets {
         let auth = nexinets::NexinetsAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        Ok(vec![(
-            headers::AUTHORIZATION.to_string(),
-            auth.api_key.into_masked(),
-        )])
+        Ok(vec![(headers::AUTHORIZATION.to_string(), auth.api_key.into_masked())])
     }
 
-    fn base_url<'a>(&self, _connectors: &'a Connectors) -> &'a str {
-        ""
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.nexinets.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -283,7 +280,11 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
         let order_id = &req.resource_common_data.connector_request_reference_id;
-        let transaction_id = req.request.connector_transaction_id.get_connector_transaction_id().unwrap_or_else(|_| "missing-transaction-id".to_string());
+        let transaction_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(format!(
             "{}/orders/{order_id}/transactions/{transaction_id}/capture",
             self.connector_base_url_payments(req),
@@ -309,45 +310,46 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-           let connector_metadata = req
-    .request
-    .get_connector_metadata()
-    .map_err(|_| errors::ConnectorError::MissingRequiredField {
-        field_name: "connector_metadata",
-    })?;
+            let connector_metadata = req
+                .request
+                .get_connector_metadata()
+                .change_context(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_metadata",
+                })?;
 
-// connector_metadata is a Value::String, so extract and parse
-let metadata_str = connector_metadata
-    .as_str()
-    .ok_or(errors::ConnectorError::MissingRequiredField {
-        field_name: "connector_metadata as string",
-    })?;
+            // connector_metadata is a Value::String, so extract and parse
+            let metadata_str = connector_metadata
+                .as_str()
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_metadata as string",
+                })?;
 
-let parsed_metadata: serde_json::Value = serde_json::from_str(metadata_str).map_err(|_| {
-    errors::ConnectorError::MissingRequiredField {
-        field_name: "connector_metadata (invalid JSON string)",
-    }
-})?;
+            let parsed_metadata: serde_json::Value =
+                serde_json::from_str(metadata_str).map_err(|_| {
+                    errors::ConnectorError::ParsingFailed
+                })?;
 
-let order_id = parsed_metadata
-    .get("order_id")
-    .and_then(|v| v.as_str())
-    .ok_or(errors::ConnectorError::MissingRequiredField {
-        field_name: "order_id in connector_metadata",
-    })?;
+            let order_id = parsed_metadata
+                .get("order_id")
+                .and_then(|v| v.as_str())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "order_id in connector_metadata",
+                })?;
 
-        Ok(format!(
-            "{}/orders/{order_id}/transactions/{}/refund",
-            self.connector_base_url_refunds(req),
-            req.request.connector_transaction_id
-        ))
+            Ok(format!(
+                "{}/orders/{order_id}/transactions/{}/refund",
+                self.connector_base_url_refunds(req),
+                req.request.connector_transaction_id
+            ))
         }
     }
 );
+
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -365,39 +367,43 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-        let transaction_id = req
-            .request
-            .connector_refund_id
-            .clone();
+            let transaction_id = req
+                .request
+                .connector_refund_id
+                .clone();
 
-let order_id = req.request
-    .refund_connector_metadata
-    .clone()
-    .and_then(|secret| {
-        secret
-            .expose()
-            .get("request_ref_id")?
-            .get("id_type")?
-            .get("Id")?
-            .as_str()
-            .map(|s| s.to_string())
-    })
-    .ok_or(
-        errors::ConnectorError::MissingConnectorRelatedTransactionID {
-            id: "order_id".to_string(),
-        },
-    )?;
-        Ok(format!(
-            "{}/orders/{order_id}/transactions/{transaction_id}",
-            self.connector_base_url_refunds(req),
-        ))
+            let order_id = req
+                .request
+                .refund_connector_metadata
+                .clone()
+                .and_then(|secret| {
+                    secret
+                        .expose()
+                        .get("request_ref_id")?
+                        .get("id_type")?
+                        .get("Id")?
+                        .as_str()
+                        .map(|s| s.to_string())
+                })
+                .ok_or(
+                    errors::ConnectorError::MissingConnectorRelatedTransactionID {
+                        id: "order_id".to_string(),
+                    },
+                )?;
+
+            Ok(format!(
+                "{}/orders/{order_id}/transactions/{transaction_id}",
+                self.connector_base_url_refunds(req),
+            ))
         }
     }
 );
+
 
 impl
     ConnectorIntegrationV2<
