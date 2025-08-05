@@ -125,9 +125,17 @@ impl ConnectorCommon for Razorpay {
 
         with_error_response_body!(event_builder, response);
 
-        let (code, message, reason) = match response {
+        let (code, message, reason, attempt_status) = match response {
             razorpay::RazorpayErrorResponse::StandardError { error } => {
-                (error.code, error.description, error.reason)
+                let attempt_status = match error.code.as_str() {
+                    "BAD_REQUEST_ERROR" => AttemptStatus::Failure,
+                    "GATEWAY_ERROR" => AttemptStatus::Failure,
+                    "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
+                    "AUTHORIZATION_ERROR" => AttemptStatus::AuthorizationFailed,
+                    "SERVER_ERROR" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Pending,
+                };
+                (error.code, error.description, error.reason, attempt_status)
             }
             razorpay::RazorpayErrorResponse::SimpleError { message } => {
                 // For simple error messages like "no Route matched with those values"
@@ -136,6 +144,7 @@ impl ConnectorCommon for Razorpay {
                     "ROUTE_ERROR".to_string(),
                     message.clone(),
                     Some(message.clone()),
+                    AttemptStatus::Failure,
                 )
             }
         };
@@ -145,7 +154,7 @@ impl ConnectorCommon for Razorpay {
             code,
             message: message.clone(),
             reason,
-            attempt_status: None,
+            attempt_status: Some(attempt_status),
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
@@ -621,7 +630,7 @@ impl connector_types::IncomingWebhook for Razorpay {
         let request_body_copy = request.body.clone();
         let payload = transformers::get_webhook_object_from_body(request.body).map_err(|err| {
             report!(errors::ConnectorError::WebhookBodyDecodingFailed)
-                .attach_printable(format!("error while decoing webhook body {err}"))
+                .attach_printable(format!("error while decoding webhook body {err}"))
         })?;
 
         let notif = payload.payment.ok_or_else(|| {
@@ -639,6 +648,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             error_message: notif.entity.error_reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
+            response_headers: None,
         })
     }
 
@@ -669,6 +679,7 @@ impl connector_types::IncomingWebhook for Razorpay {
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
+            response_headers: None,
         })
     }
 }

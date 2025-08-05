@@ -163,6 +163,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         multiple_capture_data: None,
         metadata: std::collections::HashMap::new(),
         request_ref_id: None,
+        browser_info: None,
     }
 }
 
@@ -198,6 +199,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_id: refund_id.to_string(),
         refund_reason: None,
         request_ref_id: None,
+        browser_info: None,
     }
 }
 
@@ -217,6 +219,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
             id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
         }),
         all_keys_required: None,
+        browser_info: None,
     }
 }
 
