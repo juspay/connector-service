@@ -56,7 +56,10 @@ impl ConnectorCommon for Nexinets {
         let auth = nexinets::NexinetsAuthType::try_from(auth_type)
             .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
-        Ok(vec![(headers::AUTHORIZATION.to_string(), auth.api_key.into_masked())])
+        Ok(vec![(
+            headers::AUTHORIZATION.to_string(),
+            auth.api_key.into_masked(),
+        )])
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -350,7 +353,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Nexinets,
@@ -403,7 +405,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
 
 impl
     ConnectorIntegrationV2<

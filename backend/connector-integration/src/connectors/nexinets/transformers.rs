@@ -192,9 +192,12 @@ impl
         let (payment, product) = get_payment_details_and_product(&item.router_data)?;
         let merchant_order_id = match item.router_data.resource_common_data.payment_method {
             // Merchant order id is sent only in case of card payment
-            enums::PaymentMethod::Card => {
-                Some(item.router_data.resource_common_data.connector_request_reference_id.clone())
-            }
+            enums::PaymentMethod::Card => Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             _ => None,
         };
         Ok(Self {
@@ -221,7 +224,9 @@ impl TryFrom<&ConnectorAuthType> for NexinetsAuthType {
             ConnectorAuthType::BodyKey { api_key, key1 } => {
                 let auth_key = format!("{}:{}", key1.peek(), api_key.peek());
                 let auth_header = format!("Basic {}", BASE64_ENGINE.encode(auth_key));
-                Ok(Self { api_key: Secret::new(auth_header) })
+                Ok(Self {
+                    api_key: Secret::new(auth_header),
+                })
             }
             _ => Err(errors::ConnectorError::FailedToObtainAuthType)?,
         }
@@ -347,8 +352,10 @@ impl<F> TryFrom<ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>>
         let connector_metadata = serde_json::to_value(&nexinets_metadata)
             .change_context(errors::ConnectorError::ResponseHandlingFailed)?;
 
-        let redirection_data =
-            item.response.redirect_url.map(|url| RedirectForm::from((url, Method::Get)));
+        let redirection_data = item
+            .response
+            .redirect_url
+            .map(|url| RedirectForm::from((url, Method::Get)));
         let resource_id = match item.response.transaction_type.clone() {
             NexinetsTransactionType::Preauth
             | NexinetsTransactionType::Debit
@@ -357,9 +364,14 @@ impl<F> TryFrom<ResponseRouterData<NexinetsPreAuthOrDebitResponse, Self>>
             }
             _ => Err(errors::ConnectorError::ResponseHandlingFailed)?,
         };
-        let mandate_reference = item.response.payment_instrument.payment_instrument_id.map(|id| {
-            MandateReference { connector_mandate_id: Some(id.expose()), payment_method_id: None }
-        });
+        let mandate_reference = item
+            .response
+            .payment_instrument
+            .payment_instrument_id
+            .map(|id| MandateReference {
+                connector_mandate_id: Some(id.expose()),
+                payment_method_id: None,
+            });
         Ok(Self {
             resource_common_data: PaymentFlowData {
                 status: get_status(transaction.status.clone(), item.response.transaction_type),
@@ -590,19 +602,22 @@ fn get_payment_details_and_product(
     error_stack::Report<errors::ConnectorError>,
 > {
     match &item.request.payment_method_data {
-        PaymentMethodData::Card(card) => {
-            Ok((Some(get_card_data(item, card)?), NexinetsProduct::Creditcard))
-        }
+        PaymentMethodData::Card(card) => Ok((
+            Some(get_card_data(item, card)?),
+            NexinetsProduct::Creditcard,
+        )),
         PaymentMethodData::Wallet(wallet) => Ok(get_wallet_details(wallet)?),
         PaymentMethodData::BankRedirect(bank_redirect) => match bank_redirect {
             BankRedirectData::Eps { .. } => Ok((None, NexinetsProduct::Eps)),
             BankRedirectData::Giropay { .. } => Ok((None, NexinetsProduct::Giropay)),
             BankRedirectData::Ideal { bank_name, .. } => Ok((
-                Some(NexinetsPaymentDetails::BankRedirects(Box::new(NexinetsBankRedirects {
-                    bic: bank_name
-                        .map(|bank_name| NexinetsBIC::try_from(&bank_name))
-                        .transpose()?,
-                }))),
+                Some(NexinetsPaymentDetails::BankRedirects(Box::new(
+                    NexinetsBankRedirects {
+                        bic: bank_name
+                            .map(|bank_name| NexinetsBIC::try_from(&bank_name))
+                            .transpose()?,
+                    },
+                ))),
                 NexinetsProduct::Ideal,
             )),
             BankRedirectData::Sofort { .. } => Ok((None, NexinetsProduct::Sofort)),
@@ -661,12 +676,20 @@ fn get_card_data(
                 })),
                 _ => CardDataDetails::CardDetails(Box::new(get_card_details(card)?)),
             };
-            let cof_contract = Some(CofContract { recurring_type: RecurringType::Unscheduled });
+            let cof_contract = Some(CofContract {
+                recurring_type: RecurringType::Unscheduled,
+            });
             (card_data, cof_contract)
         }
-        false => (CardDataDetails::CardDetails(Box::new(get_card_details(card)?)), None),
+        false => (
+            CardDataDetails::CardDetails(Box::new(get_card_details(card)?)),
+            None,
+        ),
     };
-    Ok(NexinetsPaymentDetails::Card(Box::new(NexiCardDetails { card_data, cof_contract })))
+    Ok(NexinetsPaymentDetails::Card(Box::new(NexiCardDetails {
+        card_data,
+        cof_contract,
+    })))
 }
 
 fn get_applepay_details(
@@ -703,9 +726,12 @@ fn get_wallet_details(
     match wallet {
         WalletData::PaypalRedirect(_) => Ok((None, NexinetsProduct::Paypal)),
         WalletData::ApplePay(applepay_data) => Ok((
-            Some(NexinetsPaymentDetails::Wallet(Box::new(NexinetsWalletDetails::ApplePayToken(
-                Box::new(get_applepay_details(wallet, applepay_data)?),
-            )))),
+            Some(NexinetsPaymentDetails::Wallet(Box::new(
+                NexinetsWalletDetails::ApplePayToken(Box::new(get_applepay_details(
+                    wallet,
+                    applepay_data,
+                )?)),
+            ))),
             NexinetsProduct::Applepay,
         )),
         WalletData::AliPayQr(_)
@@ -745,7 +771,9 @@ pub fn get_order_id(
     meta: &NexinetsPaymentsMetadata,
 ) -> Result<String, error_stack::Report<errors::ConnectorError>> {
     let order_id = meta.order_id.clone().ok_or(
-        errors::ConnectorError::MissingConnectorRelatedTransactionID { id: "order_id".to_string() },
+        errors::ConnectorError::MissingConnectorRelatedTransactionID {
+            id: "order_id".to_string(),
+        },
     )?;
     Ok(order_id)
 }
