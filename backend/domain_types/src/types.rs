@@ -1203,13 +1203,10 @@ pub fn generate_payment_authorize_response(
                         }
                     ).transpose()?,
                     connector_metadata: connector_metadata
-    .and_then(|value| value.as_object().cloned())
-    .map(|map| {
-        map.into_iter()
-            .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
-            .collect::<HashMap<_, _>>()
-    })
-    .unwrap_or_default(),
+                        .and_then(|value| value.as_object().cloned())
+                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
+                            .map(|s| (k, s.to_string())))
+                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
