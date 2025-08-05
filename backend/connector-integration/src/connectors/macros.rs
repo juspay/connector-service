@@ -179,7 +179,7 @@ macro_rules! expand_fn_get_request_body {
 pub(crate) use expand_fn_get_request_body;
 
 macro_rules! expand_fn_handle_response {
-    // When preprocess_response is true
+    // When preprocess_response is enabled
     ($connector: ident, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, true) => {
         fn handle_response_v2(
             &self,
@@ -209,8 +209,8 @@ macro_rules! expand_fn_handle_response {
         }
     };
 
-    // When preprocess_response is false or any other value
-    ($connector: ty, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, false) => {
+    // When preprocess_response is disabled or default
+    ($connector: ident, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, $preprocess_flag:tt) => {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -307,7 +307,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-            > for $connector<T>
+            > for $connector<$generic_type>
         {
             fn get_http_method(&self) -> common_utils::request::Method {
                 common_utils::request::Method::$http_method_type
@@ -338,7 +338,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-                true
+                $preprocess_response
             );
         }
     };
@@ -397,7 +397,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-                false
+                no_preprocess
             );
         }
     };
@@ -451,7 +451,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-                false
+                no_preprocess
             );
         }
     };
@@ -506,7 +506,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-                false
+                $preprocess_response
             );
         }
     };

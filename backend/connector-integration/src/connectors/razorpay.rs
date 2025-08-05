@@ -170,7 +170,6 @@ impl<
     > connector_types::SetupMandateV2<T> for Razorpay<T>
 {
 }
-impl connector_types::RepeatPaymentV2 for Razorpay {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1443,22 +1442,22 @@ impl<
     }
 }
 
-impl
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
         domain_types::connector_types::RepeatPaymentData,
         PaymentsResponseData,
-    > for Razorpay
+    > for Razorpay<T>
 {
 }
 
-impl
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
         domain_types::connector_types::RepeatPaymentData,
         PaymentsResponseData,
-    > for Razorpay
+    > for Razorpay<T>
 {
 }

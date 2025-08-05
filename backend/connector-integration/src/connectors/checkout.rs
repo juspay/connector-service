@@ -133,7 +133,6 @@ impl<
     > connector_types::SetupMandateV2<T> for Checkout<T>
 {
 }
-impl connector_types::RepeatPaymentV2 for Checkout {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

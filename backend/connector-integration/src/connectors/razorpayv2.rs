@@ -559,7 +559,6 @@ impl<
     > interfaces::connector_types::SetupMandateV2<T> for RazorpayV2<T>
 {
 }
-impl interfaces::connector_types::RepeatPaymentV2 for RazorpayV2 {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

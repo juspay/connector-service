@@ -117,7 +117,6 @@ impl<
     > connector_types::RefundV2 for Fiserv<T>
 {
 }
-impl connector_types::RepeatPaymentV2 for Fiserv {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

@@ -138,7 +138,6 @@ impl<
     > connector_types::SetupMandateV2<T> for Elavon<T>
 {
 }
-impl connector_types::RepeatPaymentV2 for Elavon {}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

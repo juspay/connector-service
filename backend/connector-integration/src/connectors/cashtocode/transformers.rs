@@ -5,13 +5,7 @@ use common_utils::{
     Email,
 };
 use domain_types::{
-    connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::{self, ConnectorError},
-    router_data::{ConnectorAuthType, ErrorResponse},
-    router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
-    utils,
+    connector_flow::Authorize, connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId}, errors::{self, ConnectorError}, payment_method_data::PaymentMethodDataTypes, router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, router_response_types::RedirectForm, utils
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
@@ -54,17 +48,19 @@ fn get_mid(
     }
 }
 
-impl
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
         CashtocodeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     > for CashtocodePaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CashtocodeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let customer_id = item.router_data.resource_common_data.get_customer_id()?;
@@ -242,8 +238,8 @@ fn get_redirect_form_data(
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<CashtocodePaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(

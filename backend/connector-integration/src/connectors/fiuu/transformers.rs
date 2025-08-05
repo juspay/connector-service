@@ -20,8 +20,7 @@ use domain_types::{
     },
     errors::{self, ConnectorError},
     payment_method_data::{
-        BankRedirectData, Card, CardDetailsForNetworkTransactionId, GooglePayWalletData,
-        PaymentMethodData, RealTimePaymentData, WalletData,
+        BankRedirectData, Card, CardDetailsForNetworkTransactionId, GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, RealTimePaymentData, WalletData
     },
     router_data::{ApplePayPredecryptData, ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
@@ -230,17 +229,19 @@ pub enum FiuuRecordType {
     T,
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
         &FiuuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     > for FiuuMandateRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: &FiuuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -319,7 +320,7 @@ pub fn calculate_check_sum(
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "PascalCase")]
-pub struct FiuuPaymentRequest {
+pub struct FiuuPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
     #[serde(rename = "MerchantID")]
     merchant_id: Secret<String>,
     reference_no: String,
@@ -332,14 +333,14 @@ pub struct FiuuPaymentRequest {
     #[serde(rename = "NotificationURL")]
     notification_url: Option<Url>,
     #[serde(flatten)]
-    payment_method_data: FiuuPaymentMethodData,
+    payment_method_data: FiuuPaymentMethodData<T>,
 }
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum FiuuPaymentMethodData {
+pub enum FiuuPaymentMethodData<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
     FiuuQRData(Box<FiuuQRData>),
-    FiuuCardData(Box<FiuuCardData>),
+    FiuuCardData(Box<FiuuCardData<T>>),
     FiuuCardWithNTI(Box<FiuuCardWithNTI>),
     FiuuFpxData(Box<FiuuFPXData>),
     FiuuGooglePayData(Box<FiuuGooglePayData>),
@@ -361,12 +362,12 @@ pub struct FiuuQRData {
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub struct FiuuCardData {
+pub struct FiuuCardData<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
     #[serde(rename = "non_3DS")]
     non_3ds: i32,
     #[serde(rename = "TxnChannel")]
     txn_channel: TxnChannel,
-    cc_pan: CardNumber,
+    cc_pan: RawCardNumber<T>,
     cc_cvv2: Secret<String>,
     cc_month: Secret<String>,
     cc_year: Secret<String>,
@@ -452,17 +453,19 @@ pub fn calculate_signature(
     Ok(Secret::new(encoded_data))
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
         &FiuuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
-    > for FiuuPaymentRequest
+    > for FiuuPaymentRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: &FiuuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -668,17 +671,17 @@ impl
     }
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<(
-        &Card,
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-    )> for FiuuPaymentMethodData
+        &Card<T>,
+        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+    )> for FiuuPaymentMethodData<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         (req_card, item): (
-            &Card,
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &Card<T>,
+            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
     ) -> Result<Self, Self::Error> {
         let (mps_token_status, customer_email) = (Some(3), None);
@@ -699,7 +702,7 @@ impl
     }
 }
 
-impl TryFrom<(&CardDetailsForNetworkTransactionId, String)> for FiuuPaymentMethodData {
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<(&CardDetailsForNetworkTransactionId, String)> for FiuuPaymentMethodData<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         (raw_card_data, network_transaction_id): (&CardDetailsForNetworkTransactionId, String),
@@ -714,7 +717,7 @@ impl TryFrom<(&CardDetailsForNetworkTransactionId, String)> for FiuuPaymentMetho
     }
 }
 
-impl TryFrom<&GooglePayWalletData> for FiuuPaymentMethodData {
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<&GooglePayWalletData> for FiuuPaymentMethodData<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(data: &GooglePayWalletData) -> Result<Self, Self::Error> {
         Ok(Self::FiuuGooglePayData(Box::new(FiuuGooglePayData {
@@ -744,7 +747,7 @@ impl TryFrom<&GooglePayWalletData> for FiuuPaymentMethodData {
     }
 }
 
-impl TryFrom<Box<ApplePayPredecryptData>> for FiuuPaymentMethodData {
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<Box<ApplePayPredecryptData>> for FiuuPaymentMethodData<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(decrypt_data: Box<ApplePayPredecryptData>) -> Result<Self, Self::Error> {
         Ok(Self::FiuuApplePayData(Box::new(FiuuApplePayData {
@@ -871,8 +874,8 @@ pub struct ExtraParameters {
     pub token: Option<Secret<String>>,
 }
 
-impl<F> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<FiuuPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<FiuuPaymentsResponse, Self>) -> Result<Self, Self::Error> {
@@ -1121,13 +1124,14 @@ pub enum RefundType {
     Partial,
 }
 
-impl TryFrom<FiuuRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<FiuuRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
     for FiuuRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: FiuuRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth: FiuuAuthType = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1321,10 +1325,11 @@ pub enum StatName {
     #[serde(rename = "Unknown")]
     Unknown,
 }
-impl
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
         FiuuRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T
         >,
     > for FiuuPaymentSyncRequest
 {
@@ -1332,6 +1337,7 @@ impl
     fn try_from(
         item: FiuuRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1612,10 +1618,11 @@ impl TryFrom<FiuuSyncStatus> for common_enums::AttemptStatus {
     }
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
         FiuuRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T
         >,
     > for PaymentCaptureRequest
 {
@@ -1623,6 +1630,7 @@ impl
     fn try_from(
         item: FiuuRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1766,15 +1774,16 @@ pub struct FiuuPaymentCancelResponse {
     miscellaneous: Option<HashMap<String, Secret<String>>>,
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
-        FiuuRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
+        FiuuRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
     > for FiuuPaymentCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiuuRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1889,15 +1898,16 @@ pub struct FiuuRefundSyncRequest {
     signature: Secret<String>,
 }
 
-impl
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
-        FiuuRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        FiuuRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
     > for FiuuRefundSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: FiuuRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let auth = FiuuAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -2185,15 +2195,15 @@ impl From<FiuuRefundsWebhookStatus> for common_enums::RefundStatus {
 //new additions  structs
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum FiuuPaymentsRequest {
-    FiuuPaymentRequest(Box<FiuuPaymentRequest>),
+pub enum FiuuPaymentsRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+    FiuuPaymentRequest(Box<FiuuPaymentRequest<T>>),
     FiuuMandateRequest(FiuuMandateRequest),
 }
 
-impl GetFormData for FiuuPaymentsRequest {
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> GetFormData for FiuuPaymentsRequest<T> {
     fn get_form_data(&self) -> reqwest::multipart::Form {
         match self {
-            FiuuPaymentsRequest::FiuuPaymentRequest(req) => {
+            FiuuPaymentsRequest::FiuuPaymentRequest::<T>(req) => {
                 build_form_from_struct(req).unwrap_or_else(|_| reqwest::multipart::Form::new())
             }
             FiuuPaymentsRequest::FiuuMandateRequest(req) => {
@@ -2250,17 +2260,19 @@ pub fn build_form_from_struct<T: Serialize>(
     Ok(form)
 }
 
-impl
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
     TryFrom<
         FiuuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
-    > for FiuuPaymentsRequest
+    > for FiuuPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: FiuuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            T
         >,
     ) -> Result<Self, Self::Error> {
         let optional_is_mit_flow = item.router_data.request.off_session;
@@ -2276,7 +2288,7 @@ impl
                 Ok(FiuuPaymentsRequest::FiuuMandateRequest(recurring_request))
             }
             _ => {
-                let payment_request: FiuuPaymentRequest = FiuuPaymentRequest::try_from(&item)?;
+                let payment_request: FiuuPaymentRequest<T> = FiuuPaymentRequest::try_from(&item)?;
                 Ok(FiuuPaymentsRequest::FiuuPaymentRequest(Box::new(
                     payment_request,
                 )))
