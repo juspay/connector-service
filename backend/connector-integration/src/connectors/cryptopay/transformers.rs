@@ -9,7 +9,7 @@ use crate::connectors::cryptopay::CryptopayRouterData;
 use crate::types::ResponseRouterData;
 use common_utils::{
     pii,
-    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+    types::{StringMajorUnit, StringMajorUnitForConnector},
 };
 use error_stack::ResultExt;
 use url::Url;
@@ -19,7 +19,10 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
+    utils::{
+        convert_back_amount_to_minor_units, get_unimplemented_payment_method_error_message,
+        is_payment_failure,
+    },
 };
 
 use domain_types::errors::{self, ConnectorError};
@@ -209,15 +212,15 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     .or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(
-                StringMajorUnitForConnector
-                    .convert_back(amount.clone(), router_data.request.currency)
-                    .change_context(errors::ConnectorError::AmountConversionFailed)?,
-            ),
+            Some(ref amount) => Some(convert_back_amount_to_minor_units(
+                &StringMajorUnitForConnector,
+                amount.clone(),
+                router_data.request.currency,
+            )?),
             None => None,
         };
         match amount_captured_in_minor_units {
@@ -350,15 +353,15 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     .or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
-                status_code: Some(http_code),
+                status_code: http_code,
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(
-                StringMajorUnitForConnector
-                    .convert_back(amount.clone(), router_data.request.currency)
-                    .change_context(errors::ConnectorError::AmountConversionFailed)?,
-            ),
+            Some(ref amount) => Some(convert_back_amount_to_minor_units(
+                &StringMajorUnitForConnector,
+                amount.clone(),
+                router_data.request.currency,
+            )?),
             None => None,
         };
         match amount_captured_in_minor_units {

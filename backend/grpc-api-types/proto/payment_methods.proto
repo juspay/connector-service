@@ -185,9 +185,7 @@ message MobilePaymentMethodType {
 
 // Cryptocurrency payment methods category
 message CryptoCurrencyPaymentMethodType {
-  oneof crypto_type {
-    CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
-  }
+  CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
 }
 
 // Cash and voucher payment methods category - TODO: Not yet supported

@@ -8,11 +8,10 @@ mod common;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        crypto_currency_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, AuthenticationType, CaptureMethod,
-        CryptoCurrency, CryptoCurrencyPaymentMethodType, Currency, Identifier, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
-        PaymentStatus,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        AuthenticationType, CaptureMethod, CryptoCurrency, CryptoCurrencyPaymentMethodType,
+        Currency, Identifier, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceGetRequest, PaymentStatus,
     },
 };
 use std::env;
@@ -96,14 +95,10 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         payment_method: Some(PaymentMethod {
             payment_method: Some(payment_method::PaymentMethod::Crypto(
                 CryptoCurrencyPaymentMethodType {
-                    crypto_type: Some(
-                        crypto_currency_payment_method_type::CryptoType::CryptoCurrency(
-                            CryptoCurrency {
-                                pay_currency: Some(TEST_PAY_CURRENCY.to_string()),
-                                network: Some(TEST_NETWORK.to_string()),
-                            },
-                        ),
-                    ),
+                    crypto_currency: Some(CryptoCurrency {
+                        pay_currency: Some(TEST_PAY_CURRENCY.to_string()),
+                        network: Some(TEST_NETWORK.to_string()),
+                    }),
                 },
             )),
         }),
