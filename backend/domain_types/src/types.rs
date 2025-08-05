@@ -39,12 +39,17 @@ use crate::{
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    payment_address,
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
+    payment_method_data,
     payment_method_data::{
         self, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
     router_data_v2::RouterDataV2,
+    router_request_types,
+    router_request_types::BrowserInformation,
+    router_response_types,
     utils::{ForeignFrom, ForeignTryFrom},
 };
 

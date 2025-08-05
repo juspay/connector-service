@@ -5,15 +5,16 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -224,7 +225,15 @@ impl connector_types::DisputeDefend for Novalnet {}
 impl connector_types::IncomingWebhook for Novalnet {}
 
 // Stub implementation for CreateSessionToken
-impl ConnectorIntegrationV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData> for Novalnet {}
+impl
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Novalnet
+{
+}
 
 // After adding the ConnectorIntegrationV2 implementation, we can now implement PaymentSessionToken
 impl connector_types::PaymentSessionToken for Novalnet {}
