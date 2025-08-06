@@ -1,4 +1,3 @@
-//half working
 use std::marker::PhantomData;
 
 use common_utils::{errors::CustomResult, ext_traits::BytesExt};
@@ -510,80 +509,10 @@ macro_rules! macro_connector_implementation {
             );
         }
     };
-    // Version without preprocess_response parameter (defaults to false)
-    // (
-    //     connector_default_implementations: [$($function_name:ident), *],
-    //     connector: $connector:ident,
-    //     curl_request: $content_type:ident($curl_req:ty),
-    //     curl_response: $curl_res:ty,
-    //     flow_name: $flow:ident,
-    //     resource_common_data:$resource_common_data:ty,
-    //     flow_request: $request:ty,
-    //     flow_response: $response:ty,
-    //     http_method: $http_method_type:ident,
-    //     generic_type: $generic_type:tt,
-    //     [$($bounds:tt)*],
-    //     other_functions: {
-    //         $($function_def: tt)*
-    //     }
-    // ) => {
-    //     impl<$generic_type: $($bounds)*>
-    //         ConnectorIntegrationV2<
-    //             $flow,
-    //             $resource_common_data,
-    //             $request,
-    //             $response,
-    //         > for $connector<$generic_type>
-    //     {
-    //         fn get_http_method(&self) -> common_utils::request::Method {
-    //             common_utils::request::Method::$http_method_type
-    //         }
-    //         $($function_def)*
-    //         $(
-    //             macros::expand_default_functions!(
-    //                 function: $function_name,
-    //                 flow_name:$flow,
-    //                 resource_common_data:$resource_common_data,
-    //                 flow_request:$request,
-    //                 flow_response:$response,
-    //             );
-    //         )*
-    //         macros::expand_fn_get_request_body!(
-    //             $connector,
-    //             $curl_req,
-    //             $content_type,
-    //             $curl_res,
-    //             $flow,
-    //             $resource_common_data,
-    //             $request,
-    //             $response
-
-    //         );
-    //         macros::expand_fn_handle_response!(
-    //             $connector,
-    //             $flow,
-    //             $resource_common_data,
-    //             $request,
-    //             $response,
-    //             false
-    //         );
-    //     }
-    // };
 }
 pub(crate) use macro_connector_implementation;
 
 macro_rules! impl_templating {
-    //  // Pattern 3: Handle any type (including generics) passed as ty
-    // (
-    //     connector: $connector: ident,
-    //     curl_request: $curl_req: ty,
-    //     curl_response: $curl_res: ident,
-    //     router_data: $router_data: ty,
-    //     generic_type: $generic_type: tt,
-    // ) => {
-    //     macros::impl_templating!(@parse_request_type $connector, $curl_req, $curl_res, $router_data, $generic_type,);
-    // };
-// Pattern 2: Non-generic request type with generic_type parameter
 
     (
         connector: $connector: ident,
@@ -603,29 +532,6 @@ macro_rules! impl_templating {
             }
         }
     };
-
-    // // Pattern 1: Generic request type with generic_type parameter
-    // (
-    //     connector: $connector: ident,
-    //     curl_request: $base_req: ident<$req_generic:ident>,
-    //     curl_response: $curl_res: ident,
-    //     router_data: $router_data: ty,
-    //     generic_type: $generic_type: tt,
-    // ) => {
-    //     paste::paste!{
-    //         pub struct [<$base_req Templating>];
-    //         pub struct [<$curl_res Templating>];
-
-    //         impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> BridgeRequestResponse for Bridge<[<$base_req Templating>], [<$curl_res Templating>], $generic_type>{
-    //             type RequestBody = $base_req<$generic_type>;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-    //         }
-    //     }
-    // };
-
-
-    // Pattern 4: No request body with generic_type parameter
     (
         connector: $connector: ident,
         curl_response: $curl_res: ident,
@@ -642,70 +548,11 @@ macro_rules! impl_templating {
             }
         }
     };
-    // // Pattern 5: Legacy pattern for non-generic types without generic_type parameter
-    // (
-    //     connector: $connector: ident,
-    //     curl_request: $curl_req: ty,
-    //     curl_response: $curl_res: ident,
-    //     router_data: $router_data: ty,
-    // ) => {
-    //     macros::create_template_types_for_request_and_response_types!($curl_req, $curl_res);
-    //     paste::paste!{
-    //         impl<T: Sync + Send + 'static> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>]>{
-    //             type RequestBody = $curl_req;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data>;
-    //         }
-    //     }
-    // };
-    // // Pattern 6: Legacy pattern for no request body without generic_type parameter
-    // (
-    //     connector: $connector: ident,
-    //     curl_response: $curl_res: ident,
-    //     router_data: $router_data: ty
-    // ) => {
-    //     macros::create_template_types_for_request_and_response_types!($curl_res);
-    //     paste::paste!{
-    //         impl<T: Sync + Send + 'static> BridgeRequestResponse for Bridge<NoRequestBodyTemplating, [<$curl_res Templating>] > {
-    //             type RequestBody = NoRequestBody;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data>;
-    //         }
-    //     }
-    // };
-    // (@parse_request_type $connector: ident, $curl_req: ident, $curl_res: ident, $router_data: ty, $generic_type: tt) => {
-    //     paste::paste!{
-    //         pub struct [<$curl_req Templating>];
-    //         pub struct [<$curl_res Templating>];
-
-    //         impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>], $generic_type>{
-    //             type RequestBody = $curl_req;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-    //         }
-    //     }
-    // };
-
-    // // Helper to parse request types
-    // (@parse_request_type $connector: ident, $base_req:ident<$req_generic:ident>, $curl_res: ident, $router_data: ty, $generic_type: tt) => {
-    //     paste::paste!{
-    //         pub struct [<$base_req Templating>]<$req_generic>;
-    //         pub struct [<$curl_res Templating>];
-
-    //         impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$base_req Templating>]<$generic_type>, [<$curl_res Templating>], $generic_type>{
-    //             type RequestBody = $base_req<$generic_type>;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-    //         }
-    //     }
-    // };
-
 }
 pub(crate) use impl_templating;
 
 macro_rules! impl_templating_for_generic
  {
-    // Pattern 1: Generic request type with generic_type parameter
     (
         connector: $connector: ident,
         curl_request: $base_req: ident,
@@ -724,9 +571,6 @@ macro_rules! impl_templating_for_generic
             }
         }
     };
-
-
-    // Pattern 4: No request body with generic_type parameter
     (
         connector: $connector: ident,
         curl_response: $curl_res: ident,
@@ -743,63 +587,6 @@ macro_rules! impl_templating_for_generic
             }
         }
     };
-    // // Pattern 5: Legacy pattern for non-generic types without generic_type parameter
-    // (
-    //     connector: $connector: ident,
-    //     curl_request: $curl_req: ty,
-    //     curl_response: $curl_res: ident,
-    //     router_data: $router_data: ty,
-    // ) => {
-    //     macros::create_template_types_for_request_and_response_types!($curl_req, $curl_res);
-    //     paste::paste!{
-    //         impl<T: Sync + Send + 'static> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>]>{
-    //             type RequestBody = $curl_req;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data>;
-    //         }
-    //     }
-    // };
-    // // Pattern 6: Legacy pattern for no request body without generic_type parameter
-    // (
-    //     connector: $connector: ident,
-    //     curl_response: $curl_res: ident,
-    //     router_data: $router_data: ty
-    // ) => {
-    //     macros::create_template_types_for_request_and_response_types!($curl_res);
-    //     paste::paste!{
-    //         impl<T: Sync + Send + 'static> BridgeRequestResponse for Bridge<NoRequestBodyTemplating, [<$curl_res Templating>] > {
-    //             type RequestBody = NoRequestBody;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data>;
-    //         }
-    //     }
-    // };
-    // (@parse_request_type $connector: ident, $curl_req: ident, $curl_res: ident, $router_data: ty, $generic_type: tt) => {
-    //     paste::paste!{
-    //         pub struct [<$curl_req Templating>];
-    //         pub struct [<$curl_res Templating>];
-
-    //         impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$curl_req Templating>], [<$curl_res Templating>], $generic_type>{
-    //             type RequestBody = $curl_req;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-    //         }
-    //     }
-    // };
-
-    // // Helper to parse request types
-    // (@parse_request_type $connector: ident, $base_req:ident<$req_generic:ident>, $curl_res: ident, $router_data: ty, $generic_type: tt) => {
-    //     paste::paste!{
-    //         pub struct [<$base_req Templating>]<$req_generic>;
-    //         pub struct [<$curl_res Templating>];
-
-    //         impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static> BridgeRequestResponse for Bridge<[<$base_req Templating>]<$generic_type>, [<$curl_res Templating>], $generic_type>{
-    //             type RequestBody = $base_req<$generic_type>;
-    //             type ResponseBody = $curl_res;
-    //             type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-    //         }
-    //     }
-    // };
 
 }
 pub(crate) use impl_templating_for_generic;
@@ -910,54 +697,30 @@ macro_rules! create_template_types_for_request_and_response_types {
 }
 pub(crate) use create_template_types_for_request_and_response_types;
 
-// macro_rules! create_template_types_for_flow_request_and_response_types {
-//     // Handle a single generic type like AdyenPaymentRequest<T>
-//     ($base_type:ident<$generic:ident>) => {
-//         paste::paste!{pub struct [<$base_type Templating>]<$generic>; }
-//     };
-//     // Handle a single non-generic type like AdyenPaymentResponse
-//     ($flow_request_type:ident) => {
-//         paste::paste!{pub struct [<$flow_request_type Templating>]; }
-//     };
-// }
-// pub(crate) use create_template_types_for_flow_request_and_response_types;
-
 macro_rules! optional_or_default {
-    // // Handle generic templating types like AdyenPaymentRequest<T> Templating
-    // (
-    //     $optional_item: ident<$generic:ident> Templating |
-    //     default: $default:ident
-    // ) => {
-    //     paste::paste! { [<$optional_item Templating>] }
-    // };
-    // Handle non-generic templating types like AdyenRedirectRequest Templating
     (
         $optional_item: ident Templating |
         default: $default:ident
     ) => {
         paste::paste! { [<$optional_item Templating>] }
     };
-    // Handle generic non-templating types like AdyenPaymentRequest<T>
     (
         $optional_item: ident<$generic:ident> |
         default: $default:ident
     ) => {
         $optional_item<$generic>
     };
-    // Handle non-generic non-templating types like AdyenRedirectRequest
     (
         $optional_item: ident |
         default: $default:ident
     ) => {
         $optional_item
     };
-    // Handle empty case - use default
     (
         | default: $default:ident
     ) => {
         $default
     };
-    // Handle any other case that doesn't match - use default
     (
         $($tokens:tt)* |
         default: $default:ident
