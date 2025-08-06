@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
 
 use common_utils::ext_traits::AsyncExt;
 // use base64::engine::Engine;
@@ -37,14 +37,13 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use common_utils::dapr::{emit_event_with_config, Event, EventConfig, EventStage};
 use common_utils::pii::SecretSerdeValue;
 use error_stack::{report, ResultExt};
+use interfaces::event_interface::EventInterface;
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
-use masking::Secret;
 use masking::{ErasedMaskSerialize, Maskable};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
@@ -53,12 +52,11 @@ use tracing::field::Empty;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
-#[derive(Debug)]
 pub struct EventProcessingParams<'a> {
     pub connector_name: &'a str,
     pub service_name: &'a str,
-    pub flow_name: common_utils::dapr::FlowName,
-    pub event_config: &'a EventConfig,
+    pub flow_name: &'a str,
+    pub event_client: std::sync::Arc<dyn EventInterface>,
     pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
 }
@@ -188,33 +186,36 @@ where
                     let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
                     let status_code = body.status_code;
 
-                    // Emit success response event
+                    // Emit success response event using new interface
                     tokio::spawn({
                         let connector_name = event_params.connector_name.to_string();
-                        let event_config = event_params.event_config.clone();
+                        let event_client = Arc::clone(&event_params.event_client);
                         let request_data = req.clone();
                         let response_data = res_body.clone();
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
-                        let flow_name = event_params.flow_name;
+                        let flow_name = event_params.flow_name.to_string();
 
                         async move {
-                            let event = Event {
-                                request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
-                                flow_type: flow_name,
-                                connector: connector_name.clone(),
-                                url: Some(url_clone),
-                                stage: EventStage::ConnectorCall,
-                                latency: Some(latency),
-                                status_code: Some(status_code),
-                                request_data: raw_request_data_clone,
-                                connector_request_data: request_data.map(Secret::new),
-                                connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                            let event_data = serde_json::json!({
+                                "request_id": request_id.to_string(),
+                                "timestamp": chrono::Utc::now().timestamp(),
+                                "flow_type": flow_name,
+                                "connector": connector_name.clone(),
+                                "url": url_clone,
+                                "stage": "connector_call",
+                                "latency": latency,
+                                "status_code": status_code,
+                                "request_data": raw_request_data_clone,
+                                "connector_request_data": request_data,
+                                "connector_response_data": response_data,
+                            });
 
-                            match emit_event_with_config(event, &event_config).await {
+                            let event_bytes = serde_json::to_vec(&event_data).unwrap_or_default();
+                            match event_client
+                                .emit_event("connector_response", &event_bytes)
+                                .await
+                            {
                                 Ok(_) => tracing::info!(
                                     "Successfully published response event for {}",
                                     connector_name
@@ -233,33 +234,36 @@ where
                     let latency = external_service_elapsed as u64 * 1000;
                     let status_code = error_body.status_code;
 
-                    // Emit error response event
+                    // Emit error response event using new interface
                     tokio::spawn({
                         let connector_name = event_params.connector_name.to_string();
-                        let event_config = event_params.event_config.clone();
+                        let event_client = Arc::clone(&event_params.event_client);
                         let request_data = req.clone();
                         let response_data = error_res_body.clone();
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
-                        let flow_name = event_params.flow_name;
+                        let flow_name = event_params.flow_name.to_string();
 
                         async move {
-                            let event = Event {
-                                request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
-                                flow_type: flow_name,
-                                connector: connector_name.clone(),
-                                url: Some(url_clone),
-                                stage: EventStage::ConnectorCall,
-                                latency: Some(latency),
-                                status_code: Some(status_code),
-                                request_data: raw_request_data_clone,
-                                connector_request_data: request_data.map(Secret::new),
-                                connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                            let event_data = serde_json::json!({
+                                "request_id": request_id.to_string(),
+                                "timestamp": chrono::Utc::now().timestamp(),
+                                "flow_type": flow_name,
+                                "connector": connector_name.clone(),
+                                "url": url_clone,
+                                "stage": "connector_call",
+                                "latency": latency,
+                                "status_code": status_code,
+                                "request_data": raw_request_data_clone,
+                                "connector_request_data": request_data,
+                                "connector_response_data": response_data,
+                            });
 
-                            match emit_event_with_config(event, &event_config).await {
+                            let event_bytes = serde_json::to_vec(&event_data).unwrap_or_default();
+                            match event_client
+                                .emit_event("connector_error_response", &event_bytes)
+                                .await
+                            {
                                 Ok(_) => tracing::info!(
                                     "Successfully published error response event for {}",
                                     connector_name
@@ -279,32 +283,35 @@ where
                         network_error
                     );
 
-                    // Emit network error event
+                    // Emit network error event using new interface
                     tokio::spawn({
                         let connector_name = event_params.connector_name.to_string();
-                        let event_config = event_params.event_config.clone();
+                        let event_client = Arc::clone(&event_params.event_client);
                         let request_data = req.clone();
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
-                        let flow_name = event_params.flow_name;
+                        let flow_name = event_params.flow_name.to_string();
 
                         async move {
-                            let event = Event {
-                                request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
-                                flow_type: flow_name,
-                                connector: connector_name.clone(),
-                                url: Some(url_clone),
-                                stage: EventStage::ConnectorCall,
-                                latency: None,
-                                status_code: None,
-                                request_data: raw_request_data_clone,
-                                connector_request_data: request_data.map(Secret::new),
-                                connector_response_data: None,
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                            let event_data = serde_json::json!({
+                                "request_id": request_id.to_string(),
+                                "timestamp": chrono::Utc::now().timestamp(),
+                                "flow_type": flow_name,
+                                "connector": connector_name.clone(),
+                                "url": url_clone,
+                                "stage": "connector_call",
+                                "latency": null,
+                                "status_code": null,
+                                "request_data": raw_request_data_clone,
+                                "connector_request_data": request_data,
+                                "connector_response_data": null,
+                            });
 
-                            match emit_event_with_config(event, &event_config).await {
+                            let event_bytes = serde_json::to_vec(&event_data).unwrap_or_default();
+                            match event_client
+                                .emit_event("connector_network_error", &event_bytes)
+                                .await
+                            {
                                 Ok(_) => tracing::info!(
                                     "Successfully published network error event for {}",
                                     connector_name

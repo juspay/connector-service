@@ -169,8 +169,8 @@ impl Payments {
         let event_params = external_services::service::EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
-            flow_name: common_utils::dapr::FlowName::Authorize,
-            event_config: &self.config.event_management.to_event_config(),
+            flow_name: "authorize",
+            event_client: Arc::clone(&self.event_client),
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(&payload).unwrap_or_default(),
             )),
@@ -315,8 +315,8 @@ impl Payments {
         let external_event_params = external_services::service::EventProcessingParams {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
-            flow_name: common_utils::dapr::FlowName::CreateOrder,
-            event_config: &self.config.event_management.to_event_config(),
+            flow_name: "create_order",
+            event_client: Arc::clone(&self.event_client),
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
@@ -404,8 +404,8 @@ impl Payments {
         let external_event_params = external_services::service::EventProcessingParams {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
-            flow_name: common_utils::dapr::FlowName::CreateOrder,
-            event_config: &self.config.event_management.to_event_config(),
+            flow_name: "create_order",
+            event_client: Arc::clone(&self.event_client),
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
@@ -939,8 +939,8 @@ impl PaymentService for Payments {
                 let event_params = external_services::service::EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: common_utils::dapr::FlowName::SetupMandate,
-                    event_config: &self.config.event_management.to_event_config(),
+                    flow_name: "setup_mandate",
+                    event_client: Arc::clone(&self.event_client),
                     raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
                     )),
@@ -1048,8 +1048,8 @@ impl PaymentService for Payments {
                 let event_params = external_services::service::EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: common_utils::dapr::FlowName::Authorize,
-                    event_config: &self.config.event_management.to_event_config(),
+                    flow_name: "repeat_payment",
+                    event_client: Arc::clone(&self.event_client),
                     raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
                     )),

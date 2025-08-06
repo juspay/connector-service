@@ -1,6 +1,7 @@
 //! Interactions with the Dapr SDK
 
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
+use tokio::sync::Mutex;
 
 use common_utils::errors::CustomResult;
 use error_stack::ResultExt;
@@ -24,11 +25,20 @@ pub struct DaprConfig {
 }
 
 /// Client for Dapr operations.
-#[derive(Clone)]
 pub struct DaprClient {
-    dapr_client: dapr::Client<dapr::client::TonicClient>,
+    dapr_client: Arc<Mutex<dapr::Client<dapr::client::TonicClient>>>,
     pubsub_component: String,
     topic: String,
+}
+
+impl Clone for DaprClient {
+    fn clone(&self) -> Self {
+        Self {
+            dapr_client: Arc::clone(&self.dapr_client),
+            pubsub_component: self.pubsub_component.clone(),
+            topic: self.topic.clone(),
+        }
+    }
 }
 
 impl DaprClient {
@@ -36,18 +46,32 @@ impl DaprClient {
     ///
     /// Creates a single-instance client that will be stored in the application state.
     pub async fn new(config: &DaprConfig) -> CustomResult<Self, DaprError> {
-        let dapr_client = dapr::Client::<dapr::client::TonicClient>::connect(format!(
-            "http://{}:{}",
-            config.host, config.grpc_port
-        ))
-        .await
-        .inspect_err(|error| {
-            logger::error!(dapr_connection_error=?error, "Failed to connect to Dapr");
-        })
-        .change_context(DaprError::ConnectionFailed)?;
+        let dapr_endpoint = format!("http://{}:{}", config.host, config.grpc_port);
+        logger::info!(
+            dapr_endpoint = %dapr_endpoint,
+            pubsub_component = %config.pubsub_component,
+            topic = %config.topic,
+            "Attempting to connect to Dapr"
+        );
+
+        let dapr_client = dapr::Client::<dapr::client::TonicClient>::connect(dapr_endpoint.clone())
+            .await
+            .inspect_err(|error| {
+                logger::error!(
+                    dapr_endpoint = %dapr_endpoint,
+                    dapr_connection_error=?error,
+                    "Failed to connect to Dapr"
+                );
+            })
+            .change_context(DaprError::ConnectionFailed)?;
+
+        logger::info!(
+            dapr_endpoint = %dapr_endpoint,
+            "Successfully connected to Dapr"
+        );
 
         Ok(Self {
-            dapr_client,
+            dapr_client: Arc::new(Mutex::new(dapr_client)),
             pubsub_component: config.pubsub_component.clone(),
             topic: config.topic.clone(),
         })
@@ -55,12 +79,8 @@ impl DaprClient {
 
     /// Publishes an event to the configured topic
     ///
-    /// This method requires mutable access to self since the DAPR SDK requires it.
-    pub async fn emit_event(
-        &mut self,
-        event_type: &str,
-        data: &[u8],
-    ) -> CustomResult<(), DaprError> {
+    /// This method uses interior mutability to work with the DAPR SDK requirements.
+    pub async fn emit_event(&self, event_type: &str, data: &[u8]) -> CustomResult<(), DaprError> {
         let start = Instant::now();
 
         let event_data = serde_json::json!({
@@ -69,7 +89,9 @@ impl DaprClient {
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
 
-        self.dapr_client
+        let mut client = self.dapr_client.lock().await;
+
+        client
             .publish_event(
                 &self.pubsub_component,
                 &self.topic,

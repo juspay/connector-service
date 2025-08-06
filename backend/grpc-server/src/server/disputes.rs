@@ -143,8 +143,8 @@ impl DisputeService for Disputes {
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
-                flow_name: common_utils::dapr::FlowName::SubmitEvidence,
-                event_config: &self.config.event_management.to_event_config(),
+                flow_name: "submit_evidence",
+                event_client: Arc::clone(&self.event_client),
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                     serde_json::to_value(&payload).unwrap_or_default(),
                 )),
@@ -316,8 +316,8 @@ impl DisputeService for Disputes {
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
-                flow_name: common_utils::dapr::FlowName::AcceptDispute,
-                event_config: &self.config.event_management.to_event_config(),
+                flow_name: "accept_dispute",
+                event_client: Arc::clone(&self.event_client),
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                     serde_json::to_value(&payload).unwrap_or_default(),
                 )),

@@ -386,8 +386,8 @@ macro_rules! implement_connector_operation {
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
-                flow_name,
-                event_config: &self.config.event_management.to_event_config(),
+                flow_name: flow_name.as_str(),
+                event_client: self.event_client.clone(),
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
                 request_id: &request_id,
             };

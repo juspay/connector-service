@@ -8,7 +8,7 @@ use common_utils::errors::CustomResult;
 #[async_trait::async_trait]
 pub trait EventInterface: Sync + Send + dyn_clone::DynClone {
     /// Emit an event with the given data
-    async fn emit_event(&mut self, event_type: &str, data: &[u8]) -> CustomResult<(), EventError>;
+    async fn emit_event(&self, event_type: &str, data: &[u8]) -> CustomResult<(), EventError>;
 }
 
 dyn_clone::clone_trait_object!(EventInterface);

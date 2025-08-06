@@ -6,7 +6,7 @@ pub struct NoEvents;
 
 impl NoEvents {
     /// Event emission functionality (no-op)
-    pub async fn emit_event(&mut self, _event_type: &str, _data: &[u8]) -> Result<(), ()> {
+    pub async fn emit_event(&self, _event_type: &str, _data: &[u8]) -> Result<(), ()> {
         // No-op implementation
         Ok(())
     }

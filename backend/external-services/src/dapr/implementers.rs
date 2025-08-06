@@ -8,7 +8,7 @@ use crate::dapr::core::DaprClient;
 
 #[async_trait::async_trait]
 impl EventInterface for DaprClient {
-    async fn emit_event(&mut self, event_type: &str, data: &[u8]) -> CustomResult<(), EventError> {
+    async fn emit_event(&self, event_type: &str, data: &[u8]) -> CustomResult<(), EventError> {
         self.emit_event(event_type, data)
             .await
             .change_context(EventError::EventEmissionFailed)
