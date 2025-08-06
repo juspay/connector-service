@@ -217,7 +217,7 @@ pub struct CashfreePayloadData {
 // Helper Functions
 // ============================================================================
 
-fn get_cashfree_payment_method_data<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>(
+fn get_cashfree_payment_method_data<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
     payment_method_data: &PaymentMethodData<T>,
 ) -> Result<CashfreePaymentMethod, ConnectorError> {
     match payment_method_data {
@@ -281,7 +281,7 @@ fn get_cashfree_payment_method_data<T:PaymentMethodDataTypes + std::fmt::Debug +
 // ============================================================================
 
 // TryFrom implementation for macro-generated CashfreeRouterData wrapper
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         crate::connectors::cashfree::CashfreeRouterData<
             RouterDataV2<
@@ -430,7 +430,7 @@ impl
 }
 
 // TryFrom implementation for macro-generated CashfreeRouterData wrapper
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         crate::connectors::cashfree::CashfreeRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
@@ -449,7 +449,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Keep original TryFrom implementation for backward compatibility
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for CashfreePaymentRequest
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -547,7 +547,7 @@ impl
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
         ResponseRouterData<
             CashfreePaymentResponse,

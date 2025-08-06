@@ -592,7 +592,7 @@ pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
 }
 
 // Implementation for RepeatPayment request conversion
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
@@ -766,7 +766,7 @@ pub struct AuthorizedotnetCaptureRequest {
 }
 
 // New direct implementation for capture without relying on the reference version
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
@@ -878,7 +878,7 @@ impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
@@ -971,7 +971,7 @@ pub struct AuthorizedotnetRSyncRequest {
     pub get_transaction_details_request: TransactionDetails,
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -1013,7 +1013,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Implementation for the RSync flow to support refund synchronization
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
@@ -1469,7 +1469,7 @@ pub struct CreateCustomerProfileRequest<T: PaymentMethodDataTypes + std::fmt::De
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetZeroMandateRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct AuthorizedotnetZeroMandateRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > {
     merchant_authentication: AuthorizedotnetAuthType,
     profile: Profile<T>,
     validation_mode: ValidationMode,
@@ -1477,7 +1477,7 @@ pub struct AuthorizedotnetZeroMandateRequest<T:PaymentMethodDataTypes + std::fmt
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Profile<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+struct Profile<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > {
     merchant_customer_id: Option<String>,
     description: String,
     email: Option<String>,
@@ -1486,7 +1486,7 @@ struct Profile<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + 
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentProfiles<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+struct PaymentProfiles<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > {
     customer_type: CustomerType,
     payment: PaymentDetails<T>,
 }
@@ -2416,7 +2416,7 @@ pub struct CreateCustomerProfileResponse {
     pub messages: ResponseMessages,
 }
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
     for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;

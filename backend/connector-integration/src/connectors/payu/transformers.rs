@@ -231,7 +231,7 @@ pub struct PayuErrorResponse {
 }
 
 // Request conversion with Framework Integration
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         super::PayuRouterData<
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -388,7 +388,7 @@ fn generate_udf_fields(
 }
 
 // UPI app name determination based on Haskell getUpiAppName implementation
-fn determine_upi_app_name<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>(
+fn determine_upi_app_name<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<Option<String>, ConnectorError> {
     // From Haskell getUpiAppName implementation:
@@ -435,7 +435,7 @@ fn determine_upi_app_name<T:PaymentMethodDataTypes + std::fmt::Debug + std::mark
 
 // PayU flow determination based on Haskell getTxnS2SType implementation
 #[allow(clippy::type_complexity)]
-fn determine_upi_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>(
+fn determine_upi_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError> {
     // Based on Haskell implementation:
@@ -504,7 +504,7 @@ fn determine_upi_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::
     }
 }
 
-pub fn is_upi_collect_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>(request: &PaymentsAuthorizeData<T>) -> bool {
+pub fn is_upi_collect_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >(request: &PaymentsAuthorizeData<T>) -> bool {
     // Check if the payment method is UPI Collect
     matches!(
         request.payment_method_data,
@@ -564,7 +564,7 @@ fn generate_payu_hash(
 }
 
 // Response conversion with Framework Integration
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
     TryFrom<
         ResponseRouterData<
             PayuPaymentResponse,

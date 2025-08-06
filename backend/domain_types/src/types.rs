@@ -18,6 +18,7 @@ use utoipa::ToSchema;
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::mandates::MandateData;
 use crate::payment_method_data::{
+    self,
     DefaultPCIHolder, PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder,
 };
 use crate::{
@@ -147,11 +148,11 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
                     match card_type.card_type {
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => {
-                            let x = crate::payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
                             Ok(PaymentMethodData::Card(x))
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => {
-                            let x = crate::payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
                             Ok(PaymentMethodData::Card(x))
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_card_redirect)) => {
@@ -163,11 +164,11 @@ impl<
                             })))
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(card)) => {
-                            let x = crate::payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
                             Ok(PaymentMethodData::Card(x))
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(card)) => {
-                            let x = crate::payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
                             Ok(PaymentMethodData::Card(x))
                         },
                         None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
@@ -179,7 +180,7 @@ impl<
                     }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Token(_token) => Ok(
-                    PaymentMethodData::CardToken(crate::payment_method_data::CardToken {
+                    PaymentMethodData::CardToken(payment_method_data::CardToken {
                         card_holder_name: None,
                         card_cvc: None,
                     }),
@@ -187,16 +188,16 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(
                     upi_collect,
                 ) => Ok(PaymentMethodData::Upi(
-                    crate::payment_method_data::UpiData::UpiCollect(
-                        crate::payment_method_data::UpiCollectData {
+                    payment_method_data::UpiData::UpiCollect(
+                        payment_method_data::UpiCollectData {
                             vpa_id: upi_collect.vpa_id.map(|vpa| vpa.into()),
                         },
                     ),
                 )),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => {
                     Ok(PaymentMethodData::Upi(
-                        crate::payment_method_data::UpiData::UpiIntent(
-                            crate::payment_method_data::UpiIntentData {},
+                        payment_method_data::UpiData::UpiIntent(
+                            payment_method_data::UpiIntentData {},
                         ),
                     ))
                 }
@@ -286,16 +287,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
 pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
     fn convert_card_details(
         card: grpc_api_types::payments::CardDetails,
-    ) -> Result<crate::payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;
+    ) -> Result<payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;
 }
 
 // Implementation for DefaultPCIHolder
 impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
     fn convert_card_details(
         card: grpc_api_types::payments::CardDetails,
-    ) -> Result<crate::payment_method_data::Card<DefaultPCIHolder>, error_stack::Report<ApplicationErrorResponse>> {
+    ) -> Result<payment_method_data::Card<DefaultPCIHolder>, error_stack::Report<ApplicationErrorResponse>> {
         let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
-        Ok(crate::payment_method_data::Card {
+        Ok(payment_method_data::Card {
             card_number: RawCardNumber::<DefaultPCIHolder>(
                 cards::CardNumber::from_str(&card.card_number).change_context(
                     ApplicationErrorResponse::BadRequest(ApiError {
@@ -325,8 +326,8 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
 impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
     fn convert_card_details(
         card: grpc_api_types::payments::CardDetails,
-    ) -> Result<crate::payment_method_data::Card<VaultTokenHolder>, error_stack::Report<ApplicationErrorResponse>> {
-        Ok(crate::payment_method_data::Card {
+    ) -> Result<payment_method_data::Card<VaultTokenHolder>, error_stack::Report<ApplicationErrorResponse>> {
+        Ok(payment_method_data::Card {
             card_number: RawCardNumber(card.card_number),
             card_exp_month: card.card_exp_month.into(),
             card_exp_year: card.card_exp_year.into(),
@@ -345,7 +346,7 @@ impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
 
 // Generic ForeignTryFrom implementation using the helper trait
 impl<T> ForeignTryFrom<grpc_api_types::payments::CardDetails>
-    for crate::payment_method_data::Card<T>
+    for payment_method_data::Card<T>
 where
     T: PaymentMethodDataTypes
         + Default

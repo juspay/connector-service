@@ -451,7 +451,7 @@ pub enum AdyenSplitType {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AdyenPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct AdyenPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > {
     amount: Amount,
     merchant_account: Secret<String>,
     payment_method: PaymentMethod<T>,

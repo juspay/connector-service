@@ -75,7 +75,7 @@ pub enum PaymentMethod<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker:
     Card(CardPaymentRequest<T>),
 }
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CardPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> {
+pub struct CardPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > {
     #[serde(rename = "type")]
     pub payment_type: PaymentMethodType,
     pub card: CardInfo<T>,
