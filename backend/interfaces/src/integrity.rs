@@ -3,7 +3,6 @@
 //! This module provides a comprehensive integrity checking system for payment operations.
 //! It ensures that request and response data remain consistent across connector interactions
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
-use std::fmt::Debug;
 use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
