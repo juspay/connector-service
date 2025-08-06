@@ -4,7 +4,7 @@ use std::fmt::Debug;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMinorUnit,
+    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{

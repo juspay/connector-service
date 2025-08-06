@@ -33,10 +33,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
-use interfaces::{
-    connector_integration_v2::{BoxedConnectorIntegrationV2, ConnectorIntegrationV2},
-    connector_types::ConnectorServiceTrait,
-};
+use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use std::{fmt::Debug, sync::Arc};
 use tracing::info;
 
@@ -1030,7 +1027,8 @@ impl PaymentService for Payments {
                 let payload = request.into_inner();
 
                 //get connector data
-                let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector);
+                let connector_data: ConnectorData<DefaultPCIHolder> =
+                    ConnectorData::get_connector_by_name(&connector);
 
                 // Get connector integration
                 let connector_integration: BoxedConnectorIntegrationV2<

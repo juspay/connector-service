@@ -24,7 +24,7 @@ type HsInterfacesConnectorError = ConnectorError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret, StrongSecret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -46,48 +46,48 @@ fn create_raw_card_number_for_vault_token(card_string: String) -> RawCardNumber<
     RawCardNumber(card_string)
 }
 
-// Helper traits for working with generic types
-trait RawCardNumberExt<T: PaymentMethodDataTypes> {
-    fn peek(&self) -> &str;
-}
+// // Helper traits for working with generic types
+// trait RawCardNumberExt<T: PaymentMethodDataTypes> {
+//     fn peek(&self) -> &str;
+// }
 
-trait CardExt<T: PaymentMethodDataTypes> {
-    fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String>;
-}
+// trait CardExt<T: PaymentMethodDataTypes> {
+//     fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String>;
+// }
 
-// Implementations for DefaultPCIHolder
-impl RawCardNumberExt<DefaultPCIHolder> for RawCardNumber<DefaultPCIHolder> {
-    fn peek(&self) -> &str {
-        self.0.peek()
-    }
-}
+// // Implementations for DefaultPCIHolder
+// impl RawCardNumberExt<DefaultPCIHolder> for RawCardNumber<DefaultPCIHolder> {
+//     fn peek(&self) -> &str {
+//         self.0.peek()
+//     }
+// }
 
-impl CardExt<DefaultPCIHolder> for domain_types::payment_method_data::Card<DefaultPCIHolder> {
-    fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
-        Secret::new(format!("{}{}{}", 
-            self.card_exp_year.peek(), 
-            separator,
-            self.card_exp_month.peek()
-        ))
-    }
-}
+// impl CardExt<DefaultPCIHolder> for domain_types::payment_method_data::Card<DefaultPCIHolder> {
+//     fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+//         Secret::new(format!("{}{}{}", 
+//             self.card_exp_year.peek(), 
+//             separator,
+//             self.card_exp_month.peek()
+//         ))
+//     }
+// }
 
-// Implementations for VaultTokenHolder
-impl RawCardNumberExt<VaultTokenHolder> for RawCardNumber<VaultTokenHolder> {
-    fn peek(&self) -> &str {
-        &self.0
-    }
-}
+// // Implementations for VaultTokenHolder
+// impl RawCardNumberExt<VaultTokenHolder> for RawCardNumber<VaultTokenHolder> {
+//     fn peek(&self) -> &str {
+//         &self.0
+//     }
+// }
 
-impl CardExt<VaultTokenHolder> for domain_types::payment_method_data::Card<VaultTokenHolder> {
-    fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
-        Secret::new(format!("{}{}{}", 
-            self.card_exp_year.peek(), 
-            separator,
-            self.card_exp_month.peek()
-        ))
-    }
-}
+// impl CardExt<VaultTokenHolder> for domain_types::payment_method_data::Card<VaultTokenHolder> {
+//     fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+//         Secret::new(format!("{}{}{}", 
+//             self.card_exp_year.peek(), 
+//             separator,
+//             self.card_exp_month.peek()
+//         ))
+//     }
+// }
 
 // Wrapper for RawCardNumber to provide construction methods
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

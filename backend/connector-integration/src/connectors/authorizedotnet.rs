@@ -13,7 +13,7 @@ use domain_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse
     },
     errors::{self, ConnectorError},
-    payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes},
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -498,18 +498,19 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        fn preprocess_response_bytes<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            // Check if the bytes begin with UTF-8 BOM (EF BB BF)
-            let encoding = encoding_rs::UTF_8;
-            let intermediate_response_bytes = encoding.decode_with_bom_removal(&bytes);
-            let processed_bytes = bytes::Bytes::copy_from_slice(intermediate_response_bytes.0.as_bytes());
+        //commenting out unused function for now
+        // fn preprocess_response_bytes<F, FCD, Req, Res>(
+        //     &self,
+        //     _req: &RouterDataV2<F, FCD, Req, Res>,
+        //     bytes: bytes::Bytes,
+        // ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+        //     // Check if the bytes begin with UTF-8 BOM (EF BB BF)
+        //     let encoding = encoding_rs::UTF_8;
+        //     let intermediate_response_bytes = encoding.decode_with_bom_removal(&bytes);
+        //     let processed_bytes = bytes::Bytes::copy_from_slice(intermediate_response_bytes.0.as_bytes());
 
-            Ok(processed_bytes)
-        }
+        //     Ok(processed_bytes)
+        // }
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,

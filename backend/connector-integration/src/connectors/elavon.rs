@@ -2,7 +2,7 @@ pub mod transformers;
 
 use bytes::Bytes;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent, types::StringMajorUnit,
+    errors::CustomResult, ext_traits::ByteSliceExt
 };
 use domain_types::{
     connector_flow::{
@@ -23,7 +23,6 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon,

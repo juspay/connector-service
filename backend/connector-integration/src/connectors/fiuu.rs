@@ -30,7 +30,6 @@ use hyperswitch_masking::{Maskable, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
-    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

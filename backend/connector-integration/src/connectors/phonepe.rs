@@ -4,7 +4,7 @@ pub mod transformers;
 
 use common_enums as enums;
 use common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::MinorUnit,
+    errors::CustomResult, ext_traits::BytesExt, types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -239,14 +239,6 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )])
-        }
-
-        fn preprocess_response_bytes<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            Ok(bytes)
         }
     }
 );

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use cards::CardNumber;
 use common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
     FutureUsage,

@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use common_utils::{
-    consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+    consts, errors::CustomResult, ext_traits::ByteSliceExt,
 };
 use domain_types::{
     connector_flow::{

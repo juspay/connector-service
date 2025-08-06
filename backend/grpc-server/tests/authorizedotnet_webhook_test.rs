@@ -128,10 +128,10 @@ fn generate_webhook_signature(webhook_body: &[u8], secret: &str) -> String {
         .expect("Failed to generate signature");
 
     // Convert bytes to hex string manually
-    let hex_string = signature
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
+    let mut hex_string = String::with_capacity(signature.len() * 2);
+    for &byte in &signature {
+        hex_string.push_str(&format!("{:02x}", byte));
+    }
 
     format!("sha512={hex_string}")
 }

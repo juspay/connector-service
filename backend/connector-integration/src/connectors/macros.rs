@@ -551,46 +551,6 @@ macro_rules! impl_templating {
 }
 pub(crate) use impl_templating;
 
-macro_rules! impl_templating_for_generic
- {
-    (
-        connector: $connector: ident,
-        curl_request: $base_req: ident,
-        curl_response: $curl_res: ident,
-        router_data: $router_data: ty,
-        generic_type: $generic_type: tt,
-    ) => {
-        paste::paste!{
-            pub struct [<$base_req Templating>];
-            pub struct [<$curl_res Templating>];
-
-            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> BridgeRequestResponse for Bridge<[<$base_req Templating>], [<$curl_res Templating>], $generic_type>{
-                type RequestBody = $base_req<$generic_type>;
-                type ResponseBody = $curl_res;
-                type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-            }
-        }
-    };
-    (
-        connector: $connector: ident,
-        curl_response: $curl_res: ident,
-        router_data: $router_data: ty,
-        generic_type: $generic_type:tt,
-    ) => {
-        paste::paste!{
-            pub struct [<$curl_res Templating>];
-
-            impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> BridgeRequestResponse for Bridge<NoRequestBodyTemplating, [<$curl_res Templating>], $generic_type> {
-                type RequestBody = NoRequestBody;
-                type ResponseBody = $curl_res;
-                type ConnectorInputData = [<$connector RouterData>]<$router_data, $generic_type>;
-            }
-        }
-    };
-
-}
-pub(crate) use impl_templating_for_generic;
-
 macro_rules! impl_templating_mixed {
     // Pattern for generic request types like AdyenPaymentRequest<T>
     (
@@ -658,18 +618,6 @@ macro_rules! resolve_templating_type {
 }
 pub(crate) use resolve_templating_type;
 
-macro_rules! resolve_request_body_type_alias {
-    // Generic type like AdyenPaymentRequest<T>
-    ($alias_name: ident, $base_req: ident<$req_generic: ident>, $generic_type: tt) => {
-        type $alias_name<$generic_type> = $base_req<$generic_type>;
-    };
-    // Non-generic type like AdyenRedirectRequest - use phantom data to satisfy the generic parameter
-    ($alias_name: ident, $base_req: ident, $generic_type: tt) => {
-        type $alias_name<$generic_type> = $base_req;
-    };
-}
-pub(crate) use resolve_request_body_type_alias;
-
 macro_rules! expand_connector_input_data {
     ($connector: ident, $generics: tt) => {
         paste::paste! {
@@ -687,48 +635,6 @@ macro_rules! expand_connector_input_data {
     };
 }
 pub(crate) use expand_connector_input_data;
-
-macro_rules! create_template_types_for_request_and_response_types {
-    ($($connector_type_name:ty),+) => {
-        $(
-            paste::paste!{pub struct [<$connector_type_name Templating>]; }
-        )+
-    };
-}
-pub(crate) use create_template_types_for_request_and_response_types;
-
-macro_rules! optional_or_default {
-    (
-        $optional_item: ident Templating |
-        default: $default:ident
-    ) => {
-        paste::paste! { [<$optional_item Templating>] }
-    };
-    (
-        $optional_item: ident<$generic:ident> |
-        default: $default:ident
-    ) => {
-        $optional_item<$generic>
-    };
-    (
-        $optional_item: ident |
-        default: $default:ident
-    ) => {
-        $optional_item
-    };
-    (
-        | default: $default:ident
-    ) => {
-        $default
-    };
-    (
-        $($tokens:tt)* |
-        default: $default:ident
-    ) => {
-        $default
-    };
-}
-pub(crate) use optional_or_default;
 
 macro_rules! create_all_prerequisites {
     (

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use cards::CardNumber;
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 use domain_types::{

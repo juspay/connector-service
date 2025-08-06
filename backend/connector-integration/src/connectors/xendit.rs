@@ -6,7 +6,6 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     ext_traits::ByteSliceExt,
-    request::RequestContent,
     types::FloatMajorUnit,
 };
 use domain_types::{

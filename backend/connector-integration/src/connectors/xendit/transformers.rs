@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use cards::CardNumber;
 use common_enums::Currency;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},

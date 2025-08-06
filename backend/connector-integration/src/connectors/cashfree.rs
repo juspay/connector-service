@@ -6,7 +6,7 @@ use cashfree::{
     CashfreePaymentResponse,
 };
 use common_enums::AttemptStatus;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -245,14 +245,6 @@ macros::create_all_prerequisites!(
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
             req.resource_common_data.connectors.cashfree.base_url.to_string()
-        }
-
-        fn preprocess_response_bytes<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            Ok(bytes)
         }
     }
 );
