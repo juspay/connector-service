@@ -314,7 +314,7 @@ pub struct PaytmTxnInfo {
     #[serde(alias = "CHECKSUMHASH")]
     pub checksum_hash: Option<String>,
     #[serde(alias = "CURRENCY")]
-    pub currency: Option<String>,
+    pub currency: Option<Currency>,
     #[serde(alias = "GATEWAYNAME")]
     pub gateway_name: Option<String>,
     #[serde(alias = "MID")]
