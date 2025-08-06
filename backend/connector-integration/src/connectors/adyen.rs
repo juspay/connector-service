@@ -771,6 +771,7 @@ impl<
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
+            response_headers: None,
         })
     }
 
@@ -798,6 +799,7 @@ impl<
             error_message: notif.reason,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
+            response_headers: None,
         })
     }
 
@@ -831,6 +833,7 @@ impl<
                     String::from_utf8_lossy(&request_body_copy).to_string(),
                 ),
                 status_code: 200,
+                response_headers: None,
             },
         )
     }

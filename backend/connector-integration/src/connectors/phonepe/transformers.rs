@@ -373,6 +373,13 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             let error_message = response.message.clone();
             let error_code = response.code.clone();
 
+            tracing::warn!(
+                "PhonePe payment failed - Code: {}, Message: {}, Status: {}",
+                error_code,
+                error_message,
+                item.http_code
+            );
+
             // Get merchant transaction ID from data if available for better tracking
             let connector_transaction_id = response
                 .data
