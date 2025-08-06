@@ -3,6 +3,7 @@ pub mod authentication;
 pub mod connector_integration_v2;
 pub mod connector_types;
 pub mod disputes;
+pub mod event_interface;
 pub mod events;
 pub mod integrity;
 pub mod routing;

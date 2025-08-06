@@ -7,7 +7,7 @@ edition = "2021"
 # First-party dependencies
 grpc-api-types = { path = "../grpc-api-types" }
 connector-integration = { path = "../connector-integration" }
-external-services = { path = "../external-services" }
+external-services = { path = "../external-services", features = ["dapr"] }
 domain_types = { path = "../domain_types" }
 interfaces = { path = "../interfaces" }
 cards = { path = "../cards" }

@@ -32,9 +32,9 @@ trait RefundOperationsInternal {
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 }
 
-#[derive(Debug)]
 pub struct Refunds {
     pub config: Arc<Config>,
+    pub event_client: Arc<dyn interfaces::event_interface::EventInterface>,
 }
 
 impl RefundOperationsInternal for Refunds {
@@ -102,6 +102,7 @@ impl RefundService for Refunds {
             tenant_id = tracing::field::Empty,
             flow = FlowName::IncomingWebhook.to_string(),
         )
+        skip(self, request)
     )]
     async fn transform(
         &self,

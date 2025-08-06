@@ -27,6 +27,7 @@ time = "0.3.41"
 tracing-actix-web = "0.7.18"
 async-trait = "0.1.88"
 actix-web = "4.11.0"
+dyn-clone = "1.0"
 
 error-stack = "0.4.1"
 

@@ -46,6 +46,7 @@ trait DisputeOperationsInternal {
 
 pub struct Disputes {
     pub config: Arc<Config>,
+    pub event_client: Arc<dyn interfaces::event_interface::EventInterface>,
 }
 
 impl DisputeOperationsInternal for Disputes {
@@ -143,7 +144,7 @@ impl DisputeService for Disputes {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
                 flow_name: common_utils::dapr::FlowName::SubmitEvidence,
-                event_config: &self.config.events,
+                event_config: &self.config.event_management.to_event_config(),
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                     serde_json::to_value(&payload).unwrap_or_default(),
                 )),
@@ -316,7 +317,7 @@ impl DisputeService for Disputes {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
                 flow_name: common_utils::dapr::FlowName::AcceptDispute,
-                event_config: &self.config.events,
+                event_config: &self.config.event_management.to_event_config(),
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                     serde_json::to_value(&payload).unwrap_or_default(),
                 )),

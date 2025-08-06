@@ -1,7 +1,7 @@
 use std::{future::Future, net, sync::Arc};
 
 use axum::{extract::Request, http};
-use common_utils::{consts, dapr};
+use common_utils::consts;
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
@@ -10,6 +10,7 @@ use grpc_api_types::{
         payment_service_server, refund_service_handler, refund_service_server,
     },
 };
+use interfaces::event_interface::EventInterface;
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
@@ -23,23 +24,11 @@ use crate::{configs, error::ConfigurationError, logger, utils};
 ///
 /// Will panic if redis connection establishment fails or signal handling fails
 pub async fn server_builder(config: configs::Config) -> Result<(), ConfigurationError> {
-    if config.events.enabled {
-        logger::info!("Checking Dapr connectivity...");
-
-        let dapr_client_config = dapr::DaprConfig {
-            host: config.dapr.host.clone(),
-            grpc_port: config.dapr.grpc_port,
-        };
-
-        match dapr::create_client(&dapr_client_config).await {
-            Ok(_) => logger::info!("Dapr connection test successful"),
-            Err(e) => logger::warn!(
-                "Failed to connect to Dapr: {:?}. Events might not be published to Kafka.",
-                e
-            ),
-        }
+    // Validate event management configuration
+    if let Err(e) = config.event_management.validate() {
+        logger::warn!("Event management configuration validation failed: {}", e);
     } else {
-        logger::info!("Dapr is disabled via configuration, skipping connectivity check");
+        logger::info!("Event management configuration validated successfully");
     }
 
     let server_config = config.server.clone();
@@ -112,6 +101,7 @@ pub struct Service {
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
+    pub event_client: Arc<dyn EventInterface>,
 }
 
 impl Service {
@@ -121,15 +111,28 @@ impl Service {
     /// deserialize any of the above keys
     #[allow(clippy::expect_used)]
     pub async fn new(config: Arc<configs::Config>) -> Self {
+        // Create event client
+        let event_client = config
+            .event_management
+            .get_event_management_client()
+            .await
+            .expect("Failed to create event client");
+
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             payments_service: crate::server::payments::Payments {
                 config: Arc::clone(&config),
+                event_client: Arc::clone(&event_client),
             },
             refunds_service: crate::server::refunds::Refunds {
                 config: Arc::clone(&config),
+                event_client: Arc::clone(&event_client),
             },
-            disputes_service: crate::server::disputes::Disputes { config },
+            disputes_service: crate::server::disputes::Disputes {
+                config,
+                event_client: Arc::clone(&event_client),
+            },
+            event_client,
         }
     }
 

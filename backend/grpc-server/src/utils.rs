@@ -387,7 +387,7 @@ macro_rules! implement_connector_operation {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
                 flow_name,
-                event_config: &self.config.events,
+                event_config: &self.config.event_management.to_event_config(),
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
                 request_id: &request_id,
             };

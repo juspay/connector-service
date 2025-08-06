@@ -75,6 +75,7 @@ trait PaymentOperationsInternal {
 #[derive(Clone)]
 pub struct Payments {
     pub config: Arc<Config>,
+    pub event_client: Arc<dyn interfaces::event_interface::EventInterface>,
 }
 
 impl Payments {
@@ -169,7 +170,7 @@ impl Payments {
             connector_name: &connector.to_string(),
             service_name,
             flow_name: common_utils::dapr::FlowName::Authorize,
-            event_config: &self.config.events,
+            event_config: &self.config.event_management.to_event_config(),
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(&payload).unwrap_or_default(),
             )),
@@ -315,7 +316,7 @@ impl Payments {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
             flow_name: common_utils::dapr::FlowName::CreateOrder,
-            event_config: &self.config.events,
+            event_config: &self.config.event_management.to_event_config(),
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
@@ -404,7 +405,7 @@ impl Payments {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
             flow_name: common_utils::dapr::FlowName::CreateOrder,
-            event_config: &self.config.events,
+            event_config: &self.config.event_management.to_event_config(),
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
@@ -939,7 +940,7 @@ impl PaymentService for Payments {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
                     flow_name: common_utils::dapr::FlowName::SetupMandate,
-                    event_config: &self.config.events,
+                    event_config: &self.config.event_management.to_event_config(),
                     raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
                     )),
@@ -1048,7 +1049,7 @@ impl PaymentService for Payments {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
                     flow_name: common_utils::dapr::FlowName::Authorize,
-                    event_config: &self.config.events,
+                    event_config: &self.config.event_management.to_event_config(),
                     raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
                     )),
