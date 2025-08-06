@@ -284,7 +284,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}payment/v1/order", self.connector_base_url_payments(req),))
+            Ok(format!("{}payment/v1/order", self.connector_base_url_payments(req)))
         }
     }
 );
