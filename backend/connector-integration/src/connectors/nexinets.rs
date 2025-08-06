@@ -328,7 +328,7 @@ macros::macro_connector_implementation!(
             // connector_metadata is a Value::String, so extract and parse
             let metadata_str = connector_metadata
                 .as_str()
-                .ok_or(errors::ConnectorError::MissingRequiredField {
+                .ok_or(errors::ConnectorError::InvalidDataFormat {
                     field_name: "connector_metadata as string",
                 })?;
 
