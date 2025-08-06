@@ -3870,9 +3870,16 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
-        let capture_method = Some(common_enums::CaptureMethod::foreign_try_from(
-            value.capture_method(),
-        )?);
+        let capture_method = match value.capture_method {
+            Some(method) => {
+                let grpc_capture_method = grpc_api_types::payments::CaptureMethod::try_from(method)
+                    .unwrap_or(grpc_api_types::payments::CaptureMethod::Unspecified);
+                Some(common_enums::CaptureMethod::foreign_try_from(
+                    grpc_capture_method,
+                )?)
+            }
+            None => None,
+        };
         let merchant_order_reference_id = value.merchant_order_reference_id;
         let metadata = value.metadata;
         let webhook_url = value.webhook_url;

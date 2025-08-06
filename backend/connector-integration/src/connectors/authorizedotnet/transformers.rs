@@ -2182,3 +2182,211 @@ fn get_the_truncate_id(id: Option<String>, max_length: usize) -> Option<String> 
         }
     })
 }
+
+// Webhook-related structures
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetWebhookObjectId {
+    pub webhook_id: String,
+    pub event_type: AuthorizedotnetWebhookEvent,
+    pub payload: AuthorizedotnetWebhookPayload,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetWebhookPayload {
+    pub id: Option<String>,
+    // Fields specific to customer creation webhooks
+    pub payment_profiles: Option<Vec<PaymentProfileInfo>>,
+    pub merchant_customer_id: Option<String>,
+    pub description: Option<String>,
+    pub entity_name: Option<String>,
+    // Fields specific to customer payment profile creation webhooks
+    pub customer_profile_id: Option<u64>,
+    pub customer_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentProfileInfo {
+    pub id: String,
+    pub customer_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetWebhookEventType {
+    pub event_type: AuthorizedotnetIncomingWebhookEventType,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum AuthorizedotnetWebhookEvent {
+    #[serde(rename = "net.authorize.payment.authorization.created")]
+    AuthorizationCreated,
+    #[serde(rename = "net.authorize.payment.priorAuthCapture.created")]
+    PriorAuthCapture,
+    #[serde(rename = "net.authorize.payment.authcapture.created")]
+    AuthCapCreated,
+    #[serde(rename = "net.authorize.payment.capture.created")]
+    CaptureCreated,
+    #[serde(rename = "net.authorize.payment.void.created")]
+    VoidCreated,
+    #[serde(rename = "net.authorize.payment.refund.created")]
+    RefundCreated,
+    #[serde(rename = "net.authorize.customer.created")]
+    CustomerCreated,
+    #[serde(rename = "net.authorize.customer.paymentProfile.created")]
+    CustomerPaymentProfileCreated,
+}
+
+/// Including Unknown to map unknown webhook events
+#[derive(Debug, Clone, Deserialize)]
+pub enum AuthorizedotnetIncomingWebhookEventType {
+    #[serde(rename = "net.authorize.payment.authorization.created")]
+    AuthorizationCreated,
+    #[serde(rename = "net.authorize.payment.priorAuthCapture.created")]
+    PriorAuthCapture,
+    #[serde(rename = "net.authorize.payment.authcapture.created")]
+    AuthCapCreated,
+    #[serde(rename = "net.authorize.payment.capture.created")]
+    CaptureCreated,
+    #[serde(rename = "net.authorize.payment.void.created")]
+    VoidCreated,
+    #[serde(rename = "net.authorize.payment.refund.created")]
+    RefundCreated,
+    #[serde(rename = "net.authorize.customer.created")]
+    CustomerCreated,
+    #[serde(rename = "net.authorize.customer.paymentProfile.created")]
+    CustomerPaymentProfileCreated,
+    #[serde(other)]
+    Unknown,
+}
+
+impl From<AuthorizedotnetIncomingWebhookEventType> for interfaces::webhooks::IncomingWebhookEvent {
+    fn from(event_type: AuthorizedotnetIncomingWebhookEventType) -> Self {
+        match event_type {
+            AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated
+            | AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
+            | AuthorizedotnetIncomingWebhookEventType::AuthCapCreated
+            | AuthorizedotnetIncomingWebhookEventType::CaptureCreated
+            | AuthorizedotnetIncomingWebhookEventType::VoidCreated
+            | AuthorizedotnetIncomingWebhookEventType::CustomerCreated
+            | AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
+                Self::PaymentIntentSuccess
+            }
+            AuthorizedotnetIncomingWebhookEventType::RefundCreated => Self::RefundSuccess,
+            AuthorizedotnetIncomingWebhookEventType::Unknown => Self::EventNotSupported,
+        }
+    }
+}
+
+impl From<AuthorizedotnetWebhookEvent> for enums::AttemptStatus {
+    // status mapping reference https://developer.authorize.net/api/reference/features/webhooks.html#Event_Types_and_Payloads
+    fn from(event_type: AuthorizedotnetWebhookEvent) -> Self {
+        match event_type {
+            AuthorizedotnetWebhookEvent::AuthorizationCreated => Self::Authorized,
+            AuthorizedotnetWebhookEvent::CaptureCreated
+            | AuthorizedotnetWebhookEvent::AuthCapCreated
+            | AuthorizedotnetWebhookEvent::PriorAuthCapture => Self::Charged,
+            AuthorizedotnetWebhookEvent::VoidCreated => Self::Voided,
+            AuthorizedotnetWebhookEvent::RefundCreated => Self::PartialCharged, // This will be used for refund status
+            AuthorizedotnetWebhookEvent::CustomerCreated => Self::Charged, // Customer profile creation indicates successful setup mandate
+            AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Self::Charged, // Payment profile creation indicates successful setup mandate
+        }
+    }
+}
+
+impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
+    // status mapping reference https://developer.authorize.net/api/reference/features/webhooks.html#Event_Types_and_Payloads
+    fn from(event_type: AuthorizedotnetWebhookEvent) -> Self {
+        match event_type {
+            AuthorizedotnetWebhookEvent::AuthorizationCreated => Self::AuthorizedPendingCapture,
+            AuthorizedotnetWebhookEvent::CaptureCreated
+            | AuthorizedotnetWebhookEvent::AuthCapCreated => Self::CapturedPendingSettlement,
+            AuthorizedotnetWebhookEvent::PriorAuthCapture => Self::SettledSuccessfully,
+            AuthorizedotnetWebhookEvent::VoidCreated => Self::Voided,
+            AuthorizedotnetWebhookEvent::RefundCreated => Self::RefundSettledSuccessfully,
+            AuthorizedotnetWebhookEvent::CustomerCreated => Self::SettledSuccessfully, // Customer profile successfully created and settled
+            AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Self::SettledSuccessfully, // Payment profile successfully created and settled
+        }
+    }
+}
+
+pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, ConnectorError> {
+    match details.event_type {
+        AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
+            // For payment profile creation, use the customer_profile_id as the primary identifier
+            if let Some(customer_profile_id) = details.payload.customer_profile_id {
+                tracing::debug!(
+                    target: "authorizedotnet_webhook",
+                    "Extracted customer profile ID {} for payment profile creation webhook",
+                    customer_profile_id
+                );
+                Ok(customer_profile_id.to_string())
+            } else {
+                match details.payload.id.clone() {
+                    Some(id) => {
+                        tracing::debug!(
+                            target: "authorizedotnet_webhook",
+                            "Extracted transaction ID {} from payment profile webhook payload",
+                            id
+                        );
+                        Ok(id)
+                    }
+                    None => {
+                        tracing::error!(
+                            target: "authorizedotnet_webhook",
+                            "No customer_profile_id or id found in CustomerPaymentProfileCreated webhook payload"
+                        );
+                        Err(ConnectorError::WebhookReferenceIdNotFound)
+                    }
+                }
+            }
+        }
+        _ => {
+            // For all other events, use the standard id field
+            match details.payload.id.clone() {
+                Some(id) => {
+                    tracing::debug!(
+                        target: "authorizedotnet_webhook",
+                        "Extracted transaction ID {} for webhook event type: {:?}",
+                        id,
+                        details.event_type
+                    );
+                    Ok(id)
+                }
+                None => {
+                    tracing::error!(
+                        target: "authorizedotnet_webhook",
+                        "No transaction ID found in webhook payload for event type: {:?}",
+                        details.event_type
+                    );
+                    Err(ConnectorError::WebhookReferenceIdNotFound)
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<AuthorizedotnetWebhookObjectId> for AuthorizedotnetPSyncResponse {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: AuthorizedotnetWebhookObjectId) -> Result<Self, Self::Error> {
+        Ok(Self {
+            transaction: Some(SyncTransactionResponse {
+                transaction_id: get_trans_id(&item)?,
+                transaction_status: SyncStatus::from(item.event_type),
+                response_code: Some(1),
+                response_reason_code: Some(1),
+                response_reason_description: Some("Approved".to_string()),
+                network_trans_id: None,
+            }),
+            messages: ResponseMessages {
+                result_code: ResultCode::Ok,
+                message: vec![ResponseMessage {
+                    code: "I00001".to_string(),
+                    text: "Successful.".to_string(),
+                }],
+            },
+        })
+    }
+}
