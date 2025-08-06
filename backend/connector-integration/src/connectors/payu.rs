@@ -2,9 +2,7 @@ pub mod transformers;
 
 use base64::Engine;
 use common_enums::{enums, CurrencyUnit};
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit,
-};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -204,21 +202,6 @@ macros::create_all_prerequisites!(
         amount_converter: StringMajorUnit
     ],
     member_functions: {
-        // Payu-specific helper functions will be added here
-        pub fn preprocess_response_bytes<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, ConnectorError> {
-            // For UPI collect flows, we need to return base64 decoded response
-            // For other flows, we can use the response itself
-            // Since we can't easily check the request type here, we'll try to decode
-            // and fall back to original bytes if decoding fails
-            match BASE64_ENGINE.decode(&bytes) {
-                Ok(decoded_value) => Ok(decoded_value.into()),
-                Err(_) => Ok(bytes), // Fall back to original bytes if not base64
-            }
-        }
 
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -246,14 +229,29 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.payu.base_url
         }
+
+        pub fn preprocess_response_bytes<F, FCD, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, ConnectorError> {
+            if is_upi_collect_flow(&req.request) {
+                // For UPI collect flows, we need to return base64 decoded response
+                let decoded_value = BASE64_ENGINE.decode(bytes)
+                    .change_context(ConnectorError::ResponseDeserializationFailed)?;
+                Ok(decoded_value.into())
+            } else {
+                // For other flows, we can use the response itself
+                Ok(bytes)
+            }
+        }
     }
 );
 
-// Implement authorize flow using macro framework
 macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector_default_implementations: [],
     connector: Payu,
-    curl_request: Json(PayuPaymentRequest),
+    curl_request: FormUrlEncoded(PayuPaymentRequest),
     curl_response: PayuPaymentResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -278,8 +276,54 @@ macros::macro_connector_implementation!(
             // Based on Haskell Endpoints.hs: uses /_payment endpoint for UPI transactions
             // Test: https://test.payu.in/_payment
             // Prod: https://secure.payu.in/_payment
-            let base_url = self.connector_base_url_payments(req);
+            let base_url = self.base_url(&req.resource_common_data.connectors);
             Ok(format!("{base_url}/_payment"))
+        }
+        fn get_content_type(&self) -> &'static str {
+            "application/x-www-form-urlencoded"
+        }
+        fn get_error_response_v2(
+            &self,
+            res: Response,
+            _event_builder: Option<&mut ConnectorEvent>,
+        ) -> CustomResult<ErrorResponse, ConnectorError> {
+            // PayU returns error responses in the same JSON format as success responses
+            // We need to parse the response and check for error fields
+            let response: PayuPaymentResponse = res
+                .response
+                .parse_struct("PayU ErrorResponse")
+                .change_context(ConnectorError::ResponseDeserializationFailed)?;
+
+            // Check if this is an error response
+            if response.error.is_some() {
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: response.error.unwrap_or_default(),
+                    message: response.message.unwrap_or_default(),
+                    reason: None,
+                    attempt_status: Some(enums::AttemptStatus::Failure),
+                    connector_transaction_id: response.reference_id,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    raw_connector_response: None,
+                })
+            } else {
+                // This shouldn't happen as successful responses go through normal flow
+                // But fallback to generic error
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: "UNKNOWN_ERROR".to_string(),
+                    message: "Unknown PayU error".to_string(),
+                    reason: None,
+                    attempt_status: Some(enums::AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    raw_connector_response: None,
+                })
+            }
         }
     }
 );
@@ -298,12 +342,8 @@ impl<
         "payu"
     }
 
-    fn get_currency_unit(&self) -> CurrencyUnit {
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
         CurrencyUnit::Minor
-    }
-
-    fn common_get_content_type(&self) -> &'static str {
-        "application/x-www-form-urlencoded"
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -319,49 +359,6 @@ impl<
         Ok(vec![])
     }
 
-    fn build_error_response(
-        &self,
-        res: Response,
-        _event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, ConnectorError> {
-        // PayU returns error responses in the same JSON format as success responses
-        // We need to parse the response and check for error fields
-        let response: PayuPaymentResponse = res
-            .response
-            .parse_struct("PayU ErrorResponse")
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-
-        // Check if this is an error response
-        if response.error.is_some() {
-            Ok(ErrorResponse {
-                status_code: res.status_code,
-                code: response.error.unwrap_or_default(),
-                message: response.message.unwrap_or_default(),
-                reason: None,
-                attempt_status: Some(enums::AttemptStatus::Failure),
-                connector_transaction_id: response.reference_id,
-                network_error_message: None,
-                network_advice_code: None,
-                network_decline_code: None,
-                raw_connector_response: None,
-            })
-        } else {
-            // This shouldn't happen as successful responses go through normal flow
-            // But fallback to generic error
-            Ok(ErrorResponse {
-                status_code: res.status_code,
-                code: "UNKNOWN_ERROR".to_string(),
-                message: "Unknown PayU error".to_string(),
-                reason: None,
-                attempt_status: Some(enums::AttemptStatus::Failure),
-                connector_transaction_id: None,
-                network_error_message: None,
-                network_advice_code: None,
-                network_decline_code: None,
-                raw_connector_response: None,
-            })
-        }
-    }
 }
 
 // **STUB IMPLEMENTATIONS**: Source Verification Framework stubs for main development
@@ -369,7 +366,15 @@ impl<
 use common_utils::crypto;
 use interfaces::verification::{ConnectorSourceVerificationSecrets, SourceVerification};
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
     for Payu<T>
 {
     fn get_secrets(
@@ -515,18 +520,74 @@ impl_source_verification_stub!(
 );
 
 // Connector integration implementations for unsupported flows (stubs)
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Payu<T> {}
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Payu<T> {}
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Payu<T> {}
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
     for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
@@ -535,24 +596,65 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
     > for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize> ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Payu<T>
 {
 }
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
