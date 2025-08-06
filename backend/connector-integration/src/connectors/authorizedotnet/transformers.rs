@@ -2317,22 +2317,53 @@ pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, 
         AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
             // For payment profile creation, use the customer_profile_id as the primary identifier
             if let Some(customer_profile_id) = details.payload.customer_profile_id {
+                tracing::debug!(
+                    target: "authorizedotnet_webhook",
+                    "Extracted customer profile ID {} for payment profile creation webhook",
+                    customer_profile_id
+                );
                 Ok(customer_profile_id.to_string())
             } else {
-                details
-                    .payload
-                    .id
-                    .clone()
-                    .ok_or(ConnectorError::WebhookReferenceIdNotFound)
+                match details.payload.id.clone() {
+                    Some(id) => {
+                        tracing::debug!(
+                            target: "authorizedotnet_webhook",
+                            "Extracted transaction ID {} from payment profile webhook payload",
+                            id
+                        );
+                        Ok(id)
+                    }
+                    None => {
+                        tracing::error!(
+                            target: "authorizedotnet_webhook",
+                            "No customer_profile_id or id found in CustomerPaymentProfileCreated webhook payload"
+                        );
+                        Err(ConnectorError::WebhookReferenceIdNotFound)
+                    }
+                }
             }
         }
         _ => {
             // For all other events, use the standard id field
-            details
-                .payload
-                .id
-                .clone()
-                .ok_or(ConnectorError::WebhookReferenceIdNotFound)
+            match details.payload.id.clone() {
+                Some(id) => {
+                    tracing::debug!(
+                        target: "authorizedotnet_webhook",
+                        "Extracted transaction ID {} for webhook event type: {:?}",
+                        id,
+                        details.event_type
+                    );
+                    Ok(id)
+                }
+                None => {
+                    tracing::error!(
+                        target: "authorizedotnet_webhook",
+                        "No transaction ID found in webhook payload for event type: {:?}",
+                        details.event_type
+                    );
+                    Err(ConnectorError::WebhookReferenceIdNotFound)
+                }
+            }
         }
     }
 }

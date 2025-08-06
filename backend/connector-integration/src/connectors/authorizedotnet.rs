@@ -77,19 +77,40 @@ impl IncomingWebhook for Authorizedotnet {
             .or_else(|| request.headers.get("x-anet-signature"))
         {
             Some(header) => header,
-            None => return Ok(false), // Missing signature -> verification fails but continue processing
+            None => {
+                tracing::warn!(
+                    target: "authorizedotnet_webhook",
+                    "Missing X-ANET-Signature header in webhook request from Authorize.Net - verification failed but continuing processing"
+                );
+                return Ok(false); // Missing signature -> verification fails but continue processing
+            }
         };
 
         // Parse "sha512=<hex>" format
         let signature_hex = match signature_header.strip_prefix("sha512=") {
             Some(hex) => hex,
-            None => return Ok(false), // Invalid format -> verification fails but continue processing
+            None => {
+                tracing::warn!(
+                    target: "authorizedotnet_webhook",
+                    "Invalid signature format in X-ANET-Signature header, expected 'sha512=<hex>' but got: '{}' - verification failed but continuing processing",
+                    signature_header
+                );
+                return Ok(false); // Invalid format -> verification fails but continue processing
+            }
         };
 
         // Decode hex signature
         let expected_signature = match hex::decode(signature_hex) {
             Ok(sig) => sig,
-            Err(_) => return Ok(false), // Invalid hex -> verification fails but continue processing
+            Err(hex_error) => {
+                tracing::warn!(
+                    target: "authorizedotnet_webhook",
+                    "Failed to decode hex signature from X-ANET-Signature header: '{}', error: {} - verification failed but continuing processing",
+                    signature_hex,
+                    hex_error
+                );
+                return Ok(false); // Invalid hex -> verification fails but continue processing
+            }
         };
 
         // Compute HMAC-SHA512 of request body
@@ -98,7 +119,14 @@ impl IncomingWebhook for Authorizedotnet {
         let computed_signature = match crypto_algorithm.sign_message(&webhook_secret, &request.body)
         {
             Ok(sig) => sig,
-            Err(_) => return Ok(false), // Crypto error -> verification fails but continue processing
+            Err(crypto_error) => {
+                tracing::error!(
+                    target: "authorizedotnet_webhook",
+                    "Failed to compute HMAC-SHA512 signature for webhook verification, error: {:?} - verification failed but continuing processing",
+                    crypto_error
+                );
+                return Ok(false); // Crypto error -> verification fails but continue processing
+            }
         };
 
         // Constant-time comparison to prevent timing attacks
@@ -114,7 +142,10 @@ impl IncomingWebhook for Authorizedotnet {
         let webhook_body: AuthorizedotnetWebhookEventType = request
             .body
             .parse_struct("AuthorizedotnetWebhookEventType")
-            .change_context(ConnectorError::WebhookEventTypeNotFound)?;
+            .change_context(ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse webhook event type from Authorize.Net webhook body"
+            })?;
 
         Ok(match webhook_body.event_type {
             transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated
@@ -130,6 +161,10 @@ impl IncomingWebhook for Authorizedotnet {
                 EventType::Refund
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::Unknown => {
+                tracing::warn!(
+                    target: "authorizedotnet_webhook",
+                    "Received unknown webhook event type from Authorize.Net - rejecting webhook"
+                );
                 return Err(
                     error_stack::report!(ConnectorError::WebhookEventTypeNotFound)
                         .attach_printable("Unknown webhook event type"),
@@ -148,9 +183,17 @@ impl IncomingWebhook for Authorizedotnet {
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(ConnectorError::WebhookResourceObjectNotFound)?;
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse Authorize.Net payment webhook body structure"
+            })?;
 
-        let transaction_id = get_trans_id(&webhook_body)?;
+        let transaction_id = get_trans_id(&webhook_body).attach_printable_lazy(|| {
+            format!(
+                "Failed to extract transaction ID from payment webhook for event: {:?}",
+                webhook_body.event_type
+            )
+        })?;
         let status = transformers::SyncStatus::from(webhook_body.event_type.clone());
 
         Ok(WebhookDetailsResponse {
@@ -175,9 +218,17 @@ impl IncomingWebhook for Authorizedotnet {
         let webhook_body: AuthorizedotnetWebhookObjectId = request
             .body
             .parse_struct("AuthorizedotnetWebhookObjectId")
-            .change_context(ConnectorError::WebhookResourceObjectNotFound)?;
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse Authorize.Net refund webhook body structure"
+            })?;
 
-        let transaction_id = get_trans_id(&webhook_body)?;
+        let transaction_id = get_trans_id(&webhook_body).attach_printable_lazy(|| {
+            format!(
+                "Failed to extract transaction ID from refund webhook for event: {:?}",
+                webhook_body.event_type
+            )
+        })?;
 
         Ok(RefundWebhookDetailsResponse {
             connector_refund_id: Some(transaction_id.clone()),
