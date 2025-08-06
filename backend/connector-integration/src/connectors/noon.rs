@@ -44,7 +44,6 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 // Local headers module
 mod headers {
     pub const CONTENT_TYPE: &str = "Content-Type";
-    
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
@@ -364,7 +363,13 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let request_ref_id = req.request.connector_refund_id.clone();
+        let request_ref_id = req.request.connector_refund_id.clone();
+        // Validate the refund ID to prevent injection attacks
+        if request_ref_id.is_empty() {
+           return Err(errors::ConnectorError::MissingRequiredField {
+              field_name: "request_ref_id",
+           }.into());
+        }
         Ok(format!(
             "{}payment/v1/order/getbyreference/{}",
             self.connector_base_url_refunds(req),
