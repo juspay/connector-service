@@ -663,18 +663,3 @@ impl<
     > for Payu<T>
 {
 }
-
-// Trait aliases (required for compilation)
-// impl connector_types::RefundV2 for Payu {}
-// impl connector_types::RefundSyncV2 for Payu {}
-// impl connector_types::PaymentSyncV2 for Payu {}
-// impl connector_types::PaymentVoidV2 for Payu {}
-// impl connector_types::PaymentCapture for Payu {}
-// impl connector_types::SetupMandateV2 for Payu {}
-// impl connector_types::AcceptDispute for Payu {}
-// impl connector_types::SubmitEvidenceV2 for Payu {}
-// impl connector_types::DisputeDefend for Payu {}
-// impl connector_types::IncomingWebhook for Payu {}
-// impl connector_types::PaymentOrderCreate for Payu {}
-// impl connector_types::ValidationTrait for Payu {}
-// impl connector_types::RepeatPaymentV2 for Payu {}
