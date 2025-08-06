@@ -14,6 +14,30 @@ use http::request::Request;
 use tonic::metadata;
 
 use crate::error::ResultExtGrpc;
+use common_utils::dapr::FlowName;
+use domain_types::connector_flow::{Capture, PSync, Refund, SetupMandate, Void};
+
+// Helper function to map flow markers to flow names
+pub fn flow_marker_to_flow_name<F>() -> Option<FlowName>
+where
+    F: 'static,
+{
+    let type_id = std::any::TypeId::of::<F>();
+
+    if type_id == std::any::TypeId::of::<PSync>() {
+        Some(FlowName::Psync)
+    } else if type_id == std::any::TypeId::of::<Void>() {
+        Some(FlowName::Void)
+    } else if type_id == std::any::TypeId::of::<Refund>() {
+        Some(FlowName::Refund)
+    } else if type_id == std::any::TypeId::of::<Capture>() {
+        Some(FlowName::Capture)
+    } else if type_id == std::any::TypeId::of::<SetupMandate>() {
+        Some(FlowName::SetupMandate)
+    } else {
+        None
+    }
+}
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {
@@ -316,7 +340,7 @@ macro_rules! implement_connector_operation {
             $crate::utils::log_before_initialization(&request, service_name.as_str()).into_grpc_status()?;
             let start_time = tokio::time::Instant::now();
             let result = Box::pin(async{
-            let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
+            let (connector, _merchant_id, _tenant_id, request_id) = $crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let payload = request.into_inner();
 
@@ -355,13 +379,24 @@ macro_rules! implement_connector_operation {
             };
 
             // Execute connector processing
+            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>()
+                .ok_or_else(|| {
+                    tonic::Status::internal("Unknown flow marker type")
+                })?;
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+                request_id: &request_id,
+            };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,
-                &connector.to_string(),
-                &service_name,
+                event_params,
             )
             .await
             .switch()

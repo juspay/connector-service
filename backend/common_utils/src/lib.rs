@@ -13,6 +13,7 @@ pub mod request;
 pub mod types;
 // Re-export commonly used items
 pub use errors::{CustomResult, ParsingError, ValidationError};
+pub use global_id::{CellId, GlobalPaymentId};
 pub use id_type::{CustomerId, MerchantId};
 pub use pii::{Email, SecretSerdeValue};
 pub use request::{Method, Request, RequestContent};
@@ -20,6 +21,7 @@ pub use types::{
     AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, MinorUnitForConnector,
     StringMajorUnit, StringMajorUnitForConnector, StringMinorUnit,
 };
+pub mod dapr;
 pub mod events;
 pub mod global_id;
 

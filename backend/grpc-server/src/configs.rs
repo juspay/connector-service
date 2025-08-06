@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use common_utils::consts;
+use common_utils::{
+    consts,
+    dapr::{DaprConfig, EventConfig},
+};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
@@ -13,6 +16,10 @@ pub struct Config {
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+    #[serde(default)]
+    pub events: EventConfig,
+    #[serde(default)]
+    pub dapr: DaprConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
