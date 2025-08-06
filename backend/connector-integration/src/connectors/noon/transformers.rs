@@ -28,25 +28,6 @@ const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;
 const GOOGLEPAY_API_VERSION: u8 = 2;
 
 #[derive(Debug, Serialize)]
-pub struct NoonRouterData1<T> {
-    pub amount: StringMajorUnit,
-    pub router_data: T,
-    pub mandate_amount: Option<StringMajorUnit>,
-}
-
-impl<T> From<(StringMajorUnit, T, Option<StringMajorUnit>)> for NoonRouterData1<T> {
-    fn from(
-        (amount, router_data, mandate_amount): (StringMajorUnit, T, Option<StringMajorUnit>),
-    ) -> Self {
-        Self {
-            amount,
-            router_data,
-            mandate_amount,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum NoonChannels {
     Web,
