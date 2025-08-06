@@ -53,7 +53,14 @@ pub enum CheckoutSourceTypes {
 
 // Card source structure
 #[derive(Debug, Serialize)]
-pub struct CardSource <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+pub struct CardSource<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     #[serde(rename = "type")]
     pub source_type: CheckoutSourceTypes,
     pub number: RawCardNumber<T>,
@@ -64,7 +71,14 @@ pub struct CardSource <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker:
 
 // Simple payment request structure
 #[derive(Debug, Serialize)]
-pub struct CheckoutPaymentsRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+pub struct CheckoutPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub source: CardSource<T>,
     pub amount: MinorUnit,
     pub currency: String,
@@ -374,19 +388,36 @@ impl TryFrom<&ConnectorAuthType> for CheckoutAuthType {
 }
 
 // Payment request conversion
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for CheckoutPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: super::CheckoutRouterData<
-                RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-                T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -434,7 +465,15 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Payment response conversion
-impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             CheckoutPaymentsResponse,
@@ -503,11 +542,18 @@ impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::ma
 }
 
 // Implementation for PaymentCaptureRequest
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T
+            T,
         >,
     > for PaymentCaptureRequest
 {
@@ -515,7 +561,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: super::CheckoutRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -547,11 +593,18 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Implementation for RefundRequest
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T
+            T,
         >,
     > for RefundRequest
 {
@@ -559,7 +612,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: super::CheckoutRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -570,11 +623,18 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Implementation for PaymentVoidRequest with the router data generated by the macro
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T
+            T,
         >,
     > for PaymentVoidRequest
 {
@@ -582,7 +642,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: super::CheckoutRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let connector_transaction_id = item.router_data.request.connector_transaction_id.clone();
@@ -905,11 +965,18 @@ impl<F>
 }
 
 // Implementation for CheckoutSyncRequest with CheckoutRouterData - needed for PSync flow
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T
+            T,
         >,
     > for CheckoutSyncRequest
 {
@@ -917,7 +984,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         _item: super::CheckoutRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})
@@ -925,11 +992,18 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 }
 
 // Implementation for CheckoutRefundSyncRequest with CheckoutRouterData
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::CheckoutRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T
+            T,
         >,
     > for CheckoutRefundSyncRequest
 {
@@ -937,7 +1011,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         _item: super::CheckoutRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {})

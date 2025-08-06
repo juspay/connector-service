@@ -431,7 +431,10 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Cashfree<T> {}
+    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Cashfree<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -502,7 +505,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Cashfree<T>
 {
 }
@@ -517,7 +521,8 @@ macro_rules! impl_source_verification_stub {
                     + std::marker::Send
                     + 'static
                     + Serialize,
-            > SourceVerification<$flow, $common_data, $req, $resp> for Cashfree<T> {
+            > SourceVerification<$flow, $common_data, $req, $resp> for Cashfree<T>
+        {
             fn get_secrets(
                 &self,
                 _secrets: ConnectorSourceVerificationSecrets,

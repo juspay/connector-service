@@ -3,13 +3,20 @@ use std::sync::Arc;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence}, connector_types::{
+    connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
+    connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         SubmitEvidenceData,
-    }, errors::{ApiError, ApplicationErrorResponse}, payment_method_data::DefaultPCIHolder, router_data::{ConnectorAuthType, ErrorResponse}, router_data_v2::RouterDataV2, types::{
+    },
+    errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    types::{
         generate_accept_dispute_response, generate_defend_dispute_response,
         generate_submit_evidence_response,
-    }, utils::ForeignTryFrom
+    },
+    utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use external_services;
@@ -96,7 +103,8 @@ impl DisputeService for Disputes {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
             let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-            let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -257,7 +265,8 @@ impl DisputeService for Disputes {
             let payload = request.into_inner();
             let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
 
-            let connector_data: ConnectorData<DefaultPCIHolder> = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,

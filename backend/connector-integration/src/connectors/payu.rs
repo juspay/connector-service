@@ -358,7 +358,6 @@ impl<
         // Payu uses form-based authentication, not headers
         Ok(vec![])
     }
-
 }
 
 // **STUB IMPLEMENTATIONS**: Source Verification Framework stubs for main development

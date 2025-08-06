@@ -10,7 +10,13 @@ use domain_types::{
         RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -57,7 +63,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorServiceTrait<T> for Authorizedotnet<T> {}
+    > ConnectorServiceTrait<T> for Authorizedotnet<T>
+{
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -66,7 +74,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > SetupMandateV2<T> for Authorizedotnet<T> {}
+    > SetupMandateV2<T> for Authorizedotnet<T>
+{
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -87,7 +97,6 @@ impl<
             + Serialize,
     > IncomingWebhook for Authorizedotnet<T>
 {
-
     fn verify_webhook_source(
         &self,
         request: RequestDetails,
@@ -319,7 +328,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > RepeatPaymentV2 for Authorizedotnet<T> {}
+    > RepeatPaymentV2 for Authorizedotnet<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -939,9 +950,14 @@ impl<
             + 'static
             + Serialize,
     >
-    SourceVerification<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Authorizedotnet<T>
-{}
+    SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Authorizedotnet<T>
+{
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -952,7 +968,8 @@ impl<
             + Serialize,
     > SourceVerification<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Authorizedotnet<T>
-{} 
+{
+}
 
 impl<
         T: PaymentMethodDataTypes

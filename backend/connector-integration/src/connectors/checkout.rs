@@ -1,8 +1,6 @@
 pub mod transformers;
 
-use common_utils::{
-    consts, errors::CustomResult, ext_traits::ByteSliceExt,
-};
+use common_utils::{consts, errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -190,7 +188,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::RepeatPaymentV2 for Checkout<T> {}
+    > connector_types::RepeatPaymentV2 for Checkout<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name: Checkout,
@@ -810,7 +810,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Checkout<T>
 {
 }

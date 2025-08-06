@@ -152,7 +152,9 @@ impl_check_integrity!(RepeatPaymentData);
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
 // ========================================================================
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject> for PaymentsAuthorizeData<T> {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthoriseIntegrityObject>
+    for PaymentsAuthorizeData<T>
+{
     fn get_response_integrity_object(&self) -> Option<AuthoriseIntegrityObject> {
         self.integrity_object.clone()
     }
@@ -178,7 +180,9 @@ impl GetIntegrityObject<CreateOrderIntegrityObject> for PaymentCreateOrderData {
     }
 }
 
-impl<T: PaymentMethodDataTypes> GetIntegrityObject<SetupMandateIntegrityObject> for SetupMandateRequestData<T> {
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<SetupMandateIntegrityObject>
+    for SetupMandateRequestData<T>
+{
     fn get_response_integrity_object(&self) -> Option<SetupMandateIntegrityObject> {
         self.integrity_object.clone()
     }

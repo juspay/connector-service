@@ -3,7 +3,13 @@ use std::sync::Arc;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
-    connector_flow::{FlowName, RSync}, connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData}, errors::{ApiError, ApplicationErrorResponse}, payment_method_data::DefaultPCIHolder, router_data::ConnectorAuthType, types::generate_refund_sync_response, utils::ForeignTryFrom
+    connector_flow::{FlowName, RSync},
+    connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
+    errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
+    router_data::ConnectorAuthType,
+    types::generate_refund_sync_response,
+    utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
 use external_services;

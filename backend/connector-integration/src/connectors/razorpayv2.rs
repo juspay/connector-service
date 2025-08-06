@@ -212,15 +212,16 @@ impl<
             PaymentCreateOrderResponse,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_router_data:razorpayv2::RazorpayV2RouterData<&PaymentCreateOrderData, T> = razorpayv2::RazorpayV2RouterData::try_from((
-            req.request.amount,
-            &req.request,
-            Some(
-                req.resource_common_data
-                    .connector_request_reference_id
-                    .clone(),
-            ),
-        ))?;
+        let connector_router_data: razorpayv2::RazorpayV2RouterData<&PaymentCreateOrderData, T> =
+            razorpayv2::RazorpayV2RouterData::try_from((
+                req.request.amount,
+                &req.request,
+                Some(
+                    req.resource_common_data
+                        .connector_request_reference_id
+                        .clone(),
+                ),
+            ))?;
         let connector_req =
             razorpayv2::RazorpayV2CreateOrderRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
@@ -617,7 +618,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > interfaces::connector_types::RepeatPaymentV2 for RazorpayV2<T> {}
+    > interfaces::connector_types::RepeatPaymentV2 for RazorpayV2<T>
+{
+}
 
 // Stub implementations for flows not yet implemented
 impl<
@@ -887,8 +890,13 @@ impl<
             i.set_response_body(&response)
         }
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, res.response.to_vec()))
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((
+            response,
+            data.clone(),
+            res.status_code,
+            res.response.to_vec(),
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -947,7 +955,9 @@ impl<
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = &req.resource_common_data.connectors.razorpayv2.base_url;
         let connector_payment_id = &req.request.connector_transaction_id;
-        Ok(format!("{base_url}v1/payments/{connector_payment_id}/refund"))
+        Ok(format!(
+            "{base_url}v1/payments/{connector_payment_id}/refund"
+        ))
     }
 
     fn get_request_body(
@@ -963,13 +973,11 @@ impl<
             .amount_converter
             .convert(req.request.minor_refund_amount, req.request.currency)
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let connector_router_data = razorpayv2::RazorpayV2RouterData::<&RefundsData, DefaultPCIHolder>::try_from((
-            converted_amount,
-            &req.request,
-            None,
-        ))?;
-        let connector_req =
-            razorpayv2::RazorpayV2RefundRequest::try_from(&connector_router_data)?;
+        let connector_router_data = razorpayv2::RazorpayV2RouterData::<
+            &RefundsData,
+            DefaultPCIHolder,
+        >::try_from((converted_amount, &req.request, None))?;
+        let connector_req = razorpayv2::RazorpayV2RefundRequest::try_from(&connector_router_data)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
@@ -1001,8 +1009,13 @@ impl<
             i.set_response_body(&response)
         }
 
-        RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, res.response.to_vec()))
-            .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        RouterDataV2::foreign_try_from((
+            response,
+            data.clone(),
+            res.status_code,
+            res.response.to_vec(),
+        ))
+        .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 
     fn get_error_response_v2(
@@ -1258,7 +1271,7 @@ impl<
 {
 }
 
-impl <
+impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
             + std::marker::Sync
@@ -1282,6 +1295,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for RazorpayV2<T>
-{}
+{
+}

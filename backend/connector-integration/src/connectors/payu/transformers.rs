@@ -231,11 +231,23 @@ pub struct PayuErrorResponse {
 }
 
 // Request conversion with Framework Integration
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         super::PayuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-            T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for PayuPaymentRequest
 {
@@ -243,7 +255,13 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
 
     fn try_from(
         item: super::PayuRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Extract router data
@@ -388,7 +406,14 @@ fn generate_udf_fields(
 }
 
 // UPI app name determination based on Haskell getUpiAppName implementation
-fn determine_upi_app_name<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >(
+fn determine_upi_app_name<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<Option<String>, ConnectorError> {
     // From Haskell getUpiAppName implementation:
@@ -435,7 +460,14 @@ fn determine_upi_app_name<T:PaymentMethodDataTypes + std::fmt::Debug + std::mark
 
 // PayU flow determination based on Haskell getTxnS2SType implementation
 #[allow(clippy::type_complexity)]
-fn determine_upi_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >(
+fn determine_upi_flow<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     request: &PaymentsAuthorizeData<T>,
 ) -> Result<(Option<String>, Option<String>, Option<String>, String), ConnectorError> {
     // Based on Haskell implementation:
@@ -504,7 +536,16 @@ fn determine_upi_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::
     }
 }
 
-pub fn is_upi_collect_flow<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >(request: &PaymentsAuthorizeData<T>) -> bool {
+pub fn is_upi_collect_flow<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    request: &PaymentsAuthorizeData<T>,
+) -> bool {
     // Check if the payment method is UPI Collect
     matches!(
         request.payment_method_data,
@@ -564,11 +605,23 @@ fn generate_payu_hash(
 }
 
 // Response conversion with Framework Integration
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             PayuPaymentResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -577,7 +630,12 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
     fn try_from(
         item: ResponseRouterData<
             PayuPaymentResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let response = item.response;

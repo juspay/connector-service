@@ -1539,7 +1539,7 @@ macro_rules! payment_method_not_supported {
     };
 }
 
-impl<T:PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodDataType {
+impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodDataType {
     fn from(pm_data: PaymentMethodData<T>) -> Self {
         match pm_data {
             PaymentMethodData::Card(_) => Self::Card,

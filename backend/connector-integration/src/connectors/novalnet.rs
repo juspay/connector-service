@@ -1,11 +1,8 @@
 pub mod transformers;
 
-use std::fmt::Debug;
 use base64::Engine;
 use common_enums::CurrencyUnit;
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
-};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -31,6 +28,7 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers::{
     self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest,
     NovalnetCaptureResponse, NovalnetPSyncResponse, NovalnetPaymentsRequest,
@@ -55,154 +53,64 @@ pub(crate) mod headers {
 }
 
 // Trait implementations with generic type parameters
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSyncV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundSyncV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentCapture for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::ValidationTrait for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::SetupMandateV2<T> for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::RepeatPaymentV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2 for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::AcceptDispute for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::SubmitEvidenceV2 for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::DisputeDefend for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Novalnet<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::IncomingWebhook for Novalnet<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Novalnet<T>
 {
 }
 
@@ -295,14 +203,9 @@ macros::create_all_prerequisites!(
     }
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for Novalnet<T> {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Novalnet<T>
+{
     fn id(&self) -> &'static str {
         "novalnet"
     }
@@ -615,14 +518,7 @@ macros::macro_connector_implementation!(
 );
 
 // Stub implementations for unsupported flows
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -632,52 +528,26 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Novalnet<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Novalnet<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
     for Novalnet<T>
 {
 }
 
 // SourceVerification implementations for all flows
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
@@ -687,14 +557,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
@@ -704,14 +567,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
@@ -721,14 +577,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
@@ -738,14 +587,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
@@ -755,14 +597,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
@@ -772,14 +607,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
@@ -789,14 +617,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
@@ -806,14 +627,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
@@ -823,14 +637,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
@@ -840,14 +647,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
@@ -857,14 +657,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,

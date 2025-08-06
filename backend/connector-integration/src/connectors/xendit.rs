@@ -169,7 +169,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::RepeatPaymentV2 for Xendit<T> {}
+    > connector_types::RepeatPaymentV2 for Xendit<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name:  Xendit,
@@ -762,7 +764,8 @@ impl<
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
     > for Xendit<T>
-{}
+{
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -772,7 +775,8 @@ impl<
             + 'static
             + Serialize,
     > connector_types::IncomingWebhook for Xendit<T>
-{}
+{
+}
 
 impl<
         T: PaymentMethodDataTypes
@@ -798,6 +802,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Xendit<T>
-{} 
+{
+}

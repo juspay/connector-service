@@ -105,7 +105,9 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(Card {
-                        card_number: RawCardNumber(CardNumber::from_str("5123456789012346").unwrap()),
+                        card_number: RawCardNumber(
+                            CardNumber::from_str("5123456789012346").unwrap(),
+                        ),
                         card_exp_month: "12".to_string().into(),
                         card_exp_year: "2026".to_string().into(),
                         card_cvc: "123".to_string().into(),
@@ -527,7 +529,9 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(Card {
-                        card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
+                        card_number: RawCardNumber(
+                            CardNumber::from_str("5123450000000008").unwrap(),
+                        ),
                         card_exp_month: "12".to_string().into(),
                         card_exp_year: "2025".to_string().into(),
                         card_cvc: "123".to_string().into(),
@@ -659,13 +663,14 @@ mod tests {
 
             let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-            let result = <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<DefaultPCIHolder>,
-                PaymentsResponseData,
-            >>::get_error_response_v2(&**connector, http_response, None)
-            .unwrap();
+            let result =
+                <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<DefaultPCIHolder>,
+                    PaymentsResponseData,
+                >>::get_error_response_v2(&**connector, http_response, None)
+                .unwrap();
 
             let actual_json = to_value(&result).unwrap();
 
@@ -704,12 +709,13 @@ mod tests {
 
             let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-            let result = <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<DefaultPCIHolder>,
-                PaymentsResponseData,
-            >>::get_error_response_v2(&**connector, http_response, None);
+            let result =
+                <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<DefaultPCIHolder>,
+                    PaymentsResponseData,
+                >>::get_error_response_v2(&**connector, http_response, None);
 
             assert!(
                 result.is_err(),
@@ -744,12 +750,13 @@ mod tests {
 
         let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<DefaultPCIHolder>,
-            PaymentsResponseData,
-        >>::get_error_response_v2(&**connector, http_response, None);
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
+                PaymentsResponseData,
+            >>::get_error_response_v2(&**connector, http_response, None);
 
         assert!(
             result.is_err(),
@@ -1098,7 +1105,10 @@ mod tests {
 
         use common_utils::{pii::Email, request::RequestContent};
         use domain_types::{
-            payment_address::{Address, PhoneDetails}, payment_method_data::DefaultPCIHolder, router_data::ConnectorAuthType, types::{ConnectorParams, Connectors}
+            payment_address::{Address, PhoneDetails},
+            payment_method_data::DefaultPCIHolder,
+            router_data::ConnectorAuthType,
+            types::{ConnectorParams, Connectors},
         };
         use interfaces::connector_types::BoxedConnector;
         use serde_json::{to_value, Value};
@@ -1802,13 +1812,14 @@ mod tests {
         };
         let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >>::get_error_response_v2(&**connector, http_response, None)
-        .unwrap();
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                domain_types::connector_flow::CreateOrder,
+                domain_types::connector_types::PaymentFlowData,
+                domain_types::connector_types::PaymentCreateOrderData,
+                domain_types::connector_types::PaymentCreateOrderResponse,
+            >>::get_error_response_v2(&**connector, http_response, None)
+            .unwrap();
 
         let actual_json = to_value(&result).unwrap();
         let expected_json = json!({
@@ -1832,12 +1843,13 @@ mod tests {
 
         let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >>::get_error_response_v2(&**connector, http_response, None);
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                domain_types::connector_flow::CreateOrder,
+                domain_types::connector_types::PaymentFlowData,
+                domain_types::connector_types::PaymentCreateOrderData,
+                domain_types::connector_types::PaymentCreateOrderResponse,
+            >>::get_error_response_v2(&**connector, http_response, None);
 
         assert!(result.is_err(), "Expected error for invalid JSON");
     }
@@ -1856,12 +1868,13 @@ mod tests {
 
         let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >>::get_error_response_v2(&**connector, http_response, None);
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                domain_types::connector_flow::CreateOrder,
+                domain_types::connector_types::PaymentFlowData,
+                domain_types::connector_types::PaymentCreateOrderData,
+                domain_types::connector_types::PaymentCreateOrderResponse,
+            >>::get_error_response_v2(&**connector, http_response, None);
 
         assert!(result.is_err(), "Expected error for missing 'error' field");
     }

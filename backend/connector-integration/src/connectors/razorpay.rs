@@ -207,7 +207,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::RepeatPaymentV2 for Razorpay<T>{}
+    > connector_types::RepeatPaymentV2 for Razorpay<T>
+{
+}
 
 impl<T> Razorpay<T> {
     pub const fn new() -> &'static Self {
@@ -401,12 +403,7 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<
-        RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         errors::ConnectorError,
     > {
         // Handle UPI payments differently from regular payments
@@ -1323,8 +1320,7 @@ impl<
 {
 }
 
-impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder>
-{
+impl connector_types::ConnectorValidation for Razorpay<DefaultPCIHolder> {
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,
@@ -1444,7 +1440,14 @@ impl<
     }
 }
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
@@ -1454,7 +1457,14 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
 {
 }
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize >
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,

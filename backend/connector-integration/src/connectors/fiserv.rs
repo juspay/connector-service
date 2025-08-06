@@ -205,7 +205,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::RepeatPaymentV2 for Fiserv<T>{}
+    > connector_types::RepeatPaymentV2 for Fiserv<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name: Fiserv,
@@ -886,7 +888,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Fiserv<T>
 {
 }

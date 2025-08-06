@@ -247,8 +247,10 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
 pub fn get_card_details<T>(
     payment_method_data: PaymentMethodData<T>,
     connector_name: &'static str,
-) -> Result<Card<T>, errors::ConnectorError> 
-where T: PaymentMethodDataTypes {
+) -> Result<Card<T>, errors::ConnectorError>
+where
+    T: PaymentMethodDataTypes,
+{
     match payment_method_data {
         PaymentMethodData::Card(details) => Ok(details),
         _ => Err(errors::ConnectorError::NotSupported {
@@ -263,8 +265,10 @@ pub fn is_mandate_supported<T>(
     payment_method_type: Option<PaymentMethodType>,
     mandate_implemented_pmds: HashSet<PaymentMethodDataType>,
     connector: &'static str,
-) -> core::result::Result<(), Error> 
-where T: PaymentMethodDataTypes {
+) -> core::result::Result<(), Error>
+where
+    T: PaymentMethodDataTypes,
+{
     if mandate_implemented_pmds.contains(&PaymentMethodDataType::from(selected_pmd.clone())) {
         Ok(())
     } else {

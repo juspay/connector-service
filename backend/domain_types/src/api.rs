@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::{payment_method_data::{DefaultPCIHolder, PaymentMethodData}, router_response_types::RedirectForm};
+use crate::{
+    payment_method_data::{DefaultPCIHolder, PaymentMethodData},
+    router_response_types::RedirectForm,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RedirectionFormData {

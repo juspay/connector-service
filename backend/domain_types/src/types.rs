@@ -1,9 +1,9 @@
 use core::result::Result;
-use std::{fmt::Debug, borrow::Cow, collections::HashMap, str::FromStr};
+use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use crate::{
-    payment_address, router_request_types,
-    router_request_types::BrowserInformation, router_response_types,
+    payment_address, router_request_types, router_request_types::BrowserInformation,
+    router_response_types,
 };
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, request::Method};
@@ -38,7 +38,10 @@ use crate::{
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
-    payment_method_data::{self, PaymentMethodData, DefaultPCIHolder, PaymentMethodDataTypes, RawCardNumber, VaultTokenHolder},
+    payment_method_data::{
+        self, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VaultTokenHolder,
+    },
     router_data_v2::RouterDataV2,
     utils::{ForeignFrom, ForeignTryFrom},
 };
@@ -295,8 +298,13 @@ pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
 impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
     fn convert_card_details(
         card: grpc_api_types::payments::CardDetails,
-    ) -> Result<payment_method_data::Card<DefaultPCIHolder>, error_stack::Report<ApplicationErrorResponse>> {
-        let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
+    ) -> Result<
+        payment_method_data::Card<DefaultPCIHolder>,
+        error_stack::Report<ApplicationErrorResponse>,
+    > {
+        let card_network = Some(common_enums::CardNetwork::foreign_try_from(
+            card.card_network(),
+        )?);
         Ok(payment_method_data::Card {
             card_number: RawCardNumber::<DefaultPCIHolder>(
                 cards::CardNumber::from_str(&card.card_number).change_context(
@@ -327,7 +335,10 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
 impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
     fn convert_card_details(
         card: grpc_api_types::payments::CardDetails,
-    ) -> Result<payment_method_data::Card<VaultTokenHolder>, error_stack::Report<ApplicationErrorResponse>> {
+    ) -> Result<
+        payment_method_data::Card<VaultTokenHolder>,
+        error_stack::Report<ApplicationErrorResponse>,
+    > {
         Ok(payment_method_data::Card {
             card_number: RawCardNumber(card.card_number),
             card_exp_month: card.card_exp_month.into(),
@@ -346,8 +357,7 @@ impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
 }
 
 // Generic ForeignTryFrom implementation using the helper trait
-impl<T> ForeignTryFrom<grpc_api_types::payments::CardDetails>
-    for payment_method_data::Card<T>
+impl<T> ForeignTryFrom<grpc_api_types::payments::CardDetails> for payment_method_data::Card<T>
 where
     T: PaymentMethodDataTypes
         + Default

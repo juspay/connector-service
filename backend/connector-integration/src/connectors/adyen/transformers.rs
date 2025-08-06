@@ -19,7 +19,9 @@ use domain_types::{
         RefundsResponseData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData},
+    payment_method_data::{
+        Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -64,7 +66,14 @@ pub enum ConnectorError {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AdyenCard<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+pub struct AdyenCard<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     number: RawCardNumber<T>,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
@@ -77,7 +86,14 @@ pub struct AdyenCard<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::S
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
-pub enum AdyenPaymentMethod<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+pub enum AdyenPaymentMethod<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     #[serde(rename = "scheme")]
     AdyenCard(Box<AdyenCard<T>>),
     #[serde(rename = "googlepay")]
@@ -118,7 +134,14 @@ pub struct Address {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-pub enum PaymentMethod<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
+pub enum PaymentMethod<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     AdyenPaymentMethod(Box<AdyenPaymentMethod<T>>),
 }
 
@@ -143,7 +166,15 @@ pub enum AdyenShopperInteraction {
     Pos,
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> From<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    From<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
     for AdyenShopperInteraction
 {
     fn from(
@@ -451,7 +482,14 @@ pub enum AdyenSplitType {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AdyenPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize > {
+pub struct AdyenPaymentRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     amount: Amount,
     merchant_account: Secret<String>,
     payment_method: PaymentMethod<T>,
@@ -484,7 +522,14 @@ pub struct AdyenPaymentRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std:
 }
 
 #[derive(Debug, Serialize)]
-pub struct SetupMandateRequest<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(AdyenPaymentRequest<T>);
+pub struct SetupMandateRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(AdyenPaymentRequest<T>);
 
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Serialize)]
@@ -510,9 +555,17 @@ impl<T> TryFrom<(MinorUnit, T)> for AdyenRouterData1<T> {
     }
 }
 
-fn get_amount_data<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn get_amount_data<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &AdyenRouterData<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
     >,
 ) -> Amount {
     Amount {
@@ -551,7 +604,15 @@ impl TryFrom<&ConnectorAuthType> for AdyenAuthType {
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<(&Card<T>, Option<String>)> for AdyenPaymentMethod<T> {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<(&Card<T>, Option<String>)> for AdyenPaymentMethod<T>
+{
     type Error = domain_types::errors::ConnectorError;
     fn try_from((card, card_holder_name): (&Card<T>, Option<String>)) -> Result<Self, Self::Error> {
         let adyen_card = AdyenCard {
@@ -567,7 +628,14 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<(
         &WalletData,
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -577,7 +645,12 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         value: (
             &WalletData,
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         ),
     ) -> Result<Self, Self::Error> {
         let (wallet_data, _item) = value;
@@ -630,10 +703,23 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<(
         AdyenRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
         &Card<T>,
     )> for AdyenPaymentRequest<T>
@@ -648,7 +734,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     PaymentsAuthorizeData<T>,
                     PaymentsResponseData,
                 >,
-                T
+                T,
             >,
             &Card<T>,
         ),
@@ -719,10 +805,23 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<(
         AdyenRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
         &WalletData,
     )> for AdyenPaymentRequest<T>
@@ -737,7 +836,7 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     PaymentsAuthorizeData<T>,
                     PaymentsResponseData,
                 >,
-                T
+                T,
             >,
             &WalletData,
         ),
@@ -791,18 +890,36 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-        
     > for AdyenPaymentRequest<T>
 {
     type Error = Error;
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         match item
@@ -844,17 +961,26 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for AdyenRedirectRequest
 {
     type Error = Error;
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let encoded_data = item
@@ -895,15 +1021,26 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     }
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        AdyenRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+        AdyenRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     > for AdyenVoidRequest
 {
     type Error = Error;
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1050,7 +1187,15 @@ fn get_adyen_payment_status(
     }
 }
 
-impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<AdyenPaymentResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
@@ -1572,7 +1717,14 @@ fn build_shopper_reference(
 
 type RecurringDetails = (Option<AdyenRecurringModel>, Option<bool>, Option<String>);
 
-fn get_recurring_processing_model<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn get_recurring_processing_model<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Result<RecurringDetails, Error> {
     let customer_id = item
@@ -1612,7 +1764,14 @@ fn get_recurring_processing_model<T:PaymentMethodDataTypes + std::fmt::Debug + s
     }
 }
 
-fn is_mandate_payment<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn is_mandate_payment<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> bool {
     (item.request.setup_future_usage == Some(common_enums::FutureUsage::OffSession))
@@ -1643,7 +1802,14 @@ pub fn get_address_info(
     })
 }
 
-fn get_additional_data<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn get_additional_data<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 ) -> Option<AdditionalData> {
     let (authorisation_type, manual_capture) = match item.request.capture_method {
@@ -1840,14 +2006,23 @@ pub struct AdyenRefundResponse {
     status: String,
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    TryFrom<AdyenRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for AdyenRefundRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        AdyenRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for AdyenRefundRequest
 {
     type Error = Error;
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1905,17 +2080,26 @@ pub struct AdyenCaptureRequest {
     reference: String,
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for AdyenCaptureRequest
 {
     type Error = Error;
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1994,7 +2178,14 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
     }
 }
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<(
         AdyenRouterData<
             RouterDataV2<
@@ -2002,7 +2193,8 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
                 PaymentsResponseData,
-            >, T
+            >,
+            T,
         >,
         &Card<T>,
     )> for SetupMandateRequest<T>
@@ -2016,7 +2208,8 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
                     PaymentFlowData,
                     SetupMandateRequestData<T>,
                     PaymentsResponseData,
-                >, T
+                >,
+                T,
             >,
             &Card<T>,
         ),
@@ -2096,7 +2289,14 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
     }
 }
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
             RouterDataV2<
@@ -2104,7 +2304,8 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
                 PaymentsResponseData,
-            >, T
+            >,
+            T,
         >,
     > for SetupMandateRequest<T>
 {
@@ -2116,7 +2317,8 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
                 PaymentsResponseData,
-            >, T
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         match item
@@ -2156,7 +2358,15 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
     }
 }
 
-impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = Error;
@@ -2190,9 +2400,22 @@ impl<F, T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::ma
     }
 }
 
-fn get_amount_data_for_setup_mandate<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn get_amount_data_for_setup_mandate<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &AdyenRouterData<
-        RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, T
+        RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
+        T,
     >,
 ) -> Amount {
     Amount {
@@ -2201,9 +2424,21 @@ fn get_amount_data_for_setup_mandate<T:PaymentMethodDataTypes + std::fmt::Debug 
     }
 }
 
-impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     From<
-        &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        &RouterDataV2<
+            SetupMandate,
+            PaymentFlowData,
+            SetupMandateRequestData<T>,
+            PaymentsResponseData,
+        >,
     > for AdyenShopperInteraction
 {
     fn from(
@@ -2221,7 +2456,14 @@ impl<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marke
     }
 }
 
-fn get_recurring_processing_model_for_setup_mandate<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn get_recurring_processing_model_for_setup_mandate<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -2266,7 +2508,14 @@ fn get_recurring_processing_model_for_setup_mandate<T:PaymentMethodDataTypes + s
     }
 }
 
-fn get_additional_data_for_setup_mandate<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn get_additional_data_for_setup_mandate<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -2315,7 +2564,14 @@ fn get_additional_data_for_setup_mandate<T:PaymentMethodDataTypes + std::fmt::De
     }
 }
 
-fn is_mandate_payment_for_setup_mandate<T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>(
+fn is_mandate_payment_for_setup_mandate<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &RouterDataV2<
         SetupMandate,
         PaymentFlowData,
@@ -2338,10 +2594,18 @@ pub struct AdyenDisputeAcceptRequest {
     pub merchant_account_code: String,
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+            T,
         >,
     > for AdyenDisputeAcceptRequest
 {
@@ -2349,7 +2613,8 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>, T
+            RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -2540,10 +2805,18 @@ fn get_content(item: Vec<u8>) -> String {
     STANDARD.encode(item)
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+            T,
         >,
     > for AdyenDisputeSubmitEvidenceRequest
 {
@@ -2551,7 +2824,8 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>, T
+            RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -2651,10 +2925,18 @@ pub struct AdyenDefendDisputeRequest {
     defense_reason_code: String,
 }
 
-impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AdyenRouterData<
-            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+            T,
         >,
     > for AdyenDefendDisputeRequest
 {
@@ -2662,7 +2944,8 @@ impl <T:PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
     fn try_from(
         item: AdyenRouterData<
-            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>, T
+            RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth_type = AdyenAuthType::try_from(&item.router_data.connector_auth_type)?;

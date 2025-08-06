@@ -11,7 +11,8 @@ mod tests {
     #[test]
     fn test_cashfree_connector_creation() {
         // Basic test to ensure connector can be created
-        let connector: &connectors::cashfree::Cashfree<DefaultPCIHolder> = super::super::Cashfree::new();
+        let connector: &connectors::cashfree::Cashfree<DefaultPCIHolder> =
+            super::super::Cashfree::new();
         assert_eq!(connector.id(), "cashfree");
     }
 }

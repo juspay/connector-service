@@ -3,10 +3,10 @@ use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBran
 use common_utils::{new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email};
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
-use serde::{Deserialize, de::DeserializeOwned, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::fmt::Debug;
 use time::Date;
 use utoipa::ToSchema;
-use std::fmt::Debug;
 
 use crate::{
     router_data::NetworkTokenNumber,
@@ -29,9 +29,8 @@ pub struct Card<T: PaymentMethodDataTypes> {
     pub co_badged_card_data: Option<CoBadgedCardData>,
 }
 
-
 pub trait PaymentMethodDataTypes: Clone {
-    type Inner: Default + Debug+ Send + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
+    type Inner: Default + Debug + Send + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
 }
 
 /// PCI holder implementation for handling raw PCI data
@@ -64,7 +63,6 @@ impl PaymentMethodDataTypes for DefaultPCIHolder {
 impl PaymentMethodDataTypes for VaultTokenHolder {
     type Inner = String; //Token
 }
-
 
 impl Card<DefaultPCIHolder> {
     pub fn get_card_expiry_year_2_digit(

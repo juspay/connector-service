@@ -7,8 +7,7 @@ pub mod fiserv;
 pub mod razorpayv2;
 
 pub use self::{
-    adyen::Adyen,
-    authorizedotnet::Authorizedotnet, fiserv::Fiserv, razorpay::Razorpay,
+    adyen::Adyen, authorizedotnet::Authorizedotnet, fiserv::Fiserv, razorpay::Razorpay,
     razorpayv2::RazorpayV2,
 };
 

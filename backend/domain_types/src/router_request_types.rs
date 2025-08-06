@@ -7,7 +7,10 @@ use common_utils::{
 use hyperswitch_masking::Secret;
 use serde::Serialize;
 
-use crate::{payment_method_data::{PaymentMethodData, PaymentMethodDataTypes}, utils::missing_field_err};
+use crate::{
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
+    utils::missing_field_err,
+};
 
 pub type Error = error_stack::Report<crate::errors::ConnectorError>;
 

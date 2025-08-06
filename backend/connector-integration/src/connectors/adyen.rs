@@ -1,16 +1,17 @@
-
 mod test;
 pub mod transformers;
-use std::{sync::LazyLock, fmt::Debug, marker::{Sync, Send}};
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+    sync::LazyLock,
+};
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue,
-};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate,
@@ -59,125 +60,55 @@ pub(crate) mod headers {
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::ConnectorServiceTrait<T> for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthorizeV2<T> for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSyncV2 for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentVoidV2 for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundSyncV2 for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::RefundV2 for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentCapture for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::SetupMandateV2<T> for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::AcceptDispute for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::SubmitEvidenceV2 for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Adyen<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::DisputeDefend for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Adyen<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::RepeatPaymentV2 for Adyen<T> {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2 for Adyen<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name: Adyen,
@@ -278,14 +209,8 @@ macros::create_all_prerequisites!(
     }
 );
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorCommon for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Adyen<T>
 {
     fn id(&self) -> &'static str {
         "adyen"
@@ -425,37 +350,17 @@ macros::macro_connector_implementation!(
     }
 );
 
-
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::ValidationTrait for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Adyen<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Adyen<T>
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
@@ -524,28 +429,14 @@ macros::macro_connector_implementation!(
     }
 );
 
-
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for Adyen<T>
 {
 }
 
 // SourceVerification implementations for all flows
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
@@ -555,14 +446,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
@@ -572,14 +456,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
@@ -589,14 +466,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
@@ -606,14 +476,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
@@ -623,14 +486,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
@@ -640,14 +496,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
@@ -657,14 +506,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
@@ -674,14 +516,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
@@ -691,14 +526,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
@@ -708,14 +536,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
@@ -725,14 +546,8 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    > connector_types::IncomingWebhook for Adyen<T>
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Adyen<T>
 {
     fn get_event_type(
         &self,
@@ -868,7 +683,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Adyen,
@@ -896,7 +710,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -957,7 +770,6 @@ macros::macro_connector_implementation!(
         }
     }
 );
-
 
 static ADYEN_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
     let adyen_supported_capture_methods = vec![
@@ -1067,14 +879,7 @@ impl ConnectorValidation for Adyen<DefaultPCIHolder> {
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,
@@ -1084,14 +889,7 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + Debug
-            + Sync
-            + Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         domain_types::connector_flow::RepeatPayment,
         PaymentFlowData,

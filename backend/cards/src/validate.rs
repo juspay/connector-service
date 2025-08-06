@@ -1,7 +1,8 @@
 use std::{collections::HashMap, fmt, ops::Deref, str::FromStr, sync::LazyLock};
 
 use common_utils::{
-    consts::{MAX_CARD_NUMBER_LENGTH, MIN_CARD_NUMBER_LENGTH}, date_time, ValidationError
+    consts::{MAX_CARD_NUMBER_LENGTH, MIN_CARD_NUMBER_LENGTH},
+    date_time, ValidationError,
 };
 use error_stack::report;
 use hyperswitch_masking::{PeekInterface, Strategy, StrongSecret, WithType};
@@ -19,7 +20,6 @@ pub struct CardNumberValidationErr(&'static str);
 /// Card number
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 pub struct CardNumber(StrongSecret<String, CardNumberStrategy>);
-
 
 //Network Token
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
