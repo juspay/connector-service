@@ -1,0 +1,90 @@
+name: Proto Code Generation
+
+on:
+  push:
+    paths:
+      - 'backend/grpc-api-types/proto/**'
+      - 'tools/proto-codegen/**'
+      - '.github/workflows/proto-codegen.yml'
+  pull_request:
+    paths:
+      - 'backend/grpc-api-types/proto/**'
+      - 'tools/proto-codegen/**'
+      - '.github/workflows/proto-codegen.yml'
+
+jobs:
+  check-proto-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      proto-changed: ${{ steps.filter.outputs.proto }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            proto:
+              - 'backend/grpc-api-types/proto/**'
+
+  regenerate-clients:
+    needs: check-proto-changes
+    if: needs.check-proto-changes.outputs.proto-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Cache cargo build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+      
+      - name: Generate SDK Clients
+        run: |
+          ./scripts/regenerate-sdks.sh || true
+      
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [[ -n $(git status --porcelain ./sdk/rust-grpc-client/src/gen) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Pull Request
+        if: steps.check-changes.outputs.changes == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: regenerate gRPC clients after proto changes"
+          title: "Auto-generated: Update gRPC clients"
+          body: |
+            This PR was automatically generated because proto files were changed.
+            
+            The following clients have been regenerated:
+            - Rust gRPC client
+            
+            Please review the changes and merge if everything looks correct.
+          branch: auto/proto-codegen-${{ github.sha }}
+          delete-branch: true
+          labels: |
+            auto-generated
+            proto-update

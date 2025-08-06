@@ -409,3 +409,6 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+
+# SDK specific - ignore Cargo.lock for standalone SDK packages
+sdk/rust-grpc-client/Cargo.lock
