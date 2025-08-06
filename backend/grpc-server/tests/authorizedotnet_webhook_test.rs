@@ -130,7 +130,7 @@ fn generate_webhook_signature(webhook_body: &[u8], secret: &str) -> String {
     // Convert bytes to hex string manually
     let mut hex_string = String::with_capacity(signature.len() * 2);
     for &byte in &signature {
-        hex_string.push_str(&format!("{:02x}", byte));
+        hex_string.push_str(&format!("{byte:02x}"));
     }
 
     format!("sha512={hex_string}")
