@@ -79,7 +79,7 @@ use common_enums::{AttemptStatus, Currency};
 use common_utils::{
     errors::CustomResult,
     request::Method,
-    types::{AmountConvertor, MinorUnit, StringMajorUnit},
+    types::{AmountConvertor, StringMajorUnit},
     Email,
 };
 use domain_types::{
@@ -702,7 +702,7 @@ pub struct PaytmRouterData {
 // Helper struct for Authorize flow RouterData transformation
 #[derive(Debug, Clone)]
 pub struct PaytmAuthorizeRouterData {
-    pub amount: MinorUnit,
+    pub amount: StringMajorUnit,
     pub currency: Currency,
     pub payment_id: String,
     pub session_token: String,
@@ -804,27 +804,19 @@ impl PaytmInitiateTxnRequest {
 }
 
 // Request transformation for Authorize flow
-impl
-    TryFrom<
-        &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Authorize,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthorizeData,
-            domain_types::connector_types::PaymentsResponseData,
-        >,
-    > for PaytmAuthorizeRouterData
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
+impl PaytmAuthorizeRouterData {
+    pub fn try_from_with_converter(
         item: &domain_types::router_data_v2::RouterDataV2<
             domain_types::connector_flow::Authorize,
             domain_types::connector_types::PaymentFlowData,
             domain_types::connector_types::PaymentsAuthorizeData,
             domain_types::connector_types::PaymentsResponseData,
         >,
-    ) -> Result<Self, Self::Error> {
-        let amount_minor_units = item.request.minor_amount;
+        amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
+    ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
+        let amount = amount_converter
+            .convert(item.request.minor_amount, item.request.currency)
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
         let customer_id = item
             .resource_common_data
             .get_customer_id()
@@ -841,7 +833,7 @@ impl
         let session_token = item.resource_common_data.get_session_token()?;
 
         Ok(Self {
-            amount: amount_minor_units,
+            amount,
             currency: item.request.currency,
             payment_id: item
                 .resource_common_data
@@ -1175,8 +1167,10 @@ impl
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let intermediate_authorize_router_data =
-            PaytmAuthorizeRouterData::try_from(&item.router_data)?;
+        let intermediate_authorize_router_data = PaytmAuthorizeRouterData::try_from_with_converter(
+            &item.router_data,
+            item.connector.amount_converter,
+        )?;
 
         // Determine the UPI flow type based on payment method data
         let upi_flow = determine_upi_flow(&item.router_data.request.payment_method_data)?;
