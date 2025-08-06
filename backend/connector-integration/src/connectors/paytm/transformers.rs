@@ -211,7 +211,7 @@ pub struct PaytmInitiateReqBody {
 #[derive(Debug, Serialize)]
 pub struct PaytmAmount {
     pub value: StringMajorUnit, // Decimal amount (e.g., "10.50")
-    pub currency: String,       // "INR"
+    pub currency: Currency,     // INR
 }
 
 #[derive(Debug, Serialize)]
@@ -322,7 +322,7 @@ pub struct PaytmTxnInfo {
     #[serde(alias = "PAYMENTMODE")]
     pub payment_mode: Option<String>,
     #[serde(alias = "TXNAMOUNT")]
-    pub txn_amount: Option<String>,
+    pub txn_amount: Option<StringMajorUnit>,
     #[serde(alias = "TXNDATE")]
     pub txn_date: Option<String>,
 }
@@ -703,7 +703,7 @@ pub struct PaytmRouterData {
 #[derive(Debug, Clone)]
 pub struct PaytmAuthorizeRouterData {
     pub amount: MinorUnit,
-    pub currency: String,
+    pub currency: Currency,
     pub payment_id: String,
     pub session_token: String,
     pub payment_method_data: PaymentMethodData,
@@ -771,7 +771,7 @@ impl PaytmInitiateTxnRequest {
             website_name: auth.website.peek().to_string(),
             txn_amount: PaytmAmount {
                 value: item.amount.clone(),
-                currency: item.currency.to_string(),
+                currency: item.currency,
             },
             user_info: PaytmUserInfo {
                 cust_id: item
@@ -842,7 +842,7 @@ impl
 
         Ok(Self {
             amount: amount_minor_units,
-            currency: item.request.currency.to_string(),
+            currency: item.request.currency,
             payment_id: item
                 .resource_common_data
                 .connector_request_reference_id
@@ -962,7 +962,7 @@ pub struct PaytmTransactionStatusRespBody {
     pub txn_id: Option<String>,
     pub bank_txn_id: Option<String>,
     pub order_id: Option<String>,
-    pub txn_amount: Option<String>,
+    pub txn_amount: Option<StringMajorUnit>,
     pub txn_type: Option<String>,
     pub gateway_name: Option<String>,
     pub mid: Option<String>,

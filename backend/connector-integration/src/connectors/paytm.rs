@@ -23,7 +23,6 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
 use hyperswitch_masking::{Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -70,13 +69,6 @@ macros::create_all_prerequisites!(
             req.resource_common_data.connectors.paytm.base_url.to_string()
         }
 
-        fn preprocess_response_bytes<F, FCD, Req, Res>(
-            &self,
-            _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            Ok(bytes)
-        }
 
         fn build_custom_error_response(
             &self,
@@ -232,9 +224,8 @@ impl ConnectorCommon for Paytm {
 
     fn get_auth_header(
         &self,
-        auth_type: &ConnectorAuthType,
+        _auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let _auth = paytm::PaytmAuthType::try_from(auth_type)?;
         Ok(vec![(
             constants::CONTENT_TYPE_HEADER.to_string(),
             constants::CONTENT_TYPE_JSON.into(),
@@ -361,18 +352,12 @@ macros::macro_connector_implementation!(
     flow_request: SessionTokenRequestData,
     flow_response: SessionTokenResponseData,
     http_method: Post,
-    preprocess_response: false,
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut headers = vec![(
-                constants::CONTENT_TYPE_HEADER.to_string(),
-                constants::CONTENT_TYPE_JSON.to_string().into(),
-            )];
-            let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
-            headers.append(&mut auth_headers);
+            let headers = self.get_auth_header(&req.connector_auth_type)?;
             Ok(headers)
         }
 
@@ -403,18 +388,13 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: false,
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut headers = vec![(
-                constants::CONTENT_TYPE_HEADER.to_string(),
-                constants::CONTENT_TYPE_JSON.to_string().into(),
-            )];
-            let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
-            headers.append(&mut auth_headers);
+
+            let headers = self.get_auth_header(&req.connector_auth_type)?;
             Ok(headers)
         }
 
@@ -445,18 +425,12 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: false,
     other_functions: {
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut headers = vec![(
-                constants::CONTENT_TYPE_HEADER.to_string(),
-                constants::CONTENT_TYPE_JSON.to_string().into(),
-            )];
-            let mut auth_headers = self.get_auth_header(&req.connector_auth_type)?;
-            headers.append(&mut auth_headers);
+            let headers = self.get_auth_header(&req.connector_auth_type)?;
             Ok(headers)
         }
 
