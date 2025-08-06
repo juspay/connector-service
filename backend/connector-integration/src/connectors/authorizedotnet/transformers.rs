@@ -2227,7 +2227,6 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
 }
 
 // SetupMandate (Zero Mandate) implementation
-// Generic implementation for all PaymentMethodDataTypes
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
