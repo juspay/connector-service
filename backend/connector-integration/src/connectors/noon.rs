@@ -1,8 +1,6 @@
 use base64::Engine;
 use common_enums::AttemptStatus;
-use common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::StringMajorUnit,
-};
+use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -16,6 +14,7 @@ use domain_types::{
         RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -26,6 +25,8 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
+use std::fmt::Debug;
 pub mod transformers;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -47,58 +48,104 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
-impl connector_types::ConnectorServiceTrait for Noon {}
-impl connector_types::PaymentAuthorizeV2 for Noon {}
-impl connector_types::PaymentSyncV2 for Noon {}
-impl connector_types::PaymentVoidV2 for Noon {}
-impl connector_types::RefundSyncV2 for Noon {}
-impl connector_types::RefundV2 for Noon {}
-impl connector_types::PaymentCapture for Noon {}
-impl connector_types::ValidationTrait for Noon {}
-impl connector_types::PaymentOrderCreate for Noon {}
-impl connector_types::SetupMandateV2 for Noon {}
-impl connector_types::RepeatPaymentV2 for Noon {}
-impl connector_types::AcceptDispute for Noon {}
-impl connector_types::SubmitEvidenceV2 for Noon {}
-impl connector_types::DisputeDefend for Noon {}
-impl connector_types::IncomingWebhook for Noon {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthorizeV2<T> for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSyncV2 for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentVoidV2 for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundSyncV2 for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RefundV2 for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentCapture for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ValidationTrait for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentOrderCreate for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SetupMandateV2<T> for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::RepeatPaymentV2 for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::AcceptDispute for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::SubmitEvidenceV2 for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::DisputeDefend for Noon<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Noon<T>
+{
+}
 
 macros::create_all_prerequisites!(
     connector_name: Noon,
+    generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: NoonPaymentsRequest,
+            request_body: NoonPaymentsRequest<T>,
             response_body: NoonPaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             response_body: NoonPaymentsSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
             request_body: NoonPaymentsActionRequest,
             response_body: NoonPaymentsCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
             request_body: NoonPaymentsCancelRequest,
             response_body: NoonPaymentsVoidResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
             request_body: NoonPaymentsRefundActionRequest,
             response_body: RefundResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
             response_body: RefundSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [
@@ -160,7 +207,9 @@ macros::create_all_prerequisites!(
     }
 );
 
-impl ConnectorCommon for Noon {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Noon<T>
+{
     fn id(&self) -> &'static str {
         "noon"
     }
@@ -214,19 +263,21 @@ macros::macro_connector_implementation!(
     curl_response: NoonPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData,
+    flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
         fn get_url(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!("{}payment/v1/order", self.connector_base_url_payments(req)))
         }
@@ -242,6 +293,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -272,6 +325,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -299,6 +354,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -326,6 +383,8 @@ macros::macro_connector_implementation!(
     flow_request: RefundsData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -352,6 +411,8 @@ macros::macro_connector_implementation!(
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
     http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -380,164 +441,170 @@ macros::macro_connector_implementation!(
 );
 
 // Implementation for empty stubs - these will need to be properly implemented later
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Noon
+    > for Noon<T>
 {
 }
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Noon
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Noon<T>
 {
 }
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Noon
+    for Noon<T>
 {
 }
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Noon
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Noon<T>
 {
 }
 
 // SourceVerification implementations for all flows
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
         PaymentFlowData,
-        PaymentsAuthorizeData,
+        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Capture,
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Void,
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Refund,
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RSync,
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Accept,
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SubmitEvidence,
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         DefendDispute,
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl ConnectorSpecifications for Noon {}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications
+    for Noon<T>
+{
+}
 
 // We already have an implementation for ValidationTrait above
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
         RepeatPaymentData,
         PaymentsResponseData,
-    > for Noon
+    > for Noon<T>
 {
 }
 
-impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Noon
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Noon<T>
 {
 }

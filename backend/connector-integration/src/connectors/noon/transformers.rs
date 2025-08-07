@@ -11,7 +11,9 @@ use domain_types::{
     },
     errors::{self, ConnectorError},
     mandates::MandateDataType,
-    payment_method_data::{GooglePayWalletData, PaymentMethodData, WalletData},
+    payment_method_data::{
+        GooglePayWalletData, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber, WalletData,
+    },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -150,9 +152,16 @@ pub struct NoonSubscription {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoonCard {
+pub struct NoonCard<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     name_on_card: Option<Secret<String>>,
-    number_plain: cards::CardNumber,
+    number_plain: RawCardNumber<T>,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     cvv: Secret<String>,
@@ -219,8 +228,15 @@ pub struct NoonPayPal {
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "UPPERCASE")]
-pub enum NoonPaymentData {
-    Card(NoonCard),
+pub enum NoonPaymentData<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    Card(NoonCard<T>),
     Subscription(NoonSubscription),
     ApplePay(NoonApplePay),
     GooglePay(NoonGooglePay),
@@ -238,26 +254,52 @@ pub enum NoonApiOperations {
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NoonPaymentsRequest {
+pub struct NoonPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     api_operation: NoonApiOperations,
     order: NoonOrder,
     configuration: NoonConfiguration,
-    payment_data: NoonPaymentData,
+    payment_data: NoonPaymentData<T>,
     subscription: Option<NoonSubscriptionData>,
     billing: Option<NoonBilling>,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         NoonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for NoonPaymentsRequest
+    > for NoonPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         data: NoonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
@@ -281,7 +323,7 @@ impl
                         name_on_card: item.resource_common_data.get_optional_billing_full_name(),
                         number_plain: req_card.card_number.clone(),
                         expiry_month: req_card.card_exp_month.clone(),
-                        expiry_year: req_card.get_expiry_year_4_digit(),
+                        expiry_year: req_card.card_exp_year.clone(),
                         cvv: req_card.card_cvc,
                     })),
                     PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
@@ -659,10 +701,18 @@ pub struct NoonPaymentsActionRequest {
     transaction: NoonActionTransaction,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         NoonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for NoonPaymentsActionRequest
 {
@@ -670,6 +720,7 @@ impl
     fn try_from(
         data: NoonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
@@ -706,15 +757,26 @@ pub struct NoonPaymentsCancelRequest {
     order: NoonActionOrder,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        NoonRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
+        NoonRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     > for NoonPaymentsCancelRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: NoonRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let order = NoonActionOrder {
@@ -734,13 +796,23 @@ pub struct NoonRevokeMandateRequest {
     subscription: NoonSubscriptionObject,
 }
 
-impl TryFrom<NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
-    for NoonPaymentsActionRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NoonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for NoonPaymentsActionRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         data: NoonRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
