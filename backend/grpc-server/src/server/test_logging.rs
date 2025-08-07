@@ -1,4 +1,4 @@
-use crate::metrics::TRACING_EVENTS_GENERATED;
+use crate::metrics::{self, TRACING_EVENTS_GENERATED};
 use axum::{http, Json};
 use serde::{Deserialize, Serialize};
 use std::time::Instant;
@@ -27,6 +27,7 @@ pub async fn test_logging_handler(
     let start = Instant::now();
     let request_id = payload.request_id.clone();
 
+    metrics::TEST_LOGGING_REQUESTS.inc();
     // Generate logs based on the request
     for i in 0..payload.log_count {
         let log_generation_timestamp_ms = std::time::SystemTime::now()
@@ -119,7 +120,7 @@ pub async fn test_logging_handler(
                 TRACING_EVENTS_GENERATED.inc();
             }
             "many_fields" => {
-                // Test scenario with 50+ fields
+                // Test scenario with 50+ fields (for deserialization testing)
                 tracing::info!(
                     payment_id,
                     merchant_id,
