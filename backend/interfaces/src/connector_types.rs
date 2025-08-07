@@ -13,7 +13,7 @@ use domain_types::{
         RefundsResponseData, RepeatPaymentData, RequestDetails, SetupMandateRequestData,
         SubmitEvidenceData, WebhookDetailsResponse,
     },
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     types::{PaymentMethodDataType, PaymentMethodDetails, SupportedPaymentMethods},
 };
@@ -21,17 +21,17 @@ use error_stack::ResultExt;
 
 use crate::{api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2};
 
-pub trait ConnectorServiceTrait:
+pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     ConnectorCommon
     + ValidationTrait
-    + PaymentAuthorizeV2
+    + PaymentAuthorizeV2<T>
     + PaymentSyncV2
     + PaymentOrderCreate
     + PaymentVoidV2
     + IncomingWebhook
     + RefundV2
     + PaymentCapture
-    + SetupMandateV2
+    + SetupMandateV2<T>
     + RepeatPaymentV2
     + AcceptDispute
     + RefundSyncV2
@@ -45,7 +45,7 @@ pub trait PaymentVoidV2:
 {
 }
 
-pub type BoxedConnector = Box<&'static (dyn ConnectorServiceTrait + Sync)>;
+pub type BoxedConnector<T> = Box<&'static (dyn ConnectorServiceTrait<T> + Sync)>;
 
 pub trait ValidationTrait {
     fn should_do_order_create(&self) -> bool {
@@ -63,11 +63,11 @@ pub trait PaymentOrderCreate:
 {
 }
 
-pub trait PaymentAuthorizeV2:
+pub trait PaymentAuthorizeV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::Authorize,
     PaymentFlowData,
-    PaymentsAuthorizeData,
+    PaymentsAuthorizeData<T>,
     PaymentsResponseData,
 >
 {
@@ -103,11 +103,11 @@ pub trait PaymentCapture:
 {
 }
 
-pub trait SetupMandateV2:
+pub trait SetupMandateV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::SetupMandate,
     PaymentFlowData,
-    SetupMandateRequestData,
+    SetupMandateRequestData<T>,
     PaymentsResponseData,
 >
 {
@@ -264,7 +264,7 @@ pub trait ConnectorValidation: ConnectorCommon + ConnectorSpecifications {
     fn validate_mandate_payment(
         &self,
         pm_type: Option<PaymentMethodType>,
-        _pm_data: PaymentMethodData,
+        _pm_data: PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder>,
     ) -> CustomResult<(), domain_types::errors::ConnectorError> {
         let connector = self.id();
         match pm_type {
@@ -328,8 +328,8 @@ fn get_connector_payment_method_type_info(
         .transpose()
 }
 
-pub fn is_mandate_supported(
-    selected_pmd: PaymentMethodData,
+pub fn is_mandate_supported<T: PaymentMethodDataTypes>(
+    selected_pmd: PaymentMethodData<T>,
     payment_method_type: Option<PaymentMethodType>,
     mandate_implemented_pmds: HashSet<PaymentMethodDataType>,
     connector: &'static str,
