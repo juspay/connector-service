@@ -16,6 +16,8 @@ use grpc_api_types::payments::{
     PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::Secret;
+use serde_json::json;
+
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -63,6 +65,7 @@ pub struct Connectors {
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
+    pub nexinets: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1177,6 +1180,7 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
         Err(err) => {
@@ -1206,6 +1210,7 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
     };
@@ -1232,7 +1237,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -1290,6 +1295,11 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                             }
                         }
                     ).transpose()?,
+                    connector_metadata: connector_metadata
+                        .and_then(|value| value.as_object().cloned())
+                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
+                            .map(|s| (k, s.to_string())))
+                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -1333,6 +1343,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
                 response_headers,
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
     };
@@ -1817,7 +1828,10 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
             refund_status: common_enums::RefundStatus::Pending,
-            refund_connector_metadata: None,
+            refund_connector_metadata: value
+                .request_ref_id
+                .as_ref()
+                .map(|id| Secret::new(json!({ "request_ref_id": id.clone() }))),
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
         })

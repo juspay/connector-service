@@ -55,6 +55,7 @@ pub enum ConnectorEnum {
     Payu,
     Cashtocode,
     Novalnet,
+    Nexinets,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -77,6 +78,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
+            grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
