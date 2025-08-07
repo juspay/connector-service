@@ -4,10 +4,8 @@ use error_stack::{Report, ResultExt};
 pub use xml_utils::preprocess_xml_response_bytes;
 
 use domain_types::{
-    
     connector_types::PaymentsAuthorizeData, errors, payment_method_data::PaymentMethodDataTypes,
-, router_data::ErrorResponse,
-    router_response_types::Response,
+    router_data::ErrorResponse, router_response_types::Response,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde_json::Value;
@@ -73,17 +71,18 @@ where
 
     let json_value = connector_meta_secret.expose();
 
-    let json_str = json_value.as_str().ok_or_else(|| {
-        Report::new(errors::ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })
-    })?;
-
-    let parsed: T = serde_json::from_str(json_str)
-        .map_err(Report::from)
-        .change_context(errors::ConnectorError::InvalidConnectorConfig {
-            config: "merchant_connector_account.metadata",
-        })?;
+    let parsed: T = match json_value {
+        Value::String(json_str) => serde_json::from_str(&json_str)
+            .map_err(Report::from)
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                config: "merchant_connector_account.metadata",
+            })?,
+        _ => serde_json::from_value(json_value.clone())
+            .map_err(Report::from)
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                config: "merchant_connector_account.metadata",
+            })?,
+    };
 
     Ok(parsed)
 }

@@ -9,12 +9,13 @@ use domain_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
     errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, WalletData},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
+use std::marker::PhantomData;
 
 use super::MifinityRouterData;
 use hyperswitch_masking::Secret;
@@ -45,7 +46,14 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject
 
 #[derive(Debug, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct MifinityPaymentsRequest {
+pub struct MifinityPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     money: Money,
     client: MifinityClient,
     address: MifinityAddress,
@@ -58,6 +66,8 @@ pub struct MifinityPaymentsRequest {
     return_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     language_preference: Option<String>,
+    #[serde(skip)]
+    _phantom: PhantomData<T>,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -86,17 +96,36 @@ pub struct MifinityAddress {
     city: String,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         MifinityRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for MifinityPaymentsRequest
+    > for MifinityPaymentsRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: MifinityRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let metadata: MifinityConnectorMetadataObject = utils::to_connector_meta_from_secret(
@@ -186,6 +215,7 @@ impl
                         brand_id,
                         return_url: item.router_data.request.get_router_return_url()?,
                         language_preference,
+                        _phantom: PhantomData,
                     })
                 }
                 WalletData::AliPayQr(_)
@@ -277,8 +307,16 @@ pub struct MifinityPayload {
     initialization_token: String,
 }
 
-impl<F> TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<MifinityPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -374,7 +412,7 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
 
         match payload {
             Some(payload) => {
-                let status = payload.to_owned().status.clone();
+                let status = payload.status.clone();
                 let payment_response = payload.payment_response.clone();
 
                 match payment_response {
