@@ -11,7 +11,7 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors,
-    payment_method_data::{PaymentMethodData, UpiData},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -129,10 +129,23 @@ pub struct PhonepeInstrumentResponse {
 // ===== REQUEST BUILDING =====
 
 // TryFrom implementation for macro-generated PhonepeRouterData wrapper
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         crate::connectors::phonepe::PhonepeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for PhonepePaymentsRequest
 {
@@ -140,7 +153,13 @@ impl
 
     fn try_from(
         wrapper: crate::connectors::phonepe::PhonepeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&PhonepeRouterData {
@@ -151,10 +170,22 @@ impl
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         &PhonepeRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     > for PhonepePaymentsRequest
 {
@@ -162,7 +193,12 @@ impl
 
     fn try_from(
         item: &PhonepeRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -263,20 +299,37 @@ impl
 
 // ===== RESPONSE HANDLING =====
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             PhonepePaymentsResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = Error;
 
     fn try_from(
         item: ResponseRouterData<
             PhonepePaymentsResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;
