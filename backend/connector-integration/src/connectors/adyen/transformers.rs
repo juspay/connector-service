@@ -696,7 +696,8 @@ impl<
             | WalletData::PaypalSdk(_)
             | WalletData::WeChatPayQr(_)
             | WalletData::CashappQr(_)
-            | WalletData::Mifinity(_) => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::Mifinity(_)
+            | WalletData::BluecodeRedirect { .. } => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }

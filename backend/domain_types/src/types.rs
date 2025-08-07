@@ -67,6 +67,7 @@ pub struct Connectors {
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
+    pub bluecode: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -220,6 +221,20 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(_reward) => {
                     Ok(PaymentMethodData::Reward)
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Bluecode(_)) => {
+                            Ok(PaymentMethodData::Wallet(crate::payment_method_data::WalletData::BluecodeRedirect{}
+                        ))
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_WALLET_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Wallet type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -274,6 +289,20 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     Ok(None)
                 },
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(_) => Ok(Some(PaymentMethodType::UpiCollect)),
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Bluecode(_)) => {
+                            // For PaymentMethodType conversion, we just need to return the type, not the full data
+                            Ok(Some(PaymentMethodType::Bluecode))
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_WALLET_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Wallet type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                },
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_) => Ok(Some(PaymentMethodType::UpiIntent)),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_) => Ok(Some(PaymentMethodType::UpiIntent)), // UpiQr not yet implemented, fallback to UpiIntent
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(reward) => {
@@ -3322,6 +3351,7 @@ pub enum PaymentConnectorCategory {
 #[derive(Debug, strum::Display, Eq, PartialEq, Hash)]
 pub enum PaymentMethodDataType {
     Card,
+    Bluecode,
     Knet,
     Benefit,
     MomoAtm,

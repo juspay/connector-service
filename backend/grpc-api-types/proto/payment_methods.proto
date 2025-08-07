@@ -33,7 +33,7 @@ enum CardNetwork {
 message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
-    // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
+    WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
     UpiCollect upi_collect = 3;                          // UPI Collect payment method - SUPPORTED
     UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
     UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
@@ -71,22 +71,23 @@ message CardPaymentMethodType {
 
 // Digital wallet payment methods category - TODO: Not yet supported
 // Includes mobile wallets and digital payment platforms
-/*
+
 message WalletPaymentMethodType {
   oneof wallet_type {
-    AppleWallet apple_pay = 1;             // Apple Pay
-    GoogleWallet google_pay = 2;           // Google Pay
-    SamsungWallet samsung_pay = 3;         // Samsung Pay
-    AliPayWallet ali_pay = 4;              // Alipay
-    AliPayHKWallet ali_pay_hk = 5;         // Alipay Hong Kong
-    WeChatPayWallet we_chat_pay = 6;       // WeChat Pay
-    VenmoWallet venmo = 7;                 // Venmo
-    CashAppWallet cash_app = 8;            // Cash App
-    AmazonPayWallet amazon_pay = 9;        // Amazon Pay
-    PazeWallet paze = 10;                  // Paze
+    // AppleWallet apple_pay = 1;             // Apple Pay
+    // GoogleWallet google_pay = 2;           // Google Pay
+    //SamsungWallet samsung_pay = 3;         // Samsung Pay
+    // AliPayWallet ali_pay = 4;              // Alipay
+    // AliPayHKWallet ali_pay_hk = 5;         // Alipay Hong Kong
+    // WeChatPayWallet we_chat_pay = 6;       // WeChat Pay
+    // VenmoWallet venmo = 7;                 // Venmo
+    // CashAppWallet cash_app = 8;            // Cash App
+    // AmazonPayWallet amazon_pay = 9;        // Amazon Pay
+    // PazeWallet paze = 10;                  // Paze
+    Bluecode bluecode = 11;               // Bluecode 
   }
 }
-*/
+
 
 // Real-time payment methods category - TODO: Not yet supported
 // Includes instant payment systems and QR code-based payments
@@ -433,6 +434,9 @@ message PazeWallet {
   string complete_response = 1;
 }
 */
+
+message Bluecode {
+}
 
 // ============================================================================
 // REAL-TIME PAYMENT METHODS
