@@ -392,9 +392,9 @@ macros::macro_connector_implementation!(
                 })?;
 
             let parsed_metadata: serde_json::Value =
-                serde_json::from_str(metadata_str).map_err(|_| {
+                serde_json::from_str(metadata_str).change_context(
                     errors::ConnectorError::ParsingFailed
-                })?;
+                )?;
 
             let order_id = parsed_metadata
                 .get("order_id")
