@@ -39,3 +39,6 @@ pub use self::cashtocode::Cashtocode;
 
 pub mod novalnet;
 pub use self::novalnet::Novalnet;
+
+pub mod cryptopay;
+pub use self::cryptopay::Cryptopay;
