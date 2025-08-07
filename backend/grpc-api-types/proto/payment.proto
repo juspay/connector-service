@@ -1100,6 +1100,9 @@ message PaymentServiceAuthorizeResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
   
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
+  
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
 }
@@ -1805,16 +1808,3 @@ message DisputesSyncResponse {
   DisputeStatus status = 4;
   DisputeStage stage = 5;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
