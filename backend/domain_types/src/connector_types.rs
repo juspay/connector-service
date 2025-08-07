@@ -18,6 +18,7 @@ use strum::{Display, EnumString};
 
 use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
+    mandates,
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
     payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
@@ -57,6 +58,7 @@ pub enum ConnectorEnum {
     Cashtocode,
     Novalnet,
     Nexinets,
+    Noon,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -81,6 +83,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
+            grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -763,6 +766,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub customer_id: Option<common_utils::id_type::CustomerId>,
     pub request_incremental_authorization: bool,
     pub metadata: Option<serde_json::Value>,
+    pub setup_mandate_details: Option<mandates::MandateData>,
     // New amount for amount frame work
     pub minor_amount: MinorUnit,
     /// Merchant's identifier for the payment/invoice. This will be sent to the connector
