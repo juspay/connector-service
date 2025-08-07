@@ -49,6 +49,7 @@ pub enum ConnectorEnum {
     Xendit,
     Checkout,
     Authorizedotnet,
+    Mifinity,
     Phonepe,
     Cashfree,
     Paytm,
