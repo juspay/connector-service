@@ -1,4 +1,8 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    cmp,
+    collections::HashMap,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use aes::{Aes128, Aes192, Aes256};
 
@@ -104,7 +108,10 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use url::Url;
 
-use crate::types::ResponseRouterData;
+use crate::{
+    connectors::paytm::PaytmRouterData as MacroPaytmRouterData,
+    types::ResponseRouterData,
+};
 
 #[derive(Debug, Clone)]
 pub struct PaytmAuthType {
@@ -632,7 +639,7 @@ fn aes_encrypt(data: &str, key: &str) -> CustomResult<String, errors::ConnectorE
 
             // For AES-256, we need exactly 32 bytes, so pad or truncate the key
             let mut aes256_key = [0u8; constants::AES_256_KEY_LENGTH];
-            let copy_len = std::cmp::min(key_bytes.len(), constants::AES_256_KEY_LENGTH);
+            let copy_len = cmp::min(key_bytes.len(), constants::AES_256_KEY_LENGTH);
             aes256_key[..copy_len].copy_from_slice(&key_bytes[..copy_len]);
 
             let encryptor = Aes256CbcEnc::new(&aes256_key.into(), &iv.into());
@@ -718,11 +725,11 @@ pub struct PaytmAuthorizeRouterData<T: domain_types::payment_method_data::Paymen
 // Request transformation for CreateSessionToken flow
 impl PaytmRouterData {
     pub fn try_from_with_converter(
-        item: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::CreateSessionToken,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::SessionTokenRequestData,
-            domain_types::connector_types::SessionTokenResponseData,
+        item: &RouterDataV2<
+            CreateSessionToken,
+            PaymentFlowData,
+            SessionTokenRequestData,
+            SessionTokenResponseData,
         >,
         amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
     ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
@@ -806,11 +813,11 @@ impl PaytmInitiateTxnRequest {
 // Request transformation for Authorize flow
 impl<T: domain_types::payment_method_data::PaymentMethodDataTypes> PaytmAuthorizeRouterData<T> {
     pub fn try_from_with_converter(
-        item: &domain_types::router_data_v2::RouterDataV2<
-            domain_types::connector_flow::Authorize,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthorizeData<T>,
-            domain_types::connector_types::PaymentsResponseData,
+        item: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
         >,
         amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
     ) -> Result<Self, error_stack::Report<errors::ConnectorError>> {
@@ -1107,7 +1114,7 @@ pub struct PaytmRedirectForm {
     #[serde(rename = "actionUrl")]
     pub action_url: String,
     pub method: String,
-    pub content: std::collections::HashMap<String, String>,
+    pub content: HashMap<String, String>,
 }
 
 // TryFrom implementations required by the macro framework
@@ -1127,7 +1134,7 @@ impl<
             + serde::Serialize,
     >
     TryFrom<
-        crate::connectors::paytm::PaytmRouterData<
+        MacroPaytmRouterData<
             RouterDataV2<
                 CreateSessionToken,
                 PaymentFlowData,
@@ -1141,7 +1148,7 @@ impl<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::paytm::PaytmRouterData<
+        item: MacroPaytmRouterData<
             RouterDataV2<
                 CreateSessionToken,
                 PaymentFlowData,
@@ -1170,7 +1177,7 @@ impl<
             + serde::Serialize,
     >
     TryFrom<
-        crate::connectors::paytm::PaytmRouterData<
+        MacroPaytmRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -1184,7 +1191,7 @@ impl<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::paytm::PaytmRouterData<
+        item: MacroPaytmRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -1234,7 +1241,7 @@ impl<
             + serde::Serialize,
     >
     TryFrom<
-        crate::connectors::paytm::PaytmRouterData<
+        MacroPaytmRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -1243,7 +1250,7 @@ impl<
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
-        item: crate::connectors::paytm::PaytmRouterData<
+        item: MacroPaytmRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
