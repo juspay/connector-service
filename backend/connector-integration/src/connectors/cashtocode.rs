@@ -5,15 +5,16 @@ use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -73,6 +74,18 @@ impl<
     > connector_types::PaymentSyncV2 for Cashtocode<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Cashtocode<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -396,95 +409,14 @@ impl<
             + Serialize,
     > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
     for Cashtocode<T>
+{
+}
+
 //marker traits
-impl connector_types::ConnectorServiceTrait for Cashtocode {}
-impl connector_types::PaymentAuthorizeV2 for Cashtocode {}
-impl connector_types::PaymentSyncV2 for Cashtocode {}
-impl connector_types::PaymentVoidV2 for Cashtocode {}
-impl connector_types::RefundSyncV2 for Cashtocode {}
-impl connector_types::RefundV2 for Cashtocode {}
-impl connector_types::PaymentCapture for Cashtocode {}
-impl connector_types::ValidationTrait for Cashtocode {}
-impl connector_types::PaymentOrderCreate for Cashtocode {}
-impl connector_types::PaymentSessionToken for Cashtocode {}
-impl connector_types::SetupMandateV2 for Cashtocode {}
-impl connector_types::AcceptDispute for Cashtocode {}
-impl connector_types::SubmitEvidenceV2 for Cashtocode {}
-impl connector_types::DisputeDefend for Cashtocode {}
-impl connector_types::IncomingWebhook for Cashtocode {}
-impl connector_types::RepeatPaymentV2 for Cashtocode {}
 
-macros::create_all_prerequisites!(
-    connector_name: Cashtocode,
-    api: [
-        (
-            flow: Authorize,
-            request_body: CashtocodePaymentsRequest,
-            response_body: CashtocodePaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-        )
-    ],
-    amount_converters: [
-        amount_converter: FloatMajorUnit
-    ],
-    member_functions: {
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.cashtocode.base_url
-        }
-    }
-);
+// Duplicate create_all_prerequisites! call removed - already defined above
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Cashtocode,
-    curl_request: Json(CashtocodePaymentsRequest),
-    curl_response: CashtocodePaymentsResponse,
-    flow_name: Authorize,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                self.common_get_content_type().to_string().into(),
-            )];
-
-            let auth_type = transformers::CashtocodeAuth::try_from((
-                &req.connector_auth_type,
-                &req.request.currency,
-            ))?;
-
-            let mut api_key = get_b64_auth_cashtocode(req.request.payment_method_type, &auth_type)?;
-
-            header.append(&mut api_key);
-            Ok(header)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/merchant/paytokens", self.connector_base_url_payments(req)))
-        }
-    }
-);
-
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Cashtocode
-{
-}
-
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Cashtocode
-{
-}
+// Duplicate macro_connector_implementation! for Authorize flow removed - already defined above
 
 impl<
         T: PaymentMethodDataTypes
@@ -567,6 +499,23 @@ impl<
     >
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Cashtocode<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Cashtocode<T>
 {
 }
 
@@ -674,148 +623,21 @@ impl_source_verification_stub!(
     PaymentCreateOrderData,
     PaymentCreateOrderResponse
 );
-impl
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
-        Authorize,
+        CreateSessionToken,
         PaymentFlowData,
-        PaymentsAuthorizeData,
-        PaymentsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        PSync,
-        PaymentFlowData,
-        PaymentsSyncData,
-        PaymentsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        Capture,
-        PaymentFlowData,
-        PaymentsCaptureData,
-        PaymentsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        Void,
-        PaymentFlowData,
-        PaymentVoidData,
-        PaymentsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        RSync,
-        RefundFlowData,
-        RefundSyncData,
-        RefundsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData,
-        PaymentsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        Accept,
-        DisputeFlowData,
-        AcceptDisputeData,
-        DisputeResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        SubmitEvidence,
-        DisputeFlowData,
-        SubmitEvidenceData,
-        DisputeResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        DefendDispute,
-        DisputeFlowData,
-        DisputeDefendData,
-        DisputeResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        RepeatPayment,
-        PaymentFlowData,
-        RepeatPaymentData,
-        PaymentsResponseData,
-    > for Cashtocode
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::CreateSessionToken,
-        PaymentFlowData,
-        domain_types::connector_types::SessionTokenRequestData,
-        domain_types::connector_types::SessionTokenResponseData,
-    > for Cashtocode
-{
-}
-
-impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Cashtocode
-{
-}
-
-impl
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::CreateSessionToken,
-        PaymentFlowData,
-        domain_types::connector_types::SessionTokenRequestData,
-        domain_types::connector_types::SessionTokenResponseData,
-    > for Cashtocode
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Cashtocode<T>
 {
 }
 

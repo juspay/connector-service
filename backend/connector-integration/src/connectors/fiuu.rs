@@ -48,7 +48,6 @@ use crate::{
     with_response_body,
 };
 
-impl connector_types::PaymentSessionToken for Fiuu {}
 // Trait implementations with generic type parameters
 impl<
         T: PaymentMethodDataTypes
@@ -70,6 +69,17 @@ impl<
     > connector_types::PaymentAuthorizeV2<T> for Fiuu<T>
 {
 }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Fiuu<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -693,6 +703,24 @@ impl<
     for Fiuu<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Fiuu<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -738,28 +766,6 @@ impl<
             + 'static
             + Serialize,
     > ConnectorSpecifications for Fiuu<T>
-{
-}
-
-// CreateSessionToken stub implementation
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Fiuu
-{
-}
-
-// CreateSessionToken stub implementation
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Fiuu
 {
 }
 
@@ -951,23 +957,20 @@ impl<
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Fiuu
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Fiuu
+    > for Fiuu<T>
 {
 }
 

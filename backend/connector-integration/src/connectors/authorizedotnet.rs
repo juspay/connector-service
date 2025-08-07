@@ -10,20 +10,14 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets,
-        DisputeDefendData, DisputeDefendData, DisputeFlowData, DisputeFlowData,
-        DisputeResponseData, DisputeResponseData, EventType, PaymentCreateOrderData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentFlowData, PaymentVoidData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsResponseData, PaymentsSyncData, PaymentsSyncData, RefundFlowData, RefundFlowData,
-        RefundFlowData, RefundSyncData, RefundSyncData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsData, RefundsData, RefundsResponseData,
-        RefundsResponseData, RefundsResponseData, RepeatPaymentData, RepeatPaymentData,
-        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenRequestData,
-        SessionTokenResponseData, SessionTokenResponseData, SetupMandateRequestData,
-        SetupMandateRequestData, SetupMandateRequestData, SubmitEvidenceData, SubmitEvidenceData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -71,6 +65,17 @@ impl<
             + 'static
             + Serialize,
     > ConnectorServiceTrait<T> for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > PaymentSessionToken for Authorizedotnet<T>
 {
 }
 
@@ -824,6 +829,23 @@ impl<
     > for Authorizedotnet<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Authorizedotnet<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -869,6 +891,23 @@ impl<
             + Serialize,
     > SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
     for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Authorizedotnet<T>
 {
 }
 
@@ -1022,45 +1061,5 @@ impl<
             + 'static
             + Serialize,
     > ConnectorSpecifications for Authorizedotnet<T>
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Authorizedotnet
-{
-}
-
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Authorizedotnet
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Authorizedotnet
-{
-}
-
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Authorizedotnet
 {
 }

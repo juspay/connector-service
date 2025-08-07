@@ -1,6 +1,7 @@
+use std::fmt::Debug;
+
 use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentMethodDataTypes};
 use interfaces::connector_types::BoxedConnector;
-use std::fmt::Debug;
 
 use crate::connectors::{
     Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Nexinets,

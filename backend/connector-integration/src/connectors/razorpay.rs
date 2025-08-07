@@ -81,7 +81,7 @@ impl<
     }
 }
 
-impl connector_types::PaymentSessionToken for Razorpay {}
+// Type alias for non-generic trait implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -100,6 +100,16 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentAuthorizeV2<T> for Razorpay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Razorpay<T>
 {
 }
 impl<
@@ -172,6 +182,7 @@ impl<
     > connector_types::SetupMandateV2<T> for Razorpay<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1161,6 +1172,23 @@ impl<
             + Serialize,
     >
     interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Razorpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
@@ -1476,42 +1504,19 @@ impl<
 {
 }
 
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Razorpay
-{
-}
-
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Razorpay
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Razorpay
-{
-}
-
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Razorpay
+    > for Razorpay<T>
 {
 }

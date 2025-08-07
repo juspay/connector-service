@@ -10,13 +10,15 @@ use domain_types::connector_types::{
     PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
     RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
 };
-use domain_types::payment_method_data::PaymentMethodDataTypes;
-use domain_types::router_request_types::{
-    AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
-    CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
-    PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-    RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-    SubmitEvidenceIntegrityObject,
+use domain_types::{
+    payment_method_data::PaymentMethodDataTypes,
+    router_request_types::{
+        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
+        CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
+        PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
+        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject,
+    },
 };
 
 // ========================================================================

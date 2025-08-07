@@ -1,10 +1,6 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::{
-    payment_address, router_request_types, router_request_types::BrowserInformation,
-    router_response_types,
-};
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
 use error_stack::{report, ResultExt};
@@ -43,7 +39,7 @@ use crate::{
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
     payment_method_data,
     payment_method_data::{
-        self, DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
     router_data_v2::RouterDataV2,

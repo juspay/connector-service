@@ -144,8 +144,8 @@ pub enum UpiFlowType {
     Collect,
 }
 
-pub fn determine_upi_flow(
-    payment_method_data: &PaymentMethodData,
+pub fn determine_upi_flow<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+    payment_method_data: &PaymentMethodData<T>,
 ) -> CustomResult<UpiFlowType, errors::ConnectorError> {
     match payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
@@ -503,8 +503,8 @@ pub struct PaytmNativeProcessFailureResp {
 }
 
 // Helper function for UPI VPA extraction
-pub fn extract_upi_vpa(
-    payment_method_data: &PaymentMethodData,
+pub fn extract_upi_vpa<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+    payment_method_data: &PaymentMethodData<T>,
 ) -> CustomResult<Option<String>, errors::ConnectorError> {
     match payment_method_data {
         PaymentMethodData::Upi(UpiData::UpiCollect(collect_data)) => {
@@ -701,12 +701,12 @@ pub struct PaytmRouterData {
 
 // Helper struct for Authorize flow RouterData transformation
 #[derive(Debug, Clone)]
-pub struct PaytmAuthorizeRouterData {
+pub struct PaytmAuthorizeRouterData<T: domain_types::payment_method_data::PaymentMethodDataTypes> {
     pub amount: StringMajorUnit,
     pub currency: Currency,
     pub payment_id: String,
     pub session_token: String,
-    pub payment_method_data: PaymentMethodData,
+    pub payment_method_data: PaymentMethodData<T>,
     pub customer_id: Option<String>,
     pub email: Option<Email>,
     pub phone: Option<Secret<String>>,
@@ -804,12 +804,12 @@ impl PaytmInitiateTxnRequest {
 }
 
 // Request transformation for Authorize flow
-impl PaytmAuthorizeRouterData {
+impl<T: domain_types::payment_method_data::PaymentMethodDataTypes> PaytmAuthorizeRouterData<T> {
     pub fn try_from_with_converter(
         item: &domain_types::router_data_v2::RouterDataV2<
             domain_types::connector_flow::Authorize,
             domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentsAuthorizeData,
+            domain_types::connector_types::PaymentsAuthorizeData<T>,
             domain_types::connector_types::PaymentsResponseData,
         >,
         amount_converter: &dyn AmountConvertor<Output = StringMajorUnit>,
@@ -853,8 +853,8 @@ impl PaytmAuthorizeRouterData {
 
 // Request transformation for PayTM UPI Intent flow (ProcessTxnRequest)
 impl PaytmProcessTxnRequest {
-    pub fn try_from_with_auth(
-        item: &PaytmAuthorizeRouterData,
+    pub fn try_from_with_auth<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+        item: &PaytmAuthorizeRouterData<T>,
         auth: &PaytmAuthType,
     ) -> CustomResult<Self, errors::ConnectorError> {
         let timestamp = SystemTime::now()
@@ -884,8 +884,8 @@ impl PaytmProcessTxnRequest {
 
 // Request transformation for PayTM UPI Collect flow (NativeProcessTxnRequest)
 impl PaytmNativeProcessTxnRequest {
-    pub fn try_from_with_auth(
-        item: &PaytmAuthorizeRouterData,
+    pub fn try_from_with_auth<T: domain_types::payment_method_data::PaymentMethodDataTypes>(
+        item: &PaytmAuthorizeRouterData<T>,
         auth: &PaytmAuthType,
     ) -> CustomResult<Self, errors::ConnectorError> {
         // Extract UPI VPA for collect flow
@@ -1042,8 +1042,8 @@ pub fn map_paytm_status_to_attempt_status(result_code: &str) -> AttemptStatus {
             AttemptStatus::Failure
         }
 
-        // Default to failure for unknown codes
-        _ => AttemptStatus::Failure,
+        // Default to failure for unknown codes (WILL NEVER HAPPEN)
+        _ => AttemptStatus::Pending,
     }
 }
 
@@ -1118,7 +1118,14 @@ pub struct PaytmRedirectForm {
 
 // PaytmInitiateTxnRequest TryFrom CreateSessionToken RouterData
 // Using the macro-generated PaytmRouterData type from the paytm module
-impl
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         crate::connectors::paytm::PaytmRouterData<
             RouterDataV2<
@@ -1127,6 +1134,7 @@ impl
                 SessionTokenRequestData,
                 SessionTokenResponseData,
             >,
+            T,
         >,
     > for PaytmInitiateTxnRequest
 {
@@ -1140,6 +1148,7 @@ impl
                 SessionTokenRequestData,
                 SessionTokenResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1152,10 +1161,23 @@ impl
 }
 
 // PaytmAuthorizeRequest TryFrom Authorize RouterData
-impl
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         crate::connectors::paytm::PaytmRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for PaytmAuthorizeRequest
 {
@@ -1163,7 +1185,13 @@ impl
 
     fn try_from(
         item: crate::connectors::paytm::PaytmRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1197,10 +1225,18 @@ impl
 }
 
 // PaytmTransactionStatusRequest TryFrom PSync RouterData
-impl
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         crate::connectors::paytm::PaytmRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for PaytmTransactionStatusRequest
 {
@@ -1209,6 +1245,7 @@ impl
     fn try_from(
         item: crate::connectors::paytm::PaytmRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PaytmAuthType::try_from(&item.router_data.connector_auth_type)?;
@@ -1270,20 +1307,37 @@ impl
 }
 
 // Authorize response transformation
-impl
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         ResponseRouterData<
             PaytmProcessTxnResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ResponseRouterData<
             PaytmProcessTxnResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         let response = &item.response;

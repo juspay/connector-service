@@ -8,23 +8,12 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AcceptDisputeData, AcceptDisputeData, ConnectorSpecifications,
-        DisputeDefendData, DisputeDefendData, DisputeDefendData, DisputeFlowData, DisputeFlowData,
-        DisputeFlowData, DisputeResponseData, DisputeResponseData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentCreateOrderResponse, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentFlowData, PaymentFlowData, PaymentVoidData, PaymentVoidData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsAuthorizeData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsCaptureData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsResponseData, PaymentsResponseData, PaymentsSyncData, PaymentsSyncData,
-        PaymentsSyncData, RefundFlowData, RefundFlowData, RefundFlowData, RefundSyncData,
-        RefundSyncData, RefundSyncData, RefundsData, RefundsData, RefundsData, RefundsResponseData,
-        RefundsResponseData, RefundsResponseData, RepeatPaymentData, RepeatPaymentData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenRequestData,
-        SessionTokenRequestData, SessionTokenRequestData, SessionTokenResponseData,
-        SessionTokenResponseData, SessionTokenResponseData, SessionTokenResponseData,
-        SetupMandateRequestData, SetupMandateRequestData, SetupMandateRequestData,
-        SubmitEvidenceData, SubmitEvidenceData, SubmitEvidenceData,
+        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -66,6 +55,18 @@ impl<
     > connector_types::ConnectorServiceTrait<T> for Elavon<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Elavon<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -116,7 +117,7 @@ impl<
     > connector_types::RefundV2 for Elavon<T>
 {
 }
-impl connector_types::PaymentSessionToken for Elavon {}
+// Type alias for non-generic trait implementations
 
 impl<
         T: PaymentMethodDataTypes
@@ -665,6 +666,23 @@ impl<
             + Serialize,
     >
     interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Elavon<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
         PSync,
         PaymentFlowData,
         PaymentsSyncData,
@@ -837,43 +855,20 @@ impl<
 {
 }
 
-impl
-    connector_integration_v2::ConnectorIntegrationV2<
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Elavon
-{
-}
-
-impl
-    connector_integration_v2::ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Elavon
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Elavon
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Elavon
+    > for Elavon<T>
 {
 }
 

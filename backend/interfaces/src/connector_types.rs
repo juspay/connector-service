@@ -79,16 +79,6 @@ pub trait PaymentSessionToken:
 {
 }
 
-pub trait PaymentSessionToken:
-    ConnectorIntegrationV2<
-    connector_flow::CreateSessionToken,
-    PaymentFlowData,
-    SessionTokenRequestData,
-    SessionTokenResponseData,
->
-{
-}
-
 pub trait PaymentAuthorizeV2<T: PaymentMethodDataTypes>:
     ConnectorIntegrationV2<
     connector_flow::Authorize,

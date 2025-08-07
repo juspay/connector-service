@@ -58,7 +58,7 @@ mod headers {
     pub const AUTHORIZATION: &str = "Authorization";
 }
 
-impl connector_types::PaymentSessionToken for Fiserv {}
+// Type alias for non-generic trait implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -79,6 +79,18 @@ impl<
     > connector_types::PaymentAuthorizeV2<T> for Fiserv<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Fiserv<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -855,23 +867,20 @@ impl<
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     interfaces::verification::SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Fiserv
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Fiserv
+    > for Fiserv<T>
 {
 }
 
@@ -886,6 +895,8 @@ impl<
 {
 }
 
+// We already have an implementation for ValidationTrait above
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -894,21 +905,6 @@ impl<
             + 'static
             + Serialize,
     >
-impl ConnectorSpecifications for Fiserv {}
-
-// We already have an implementation for ValidationTrait above
-
-impl
-    ConnectorIntegrationV2<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Fiserv
-{
-}
-
-impl
     interfaces::verification::SourceVerification<
         RepeatPayment,
         PaymentFlowData,
@@ -931,17 +927,19 @@ impl<
 {
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Fiserv
-{
-}
-
-impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Fiserv
+    > for Fiserv<T>
 {
 }

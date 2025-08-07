@@ -6,19 +6,14 @@ use std::{
     sync::LazyLock,
 };
 
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue};
 use domain_types::{
     connector_flow::{
-        Accept, Accept, Accept, Authorize, Authorize, Authorize, Capture, Capture, Capture,
-        CreateOrder, CreateOrder, CreateOrder, CreateSessionToken, CreateSessionToken,
-        CreateSessionToken, DefendDispute, DefendDispute, DefendDispute, PSync, PSync, PSync,
-        RSync, RSync, RSync, Refund, Refund, Refund, SetupMandate, SetupMandate, SetupMandate,
-        SubmitEvidence, SubmitEvidence, SubmitEvidence, Void, Void, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
@@ -58,18 +53,25 @@ use transformers::{
     SetupMandateRequest, SetupMandateResponse,
 };
 
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
+
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const X_API_KEY: &str = "X-Api-Key";
 }
 
-impl connector_types::PaymentSessionToken for Adyen {}
+// Type alias for non-generic trait implementations
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Adyen<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAuthorizeV2<T> for Adyen<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for Adyen<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -439,13 +441,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 
@@ -560,23 +562,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Adyen
-{
-}
-
-impl
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Adyen
+    > for Adyen<T>
 {
 }
 

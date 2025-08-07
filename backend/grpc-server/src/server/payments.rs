@@ -1,3 +1,5 @@
+use std::{fmt::Debug, sync::Arc};
+
 use common_enums;
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
@@ -35,7 +37,6 @@ use grpc_api_types::payments::{
     RefundResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use std::{fmt::Debug, sync::Arc};
 use tracing::info;
 
 use crate::{
@@ -451,18 +452,31 @@ impl Payments {
         }
     }
 
-    async fn handle_session_token<T>(
+    async fn handle_session_token<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>
+            + 'static,
+        P,
+    >(
         &self,
-        connector_data: ConnectorData,
+        connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        payload: &T,
+        payload: &P,
         connector_name: &str,
         service_name: &str,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
-        T: Clone,
-        SessionTokenRequestData: ForeignTryFrom<T, Error = ApplicationErrorResponse>,
+        P: Clone,
+        SessionTokenRequestData: ForeignTryFrom<P, Error = ApplicationErrorResponse>,
     {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
