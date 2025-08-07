@@ -28,6 +28,9 @@ pub use self::phonepe::Phonepe;
 pub mod cashfree;
 pub use self::cashfree::Cashfree;
 
+pub mod paytm;
+pub use self::paytm::Paytm;
+
 pub mod fiuu;
 pub use self::fiuu::Fiuu;
 

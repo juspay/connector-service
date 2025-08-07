@@ -52,6 +52,7 @@ pub enum ConnectorEnum {
     Authorizedotnet,
     Phonepe,
     Cashfree,
+    Paytm,
     Fiuu,
     Payu,
     Cashtocode,
@@ -76,6 +77,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
+            grpc_api_types::payments::Connector::Paytm => Ok(Self::Paytm),
             grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
             grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
@@ -278,6 +280,10 @@ pub struct PaymentFlowData {
 }
 
 impl PaymentFlowData {
+    pub fn set_status(&mut self, status: AttemptStatus) {
+        self.status = status;
+    }
+
     pub fn get_billing(&self) -> Result<&Address, Error> {
         self.address
             .get_payment_method_billing()
@@ -662,6 +668,16 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_session_token_id(mut self, session_token_id: Option<String>) -> Self {
+        if session_token_id.is_some() && self.session_token.is_none() {
+            self.session_token = session_token_id;
+        }
+        self
+    }
+
+    pub fn get_return_url(&self) -> Option<String> {
+        self.return_url.clone()
+    }
 }
 
 impl RawConnectorResponse for PaymentFlowData {
@@ -942,6 +958,11 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     //         })
     //         .ok_or_else(missing_field_err("connector_mandate_request_reference_id"))
     // }
+
+    pub fn set_session_token(mut self, session_token: Option<String>) -> Self {
+        self.session_token = session_token;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -1002,6 +1023,17 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenRequestData {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenResponseData {
+    pub session_token: String,
 }
 
 #[derive(Debug, Default, Clone)]
