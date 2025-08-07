@@ -292,7 +292,7 @@ async fn test_payment_authorization_auto_capture() {
             "Resource ID should be present"
         );
         assert!(
-            response.status == i32::from(PaymentStatus::AuthenticationPending)
+            response.status == i32::from(PaymentStatus::AuthenticationPending),
             "Payment should be in AuthenticationPending state"
         );
     });
