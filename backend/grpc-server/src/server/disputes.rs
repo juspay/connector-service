@@ -9,6 +9,7 @@ use domain_types::{
         SubmitEvidenceData,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
@@ -102,7 +103,8 @@ impl DisputeService for Disputes {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
             let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -263,7 +265,8 @@ impl DisputeService for Disputes {
             let payload = request.into_inner();
             let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
 
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -409,7 +412,7 @@ impl DisputeService for Disputes {
 }
 
 async fn get_disputes_webhook_content(
-    connector_data: ConnectorData,
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
