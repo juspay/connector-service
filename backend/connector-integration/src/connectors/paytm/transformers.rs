@@ -109,8 +109,7 @@ use serde_json;
 use url::Url;
 
 use crate::{
-    connectors::paytm::PaytmRouterData as MacroPaytmRouterData,
-    types::ResponseRouterData,
+    connectors::paytm::PaytmRouterData as MacroPaytmRouterData, types::ResponseRouterData,
 };
 
 #[derive(Debug, Clone)]
