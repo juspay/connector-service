@@ -21,8 +21,7 @@ use crate::{
     mandates,
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
-    payment_method_data,
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::PaymentMethodToken,
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
@@ -713,8 +712,8 @@ impl PaymentVoidData {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct PaymentsAuthorizeData {
-    pub payment_method_data: payment_method_data::PaymentMethodData,
+pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
     /// ```text
@@ -763,7 +762,7 @@ pub struct PaymentsAuthorizeData {
     pub all_keys_required: Option<bool>,
 }
 
-impl PaymentsAuthorizeData {
+impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     pub fn is_auto_capture(&self) -> Result<bool, Error> {
         match self.capture_method {
             Some(common_enums::CaptureMethod::Automatic)
@@ -795,9 +794,9 @@ impl PaymentsAuthorizeData {
     //         .ok_or_else(missing_field_err("order_details"))
     // }
 
-    pub fn get_card(&self) -> Result<Card, Error> {
-        match self.payment_method_data.clone() {
-            PaymentMethodData::Card(card) => Ok(card),
+    pub fn get_card(&self) -> Result<Card<T>, Error> {
+        match &self.payment_method_data {
+            PaymentMethodData::Card(card) => Ok(card.clone()),
             _ => Err(missing_field_err("card")()),
         }
     }
@@ -1287,9 +1286,9 @@ impl PaymentsCaptureData {
 }
 
 #[derive(Debug, Clone)]
-pub struct SetupMandateRequestData {
+pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub currency: Currency,
-    pub payment_method_data: payment_method_data::PaymentMethodData,
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     pub amount: Option<i64>,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
@@ -1317,7 +1316,7 @@ pub struct SetupMandateRequestData {
     pub integrity_object: Option<SetupMandateIntegrityObject>,
 }
 
-impl SetupMandateRequestData {
+impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
         self.browser_info
             .clone()
@@ -1544,8 +1543,8 @@ macro_rules! payment_method_not_supported {
     };
 }
 
-impl From<PaymentMethodData> for PaymentMethodDataType {
-    fn from(pm_data: PaymentMethodData) -> Self {
+impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodDataType {
+    fn from(pm_data: PaymentMethodData<T>) -> Self {
         match pm_data {
             PaymentMethodData::Card(_) => Self::Card,
             PaymentMethodData::CardRedirect(card_redirect_data) => match card_redirect_data {

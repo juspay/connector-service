@@ -1,4 +1,6 @@
-use domain_types::{connector_types::PaymentsAuthorizeData, errors};
+use domain_types::{
+    connector_types::PaymentsAuthorizeData, errors, payment_method_data::PaymentMethodDataTypes,
+};
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -24,7 +26,10 @@ pub trait PaymentsAuthorizeRequestData {
     fn get_router_return_url(&self) -> Result<String, Error>;
 }
 
-impl PaymentsAuthorizeRequestData for PaymentsAuthorizeData {
+impl<
+        T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static,
+    > PaymentsAuthorizeRequestData for PaymentsAuthorizeData<T>
+{
     fn get_router_return_url(&self) -> Result<String, Error> {
         self.router_return_url
             .clone()

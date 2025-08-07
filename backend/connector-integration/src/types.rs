@@ -1,5 +1,6 @@
-use domain_types::connector_types::ConnectorEnum;
+use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentMethodDataTypes};
 use interfaces::connector_types::BoxedConnector;
+use std::fmt::Debug;
 
 use crate::connectors::{
     Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Noon, Novalnet,
@@ -7,12 +8,14 @@ use crate::connectors::{
 };
 
 #[derive(Clone)]
-pub struct ConnectorData {
-    pub connector: BoxedConnector,
+pub struct ConnectorData<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static> {
+    pub connector: BoxedConnector<T>,
     pub connector_name: ConnectorEnum,
 }
 
-impl ConnectorData {
+impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>
+    ConnectorData<T>
+{
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
         let connector = Self::convert_connector(connector_name.clone());
         Self {
@@ -21,7 +24,7 @@ impl ConnectorData {
         }
     }
 
-    fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector {
+    fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
             ConnectorEnum::Adyen => Box::new(Adyen::new()),
             ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
