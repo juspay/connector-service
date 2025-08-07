@@ -384,6 +384,9 @@ impl<
                     (Some(UpiFlow::Collect), Some(vpa_string))
                 }
                 UpiData::UpiIntent(_) => (Some(UpiFlow::Intent), None),
+                // UpiData::UpiQr(_) => {
+                //     return Err(errors::ConnectorError::NotImplemented("UPI QR flow not supported by RazorpayV2".to_string()).into());
+                // }
             },
             _ => (None, None),
         };

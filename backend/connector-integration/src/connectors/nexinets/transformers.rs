@@ -1,4 +1,3 @@
-use crate::{connectors::nexinets::NexinetsRouterData, types::ResponseRouterData};
 use base64::Engine;
 use common_enums::{enums, AttemptStatus};
 use common_utils::{errors::CustomResult, request::Method};
@@ -23,6 +22,8 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+use crate::{connectors::nexinets::NexinetsRouterData, types::ResponseRouterData};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 #[derive(Debug, Serialize)]
