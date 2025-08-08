@@ -1,17 +1,17 @@
-use super::BluecodeRouterData;
 use crate::types::ResponseRouterData;
 use common_enums::{self, enums, AttemptStatus};
 use common_utils::{
     pii,
     request::Method,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
 };
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    connector_types::{PaymentsSyncData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
     errors::{self},
-    payment_method_data::{PaymentMethodData, WalletData},
-    router_data::ConnectorAuthType,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -20,6 +20,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::marker::PhantomData;
 
 // Auth
 pub struct BluecodeAuthType {
@@ -40,7 +41,14 @@ impl TryFrom<&ConnectorAuthType> for BluecodeAuthType {
 
 // Requests
 #[derive(Debug, Serialize)]
-pub struct BluecodePaymentsRequest {
+pub struct BluecodePaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub amount: FloatMajorUnit,
     pub currency: enums::Currency,
     pub payment_provider: String,
@@ -56,6 +64,8 @@ pub struct BluecodePaymentsRequest {
     pub webhook_url: String,
     pub success_url: String,
     pub failure_url: String,
+    #[serde(skip)]
+    _phantom: PhantomData<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -91,17 +101,36 @@ impl TryFrom<&pii::SecretSerdeValue> for BluecodeMetadataObject {
 }
 
 // Request TryFrom implementations
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        BluecodeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        super::BluecodeRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for BluecodePaymentsRequest
+    > for BluecodePaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: BluecodeRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        item: super::BluecodeRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         match item.router_data.request.payment_method_data.clone() {
@@ -154,6 +183,7 @@ impl
                     webhook_url: item.router_data.request.get_webhook_url()?,
                     success_url: item.router_data.request.get_router_return_url()?,
                     failure_url: item.router_data.request.get_router_return_url()?,
+                    _phantom: PhantomData,
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
@@ -185,12 +215,6 @@ pub struct BluecodeSyncResponse {
     pub currency: enums::Currency,
 }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct BluecodeRefundResponse {
-//     id: String,
-//     status: BluecodeRefundStatus,
-// }
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum BluecodePaymentStatus {
@@ -213,24 +237,6 @@ impl From<BluecodePaymentStatus> for AttemptStatus {
         }
     }
 }
-
-// #[derive(Debug, Copy, Serialize, Deserialize, Clone)]
-// #[serde(rename_all = "PascalCase")]
-// pub enum BluecodeRefundStatus {
-//     Succeeded,
-//     Failed,
-//     Processing,
-// }
-
-// impl From<BluecodeRefundStatus> for enums::RefundStatus {
-//     fn from(item: BluecodeRefundStatus) -> Self {
-//         match item {
-//             BluecodeRefundStatus::Succeeded => Self::Success,
-//             BluecodeRefundStatus::Failed => Self::Failure,
-//             BluecodeRefundStatus::Processing => Self::Pending,
-//         }
-//     }
-// }
 
 // Response TryFrom implementations
 impl<F, T>
@@ -277,44 +283,53 @@ where
     }
 }
 
-impl<F, T>
-    TryFrom<
-        ResponseRouterData<
-            BluecodeSyncResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
-where
-    T: Clone,
+impl<F> TryFrom<ResponseRouterData<BluecodeSyncResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            BluecodeSyncResponse,
-            RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // let response = Ok(PaymentsResponseData::TransactionResponse {
-        //     resource_id: ResponseId::ConnectorTransactionId(item.response.order_id),
-        //     redirection_data: None,
-        //     mandate_reference: None,
-        //     connector_metadata: None,
-        //     network_txn_id: None,
-        //     connector_response_reference_id: None,
-        //     incremental_authorization_allowed: None,
-        //     raw_connector_response: None,
-        //     status_code: item.http_code,
-        // });
-        Ok(Self {
-            // response,
-            resource_common_data: PaymentFlowData {
-                status: AttemptStatus::from(item.response.status),
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+    fn try_from(item: ResponseRouterData<BluecodeSyncResponse, Self>) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            router_data,
+            http_code,
+        } = item;
+                let status = AttemptStatus::from(response.status.clone());
+                let response = if status == common_enums::AttemptStatus::Failure {
+                    Err(ErrorResponse {
+                        code: NO_ERROR_CODE.to_string(),
+                        message: NO_ERROR_MESSAGE.to_string(),
+                        reason: Some(NO_ERROR_MESSAGE.to_string()),
+                        attempt_status: Some(status),
+                        connector_transaction_id: Some(response.order_id.clone()),
+                        status_code: http_code,
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                        raw_connector_response: None,
+                    })
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(response.order_id.clone()),
+                        redirection_data: None,
+                        mandate_reference: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        raw_connector_response: None,
+                        status_code: http_code,
+                    })
+                };
+                Ok(Self {
+                    response,
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..router_data.resource_common_data
+                    },
+                    ..router_data
+                })
+        }
     }
-}
 
 // Error
 #[derive(Debug, Serialize, Deserialize)]
@@ -328,43 +343,6 @@ pub struct BluecodeErrorResponse {
 pub struct BluecodeMetadataObject {
     pub shop_name: String,
 }
-
-// impl TryFrom<&Option<SecretSerdeValue>> for BluecodeMetadataObject {
-//     type Error = error_stack::Report<errors::ConnectorError>;
-//     fn try_from(meta_data: &Option<SecretSerdeValue>) -> Result<Self, Self::Error> {
-//         let metadata_value = meta_data
-//             .as_ref()
-//             .ok_or(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?
-//             .peek();
-//         serde_json::from_value(metadata_value.clone())
-//             .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })
-//     }
-// }
-
-// pub(crate) fn get_bluecode_webhook_event(
-//     status: BluecodePaymentStatus,
-// ) -> api_models_webhooks::IncomingWebhookEvent {
-//     match status {
-//         BluecodePaymentStatus::Completed => {
-//             api_models_webhooks::IncomingWebhookEvent::PaymentIntentSuccess
-//         }
-//         BluecodePaymentStatus::PaymentInitiated
-//         | BluecodePaymentStatus::ManualProcessing
-//         | BluecodePaymentStatus::Pending => {
-//             api_models_webhooks::IncomingWebhookEvent::PaymentIntentProcessing
-//         }
-//         BluecodePaymentStatus::Failed => {
-//             api_models_webhooks::IncomingWebhookEvent::PaymentIntentFailure
-//         }
-//     }
-// }
-
-// pub(crate) fn get_webhook_object_from_body(
-//     body: &[u8],
-// ) -> CustomResult<BluecodeSyncResponse, common_utils::errors::ParsingError> {
-//     let webhook: BluecodeSyncResponse = body.parse_struct("BluecodeIncomingWebhook")?;
-//     Ok(webhook)
-// }
 
 pub fn sort_and_minify_json(value: &Value) -> Result<String, errors::ConnectorError> {
     fn sort_value(val: &Value) -> Value {

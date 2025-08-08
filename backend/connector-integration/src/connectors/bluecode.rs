@@ -1,27 +1,24 @@
 pub mod transformers;
 
-use std::{
-    fmt::Debug,
-    marker::{Send, Sync},
-    sync::LazyLock,
-};
-use serde::Serialize;
-use common_enums::{enums};
+use common_enums::{enums, PaymentMethodType};
 use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, SetupMandate, SubmitEvidence, Void, CreateSessionToken, 
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        self as conn_types, AcceptDisputeData, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
     },
-    router_data_v2::RouterDataV2,
-    errors::{self},
-    payment_method_data::{PaymentMethodData,PaymentMethodDataTypes, DefaultPCIHolder},
+    errors::{self, ConnectorError},
+    payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
     router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::{
         self, ConnectorInfo, Connectors, FeatureStatus, PaymentMethodDetails,
@@ -36,10 +33,16 @@ use interfaces::{
     connector_types::{self, ConnectorValidation},
     events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+    sync::LazyLock,
+};
 use transformers::*;
 
 use super::macros;
-use crate::{with_error_response_body};
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -51,7 +54,8 @@ const BLUECODE_API_VERSION: &str = "v1";
 // Type alias for non-generic trait implementations
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Bluecode<T>
-    {}
+{
+}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Bluecode<T>
 {
@@ -133,12 +137,58 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
     > for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Bluecode<T>
 {
 }
 
@@ -245,6 +295,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Bluecode<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
@@ -255,44 +315,41 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        CreateSessionToken,
+        RepeatPayment,
         PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Bluecode<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::RepeatPayment,
-        PaymentFlowData,
-        domain_types::connector_types::RepeatPaymentData,
+        RepeatPaymentData,
         PaymentsResponseData,
     > for Bluecode<T>
 {
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Bluecode<T>
+{
+}
+
 macros::create_all_prerequisites!(
     connector_name: Bluecode,
+    generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: BluecodePaymentsRequest,
+            request_body: BluecodePaymentsRequest<T>,
             response_body: BluecodePaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
             response_body: BluecodeSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
     member_functions: {
-        fn build_headers<F, Req, Res>(
+        pub fn build_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+            req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
@@ -303,7 +360,7 @@ macros::create_all_prerequisites!(
             Ok(header)
         }
 
-        fn connector_base_url_payments<'a, F, Req, Res>(
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
@@ -312,8 +369,10 @@ macros::create_all_prerequisites!(
     }
 );
 
+// present
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Bluecode<T> {
+    for Bluecode<T>
+{
     fn id(&self) -> &'static str {
         "bluecode"
     }
@@ -369,11 +428,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-impl ConnectorValidation for Bluecode {
+impl ConnectorValidation for Bluecode<DefaultPCIHolder> {
     fn validate_mandate_payment(
         &self,
-        _pm_type: Option<enums::PaymentMethodType>,
-        pm_data: PaymentMethodData,
+        _pm_type: Option<PaymentMethodType>,
+        pm_data: PaymentMethodData<DefaultPCIHolder>,
     ) -> CustomResult<(), errors::ConnectorError> {
         match pm_data {
             PaymentMethodData::Card(_) => Err(errors::ConnectorError::NotImplemented(
@@ -392,6 +451,10 @@ impl ConnectorValidation for Bluecode {
         _connector_meta_data: Option<common_utils::pii::SecretSerdeValue>,
     ) -> CustomResult<(), errors::ConnectorError> {
         Ok(())
+    }
+
+    fn is_webhook_source_verification_mandatory(&self) -> bool {
+        true
     }
 }
 
@@ -493,7 +556,7 @@ static BLUECODE_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
 
 static BLUECODE_SUPPORTED_WEBHOOK_FLOWS: [enums::EventClass; 1] = [enums::EventClass::Payments];
 
-impl conn_types::ConnectorSpecifications for Bluecode<DefaultPCIHolder> {
+impl ConnectorSpecifications for Bluecode<DefaultPCIHolder> {
     fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
         Some(&BLUECODE_CONNECTOR_INFO)
     }
@@ -506,4 +569,3 @@ impl conn_types::ConnectorSpecifications for Bluecode<DefaultPCIHolder> {
         Some(&BLUECODE_SUPPORTED_WEBHOOK_FLOWS)
     }
 }
-
