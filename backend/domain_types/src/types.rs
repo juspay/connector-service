@@ -1522,6 +1522,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+    let raw_connector_response = router_data_v2.resource_common_data.raw_connector_response;
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
