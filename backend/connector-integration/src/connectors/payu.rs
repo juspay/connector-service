@@ -317,7 +317,6 @@ macros::macro_connector_implementation!(
                     network_error_message: None,
                     network_advice_code: None,
                     network_decline_code: None,
-                    raw_connector_response: None,
                 })
             } else {
                 // This shouldn't happen as successful responses go through normal flow
@@ -332,7 +331,6 @@ macros::macro_connector_implementation!(
                     network_error_message: None,
                     network_advice_code: None,
                     network_decline_code: None,
-                    raw_connector_response: None,
                 })
             }
         }
