@@ -139,8 +139,8 @@ pub struct PhonepeResponseData {
     merchant_id: String,
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
-    #[serde(rename = "transactionId")]
-    transaction_id: String,
+    #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
+    transaction_id: Option<String>,
     #[serde(rename = "instrumentResponse", skip_serializing_if = "Option::is_none")]
     instrument_response: Option<PhonepeInstrumentResponse>,
     #[serde(rename = "responseCode", skip_serializing_if = "Option::is_none")]
@@ -171,7 +171,7 @@ pub struct PhonepeSyncResponseData {
         skip_serializing_if = "Option::is_none"
     )]
     merchant_transaction_id: Option<String>,
-    #[serde(rename = "transactionId")]
+    #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
     transaction_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     amount: Option<MinorUnit>,
@@ -449,7 +449,9 @@ impl<
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id.clone(),
+                                data.transaction_id
+                                    .clone()
+                                    .unwrap_or(data.merchant_transaction_id.clone()),
                             ),
                             redirection_data: redirect_form.map(Box::new),
                             mandate_reference: None,
