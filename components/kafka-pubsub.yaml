@@ -16,3 +16,75 @@ spec:
       value: audit-trail-events
     - name: subscribeTopics
       value: audit-trail-events
+    
+    # Connection Management & Resilience
+    - name: clientID
+      value: "connector-service-client"
+    - name: connectionTimeout
+      value: "30s"
+    - name: requestTimeout
+      value: "30s"
+    - name: retryBackoff
+      value: "100ms"
+    - name: maxRetries
+      value: "5"
+    - name: keepAlive
+      value: "30s"
+    - name: dialTimeout
+      value: "30s"
+    - name: readTimeout
+      value: "30s"
+    - name: writeTimeout
+      value: "30s"
+    
+    # Producer Configuration for Load Testing
+    - name: producerBatchSize
+      value: "16384"     # 16KB batches
+    - name: producerLingerMs
+      value: "10"        # Increased batching time
+    - name: producerCompressionType
+      value: "snappy"    # Enable compression
+    - name: producerMaxRequestSize
+      value: "1048576"   # 1MB max request
+    - name: producerRetries
+      value: "5"         # Increased retries
+    - name: producerAcks
+      value: "1"         # Wait for leader acknowledgment only
+    - name: producerRequestTimeoutMs
+      value: "30000"     # 30 second timeout
+    - name: producerRetryBackoffMs
+      value: "100"       # Retry backoff
+    - name: producerMaxInFlightRequests
+      value: "5"         # Limit in-flight requests
+    - name: producerBufferMemory
+      value: "33554432"  # 32MB buffer
+    - name: producerFlushFrequency
+      value: "500ms"     # Flush frequency
+    
+    # Consumer Configuration for Load Testing
+    - name: consumerFetchMinBytes
+      value: "1024"      # Minimum fetch size
+    - name: consumerFetchMaxWait
+      value: "500"       # Max wait time in ms
+    - name: consumerMaxProcessingTime
+      value: "2000"      # Increased processing time
+    - name: consumerSessionTimeout
+      value: "30000"     # 30 second session timeout
+    - name: consumerHeartbeatInterval
+      value: "3000"      # 3 second heartbeat
+    - name: consumerMaxPollRecords
+      value: "500"       # Max records per poll
+    - name: consumerMaxPollInterval
+      value: "300000"    # 5 minute max poll interval
+    
+    # Message Configuration
+    - name: maxMessageBytes
+      value: "10485760"  # 10MB
+    - name: enableIdempotence
+      value: "true"      # Enable idempotent producer
+    
+    # Load Testing Specific Settings
+    - name: metadataRefreshFrequency
+      value: "10m"       # Refresh metadata every 10 minutes
+    - name: socketKeepAliveEnabled
+      value: "true"      # Enable socket keep-alive

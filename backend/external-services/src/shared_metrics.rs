@@ -57,6 +57,27 @@ lazy_static! {
         &["method", "service", "connector", "error"]
     )
     .unwrap();
+    pub static ref DAPR_EVENT_PUBLISH_TOTAL: IntCounterVec = register_int_counter_vec!(
+        "DAPR_EVENT_PUBLISH_TOTAL",
+        "Total number of events published to DAPR",
+        &["flow_type", "connector", "status"]
+    )
+    .unwrap();
+    pub static ref DAPR_EVENT_PUBLISH_LATENCY: HistogramVec = register_histogram_vec!(
+        "DAPR_EVENT_PUBLISH_LATENCY_SECONDS",
+        "Latency of DAPR event publishing in seconds",
+        &["flow_type", "connector"],
+        LATENCY_BUCKETS.to_vec()
+    )
+    .unwrap();
+
+    // Comprehensive Event Publishing Metrics - Single metric with all info
+    pub static ref EVENT_PUBLISHING_METRICS: IntCounterVec = register_int_counter_vec!(
+        "EVENT_PUBLISHING_METRICS_TOTAL",
+        "Comprehensive event publishing metrics with status and error details",
+        &["flow_type", "connector", "status", "error_type", "error_category"]
+    )
+    .unwrap();
 }
 
 // Middleware Layer that automatically handles all gRPC methods

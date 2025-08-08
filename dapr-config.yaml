@@ -1,0 +1,63 @@
+apiVersion: dapr.io/v1alpha1
+kind: Configuration
+metadata:
+  name: dapr-config
+spec:
+  tracing:
+    samplingRate: "0.1"  # Reduce tracing overhead
+  metric:
+    enabled: true
+  api:
+    allowed:
+      - name: "pubsub"
+        version: "v1"
+        protocol: "grpc"
+    # Add API timeouts for load testing
+    timeout: "30s"
+  grpc:
+    # gRPC configuration for better load handling
+    timeout: "30s"
+    maxRequestBodySize: "10MB"
+    maxConcurrency: 1000
+  features:
+    - name: "pubsub.outbox"
+      enabled: false  # Disable if not needed
+  # Component initialization settings
+  components:
+    deny:
+      - "secretstores.kubernetes"  # Disable unused components
+  # Resilience settings for pubsub
+  resiliency:
+    policies:
+      retries:
+        pubsubRetry:
+          policy: "exponential"
+          duration: "5s"
+          maxRetries: 3
+      timeouts:
+        pubsubTimeout:
+          timeout: "30s"
+      circuitBreakers:
+        pubsubCircuitBreaker:
+          maxRequests: 100
+          interval: "30s"
+          timeout: "60s"
+          trip: "consecutiveFailures >= 5"
+    targets:
+      components:
+        kafka-pubsub:
+          retry: "pubsubRetry"
+          timeout: "pubsubTimeout"
+          circuitBreaker: "pubsubCircuitBreaker"
+  httpPipeline:
+    handlers:
+      - name: "uppercase"
+        type: "middleware.http.uppercase"
+  appHttpPipeline:
+    handlers:
+      - name: "oauth2"
+        type: "middleware.http.oauth2"
+  secrets:
+    scopes:
+      - storeName: "kubernetes"
+        defaultAccess: "allow"

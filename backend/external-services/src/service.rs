@@ -63,6 +63,201 @@ pub struct EventProcessingParams<'a> {
     pub request_id: &'a str,
 }
 
+/// Helper function to publish event with retry logic for transport errors
+async fn publish_event_with_retry(
+    event: Event,
+    event_config: &EventConfig,
+    request_id: &str,
+    connector_name: &str,
+    flow_type_str: &str,
+) {
+    let dapr_start_time = std::time::Instant::now();
+
+    // First attempt
+    match emit_event_with_config(event.clone(), event_config).await {
+        Ok(_) => {
+            let dapr_elapsed = dapr_start_time.elapsed().as_secs_f64();
+
+            // Record successful event publish metrics (first attempt success)
+            metrics::DAPR_EVENT_PUBLISH_TOTAL
+                .with_label_values(&[flow_type_str, connector_name, "success"])
+                .inc();
+
+            metrics::DAPR_EVENT_PUBLISH_LATENCY
+                .with_label_values(&[flow_type_str, connector_name])
+                .observe(dapr_elapsed);
+
+            // Comprehensive metrics - first attempt success
+            metrics::EVENT_PUBLISHING_METRICS
+                .with_label_values(&[
+                    flow_type_str,
+                    connector_name,
+                    "success",
+                    "first_attempt",
+                    "none",
+                ])
+                .inc();
+
+            tracing::info!(
+                "Successfully published event {} for {} on first attempt (latency: {:.3}s)",
+                request_id,
+                connector_name,
+                dapr_elapsed
+            );
+        }
+        Err(e) => {
+            let error_str = format!("{:?}", e);
+            let is_transport_error = error_str.contains("Failed to connect to Dapr sidecar")
+                || error_str.contains("TransportError")
+                || error_str.contains("connection refused");
+
+            if is_transport_error {
+                // Record initial transport error metrics
+                metrics::EVENT_PUBLISHING_METRICS
+                    .with_label_values(&[
+                        flow_type_str,
+                        connector_name,
+                        "failure",
+                        "transport_error_initial",
+                        "dapr_connection",
+                    ])
+                    .inc();
+
+                tracing::warn!(
+                    "Transport error on first attempt for event {}: {:?}. Retrying once...",
+                    request_id,
+                    e
+                );
+
+                // Wait a brief moment before retry
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                // Retry attempt
+                let retry_start_time = std::time::Instant::now();
+                match emit_event_with_config(event, event_config).await {
+                    Ok(_) => {
+                        let retry_elapsed = retry_start_time.elapsed().as_secs_f64();
+                        let total_elapsed = dapr_start_time.elapsed().as_secs_f64();
+
+                        // Record successful retry metrics
+                        metrics::DAPR_EVENT_PUBLISH_TOTAL
+                            .with_label_values(&[flow_type_str, connector_name, "success"])
+                            .inc();
+
+                        metrics::DAPR_EVENT_PUBLISH_LATENCY
+                            .with_label_values(&[flow_type_str, connector_name])
+                            .observe(total_elapsed);
+
+                        // Comprehensive metrics - success after retry (distinct from initial transport error)
+                        metrics::EVENT_PUBLISHING_METRICS
+                            .with_label_values(&[
+                                flow_type_str,
+                                connector_name,
+                                "success",
+                                "retry_success",
+                                "dapr_connection",
+                            ])
+                            .inc();
+
+                        tracing::info!(
+                            "Successfully published event {} for {} after retry (retry_latency: {:.3}s, total_latency: {:.3}s)",
+                            request_id, connector_name, retry_elapsed, total_elapsed
+                        );
+                    }
+                    Err(retry_error) => {
+                        let total_elapsed = dapr_start_time.elapsed().as_secs_f64();
+
+                        // Analyze retry error type for detailed metrics
+                        let retry_error_str = format!("{:?}", retry_error);
+                        let (error_type, error_category) = if retry_error_str
+                            .contains("Failed to connect to Dapr sidecar")
+                            || retry_error_str.contains("TransportError")
+                        {
+                            ("retry_failure_transport", "dapr_connection")
+                        } else if retry_error_str
+                            .contains("kafka: client has run out of available brokers")
+                            || retry_error_str.contains("connection refused")
+                        {
+                            ("retry_failure_kafka", "kafka_connection")
+                        } else if retry_error_str.contains("GrpcError") {
+                            ("retry_failure_grpc", "dapr_grpc")
+                        } else if retry_error_str.contains("timeout") {
+                            ("retry_failure_timeout", "timeout")
+                        } else {
+                            ("retry_failure_unknown", "other")
+                        };
+
+                        // Record failed retry metrics
+                        metrics::DAPR_EVENT_PUBLISH_TOTAL
+                            .with_label_values(&[flow_type_str, connector_name, "failure"])
+                            .inc();
+
+                        metrics::DAPR_EVENT_PUBLISH_LATENCY
+                            .with_label_values(&[flow_type_str, connector_name])
+                            .observe(total_elapsed);
+
+                        // Comprehensive metrics with retry failure details (distinct from initial transport error)
+                        metrics::EVENT_PUBLISHING_METRICS
+                            .with_label_values(&[
+                                flow_type_str,
+                                connector_name,
+                                "failure",
+                                error_type,
+                                error_category,
+                            ])
+                            .inc();
+
+                        tracing::error!(
+                            "Failed to publish event {} after retry: {:?} (total_latency: {:.3}s) [error_type: {}, category: {}]", 
+                            request_id, retry_error, total_elapsed, error_type, error_category
+                        );
+                    }
+                }
+            } else {
+                // Non-transport error, don't retry
+                let dapr_elapsed = dapr_start_time.elapsed().as_secs_f64();
+
+                // Analyze error type for detailed metrics
+                let (error_type, error_category) =
+                    if error_str.contains("kafka: client has run out of available brokers") {
+                        ("kafka_broker_error", "kafka_connection")
+                    } else if error_str.contains("GrpcError") {
+                        ("grpc_error", "dapr_grpc")
+                    } else if error_str.contains("timeout") {
+                        ("timeout_error", "timeout")
+                    } else {
+                        ("unknown_error", "other")
+                    };
+
+                // Record failed event publish metrics
+                metrics::DAPR_EVENT_PUBLISH_TOTAL
+                    .with_label_values(&[flow_type_str, connector_name, "failure"])
+                    .inc();
+
+                metrics::DAPR_EVENT_PUBLISH_LATENCY
+                    .with_label_values(&[flow_type_str, connector_name])
+                    .observe(dapr_elapsed);
+
+                // Comprehensive metrics with error details (non-transport errors)
+                metrics::EVENT_PUBLISHING_METRICS
+                    .with_label_values(&[
+                        flow_type_str,
+                        connector_name,
+                        "failure",
+                        error_type,
+                        error_category,
+                    ])
+                    .inc();
+
+                tracing::error!(
+                    "Failed to publish event {}: {:?} (latency: {:.3}s) [error_type: {}, category: {}]", 
+                    request_id, e, dapr_elapsed, error_type, error_category
+                );
+            }
+        }
+    }
+}
+
 #[tracing::instrument(
     name = "execute_connector_processing_step",
     skip_all,
@@ -188,43 +383,48 @@ where
                     let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
                     let status_code = body.status_code;
 
-                    // Emit success response event
-                    tokio::spawn({
-                        let connector_name = event_params.connector_name.to_string();
-                        let event_config = event_params.event_config.clone();
-                        let request_data = req.clone();
-                        let response_data = res_body.clone();
-                        let raw_request_data_clone = event_params.raw_request_data.clone();
-                        let url_clone = url.clone();
-                        let flow_name = event_params.flow_name;
+                    // Emit 5 success response events for load testing
+                    for event_index in 0..10 {
+                        tokio::spawn({
+                            let connector_name = event_params.connector_name.to_string();
+                            let event_config = event_params.event_config.clone();
+                            let request_data = req.clone();
+                            let response_data = res_body.clone();
+                            let raw_request_data_clone = event_params.raw_request_data.clone();
+                            let url_clone = url.clone();
+                            let flow_name = event_params.flow_name;
+                            let request_id_with_index =
+                                format!("{}_event_{}", request_id, event_index);
 
-                        async move {
-                            let event = Event {
-                                request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
-                                flow_type: flow_name,
-                                connector: connector_name.clone(),
-                                url: Some(url_clone),
-                                stage: EventStage::ConnectorCall,
-                                latency: Some(latency),
-                                status_code: Some(status_code),
-                                request_data: raw_request_data_clone,
-                                connector_request_data: request_data.map(Secret::new),
-                                connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                            async move {
+                                let event = Event {
+                                    request_id: request_id_with_index.clone(),
+                                    timestamp: chrono::Utc::now().timestamp() as i128,
+                                    flow_type: flow_name,
+                                    connector: connector_name.clone(),
+                                    url: Some(url_clone),
+                                    stage: EventStage::ConnectorCall,
+                                    latency: Some(latency),
+                                    status_code: Some(status_code),
+                                    request_data: raw_request_data_clone,
+                                    connector_request_data: request_data.map(Secret::new),
+                                    connector_response_data: response_data.map(Secret::new),
+                                    additional_fields: std::collections::HashMap::new(),
+                                };
 
-                            match emit_event_with_config(event, &event_config).await {
-                                Ok(_) => tracing::info!(
-                                    "Successfully published response event for {}",
-                                    connector_name
-                                ),
-                                Err(e) => {
-                                    tracing::error!("Failed to publish response event: {:?}", e)
-                                }
+                                // Use retry logic for event publishing
+                                let flow_type_str = flow_name.as_str();
+                                publish_event_with_retry(
+                                    event,
+                                    &event_config,
+                                    &request_id_with_index,
+                                    &connector_name,
+                                    flow_type_str,
+                                )
+                                .await;
                             }
-                        }
-                    });
+                        });
+                    }
                 }
                 Ok(Err(error_body)) => {
                     let error_res_body =
@@ -233,44 +433,48 @@ where
                     let latency = external_service_elapsed as u64 * 1000;
                     let status_code = error_body.status_code;
 
-                    // Emit error response event
-                    tokio::spawn({
-                        let connector_name = event_params.connector_name.to_string();
-                        let event_config = event_params.event_config.clone();
-                        let request_data = req.clone();
-                        let response_data = error_res_body.clone();
-                        let raw_request_data_clone = event_params.raw_request_data.clone();
-                        let url_clone = url.clone();
-                        let flow_name = event_params.flow_name;
+                    // Emit 4 error response events for load testing
+                    for event_index in 0..10 {
+                        tokio::spawn({
+                            let connector_name = event_params.connector_name.to_string();
+                            let event_config = event_params.event_config.clone();
+                            let request_data = req.clone();
+                            let response_data = error_res_body.clone();
+                            let raw_request_data_clone = event_params.raw_request_data.clone();
+                            let url_clone = url.clone();
+                            let flow_name = event_params.flow_name;
+                            let request_id_with_index =
+                                format!("{}_error_event_{}", request_id, event_index);
 
-                        async move {
-                            let event = Event {
-                                request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
-                                flow_type: flow_name,
-                                connector: connector_name.clone(),
-                                url: Some(url_clone),
-                                stage: EventStage::ConnectorCall,
-                                latency: Some(latency),
-                                status_code: Some(status_code),
-                                request_data: raw_request_data_clone,
-                                connector_request_data: request_data.map(Secret::new),
-                                connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                            async move {
+                                let event = Event {
+                                    request_id: request_id_with_index.clone(),
+                                    timestamp: chrono::Utc::now().timestamp() as i128,
+                                    flow_type: flow_name,
+                                    connector: connector_name.clone(),
+                                    url: Some(url_clone),
+                                    stage: EventStage::ConnectorCall,
+                                    latency: Some(latency),
+                                    status_code: Some(status_code),
+                                    request_data: raw_request_data_clone,
+                                    connector_request_data: request_data.map(Secret::new),
+                                    connector_response_data: response_data.map(Secret::new),
+                                    additional_fields: std::collections::HashMap::new(),
+                                };
 
-                            match emit_event_with_config(event, &event_config).await {
-                                Ok(_) => tracing::info!(
-                                    "Successfully published error response event for {}",
-                                    connector_name
-                                ),
-                                Err(e) => tracing::error!(
-                                    "Failed to publish error response event: {:?}",
-                                    e
-                                ),
+                                // Use retry logic for event publishing
+                                let flow_type_str = flow_name.as_str();
+                                publish_event_with_retry(
+                                    event,
+                                    &event_config,
+                                    &request_id_with_index,
+                                    &connector_name,
+                                    flow_type_str,
+                                )
+                                .await;
                             }
-                        }
-                    });
+                        });
+                    }
                 }
                 Err(network_error) => {
                     tracing::error!(
@@ -279,43 +483,47 @@ where
                         network_error
                     );
 
-                    // Emit network error event
-                    tokio::spawn({
-                        let connector_name = event_params.connector_name.to_string();
-                        let event_config = event_params.event_config.clone();
-                        let request_data = req.clone();
-                        let raw_request_data_clone = event_params.raw_request_data.clone();
-                        let url_clone = url.clone();
-                        let flow_name = event_params.flow_name;
+                    // Emit 4 network error events for load testing
+                    for event_index in 0..10 {
+                        tokio::spawn({
+                            let connector_name = event_params.connector_name.to_string();
+                            let event_config = event_params.event_config.clone();
+                            let request_data = req.clone();
+                            let raw_request_data_clone = event_params.raw_request_data.clone();
+                            let url_clone = url.clone();
+                            let flow_name = event_params.flow_name;
+                            let request_id_with_index =
+                                format!("{}_network_error_event_{}", request_id, event_index);
 
-                        async move {
-                            let event = Event {
-                                request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
-                                flow_type: flow_name,
-                                connector: connector_name.clone(),
-                                url: Some(url_clone),
-                                stage: EventStage::ConnectorCall,
-                                latency: None,
-                                status_code: None,
-                                request_data: raw_request_data_clone,
-                                connector_request_data: request_data.map(Secret::new),
-                                connector_response_data: None,
-                                additional_fields: std::collections::HashMap::new(),
-                            };
+                            async move {
+                                let event = Event {
+                                    request_id: request_id_with_index.clone(),
+                                    timestamp: chrono::Utc::now().timestamp() as i128,
+                                    flow_type: flow_name,
+                                    connector: connector_name.clone(),
+                                    url: Some(url_clone),
+                                    stage: EventStage::ConnectorCall,
+                                    latency: None,
+                                    status_code: None,
+                                    request_data: raw_request_data_clone,
+                                    connector_request_data: request_data.map(Secret::new),
+                                    connector_response_data: None,
+                                    additional_fields: std::collections::HashMap::new(),
+                                };
 
-                            match emit_event_with_config(event, &event_config).await {
-                                Ok(_) => tracing::info!(
-                                    "Successfully published network error event for {}",
-                                    connector_name
-                                ),
-                                Err(e) => tracing::error!(
-                                    "Failed to publish network error event: {:?}",
-                                    e
-                                ),
+                                // Use retry logic for event publishing
+                                let flow_type_str = flow_name.as_str();
+                                publish_event_with_retry(
+                                    event,
+                                    &event_config,
+                                    &request_id_with_index,
+                                    &connector_name,
+                                    flow_type_str,
+                                )
+                                .await;
                             }
-                        }
-                    });
+                        });
+                    }
                 }
             }
 

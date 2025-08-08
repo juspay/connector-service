@@ -40,7 +40,7 @@ novalnet.base_url = "https://payport.novalnet.de/v2"
 
 # Generic Events Configuration
 [events]
-enabled = false
+enabled = true
 pubsub_component = "kafka-pubsub"
 topic = "audit-trail-events"
 partition_key_field = "request_id"

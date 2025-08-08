@@ -1,0 +1,23 @@
+global:
+  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  - job_name: 'dapr'
+
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 5s
+
+    static_configs:
+      - targets: ['host.containers.internal:9091'] # Use host.containers.internal to reach host from container
+
+  - job_name: 'connector-service'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['host.containers.internal:8080'] # Also scrape the connector service metrics
+
+  - job_name: 'locust-dapr-test'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['host.containers.internal:9093'] # Locust direct Dapr test metrics
