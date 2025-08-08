@@ -36,7 +36,6 @@ message PaymentMethod {
     // WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: Not yet supported
     UpiCollect upi_collect = 3;                          // UPI Collect payment method - SUPPORTED
     UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
-    UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
     TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
     BankTransferPaymentMethodType bank_transfer = 6;     // Bank transfer payment methods - SUPPORTED
     OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - SUPPORTED
@@ -47,6 +46,7 @@ message PaymentMethod {
     DirectDebitPaymentMethodType direct_debit = 12;      // Direct debit payment methods - SUPPORTED
     // OtherPaymentMethodType other = 13;                   // Other payment methods - TODO: Not yet supported
     RewardPaymentMethodType reward = 14;                 // Reward payment methods - SUPPORTED
+    UpiQr upi_qr = 15;                                   // UPI QR payment method - SUPPORTED
   }
 }
 
