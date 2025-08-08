@@ -1309,6 +1309,7 @@ pub fn generate_payment_authorize_response(
     info!("Payment authorize response status: {:?}", status);
     let order_id = router_data_v2.resource_common_data.reference_id;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+    let raw_connector_response = router_data_v2.resource_common_data.raw_connector_response;
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -1319,7 +1320,7 @@ pub fn generate_payment_authorize_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference: _,
-                raw_connector_response,
+                raw_connector_response: _,
                 status_code,
             } => {
                 PaymentServiceAuthorizeResponse {
