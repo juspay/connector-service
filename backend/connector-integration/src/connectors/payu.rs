@@ -1,23 +1,23 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::enums;
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit, RequestContent,
-};
+use common_enums::{enums, CurrencyUnit};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors::{self, ConnectorError},
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -29,30 +29,221 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+use serde::Serialize;
 use transformers::{is_upi_collect_flow, PayuAuthType, PayuPaymentRequest, PayuPaymentResponse};
 
 use super::{macros, xendit::BASE64_ENGINE};
 use crate::types::ResponseRouterData;
 
+// Trait implementations with generic type parameters
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSyncV2 for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidV2 for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundSyncV2 for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundV2 for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentCapture for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SetupMandateV2<T> for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::AcceptDispute for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SubmitEvidenceV2 for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::DisputeDefend for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentOrderCreate for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ValidationTrait for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Payu<T>
+{
+}
+
 // Set up connector using macros with all framework integrations
 macros::create_all_prerequisites!(
     connector_name: Payu,
+    generic_type: T,
     api: [
         (
             flow: Authorize,
             request_body: PayuPaymentRequest,
             response_body: PayuPaymentResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [
-        amount_converter: StringMajorUnit // Must match the converter chosen above
+        amount_converter: StringMajorUnit
     ],
     member_functions: {
-        // Payu-specific helper functions will be added here
-        fn preprocess_response_bytes<F, FCD, Res>(
+
+        pub fn build_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, PaymentsAuthorizeData, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            Ok(vec![
+                ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
+                ("Accept".to_string(), "application/json".into()),
+            ])
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.payu.base_url
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.payu.base_url
+        }
+
+        pub fn preprocess_response_bytes<F, FCD, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, PaymentsAuthorizeData<T>, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, ConnectorError> {
             if is_upi_collect_flow(&req.request) {
@@ -68,7 +259,6 @@ macros::create_all_prerequisites!(
     }
 );
 
-// Implement authorize flow using macro framework
 macros::macro_connector_implementation!(
     connector_default_implementations: [],
     connector: Payu,
@@ -76,25 +266,23 @@ macros::macro_connector_implementation!(
     curl_response: PayuPaymentResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData,
+    flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     preprocess_response: true,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let _auth = PayuAuthType::try_from(&req.connector_auth_type)?;
-            Ok(vec![
-                ("Content-Type".to_string(), "application/x-www-form-urlencoded".into()),
-                ("Accept".to_string(), "application/json".into()),
-            ])
+            self.build_headers(req)
         }
 
         fn get_url(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             // Based on Haskell Endpoints.hs: uses /_payment endpoint for UPI transactions
             // Test: https://test.payu.in/_payment
@@ -102,11 +290,9 @@ macros::macro_connector_implementation!(
             let base_url = self.base_url(&req.resource_common_data.connectors);
             Ok(format!("{base_url}/_payment"))
         }
-
         fn get_content_type(&self) -> &'static str {
             "application/x-www-form-urlencoded"
         }
-
         fn get_error_response_v2(
             &self,
             res: Response,
@@ -154,13 +340,21 @@ macros::macro_connector_implementation!(
 );
 
 // Implement ConnectorCommon trait
-impl ConnectorCommon for Payu {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorCommon for Payu<T>
+{
     fn id(&self) -> &'static str {
         "payu"
     }
 
     fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        common_enums::CurrencyUnit::Minor // Standard currency unit
+        CurrencyUnit::Minor
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -177,17 +371,21 @@ impl ConnectorCommon for Payu {
     }
 }
 
-// Core service traits
-impl connector_types::ConnectorServiceTrait for Payu {}
-impl connector_types::PaymentAuthorizeV2 for Payu {}
-
 // **STUB IMPLEMENTATIONS**: Source Verification Framework stubs for main development
 // These will be replaced with actual implementations in Phase 10
 use common_utils::crypto;
 use interfaces::verification::{ConnectorSourceVerificationSecrets, SourceVerification};
 
-impl SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
-    for Payu
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+    for Payu<T>
 {
     fn get_secrets(
         &self,
@@ -210,7 +408,7 @@ impl SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, Payme
         _router_data: &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
         _secrets: &[u8],
@@ -225,7 +423,7 @@ impl SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, Payme
         _router_data: &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
         _secrets: &[u8],
@@ -238,7 +436,15 @@ impl SourceVerification<Authorize, PaymentFlowData, PaymentsAuthorizeData, Payme
 // Add Source Verification stubs for all other flows
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
-        impl SourceVerification<$flow, $common_data, $req, $resp> for Payu {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > SourceVerification<$flow, $common_data, $req, $resp> for Payu<T>
+        {
             fn get_secrets(
                 &self,
                 _secrets: ConnectorSourceVerificationSecrets,
@@ -301,7 +507,7 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
-    SetupMandateRequestData,
+    SetupMandateRequestData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
@@ -324,64 +530,173 @@ impl_source_verification_stub!(
 );
 
 // Connector integration implementations for unsupported flows (stubs)
-impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Payu {}
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Payu {}
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Payu
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Payu<T>
 {
 }
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Payu {}
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Payu
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Payu<T>
 {
 }
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Payu<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Payu
+    > for Payu<T>
 {
 }
-impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Payu
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Payu<T>
 {
 }
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Payu
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Payu<T>
 {
 }
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Payu
+    for Payu<T>
 {
 }
-impl ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Payu
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Payu<T>
 {
 }
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Payu
+    > for Payu<T>
 {
 }
 
-// Trait aliases (required for compilation)
-impl connector_types::RefundV2 for Payu {}
-impl connector_types::RefundSyncV2 for Payu {}
-impl connector_types::PaymentSyncV2 for Payu {}
-impl connector_types::PaymentVoidV2 for Payu {}
-impl connector_types::PaymentCapture for Payu {}
-impl connector_types::SetupMandateV2 for Payu {}
-impl connector_types::AcceptDispute for Payu {}
-impl connector_types::SubmitEvidenceV2 for Payu {}
-impl connector_types::DisputeDefend for Payu {}
-impl connector_types::IncomingWebhook for Payu {}
-impl connector_types::PaymentOrderCreate for Payu {}
-impl connector_types::ValidationTrait for Payu {}
-impl connector_types::RepeatPaymentV2 for Payu {}
+// Add stub implementation for CreateSessionToken
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Payu<T>
+{
+}
+
+// Add source verification stub for CreateSessionToken
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);

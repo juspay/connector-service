@@ -3,22 +3,22 @@ pub mod headers;
 pub mod transformers;
 
 use common_enums as enums;
-use common_utils::{
-    errors::CustomResult, ext_traits::BytesExt, request::RequestContent, types::MinorUnit,
-};
+use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::MinorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
+    payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -27,27 +27,196 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
-    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
+    api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
+    events::connector_api_logs::ConnectorEvent,
+    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
+use serde::Serialize;
 use transformers as phonepe;
 
 use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
 
+// Trait implementations with generic type parameters
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ConnectorServiceTrait<T> for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthorizeV2<T> for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSyncV2 for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidV2 for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundSyncV2 for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RefundV2 for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentCapture for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SetupMandateV2<T> for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::AcceptDispute for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::SubmitEvidenceV2 for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::DisputeDefend for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentOrderCreate for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::ValidationTrait for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Phonepe<T>
+{
+}
+
 // Define connector prerequisites
 macros::create_all_prerequisites!(
     connector_name: Phonepe,
+    generic_type: T,
     api: [
         (
             flow: Authorize,
             request_body: PhonepePaymentsRequest,
             response_body: PhonepePaymentsResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         )
     ],
-    amount_converters: [minor_unit_for_converter: MinorUnit],
+    amount_converters: [
+        amount_converter: MinorUnit
+    ],
     member_functions: {
         pub fn connector_base_url<F, Req, Res>(
             &self,
@@ -56,12 +225,31 @@ macros::create_all_prerequisites!(
             req.resource_common_data.connectors.phonepe.base_url.to_string()
         }
 
-        fn preprocess_response_bytes<F, FCD, Req, Res>(
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.phonepe.base_url
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.phonepe.base_url
+        }
+
+        pub fn build_headers<F, FCD, Req, Res>(
             &self,
             _req: &RouterDataV2<F, FCD, Req, Res>,
-            bytes: bytes::Bytes,
-        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            Ok(bytes)
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
+        where
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
+        {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/json".to_string().into(),
+            )])
         }
     }
 );
@@ -74,14 +262,16 @@ macros::macro_connector_implementation!(
     curl_response: PhonepePaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
-    flow_request: PaymentsAuthorizeData,
+    flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
     preprocess_response: false,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             // Get base headers first
             let mut headers = vec![
@@ -102,7 +292,7 @@ macros::macro_connector_implementation!(
 
         fn get_url(
             &self,
-            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{}{}", base_url, constants::API_PAY_ENDPOINT))
@@ -110,33 +300,28 @@ macros::macro_connector_implementation!(
     }
 );
 
-impl connector_types::ValidationTrait for Phonepe {}
-impl connector_types::PaymentAuthorizeV2 for Phonepe {}
-
-// Default empty implementations for unsupported flows
-impl connector_types::PaymentSyncV2 for Phonepe {}
-impl connector_types::PaymentOrderCreate for Phonepe {}
-impl connector_types::PaymentVoidV2 for Phonepe {}
-impl connector_types::IncomingWebhook for Phonepe {}
-impl connector_types::RefundV2 for Phonepe {}
-impl connector_types::PaymentCapture for Phonepe {}
-impl connector_types::SetupMandateV2 for Phonepe {}
-impl connector_types::RepeatPaymentV2 for Phonepe {}
-impl connector_types::AcceptDispute for Phonepe {}
-impl connector_types::RefundSyncV2 for Phonepe {}
-impl connector_types::DisputeDefend for Phonepe {}
-impl connector_types::SubmitEvidenceV2 for Phonepe {}
-
+// Type alias for non-generic trait implementations
 // Implement ConnectorServiceTrait by virtue of implementing all required traits
-impl connector_types::ConnectorServiceTrait for Phonepe {}
 
-impl ConnectorCommon for Phonepe {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorCommon for Phonepe<T>
+{
     fn id(&self) -> &'static str {
         "phonepe"
     }
 
     fn get_currency_unit(&self) -> enums::CurrencyUnit {
         enums::CurrencyUnit::Minor
+    }
+
+    fn common_get_content_type(&self) -> &'static str {
+        "application/json"
     }
 
     fn get_auth_header(
@@ -185,66 +370,15 @@ impl ConnectorCommon for Phonepe {
     }
 }
 
-// Default empty implementations for unsupported flows - the traits will use default implementations
-impl ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Phonepe
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorSpecifications for Phonepe<T>
 {
-}
-impl
-    ConnectorIntegrationV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    > for Phonepe
-{
-}
-impl ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Phonepe
-{
-}
-impl ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Phonepe {}
-impl ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Phonepe
-{
-}
-impl
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData,
-        PaymentsResponseData,
-    > for Phonepe
-{
-}
-impl ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Phonepe
-{
-}
-impl ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Phonepe
-{
-}
-impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Phonepe
-{
-}
-impl
-    ConnectorIntegrationV2<
-        DefendDispute,
-        DisputeFlowData,
-        domain_types::connector_types::DisputeDefendData,
-        DisputeResponseData,
-    > for Phonepe
-{
-}
-impl
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Phonepe
-{
-}
-
-impl ConnectorSpecifications for Phonepe {
     fn get_supported_payment_methods(
         &self,
     ) -> Option<&'static domain_types::types::SupportedPaymentMethods> {
@@ -260,13 +394,156 @@ impl ConnectorSpecifications for Phonepe {
     }
 }
 
+// Default empty implementations for unsupported flows - the traits will use default implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Phonepe<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Phonepe<T>
+{
+}
+
 // SourceVerification implementations for all flows - using macro to generate stubs
 macro_rules! impl_source_verification_stub {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
-        impl SourceVerification<$flow, $common_data, $req, $resp> for Phonepe {
+        impl<
+                T: PaymentMethodDataTypes
+                    + std::fmt::Debug
+                    + std::marker::Sync
+                    + std::marker::Send
+                    + 'static
+                    + Serialize,
+            > SourceVerification<$flow, $common_data, $req, $resp> for Phonepe<T>
+        {
             fn get_secrets(
                 &self,
-                _secrets: interfaces::verification::ConnectorSourceVerificationSecrets,
+                _secrets: ConnectorSourceVerificationSecrets,
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(Vec::new()) // Stub implementation
             }
@@ -281,12 +558,7 @@ macro_rules! impl_source_verification_stub {
             fn get_signature(
                 &self,
                 _payload: &[u8],
-                _router_data: &domain_types::router_data_v2::RouterDataV2<
-                    $flow,
-                    $common_data,
-                    $req,
-                    $resp,
-                >,
+                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
                 _secrets: &[u8],
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(Vec::new()) // Stub implementation
@@ -294,12 +566,7 @@ macro_rules! impl_source_verification_stub {
             fn get_message(
                 &self,
                 payload: &[u8],
-                _router_data: &domain_types::router_data_v2::RouterDataV2<
-                    $flow,
-                    $common_data,
-                    $req,
-                    $resp,
-                >,
+                _router_data: &RouterDataV2<$flow, $common_data, $req, $resp>,
                 _secrets: &[u8],
             ) -> CustomResult<Vec<u8>, errors::ConnectorError> {
                 Ok(payload.to_owned()) // Stub implementation
@@ -308,11 +575,35 @@ macro_rules! impl_source_verification_stub {
     };
 }
 
+// Stub implementations for missing flows
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Phonepe<T>
+{
+}
+
 // Apply to all flows
+impl_source_verification_stub!(
+    CreateSessionToken,
+    PaymentFlowData,
+    SessionTokenRequestData,
+    SessionTokenResponseData
+);
 impl_source_verification_stub!(
     Authorize,
     PaymentFlowData,
-    PaymentsAuthorizeData,
+    PaymentsAuthorizeData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
@@ -339,7 +630,7 @@ impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsRes
 impl_source_verification_stub!(
     SetupMandate,
     PaymentFlowData,
-    SetupMandateRequestData,
+    SetupMandateRequestData<T>,
     PaymentsResponseData
 );
 impl_source_verification_stub!(
@@ -363,6 +654,6 @@ impl_source_verification_stub!(
 impl_source_verification_stub!(
     DefendDispute,
     DisputeFlowData,
-    domain_types::connector_types::DisputeDefendData,
+    DisputeDefendData,
     DisputeResponseData
 );

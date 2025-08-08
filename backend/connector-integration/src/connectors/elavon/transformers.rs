@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
-use cards::CardNumber;
 use common_enums::{
     AttemptStatus as HyperswitchAttemptStatus, CaptureMethod as HyperswitchCaptureMethod, Currency,
     FutureUsage,
 };
-use common_utils::{consts::NO_ERROR_CODE, types::StringMajorUnit};
+use common_utils::{
+    consts::NO_ERROR_CODE,
+    types::{AmountConvertor, StringMajorUnit, StringMajorUnitForConnector},
+};
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund},
     connector_types::{
@@ -15,7 +17,7 @@ use domain_types::{
     },
     errors::{self},
     payment_address::PaymentAddress,
-    payment_method_data::PaymentMethodData,
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse, PaymentMethodToken},
     router_data_v2::RouterDataV2,
 };
@@ -83,13 +85,20 @@ impl Serialize for TransactionType {
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
-pub struct CardPaymentRequest {
+pub struct CardPaymentRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub ssl_transaction_type: TransactionType,
     pub ssl_account_id: Secret<String>,
     pub ssl_user_id: Secret<String>,
     pub ssl_pin: Secret<String>,
     pub ssl_amount: StringMajorUnit,
-    pub ssl_card_number: CardNumber,
+    pub ssl_card_number: RawCardNumber<T>,
     pub ssl_exp_date: Secret<String>,
     pub ssl_cvv2cvc2: Option<Secret<String>>,
     pub ssl_cvv2cvc2_indicator: Option<i32>,
@@ -112,8 +121,15 @@ pub struct CardPaymentRequest {
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
-pub enum ElavonPaymentsRequest {
-    Card(CardPaymentRequest),
+pub enum ElavonPaymentsRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    Card(CardPaymentRequest<T>),
 }
 
 fn get_avs_details_from_payment_address(
@@ -135,18 +151,37 @@ fn get_avs_details_from_payment_address(
         .unwrap_or((None, None))
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ElavonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for ElavonPaymentsRequest
+    > for ElavonPaymentsRequest<T>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
         item: ElavonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         match item.router_data.request.payment_method_data.clone() {
@@ -207,18 +242,13 @@ impl
                 let token_source = add_token.as_ref().map(|_| "ECOMMERCE".to_string());
 
                 // Manually convert to StringMajorUnit to avoid error handling issues
-                let amount = item
-                    .connector
-                    .amount_converter
-                    .convert(request_data.minor_amount, request_data.currency);
-
-                let amount = match amount {
-                    Ok(amount) => amount,
-                    Err(e) => {
-                        return Err(report!(errors::ConnectorError::AmountConversionFailed)
-                            .attach_printable(format!("Failed to convert amount: {e}")));
-                    }
-                };
+                let amount_converter = StringMajorUnitForConnector;
+                let amount = amount_converter
+                    .convert(request_data.minor_amount, request_data.currency)
+                    .map_err(|e| {
+                        report!(errors::ConnectorError::AmountConversionFailed)
+                            .attach_printable(format!("Failed to convert amount: {e}"))
+                    })?;
                 let card_req = CardPaymentRequest {
                     ssl_transaction_type: transaction_type,
                     ssl_account_id: auth_type.ssl_merchant_id.clone(),
@@ -268,10 +298,23 @@ pub struct XMLRefundRequest(pub HashMap<String, Secret<String, WithoutType>>);
 pub struct XMLRSyncRequest(pub HashMap<String, Secret<String, WithoutType>>);
 
 // TryFrom implementation to convert from the router data to XMLElavonRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ElavonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for XMLElavonRequest
 {
@@ -279,7 +322,13 @@ impl
 
     fn try_from(
         data: ElavonRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Instead of using request_body which could cause a recursive call,
@@ -316,10 +365,18 @@ impl
 }
 
 // TryFrom implementation for PSync flow using XMLPSyncRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ElavonRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for XMLPSyncRequest
 {
@@ -328,6 +385,7 @@ impl
     fn try_from(
         data: ElavonRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Direct implementation to avoid recursive calls
@@ -718,8 +776,17 @@ pub fn get_elavon_attempt_status(
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
@@ -807,10 +874,18 @@ pub struct SyncRequest {
     pub ssl_txn_id: String,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ElavonRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for SyncRequest
 {
@@ -819,6 +894,7 @@ impl
     fn try_from(
         item: ElavonRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
@@ -867,10 +943,18 @@ pub struct ElavonCaptureRequest {
     pub ssl_txn_id: String,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ElavonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for ElavonCaptureRequest
 {
@@ -879,6 +963,7 @@ impl
     fn try_from(
         item: ElavonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -894,9 +979,8 @@ impl
         };
 
         // Convert amount for capture
-        let amount = item
-            .connector
-            .amount_converter
+        let amount_converter = StringMajorUnitForConnector;
+        let amount = amount_converter
             .convert(
                 router_data.request.minor_amount_to_capture,
                 router_data.request.currency,
@@ -915,10 +999,18 @@ impl
 }
 
 // Implementation for XMLCaptureRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         ElavonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     > for XMLCaptureRequest
 {
@@ -927,6 +1019,7 @@ impl
     fn try_from(
         data: ElavonRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Create the ElavonCaptureRequest
@@ -1042,9 +1135,16 @@ pub struct ElavonRefundRequest {
     pub ssl_txn_id: String,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for ElavonRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -1052,6 +1152,7 @@ impl
     fn try_from(
         item: ElavonRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -1059,9 +1160,8 @@ impl
         let auth_type = ElavonAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Convert amount for refund
-        let amount = item
-            .connector
-            .amount_converter
+        let amount_converter = StringMajorUnitForConnector;
+        let amount = amount_converter
             .convert(request_data.minor_refund_amount, request_data.currency)
             .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
 
@@ -1077,9 +1177,16 @@ impl
 }
 
 // Implementation for XMLRefundRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+        ElavonRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for XMLRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -1087,6 +1194,7 @@ impl
     fn try_from(
         data: ElavonRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Create the ElavonRefundRequest
@@ -1180,9 +1288,19 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
 }
 
 // Implementation for Refund Sync
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        ElavonRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        ElavonRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     > for SyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -1190,6 +1308,7 @@ impl
     fn try_from(
         item: ElavonRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&item.router_data)
@@ -1218,9 +1337,19 @@ impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsRespons
 }
 
 // Implementation for XMLRSyncRequest
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        ElavonRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>,
+        ElavonRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
     > for XMLRSyncRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -1228,6 +1357,7 @@ impl
     fn try_from(
         data: ElavonRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Create the SyncRequest

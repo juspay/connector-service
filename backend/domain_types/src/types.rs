@@ -1,12 +1,8 @@
 use core::result::Result;
-use std::{borrow::Cow, collections::HashMap, str::FromStr};
+use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use crate::{
-    payment_address, payment_method_data, router_request_types,
-    router_request_types::BrowserInformation, router_response_types,
-};
 use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, request::Method};
+use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
@@ -17,14 +13,15 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::Secret;
 use serde::Serialize;
+use serde_json::json;
 use utoipa::ToSchema;
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::mandates::{self, MandateData};
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
@@ -33,13 +30,21 @@ use crate::{
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    payment_address,
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
-    payment_method_data::PaymentMethodData,
+    payment_method_data,
+    payment_method_data::{
+        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VaultTokenHolder,
+    },
     router_data_v2::RouterDataV2,
+    router_request_types,
+    router_request_types::BrowserInformation,
+    router_response_types,
     utils::{ForeignFrom, ForeignTryFrom},
 };
 
@@ -56,10 +61,12 @@ pub struct Connectors {
     pub authorizedotnet: ConnectorParams, // Add your connector params
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
+    pub paytm: ConnectorParams,
     pub fiuu: ConnectorParams,
     pub payu: ConnectorParams,
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
+    pub nexinets: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -128,7 +135,19 @@ impl ForeignTryFrom<grpc_api_types::payments::CardNetwork> for common_enums::Car
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData {
+impl<
+        T: PaymentMethodDataTypes
+            + Default
+            + Debug
+            + Send
+            + Eq
+            + PartialEq
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + CardConversionHelper<T>,
+    > ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodData<T>
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -140,51 +159,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
                     match card_type.card_type {
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Credit(card)) => {
-                            let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
-                            Ok(PaymentMethodData::Card(payment_method_data::Card {
-                                card_number: cards::CardNumber::from_str(&card.card_number)
-                                    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid card number".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                                card_exp_month: card.card_exp_month.into(),
-                                card_exp_year: card.card_exp_year.into(),
-                                card_cvc: card.card_cvc.into(),
-                                card_issuer: card.card_issuer,
-                                card_network,
-                                card_type: card.card_type,
-                                card_issuing_country: card.card_issuing_country_alpha2,
-                                bank_code: card.bank_code,
-                                nick_name: card.nick_name.map(|name| name.into()),
-                                card_holder_name: card.card_holder_name.map(Secret::new),
-                                co_badged_card_data: None, // TODO: Handle co-badged card data
-                            }))
+                            let card = payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            Ok(PaymentMethodData::Card(card))
                         },
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::Debit(card)) => {
-                            let card_network = Some(common_enums::CardNetwork::foreign_try_from(card.card_network())?);
-                            Ok(PaymentMethodData::Card(payment_method_data::Card {
-                                card_number: cards::CardNumber::from_str(&card.card_number)
-                                    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid card number".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                                card_exp_month: card.card_exp_month.into(),
-                                card_exp_year: card.card_exp_year.into(),
-                                card_cvc: card.card_cvc.into(),
-                                card_issuer: card.card_issuer,
-                                card_network,
-                                card_type: card.card_type,
-                                card_issuing_country: card.card_issuing_country_alpha2,
-                                bank_code: card.bank_code,
-                                nick_name: card.nick_name.map(|name| name.into()),
-                                card_holder_name: card.card_holder_name.map(Secret::new),
-                                co_badged_card_data: None, // TODO: Handle co-badged card data
-                            }))
-                        },
+                                                    let card = payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            Ok(PaymentMethodData::Card(card))},
                         Some(grpc_api_types::payments::card_payment_method_type::CardType::CardRedirect(_card_redirect)) => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -192,6 +172,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                                 error_message: "Card redirect payments are not yet supported".to_owned(),
                                 error_object: None,
                             })))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(card)) => {
+                            let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            Ok(PaymentMethodData::Card(x))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(card)) => {
+                            let x = payment_method_data::Card::<T>::foreign_try_from(card)?;
+                            Ok(PaymentMethodData::Card(x))
                         },
                         None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
@@ -218,6 +206,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for PaymentMethodDa
                     Ok(PaymentMethodData::Upi(
                         payment_method_data::UpiData::UpiIntent(
                             payment_method_data::UpiIntentData {},
+                        ),
+                    ))
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
+                    // UpiQr is not yet implemented, fallback to UpiIntent
+                    Ok(PaymentMethodData::Upi(
+                        crate::payment_method_data::UpiData::UpiIntent(
+                            crate::payment_method_data::UpiIntentData {},
                         ),
                     ))
                 }
@@ -435,6 +431,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                                 error_message: "Card redirect payments are not yet supported".to_owned(),
                                 error_object: None,
                             }))),
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) => {
+                            Ok(Some(PaymentMethodType::Credit))
+                        },
+                        Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
+                            Ok(Some(PaymentMethodType::Debit))
+                        },
                         None =>
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
@@ -449,6 +451,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 },
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiCollect(_) => Ok(Some(PaymentMethodType::UpiCollect)),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_) => Ok(Some(PaymentMethodType::UpiIntent)),
+                grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_) => Ok(Some(PaymentMethodType::UpiIntent)), // UpiQr not yet implemented, fallback to UpiIntent
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(reward) => {
                     match reward.reward_type() {
                         grpc_api_types::payments::RewardType::Classicreward => Ok(Some(PaymentMethodType::ClassicReward)),
@@ -583,6 +586,97 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
             })
             .into()),
         }
+    }
+}
+
+// Helper trait for generic card conversion
+pub trait CardConversionHelper<T: PaymentMethodDataTypes> {
+    fn convert_card_details(
+        card: grpc_api_types::payments::CardDetails,
+    ) -> Result<payment_method_data::Card<T>, error_stack::Report<ApplicationErrorResponse>>;
+}
+
+// Implementation for DefaultPCIHolder
+impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
+    fn convert_card_details(
+        card: grpc_api_types::payments::CardDetails,
+    ) -> Result<
+        payment_method_data::Card<DefaultPCIHolder>,
+        error_stack::Report<ApplicationErrorResponse>,
+    > {
+        let card_network = Some(common_enums::CardNetwork::foreign_try_from(
+            card.card_network(),
+        )?);
+        Ok(payment_method_data::Card {
+            card_number: RawCardNumber::<DefaultPCIHolder>(
+                cards::CardNumber::from_str(&card.card_number).change_context(
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid card number".to_owned(),
+                        error_object: None,
+                    }),
+                )?,
+            ),
+            card_exp_month: card.card_exp_month.into(),
+            card_exp_year: card.card_exp_year.into(),
+            card_cvc: card.card_cvc.into(),
+            card_issuer: card.card_issuer,
+            card_network,
+            card_type: card.card_type,
+            card_issuing_country: card.card_issuing_country_alpha2,
+            bank_code: card.bank_code,
+            nick_name: card.nick_name.map(|name| name.into()),
+            card_holder_name: card.card_holder_name.map(Secret::new),
+            co_badged_card_data: None,
+        })
+    }
+}
+
+// Implementation for VaultTokenHolder
+impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
+    fn convert_card_details(
+        card: grpc_api_types::payments::CardDetails,
+    ) -> Result<
+        payment_method_data::Card<VaultTokenHolder>,
+        error_stack::Report<ApplicationErrorResponse>,
+    > {
+        Ok(payment_method_data::Card {
+            card_number: RawCardNumber(card.card_number),
+            card_exp_month: card.card_exp_month.into(),
+            card_exp_year: card.card_exp_year.into(),
+            card_cvc: card.card_cvc.into(),
+            card_issuer: card.card_issuer,
+            card_network: None,
+            card_type: card.card_type,
+            card_issuing_country: card.card_issuing_country_alpha2,
+            bank_code: card.bank_code,
+            nick_name: card.nick_name.map(|name| name.into()),
+            card_holder_name: card.card_holder_name.map(Secret::new),
+            co_badged_card_data: None,
+        })
+    }
+}
+
+// Generic ForeignTryFrom implementation using the helper trait
+impl<T> ForeignTryFrom<grpc_api_types::payments::CardDetails> for payment_method_data::Card<T>
+where
+    T: PaymentMethodDataTypes
+        + Default
+        + Debug
+        + Send
+        + Eq
+        + PartialEq
+        + serde::Serialize
+        + serde::de::DeserializeOwned
+        + Clone
+        + CardConversionHelper<T>,
+{
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        card: grpc_api_types::payments::CardDetails,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        T::convert_card_details(card)
     }
 }
 
@@ -747,7 +841,19 @@ impl ForeignTryFrom<grpc_api_types::payments::Currency> for common_enums::Curren
     }
 }
 
-impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
+impl<
+        T: PaymentMethodDataTypes
+            + Default
+            + Debug
+            + Send
+            + Eq
+            + PartialEq
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + CardConversionHelper<T>,
+    > ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData<T>
+{
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -770,7 +876,7 @@ impl ForeignTryFrom<PaymentServiceAuthorizeRequest> for PaymentsAuthorizeData {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
             )?),
-            payment_method_data: PaymentMethodData::foreign_try_from(
+            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
                 value.payment_method.clone().ok_or_else(|| {
                     ApplicationErrorResponse::BadRequest(ApiError {
                         sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1632,6 +1738,7 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
         Err(err) => {
@@ -1661,17 +1768,18 @@ pub fn generate_create_order_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
     };
     Ok(response)
 }
 
-pub fn generate_payment_authorize_response(
+pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         Authorize,
         PaymentFlowData,
-        PaymentsAuthorizeData,
+        PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     >,
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -1687,7 +1795,7 @@ pub fn generate_payment_authorize_response(
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 redirection_data,
-                connector_metadata: _,
+                connector_metadata,
                 network_txn_id,
                 connector_response_reference_id,
                 incremental_authorization_allowed,
@@ -1700,19 +1808,13 @@ pub fn generate_payment_authorize_response(
                     redirection_data: redirection_data.map(
                         |form| {
                             match *form {
-                                router_response_types::RedirectForm::Form { endpoint, method, form_fields: _ } => {
+                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
                                     Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
                                         form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
                                             grpc_api_types::payments::FormData {
                                                 endpoint,
-                                                method: match method {
-                                                    Method::Get => 1,
-                                                    Method::Post => 2,
-                                                    Method::Put => 3,
-                                                    Method::Delete => 4,
-                                                    _ => 0,
-                                                },
-                                                form_fields: HashMap::default(), //TODO
+                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
+                                                form_fields, //TODO
                                             }
                                         ))
                                     })
@@ -1745,6 +1847,11 @@ pub fn generate_payment_authorize_response(
                             }
                         }
                     ).transpose()?,
+                    connector_metadata: connector_metadata
+                        .and_then(|value| value.as_object().cloned())
+                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
+                            .map(|s| (k, s.to_string())))
+                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
                     network_txn_id,
                     response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -1788,6 +1895,7 @@ pub fn generate_payment_authorize_response(
                 raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
                 response_headers,
+                connector_metadata: std::collections::HashMap::new(),
             }
         }
     };
@@ -1816,6 +1924,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_)),
+            } => Ok(Self::Upi),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_)),
             } => Ok(Self::Upi),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
@@ -2272,7 +2384,10 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
             refund_status: common_enums::RefundStatus::Pending,
-            refund_connector_metadata: None,
+            refund_connector_metadata: value
+                .request_ref_id
+                .as_ref()
+                .map(|id| Secret::new(json!({ "request_ref_id": id.clone() }))),
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
         })
@@ -2337,6 +2452,19 @@ impl ForeignFrom<common_enums::DisputeStatus> for grpc_api_types::payments::Disp
             common_enums::DisputeStatus::DisputeExpired => Self::DisputeExpired,
             common_enums::DisputeStatus::DisputeLost => Self::DisputeLost,
             common_enums::DisputeStatus::DisputeWon => Self::DisputeWon,
+        }
+    }
+}
+
+impl ForeignFrom<common_utils::Method> for grpc_api_types::payments::HttpMethod {
+    fn foreign_from(method: common_utils::Method) -> Self {
+        match method {
+            common_utils::Method::Post => Self::Post,
+            common_utils::Method::Get => Self::Get,
+            common_utils::Method::Put => Self::Put,
+            common_utils::Method::Delete => Self::Delete,
+            common_utils::Method::Patch => Self::Post, // Patch is not defined in gRPC, using Post
+                                                       // as a fallback
         }
     }
 }
@@ -3302,7 +3430,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
     }
 }
 
-impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData {
+impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<DefaultPCIHolder> {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
@@ -3447,11 +3575,11 @@ impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::Fut
     }
 }
 
-pub fn generate_setup_mandate_response(
+pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<
         SetupMandate,
         PaymentFlowData,
-        SetupMandateRequestData,
+        SetupMandateRequestData<T>,
         PaymentsResponseData,
     >,
 ) -> Result<PaymentServiceRegisterResponse, error_stack::Report<ApplicationErrorResponse>> {
@@ -3630,6 +3758,29 @@ pub fn generate_defend_dispute_response(
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
         }),
+    }
+}
+
+pub fn generate_session_token_response(
+    router_data_v2: RouterDataV2<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let session_token_response = router_data_v2.response;
+
+    match session_token_response {
+        Ok(response) => Ok(response.session_token),
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "SESSION_TOKEN_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Session token creation failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
     }
 }
 
@@ -3854,6 +4005,23 @@ impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInf
             os_version: value.os_version,
             device_model: value.device_model,
             accept_language: value.accept_language,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for SessionTokenRequestData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            currency,
         })
     }
 }
