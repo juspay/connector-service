@@ -491,7 +491,7 @@ impl
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, raw_response): (
+        (response, data, _status_code, _raw_response): (
             RazorpayV2RefundResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             u16,
@@ -509,7 +509,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -535,7 +534,7 @@ impl
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, raw_response): (
+        (response, data, _status_code, _raw_response): (
             RazorpayV2RefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             u16,
@@ -553,7 +552,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -579,7 +577,7 @@ impl
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (sync_response, data, _status_code, raw_response): (
+        (sync_response, data, _status_code, _raw_response): (
             RazorpayV2SyncResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             u16,
@@ -616,7 +614,6 @@ impl
             network_txn_id: None,
             connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -650,7 +647,7 @@ impl<
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (upi_response, data, _status_code, raw_response): (
+        (upi_response, data, _status_code, _raw_response): (
             RazorpayV2UpiPaymentsResponse,
             RouterDataV2<
                 Authorize,
@@ -696,7 +693,6 @@ impl<
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -730,7 +726,7 @@ impl<
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, raw_response): (
+        (response, data, _status_code, __raw_response): (
             RazorpayV2PaymentsResponse,
             RouterDataV2<
                 Authorize,
@@ -750,7 +746,6 @@ impl<
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 

@@ -146,6 +146,7 @@ impl ConnectorMandateReferenceId {
 
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
+    fn get_raw_connector_response(&self) -> Option<String>;
 }
 
 pub trait ConnectorResponseHeaders {
@@ -681,6 +682,10 @@ impl RawConnectorResponse for PaymentFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
+
+    fn get_raw_connector_response(&self) -> Option<String> {
+        self.raw_connector_response.clone()
+    }
 }
 
 impl ConnectorResponseHeaders for PaymentFlowData {
@@ -992,7 +997,6 @@ pub enum PaymentsResponseData {
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
-        raw_connector_response: Option<String>,
         status_code: u16,
     },
     SessionResponse {
@@ -1056,7 +1060,6 @@ impl RefundSyncData {
 pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
-    pub raw_connector_response: Option<String>,
     pub status_code: u16,
 }
 
@@ -1072,6 +1075,10 @@ pub struct RefundFlowData {
 impl RawConnectorResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<String> {
+        self.raw_connector_response.clone()
     }
 }
 
@@ -1438,6 +1445,10 @@ impl RawConnectorResponse for DisputeFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
+
+    fn get_raw_connector_response(&self) -> Option<String> {
+        self.raw_connector_response.clone()
+    }
 }
 
 impl ConnectorResponseHeaders for DisputeFlowData {
@@ -1455,7 +1466,6 @@ pub struct DisputeResponseData {
     pub connector_dispute_id: String,
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
-    pub raw_connector_response: Option<String>,
     pub status_code: u16,
 }
 

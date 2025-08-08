@@ -445,7 +445,6 @@ impl<
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -474,7 +473,6 @@ impl<
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: http_code,
             })
         };
@@ -527,7 +525,6 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
-                        raw_connector_response: None,
                     })
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
@@ -538,7 +535,6 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: http_code,
                     })
                 };
@@ -649,7 +645,6 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             Ok(PaymentsResponseData::TransactionResponse {
@@ -660,7 +655,6 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference_id.peek().to_string()),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: http_code,
             })
         };
@@ -748,7 +742,6 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
-                raw_connector_response: None,
                 status_code: http_code,
             }),
             ..router_data
@@ -780,7 +773,6 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
-                raw_connector_response: None,
                 status_code: http_code,
             }),
             ..router_data

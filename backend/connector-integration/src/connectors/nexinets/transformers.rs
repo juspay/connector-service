@@ -448,7 +448,6 @@ impl<
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order_id),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -544,7 +543,6 @@ impl<F, T> TryFrom<ResponseRouterData<NexinetsPaymentResponse, Self>>
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.order.order_id),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -637,7 +635,6 @@ impl<F> TryFrom<ResponseRouterData<NexinetsRefundResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id,
                 refund_status: enums::RefundStatus::from(item.response.status),
-                raw_connector_response: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
@@ -656,7 +653,6 @@ impl<F> TryFrom<ResponseRouterData<NexinetsRefundResponse, Self>>
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id,
                 refund_status: enums::RefundStatus::from(item.response.status),
-                raw_connector_response: None,
                 status_code: item.http_code,
             }),
             ..item.router_data
