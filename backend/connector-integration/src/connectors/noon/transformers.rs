@@ -3,11 +3,11 @@ use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorU
 
 use super::NoonRouterData;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, Void},
+    connector_flow::{Authorize, Capture, Refund, Void, SetupMandate},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     mandates::MandateDataType,
@@ -307,7 +307,6 @@ impl<
             data.router_data.request.minor_amount,
             data.router_data.request.currency,
         );
-        let mandate_amount = &data.router_data.request.setup_mandate_details;
 
         let (payment_data, currency, category) = match item.request.connector_mandate_id() {
             Some(mandate_id) => (
@@ -451,28 +450,6 @@ impl<
             .take(50)
             .collect();
 
-        let subscription = mandate_amount.as_ref().and_then(|mandate_data| {
-            mandate_data.mandate_type.as_ref().and_then(|mandate_type| {
-                let mandate_amount_data = match mandate_type {
-                    MandateDataType::SingleUse(amount_data) => Some(amount_data),
-                    MandateDataType::MultiUse(amount_data_opt) => amount_data_opt.as_ref(),
-                };
-                mandate_amount_data.and_then(|amount_data| {
-                    data.connector
-                        .amount_converter
-                        .convert(amount_data.amount, amount_data.currency)
-                        .ok()
-                        .map(|max_amount| NoonSubscriptionData {
-                            subscription_type: NoonSubscriptionType::Unscheduled,
-                            name: name.clone(),
-                            max_amount,
-                        })
-                })
-            })
-        });
-
-        let tokenize_c_c = subscription.is_some().then_some(true);
-
         let order = NoonOrder {
             amount: amount.change_context(ConnectorError::ParsingFailed)?,
             currency,
@@ -498,10 +475,10 @@ impl<
             configuration: NoonConfiguration {
                 payment_action,
                 return_url: item.request.router_return_url.clone(),
-                tokenize_c_c,
+                tokenize_c_c: None,
             },
             payment_data,
-            subscription,
+            subscription: None,
         })
     }
 }
@@ -1073,4 +1050,354 @@ pub struct NoonErrorResponse {
     pub result_code: u32,
     pub message: String,
     pub class_description: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SetupMandateRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(NoonPaymentsRequest<T>);
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NoonRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >
+        > for SetupMandateRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        data:
+            NoonRouterData<
+                RouterDataV2<
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData<T>,
+                    PaymentsResponseData,
+                >,
+                T,
+            >,
+    ) -> Result<Self, Self::Error> {
+        let item = &data.router_data;
+        let amount = data.connector.amount_converter.convert(
+            common_utils::types::MinorUnit::new(1),
+            data.router_data.request.currency,
+        );
+        let mandate_amount = &data.router_data.request.setup_mandate_details;
+
+        let (payment_data, currency, category) = match &item.request.mandate_id {
+            Some(mandate_ids) => match &mandate_ids.mandate_reference_id {
+                Some(MandateReferenceId::ConnectorMandateId(connector_mandate_ids)) => {
+                    if let Some(mandate_id) = connector_mandate_ids.get_connector_mandate_id() {
+                        (
+                            NoonPaymentData::Subscription(NoonSubscription {
+                                subscription_identifier: Secret::new(mandate_id),
+                            }),
+                            None,
+                            None,
+                        )
+                    } else {
+                        return Err(errors::ConnectorError::MissingRequiredField {
+                            field_name: "connector_mandate_id",
+                        }.into());
+                    }
+                }
+                _ => {
+                    return Err(errors::ConnectorError::MissingRequiredField {
+                        field_name: "connector_mandate_id",
+                    }.into());
+                }
+            },
+            None => (
+                match item.request.payment_method_data.clone() {
+                    PaymentMethodData::Card(req_card) => Ok(NoonPaymentData::Card(NoonCard {
+                        name_on_card: item.resource_common_data.get_optional_billing_full_name(),
+                        number_plain: req_card.card_number.clone(),
+                        expiry_month: req_card.card_exp_month.clone(),
+                        expiry_year: req_card.card_exp_year.clone(),
+                        cvv: req_card.card_cvc,
+                    })),
+                    PaymentMethodData::Wallet(wallet_data) => match wallet_data.clone() {
+                        WalletData::GooglePay(google_pay_data) => {
+                            Ok(NoonPaymentData::GooglePay(NoonGooglePay {
+                                api_version_minor: GOOGLEPAY_API_VERSION_MINOR,
+                                api_version: GOOGLEPAY_API_VERSION,
+                                payment_method_data: google_pay_data,
+                            }))
+                        }
+                        WalletData::ApplePay(apple_pay_data) => {
+                            let payment_token_data = NoonApplePayTokenData {
+                                token: NoonApplePayData {
+                                    payment_data: wallet_data
+                                        .get_wallet_token_as_json("Apple Pay".to_string())?,
+                                    payment_method: NoonApplePayPaymentMethod {
+                                        display_name: apple_pay_data.payment_method.display_name,
+                                        network: apple_pay_data.payment_method.network,
+                                        pm_type: apple_pay_data.payment_method.pm_type,
+                                    },
+                                    transaction_identifier: Secret::new(
+                                        apple_pay_data.transaction_identifier,
+                                    ),
+                                },
+                            };
+                            let payment_token = payment_token_data
+                                .encode_to_string_of_json()
+                                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+                            Ok(NoonPaymentData::ApplePay(NoonApplePay {
+                                payment_info: Secret::new(payment_token),
+                            }))
+                        }
+                        WalletData::PaypalRedirect(_) => Ok(NoonPaymentData::PayPal(NoonPayPal {
+                            return_url: item.request.get_router_return_url()?,
+                        })),
+                        WalletData::AliPayQr(_)
+                        | WalletData::AliPayRedirect(_)
+                        | WalletData::AliPayHkRedirect(_)
+                        | WalletData::AmazonPayRedirect(_)
+                        | WalletData::MomoRedirect(_)
+                        | WalletData::KakaoPayRedirect(_)
+                        | WalletData::GoPayRedirect(_)
+                        | WalletData::GcashRedirect(_)
+                        | WalletData::ApplePayRedirect(_)
+                        | WalletData::ApplePayThirdPartySdk(_)
+                        | WalletData::DanaRedirect {}
+                        | WalletData::GooglePayRedirect(_)
+                        | WalletData::GooglePayThirdPartySdk(_)
+                        | WalletData::MbWayRedirect(_)
+                        | WalletData::MobilePayRedirect(_)
+                        | WalletData::PaypalSdk(_)
+                        | WalletData::Paze(_)
+                        | WalletData::SamsungPay(_)
+                        | WalletData::TwintRedirect {}
+                        | WalletData::VippsRedirect {}
+                        | WalletData::TouchNGoRedirect(_)
+                        | WalletData::WeChatPayRedirect(_)
+                        | WalletData::WeChatPayQr(_)
+                        | WalletData::CashappQr(_)
+                        | WalletData::SwishQr(_)
+                        | WalletData::Mifinity(_)
+                        | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("Noon"),
+                        )),
+                    },
+                    PaymentMethodData::CardRedirect(_)
+                    | PaymentMethodData::PayLater(_)
+                    | PaymentMethodData::BankRedirect(_)
+                    | PaymentMethodData::BankDebit(_)
+                    | PaymentMethodData::BankTransfer(_)
+                    | PaymentMethodData::Crypto(_)
+                    | PaymentMethodData::MandatePayment
+                    | PaymentMethodData::Reward
+                    | PaymentMethodData::RealTimePayment(_)
+                    | PaymentMethodData::MobilePayment(_)
+                    | PaymentMethodData::Upi(_)
+                    | PaymentMethodData::Voucher(_)
+                    | PaymentMethodData::GiftCard(_)
+                    | PaymentMethodData::OpenBanking(_)
+                    | PaymentMethodData::CardToken(_)
+                    | PaymentMethodData::NetworkToken(_)
+                    | PaymentMethodData::CardDetailsForNetworkTransactionId(_) => {
+                        Err(errors::ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("Noon"),
+                        ))
+                    }
+                }?,
+                Some(item.request.currency),
+                // Get order_category from metadata field, return error if not provided
+                Some(item.request.metadata.as_ref()
+                    .and_then(|metadata| metadata.get("order_category"))
+                    .and_then(|value| value.as_str())
+                    .map(|s| s.to_string())
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "order_category in metadata",
+                    })?),
+            ),
+        };
+
+        let ip_address = item.request.browser_info.as_ref().and_then(|browser_info| {
+            browser_info.ip_address.map(|ip| Secret::new(ip.to_string()))
+        });
+
+        let channel = NoonChannels::Web;
+
+        let billing = item
+            .resource_common_data
+            .get_optional_billing()
+            .and_then(|billing_address| billing_address.address.as_ref())
+            .map(|address| NoonBilling {
+                address: NoonBillingAddress {
+                    street: address.line1.clone(),
+                    street2: address.line2.clone(),
+                    city: address.city.clone(),
+                    state_province: address.state.clone(),
+                    country: address.country,
+                    postal_code: address.zip.clone(),
+                },
+            });
+
+        // The description should not have leading or trailing whitespaces, also it should not have double whitespaces and a max 50 chars according to Noon's Docs
+        let name: String = item
+            .resource_common_data
+            .get_description()?
+            .trim()
+            .replace("  ", " ")
+            .chars()
+            .take(50)
+            .collect();
+
+        let subscription = mandate_amount.as_ref().and_then(|mandate_data| {
+            mandate_data.mandate_type.as_ref().and_then(|mandate_type| {
+                let mandate_amount_data = match mandate_type {
+                    MandateDataType::SingleUse(amount_data) => Some(amount_data),
+                    MandateDataType::MultiUse(amount_data_opt) => amount_data_opt.as_ref(),
+                };
+                mandate_amount_data.and_then(|amount_data| {
+                    data.connector
+                        .amount_converter
+                        .convert(amount_data.amount, amount_data.currency)
+                        .ok()
+                        .map(|max_amount| NoonSubscriptionData {
+                            subscription_type: NoonSubscriptionType::Unscheduled,
+                            name: name.clone(),
+                            max_amount,
+                        })
+                })
+            })
+        });
+
+        let tokenize_c_c = subscription.is_some().then_some(true);
+
+        let order = NoonOrder {
+            amount: amount.change_context(ConnectorError::ParsingFailed)?,
+            currency,
+            channel,
+            category,
+            reference: item
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            name,
+            nvp: item.request.metadata.as_ref().map(NoonOrderNvp::new),
+            ip_address,
+        };
+        let payment_action = match item.request.capture_method {
+            Some(common_enums::CaptureMethod::Automatic)
+            | None
+            | Some(common_enums::CaptureMethod::SequentialAutomatic) => NoonPaymentActions::Sale,
+            Some(common_enums::CaptureMethod::Manual) => NoonPaymentActions::Authorize,
+            Some(_) => NoonPaymentActions::Authorize, 
+        };
+        Ok(SetupMandateRequest(NoonPaymentsRequest {
+            api_operation: NoonApiOperations::Initiate,
+            order,
+            billing,
+            configuration: NoonConfiguration {
+                payment_action,
+                return_url: item.request.router_return_url.clone(),
+                tokenize_c_c,
+            },
+            payment_data,
+            subscription,
+        }))
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetupMandateResponse {
+    pub result_code: u32,
+    pub message: String,
+    pub result_class: Option<u32>,
+    pub class_description: Option<String>,
+    pub action_hint: Option<String>,
+    pub request_reference: Option<String>,
+    pub result: NoonPaymentsResponseResult,
+}
+
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<SetupMandateResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<SetupMandateResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let order = item.response.result.order;
+        let current_attempt_status = item.router_data.resource_common_data.status;
+        let status = get_payment_status((order.status, current_attempt_status));
+        let redirection_data = item.response.result.checkout_data.map(|redirection_data| {
+            Box::new(RedirectForm::Form {
+                endpoint: redirection_data.post_url.to_string(),
+                method: Method::Post,
+                form_fields: std::collections::HashMap::new(),
+            })
+        });
+        let mandate_reference = item.response.result.subscription.map(|subscription_data| {
+            Box::new(MandateReference {
+                connector_mandate_id: Some(subscription_data.identifier.expose()),
+                payment_method_id: None,
+            })
+        });
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: match order.error_message {
+                Some(error_message) => Err(ErrorResponse {
+                    code: order.error_code.to_string(),
+                    message: error_message.clone(),
+                    reason: Some(error_message),
+                    status_code: item.http_code,
+                    attempt_status: Some(status),
+                    connector_transaction_id: Some(order.id.to_string()),
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                    raw_connector_response: None,
+                }),
+                _ => {
+                    let connector_response_reference_id =
+                        order.reference.or(Some(order.id.to_string()));
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(order.id.to_string()),
+                        redirection_data,
+                        mandate_reference,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id,
+                        incremental_authorization_allowed: None,
+                        raw_connector_response: None,
+                        status_code: item.http_code,
+                    })
+                }
+            },
+            ..item.router_data
+        })
+    }
 }

@@ -26,7 +26,7 @@ pub struct OnlineMandate {
     pub user_agent: String,
 }
 
-#[derive(Default, Eq, PartialEq, Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Default, Eq, PartialEq, Debug, Clone)]
 pub struct MandateData {
     /// A way to update the mandate's payment method details
     pub update_mandate_id: Option<String>,
