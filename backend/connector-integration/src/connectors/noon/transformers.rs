@@ -3,11 +3,11 @@ use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorU
 
 use super::NoonRouterData;
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, Void, SetupMandate},
+    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     mandates::MandateDataType,
@@ -1079,21 +1079,20 @@ impl<
                 PaymentsResponseData,
             >,
             T,
-        >
-        > for SetupMandateRequest<T>
+        >,
+    > for SetupMandateRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        data:
-            NoonRouterData<
-                RouterDataV2<
-                    SetupMandate,
-                    PaymentFlowData,
-                    SetupMandateRequestData<T>,
-                    PaymentsResponseData,
-                >,
-                T,
+        data: NoonRouterData<
+            RouterDataV2<
+                SetupMandate,
+                PaymentFlowData,
+                SetupMandateRequestData<T>,
+                PaymentsResponseData,
             >,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
         let item = &data.router_data;
         let amount = data.connector.amount_converter.convert(
@@ -1116,13 +1115,15 @@ impl<
                     } else {
                         return Err(errors::ConnectorError::MissingRequiredField {
                             field_name: "connector_mandate_id",
-                        }.into());
+                        }
+                        .into());
                     }
                 }
                 _ => {
                     return Err(errors::ConnectorError::MissingRequiredField {
                         field_name: "connector_mandate_id",
-                    }.into());
+                    }
+                    .into());
                 }
             },
             None => (
@@ -1222,18 +1223,24 @@ impl<
                 }?,
                 Some(item.request.currency),
                 // Get order_category from metadata field, return error if not provided
-                Some(item.request.metadata.as_ref()
-                    .and_then(|metadata| metadata.get("order_category"))
-                    .and_then(|value| value.as_str())
-                    .map(|s| s.to_string())
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "order_category in metadata",
-                    })?),
+                Some(
+                    item.request
+                        .metadata
+                        .as_ref()
+                        .and_then(|metadata| metadata.get("order_category"))
+                        .and_then(|value| value.as_str())
+                        .map(|s| s.to_string())
+                        .ok_or(errors::ConnectorError::MissingRequiredField {
+                            field_name: "order_category in metadata",
+                        })?,
+                ),
             ),
         };
 
         let ip_address = item.request.browser_info.as_ref().and_then(|browser_info| {
-            browser_info.ip_address.map(|ip| Secret::new(ip.to_string()))
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
         });
 
         let channel = NoonChannels::Web;
@@ -1303,7 +1310,7 @@ impl<
             | None
             | Some(common_enums::CaptureMethod::SequentialAutomatic) => NoonPaymentActions::Sale,
             Some(common_enums::CaptureMethod::Manual) => NoonPaymentActions::Authorize,
-            Some(_) => NoonPaymentActions::Authorize, 
+            Some(_) => NoonPaymentActions::Authorize,
         };
         Ok(SetupMandateRequest(NoonPaymentsRequest {
             api_operation: NoonApiOperations::Initiate,
@@ -1344,9 +1351,7 @@ impl<
     for RouterDataV2<F, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<SetupMandateResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<SetupMandateResponse, Self>) -> Result<Self, Self::Error> {
         let order = item.response.result.order;
         let current_attempt_status = item.router_data.resource_common_data.status;
         let status = get_payment_status((order.status, current_attempt_status));
