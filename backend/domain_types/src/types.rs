@@ -3373,6 +3373,7 @@ pub fn generate_repeat_payment_response(
                     }),
                     raw_connector_response,
                     status_code: Some(status_code.unwrap_or(200) as u32),
+                    state: None,
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3405,6 +3406,7 @@ pub fn generate_repeat_payment_response(
                     }),
                     raw_connector_response: err.raw_connector_response,
                     status_code: Some(err.status_code as u32),
+                    state: None,
                 },
             )
         }

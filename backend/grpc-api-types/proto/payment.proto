@@ -1469,6 +1469,9 @@ message PaymentServiceRepeatEverythingResponse {
   
   // Raw Response
   optional string raw_connector_response = 7; // Raw response from the connector for debugging
+  
+  // Connector State
+  optional ConnectorState state = 9; // State information that needs to be passed back to the caller
 }
 
 // Request message for PaymentService.Transform RPC
