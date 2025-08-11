@@ -825,31 +825,317 @@ impl<
 {
 }
 ```
+37. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+```rust
+(
+    flow: Refund,
+    request_body: ,
+    response_body: ,
+    router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+)
+```
 
+38. Copy and paste the following code block as it is in the file
+```rust
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: New_connector_name,
+    curl_request: Json(),
+    curl_response: ,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
 
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
 
+        }
+    }
+);
+```
 
+39. Locate the following trait
+```rust
+impl ConnectorIntegration<Execute, RefundsData, RefundsResponseData> for New_connector_name
+```
 
+40. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+get_headers and get_url functions in the following macro, dont fix any errors
+```rust
+macros::macro_connector_implementation!(
+    //..
+    flow_name: Refund,
+)
+```
 
+41. Remove the following trait
+e.g:
+```rust
+impl ConnectorIntegration<Execute, RefundsData, RefundsResponseData> for New_connector_name
+```
 
+42. Remove the Refund stub implementation
+e.g:
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+    for New_connector_name<T>
+{
+}
+```
 
+43. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+```rust
+(
+    flow: RSync,
+    request_body: ,
+    response_body: ,
+    router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+)
+```
 
+44. Copy and paste the following code block as it is in the file
+```rust
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: New_connector_name,
+    curl_request: Json(),
+    curl_response: ,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
 
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+        
+        }
+    }
+);
+```
 
+45. Locate the following trait
+```rust
+impl ConnectorIntegration<RSync, RefundsData, RefundsResponseData> for New_connector_name
+```
 
+46. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+get_headers and get_url functions in the following macro, dont fix any errors
+```rust
+macros::macro_connector_implementation!(
+    //..
+    flow_name: RSync,
+)
+```
 
+47. Remove the following trait
+e.g:
+```rust
+impl ConnectorIntegration<RSync, RefundsData, RefundsResponseData> for New_connector_name
+```
 
+48. Remove the RSync stub implementation
+e.g:
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for New_connector_name<T>
+{
+}
+```
 
+49. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+```rust
+(
+    flow: Capture,
+    request_body: ,
+    response_body: ,
+    router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+)
+```
 
+50. Copy and paste the following code block as it is in the file
+```rust
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: New_connector_name,
+    curl_request: Json(),
+    curl_response: ,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
 
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
 
+        }
+    }
+);
+```
 
+51. Locate the following trait
+```rust
+impl ConnectorIntegration<Capture, PaymentsCaptureData, PaymentsResponseData>  for New_connector_name
+```
 
+52. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+get_headers and get_url functions in the following macro, dont fix any errors
+```rust
+macros::macro_connector_implementation!(
+    //..
+    flow_name: Capture,
+)
+```
 
+53. Remove the following trait
+e.g:
+```rust
+impl ConnectorIntegration<Capture, PaymentsCaptureData, PaymentsResponseData>  for New_connector_name
+```
+
+54. Remove the Capture stub implementation
+e.g:
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for New_connector_name<T>
+{
+}
+```
+
+55. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+```rust
+(
+    flow: Void,
+    request_body: ,
+    response_body: ,
+    router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+)
+```
+
+56. Copy and paste the following code block as it is in the file
+```rust
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: New_connector_name,
+    curl_request: Json(),
+    curl_response: ,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+
+        }
+    }
+);
+```
+
+57. Locate the following trait
+```rust
+impl ConnectorIntegration<Void, PaymentsCancelData, PaymentsResponseData>  for New_connector_name
+```
+
+58. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+get_headers and get_url functions in the following macro, dont fix any errors
+```rust
+macros::macro_connector_implementation!(
+    //..
+    flow_name: Void,
+)
+```
+
+59. Remove the following trait
+e.g:
+```rust
+impl ConnectorIntegration<Void, PaymentsCancelData, PaymentsResponseData>  for New_connector_name
+```
+
+60. Remove the Void stub implementation
+e.g:
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for New_connector_name<T>
+{
+}
+```
 
 ### File: backend/connector-integration/src/connectors/new_connector/transformers.rs
 
-37. Remove all lines at the top of the Rust file that start with use, including any grouped imports and multiline use statements. Dont do anything else dont fix any errors
+61. Remove all lines at the top of the Rust file that start with use, including any grouped imports and multiline use statements. Dont do anything else dont fix any errors
 e.g:
 ```rust
 use common_enums::enums;
@@ -871,7 +1157,7 @@ use hyperswitch_domain_models::{
 };
 ```
 
-38. Copy and paste the following code block as it is into the starting of transformers.rs file and dont remove anything else dont fix any errors
+62. Copy and paste the following code block as it is into the starting of transformers.rs file and dont remove anything else dont fix any errors
 ```rust
 use std::collections::HashMap;
 
@@ -906,12 +1192,12 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 ```
 
-39. Copy and paste the following code block below the code block that you added in the previous step dont do anything else
+63. Copy and paste the following code block below the code block that you added in the previous step dont do anything else
 ```rust
 use crate::{connectors::new_connector_name::New_connector_nameRouterData, types::ResponseRouterData};
 ```
 
-40. Locate and remove the New_connector_nameRouterData struct and its impl
+64. Locate and remove the New_connector_nameRouterData struct and its impl
 ```rust
 #[derive(Debug, Serialize)]
 pub struct New_connector_nameRouterData<T> {
@@ -924,7 +1210,7 @@ impl<T> From<(Unit, T)> for New_connector_nameRouterData<T> {
 }
 ```
 
-41. See the name of the request struct in Authorize flow in new_connector_name.rs file
+65. See the name of the request struct in Authorize flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -935,14 +1221,14 @@ e.g:
 )
 ```
 
-42. Locate the struct in transformers.rs file
+66. Locate the struct in transformers.rs file
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
 pub struct New_connector_namePaymentsRequest {
 ```
 
-43. Update the struct you located in the previous step similar to this following code
+67. Update the struct you located in the previous step similar to this following code
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
@@ -956,7 +1242,7 @@ pub struct New_connector_namePaymentsRequest<
 > {
 ```
 
-44. Add <T> in the struct which is used for payment method information like card
+68. Add <T> in the struct which is used for payment method information like card
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
@@ -967,7 +1253,7 @@ pub struct New_connector_namePaymentsRequest<
 }
 ```
 
-45. Now locate the struct where you added <T> in last step and do the changes similar in step 43 and 44 until a field with "CardNumber" is reached
+69. Now locate the struct where you added <T> in last step and do the changes similar in step 67 and 68 until a field with "CardNumber" is reached
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
@@ -978,7 +1264,7 @@ pub struct StructName {
 }
 ```
 
-46. Replace CardNumber with RawCardNumber<T>
+70. Replace CardNumber with RawCardNumber<T>
 ```rust
 pub struct StructName {
     //..
@@ -987,7 +1273,7 @@ pub struct StructName {
 }
 ```
 
-47. See the name of the request struct in Authorize flow in new_connector_name.rs file
+71. See the name of the request struct in Authorize flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -998,7 +1284,7 @@ e.g:
 )
 ```
 
-48. Locate the TryFrom impl for the request struct
+72. Locate the TryFrom impl for the request struct
 e.g:
 ```rust
 impl TryFrom<&New_connector_nameRouterData<PaymentsAuthorizeRouterData>> for New_connector_namePaymentsRequest {
@@ -1008,7 +1294,7 @@ impl TryFrom<&New_connector_nameRouterData<PaymentsAuthorizeRouterData>> for New
     ) -> Result<Self, Self::Error> {
 ```
 
-49. Replace the code block you located in the previous step with the following one
+73. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         T: PaymentMethodDataTypes
@@ -1044,14 +1330,14 @@ impl<
     ) -> Result<Self, Self::Error> {
 ```
 
-50. Inside the try_from function all the function/fields that are coming from item should come from item.resource_common_data
+74. Inside the try_from function all the function/fields that are coming from item should come from item.resource_common_data
 e.g:
 ```rust
 item.get_billing_address()? //previous
 item.resource_common_data.get_billing_address()? //Correct
 ```
 
-51. See the name of the response_body struct in Authorize flow in new_connector_name.rs file
+75. See the name of the response_body struct in Authorize flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1062,7 +1348,7 @@ e.g:
 )
 ```
 
-52. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePaymentsResponse *>
+76. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePaymentsResponse *>
 e.g:
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<* New_connector_namePaymentsResponse, *>
@@ -1074,7 +1360,7 @@ impl<F, T> TryFrom<ResponseRouterData<* New_connector_namePaymentsResponse, *>
     ) -> Result<Self, Self::Error> {
 ```
 
-53. Replace the code block you located in the previous step with the following one
+77. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         T: PaymentMethodDataTypes
@@ -1110,7 +1396,7 @@ impl<
     ) -> Result<Self, Self::Error> {
 ```
 
-54. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+78. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1123,7 +1409,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-55. Wrap status inside resource_common_data: PaymentFlowData for response try_from for authorize
+79. Wrap status inside resource_common_data: PaymentFlowData for response try_from for authorize
 e.g:
 ```rust
 Ok(Self {
@@ -1134,7 +1420,7 @@ Ok(Self {
     response: //..
 ```
 
-56. See the name of the response_body struct in PSync flow in new_connector_name.rs file
+80. See the name of the response_body struct in PSync flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1145,7 +1431,7 @@ e.g:
 )
 ```
 
-57. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePSyncResponse *>
+81. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePSyncResponse *>
 e.g:
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<* FortePaymentsSyncResponse *>
@@ -1157,7 +1443,7 @@ impl<F, T> TryFrom<ResponseRouterData<* FortePaymentsSyncResponse *>
     ) -> Result<Self, Self::Error> {
 ```
 
-58. Replace the code block you located in the previous step with the following one
+82. Replace the code block you located in the previous step with the following one
 ```rust
 impl<F> TryFrom<ResponseRouterData<New_connector_namePSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
@@ -1168,7 +1454,7 @@ impl<F> TryFrom<ResponseRouterData<New_connector_namePSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
 ```
 
-59. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+83. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1181,7 +1467,636 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-60. Wrap status inside resource_common_data: PaymentFlowData for response try_from for PSync
+84. Wrap status inside resource_common_data: PaymentFlowData for response try_from for PSync
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+85. Copy and paste the following code block as it is in the file
+```rust
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NewConnectorNameRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for refund_request_body
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: NewConnectorNameRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+86. Locate the old Refund request_body tryfrom 
+```rust
+impl<F> TryFrom<&NewConnectorNameRouterData<&types::RefundsRouterData<F>>> for refund_request_body {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item_data: &NewConnectorNameRouterData<&types::RefundsRouterData<F>>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+87. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NewConnectorNameRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    > for refund_request_body
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: NewConnectorNameRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+     // paste here
+    }
+}
+```
+88. Remove the old Refund request_body tryfrom 
+
+```rust
+impl<F> TryFrom<&NewConnectorNameRouterData<&types::RefundsRouterData<F>>> for refund_request_body {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item_data: &NewConnectorNameRouterData<&types::RefundsRouterData<F>>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+89. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+90. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Refund
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+91. Copy and paste the following code block as it is in the file
+```rust
+impl<F> TryFrom<ResponseRouterData<refund_response_body, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<refund_response_body, Self>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+92. Locate the old Refund response_body tryfrom 
+```rust
+impl TryFrom<RefundsResponseRouterData<Execute, refund_response_body>>
+    for types::RefundsRouterData<Execute>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: RefundsResponseRouterData<Execute, refund_response_body>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+93. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<F> TryFrom<ResponseRouterData<refund_response_body, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<refund_response_body, Self>,
+    ) -> Result<Self, Self::Error> {
+    // Paste here
+    }
+}
+```
+94. Remove the old Refund response_body tryfrom 
+
+```rust
+impl TryFrom<RefundsResponseRouterData<Execute, refund_response_body>>
+    for types::RefundsRouterData<Execute>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: RefundsResponseRouterData<Execute, refund_response_body>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+95. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+96. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Refund
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+97. Copy and paste the following code block as it is in the file
+```rust
+impl<F> TryFrom<ResponseRouterData<rsync_response_body, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<rsync_response_body, Self>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+98. Locate the old RSync response_body tryfrom 
+```rust
+impl TryFrom<RefundsResponseRouterData<RSync, rsync_response_body>>
+    for types::RefundsRouterData<RSync>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: RefundsResponseRouterData<RSync, rsync_response_body>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+99. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<F> TryFrom<ResponseRouterData<rsync_response_body, Self>>
+    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<rsync_response_body, Self>,
+    ) -> Result<Self, Self::Error> {
+    // Paste here
+    }
+}
+```
+100. Remove the old RSync response_body tryfrom 
+
+```rust
+impl TryFrom<RefundsResponseRouterData<RSync, rsync_response_body>>
+    for types::RefundsRouterData<RSync>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: RefundsResponseRouterData<RSync, rsync_response_body>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+101. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+102. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Rsync
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+103. Copy and paste the following code block as it is in the file
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NewConnectorNameRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for capture_request_body
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NewConnectorNameRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+104. Locate the old Capture request_body tryfrom 
+```rust
+impl TryFrom<&types::PaymentsCaptureRouterData> for capture_request_body {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &types::PaymentsCaptureRouterData) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+105. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NewConnectorNameRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for capture_request_body
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NewConnectorNameRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+    // Paste here
+    }
+}
+```
+106. Remove the old Capture request_body tryfrom 
+
+```rust
+impl TryFrom<&types::PaymentsCaptureRouterData> for capture_request_body {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &types::PaymentsCaptureRouterData) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+107. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+108. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Capture
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+109. Copy and paste the following code block as it is in the file
+```rust
+impl<F, T> TryFrom<ResponseRouterData<capture_response_body, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<capture_response_body, Self>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+110. Locate the old Capture response_body tryfrom 
+```rust
+impl TryFrom<PaymentsCaptureResponseRouterData<capture_response_body>>
+    for types::PaymentsCaptureRouterData
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: PaymentsCaptureResponseRouterData<capture_response_body>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+111. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<F, T> TryFrom<ResponseRouterData<capture_response_body, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<capture_response_body, Self>,
+    ) -> Result<Self, Self::Error> {
+    // Paste here
+    }
+}
+```
+112. Remove the old Capture response_body tryfrom 
+
+```rust
+impl TryFrom<PaymentsCaptureResponseRouterData<capture_response_body>>
+    for types::PaymentsCaptureRouterData
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: PaymentsCaptureResponseRouterData<capture_response_body>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+113. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+114. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Capture
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+115. Copy and paste the following code block as it is in the file
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NewConnectorNameRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for void_request_body
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NewConnectorNameRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+116. Locate the old Void request_body tryfrom 
+```rust
+impl TryFrom<&types::PaymentsCancelRouterData> for void_request_body {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &types::PaymentsCancelRouterData) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+117. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        NewConnectorNameRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for void_request_body
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: NewConnectorNameRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+    // Paste here
+    }
+}
+```
+118. Remove the old Void request_body tryfrom 
+
+```rust
+impl TryFrom<&types::PaymentsCancelRouterData> for void_request_body {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &types::PaymentsCancelRouterData) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+119. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+120. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Void
+e.g:
+```rust
+Ok(Self {
+    resource_common_data: PaymentFlowData {
+        status: //..,
+        ..item.router_data.resource_common_data
+    },
+    response: //..
+```
+
+121. Copy and paste the following code block as it is in the file
+```rust
+impl<F, T> TryFrom<ResponseRouterData<void_response_body, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<void_response_body, Self>) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+122. Locate the old Void response_body tryfrom 
+```rust
+impl<F, T> TryFrom<ResponseRouterData<F, void_response_body, T, PaymentsResponseData>>
+    for RouterData<F, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<F, void_response_body, T, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+123. Copy and paste the code inside the old tryfrom as it is in the 
+new tryfrom, dont fix any errors
+
+```rust
+impl<F, T> TryFrom<ResponseRouterData<void_response_body, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<void_response_body, Self>) -> Result<Self, Self::Error> {
+     // Paste here
+    }
+}
+```
+124. Remove the old Void response_body tryfrom 
+
+```rust
+impl<F, T> TryFrom<ResponseRouterData<F, void_response_body, T, PaymentsResponseData>>
+    for RouterData<F, T, PaymentsResponseData>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<F, void_response_body, T, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+
+    }
+}
+```
+
+125. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+e.g:
+```rust
+response: Ok(PaymentsResponseData::TransactionResponse {
+    //..
+    charges: None, //Remove
+    raw_connector_response: None, // Add
+    status_code: item.http_code,
+}),
+..item.data //wrong
+....item.router_data //right
+```
+
+126. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Void
 e.g:
 ```rust
 Ok(Self {
