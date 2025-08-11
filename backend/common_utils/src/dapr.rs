@@ -1,11 +1,15 @@
 use anyhow::{Context as _, Result};
 use dapr::Client;
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::info;
 
 use crate::pii::SecretSerdeValue;
 use hyperswitch_masking::ExposeInterface;
+
+// Global client instance - initialized once, cloned for each use
+static DAPR_CLIENT: OnceCell<Client<dapr::client::TonicClient>> = OnceCell::new();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
@@ -124,9 +128,19 @@ impl Default for DaprConfig {
 
 /// Create a Dapr client connection using configuration
 pub async fn create_client(config: &DaprConfig) -> Result<Client<dapr::client::TonicClient>> {
-    let addr = format!("http://{}:{}", config.host, config.grpc_port);
+    // Set environment variables that Dapr SDK expects
+    std::env::set_var("DAPR_GRPC_PORT", config.grpc_port.to_string());
+    std::env::set_var("DAPR_HTTP_PORT", "3500"); // Default HTTP port
 
-    info!("Connecting to Dapr sidecar at: {}", addr);
+    // In the new Dapr SDK, we only pass the protocol and host
+    // The SDK will automatically append the port from DAPR_GRPC_PORT
+    let addr = format!("http://{}", config.host);
+
+    info!(
+        "Connecting to Dapr sidecar at: {}:{}",
+        config.host, config.grpc_port
+    );
+    info!("DAPR_GRPC_PORT set to: {}", config.grpc_port);
 
     let client = Client::<dapr::client::TonicClient>::connect(addr)
         .await
@@ -134,6 +148,26 @@ pub async fn create_client(config: &DaprConfig) -> Result<Client<dapr::client::T
 
     info!("Successfully connected to Dapr sidecar");
     Ok(client)
+}
+
+/// Initialize the global Dapr client - call this once at application startup
+pub async fn initialize_dapr_client(config: &DaprConfig) -> Result<()> {
+    let client = create_client(config).await?;
+    DAPR_CLIENT
+        .set(client)
+        .map_err(|_| anyhow::anyhow!("Dapr client already initialized"))?;
+    info!("Dapr client initialized successfully");
+    Ok(())
+}
+
+/// Get a cloned Dapr client for use - no mutex needed!
+pub fn get_dapr_client() -> Result<Client<dapr::client::TonicClient>> {
+    DAPR_CLIENT
+        .get()
+        .ok_or_else(|| {
+            anyhow::anyhow!("Dapr client not initialized. Call initialize_dapr_client() first.")
+        })
+        .map(|client| client.clone())
 }
 
 struct EventProcessor {
@@ -227,7 +261,6 @@ async fn publish_to_dapr(
     event: serde_json::Value,
     pubsub_component: &str,
     topic: &str,
-    dapr_config: &DaprConfig,
     partition_key_field: &str,
 ) -> Result<()> {
     info!(
@@ -236,7 +269,9 @@ async fn publish_to_dapr(
     );
 
     let event_json = serde_json::to_string(&event)?;
-    let mut client = create_client(dapr_config).await?;
+    // Get a cloned client - no mutex needed!
+    let mut client = get_dapr_client()
+        .context("Failed to get Dapr client. Ensure initialize_dapr_client() was called.")?;
 
     let content_type = "application/json".to_string();
     let mut metadata = HashMap::<String, String>::new();
@@ -282,7 +317,6 @@ pub async fn emit_event_with_config(base_event: Event, config: &EventConfig) -> 
         processed_event,
         &config.pubsub_component,
         &config.topic,
-        &config.dapr,
         &config.partition_key_field,
     )
     .await

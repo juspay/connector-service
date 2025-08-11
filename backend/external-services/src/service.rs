@@ -384,7 +384,7 @@ where
                     let status_code = body.status_code;
 
                     // Emit 5 success response events for load testing
-                    for event_index in 0..10 {
+                    for event_index in 0..20 {
                         tokio::spawn({
                             let connector_name = event_params.connector_name.to_string();
                             let event_config = event_params.event_config.clone();

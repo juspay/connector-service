@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 common_enums = { path = "../common_enums" }
-dapr = "0.12.0"
+dapr = "0.16.2"
+once_cell = "1.19"
 anyhow = "1.0"
 tracing = "0.1.40"
 chrono = "0.4.31"
