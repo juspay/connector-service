@@ -267,7 +267,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 ```
 
-14. Copy and paste the following code block as it is below the impls that you added in the previous step
+14. Copy and paste the following code block as it is below the impls that you added in the previous step, dont fix any errors and dont combine multiple steps
 ```rust
 macros::create_all_prerequisites!(
     connector_name: New_connector_name,
@@ -282,7 +282,7 @@ macros::create_all_prerequisites!(
 );
 ```
 
-15. Copy and paste the following code block as it is at the bottom of the file
+15. Copy and paste the following code block as it is at the bottom of the file, dont fix any errors
 ```rust
 // Stub implementations for unsupported flows
 impl<
@@ -591,7 +591,7 @@ e.g
     }
 ```
 
-17. Copy and paste the build_headers function as it is in the member_functions block of macros::create_all_prerequisites
+17. Copy and paste the build_headers function as it is in the member_functions block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
 ```rust
 macros::create_all_prerequisites!(
     connector_name: New_connector_name,
@@ -657,7 +657,7 @@ e.g
 impl ConnectorCommon for New_connector_name {
 ```
 
-22. Update the impl with this code block
+22. Update the impl with this code block, dont fix any errors and dont combine multiple steps
 ```rust
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for New_connector_name<T>
@@ -670,12 +670,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         router_env::logger::info!(connector_response=?response);
 ```
 
-24. Copy and paste the following code block in place of the code block that you removed in the previous step
+24. Copy and paste the following code block in place of the code block that you removed in the previous step, dont fix any errors and dont combine multiple steps
 ```rust
         with_error_response_body!(event_builder, response);
 ```
 
-25. Copy and paste the following code block as it is in the member_functions: block of macros::create_all_prerequisites
+25. Copy and paste the following code block as it is in the member_functions: block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
 ```rust
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
@@ -692,17 +692,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         }
 ```
 
-26. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+26. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
 ```rust
 (
     flow: Authorize,
-    request_body: New_connector_namePaymentsRequest<T>,
-    response_body: New_connector_namePaymentsResponse,
+    request_body: <T>,
+    response_body: ,
     router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 )
 ```
 
-27. Copy and paste the following code block as it is in the file under ConnectorCommon impl
+27. Copy and paste the following code block as it is in the file under ConnectorCommon impl, dont fix any errors and dont combine multiple steps
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -736,11 +736,53 @@ macros::macro_connector_implementation!(
 impl ConnectorIntegration<Authorize, PaymentsAuthorizeData, PaymentsResponseData> for New_connector_name
 ```
 
-29. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+29.a Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
     //..
+    flow_name: Authorize,
+)
+```
+
+29.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 28
+```rust
+fn get_request_body(
+    &self,
+    req: &PaymentsAuthorizeRouterData,
+    //..
+    let connector_req = new_connector_name::New_connector_namePaymentsRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_namePaymentsRequest
+    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
+}
+fn handle_response(
+    //..
+    let response: new_connector_name::New_connector_namePaymentsResponse = res //This one is the response struct i.e New_connector_namePaymentsResponse
+}
+```
+
+29.c. Add the request struct name and response struct name to import from transformers
+```rust
+use transformers::{
+    self as new_connector_name, New_connector_namePaymentsRequest, New_connector_namePaymentsResponse,
+};
+```
+
+29.d. Add the request struct name and response struct name in the flow: Authorize of api: [] block in macros::create_all_prerequisites,
+```rust
+(
+    flow: Authorize,
+    request_body: New_connector_namePaymentsRequest<T>,
+    response_body: New_connector_namePaymentsResponse,
+    router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+)
+```
+
+29.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Authorize
+```rust
+macros::macro_connector_implementation!(
+    //..
+    curl_request: Format(New_connector_namePaymentsRequest),
+    curl_response: New_connector_namePaymentsResponse,
     flow_name: Authorize,
 )
 ```
