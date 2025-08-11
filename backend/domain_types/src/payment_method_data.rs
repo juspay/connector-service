@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
 use common_utils::{
@@ -7,7 +9,6 @@ use common_utils::{
 use error_stack::{self, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::fmt::Debug;
 use time::Date;
 use utoipa::ToSchema;
 

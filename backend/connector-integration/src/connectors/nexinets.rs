@@ -1,10 +1,7 @@
 pub mod transformers;
-
 use std::fmt::Debug;
 
-use base64::Engine;
-use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -31,147 +28,199 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
+use serde_json;
 use transformers::{
-    self as novalnet, NovalnetCancelRequest, NovalnetCancelResponse, NovalnetCaptureRequest,
-    NovalnetCaptureResponse, NovalnetPSyncResponse, NovalnetPaymentsRequest,
-    NovalnetPaymentsRequest as NovalnetPaymentsRequestMandate,
-    NovalnetPaymentsRequest as NovalnetRepeatPaymentsRequest, NovalnetPaymentsResponse,
-    NovalnetPaymentsResponse as NovalnetPaymentsResponseMandate,
-    NovalnetPaymentsResponse as NovalnetRepeatPaymentsResponse, NovalnetRefundRequest,
-    NovalnetRefundResponse, NovalnetRefundSyncResponse, NovalnetSyncRequest,
-    NovalnetSyncRequest as NovalnetRSyncRequest,
+    self as nexinets, NexinetsCaptureOrVoidRequest, NexinetsErrorResponse,
+    NexinetsPaymentResponse as NexinetsCaptureResponse, NexinetsPaymentResponse,
+    NexinetsPaymentsRequest, NexinetsPreAuthOrDebitResponse, NexinetsRefundRequest,
+    NexinetsRefundResponse, NexinetsRefundResponse as RefundSyncResponse,
 };
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const X_NN_ACCESS_KEY: &str = "X-NN-Access-Key";
+    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
-// Trait implementations with generic type parameters
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Nexinets<T>
+{
+    fn id(&self) -> &'static str {
+        "nexinets"
+    }
+
+    fn common_get_content_type(&self) -> &'static str {
+        "application/json"
+    }
+
+    fn get_auth_header(
+        &self,
+        auth_type: &ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = nexinets::NexinetsAuthType::try_from(auth_type)
+            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+
+        Ok(vec![(
+            headers::AUTHORIZATION.to_string(),
+            auth.api_key.into_masked(),
+        )])
+    }
+
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.nexinets.base_url.as_ref()
+    }
+
+    fn build_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let response: NexinetsErrorResponse = res
+            .response
+            .parse_struct("NexinetsErrorResponse")
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
+
+        let errors = response.errors;
+        let mut message = String::new();
+        let mut static_message = String::new();
+        for error in errors.iter() {
+            let field = error.field.to_owned().unwrap_or_default();
+            let mut msg = String::new();
+            if !field.is_empty() {
+                msg.push_str(format!("{} : {}", field, error.message).as_str());
+            } else {
+                error.message.clone_into(&mut msg)
+            }
+            if message.is_empty() {
+                message.push_str(&msg);
+                static_message.push_str(&msg);
+            } else {
+                message.push_str(format!(", {msg}").as_str());
+            }
+        }
+        let connector_reason = format!("reason : {} , message : {}", response.message, message);
+
+        Ok(ErrorResponse {
+            status_code: response.status,
+            code: response.code.to_string(),
+            message: static_message,
+            reason: Some(connector_reason),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+            raw_connector_response: None,
+        })
+    }
+}
+
+//marker traits
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Novalnet<T>
+    connector_types::ConnectorServiceTrait<T> for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Novalnet<T>
+    connector_types::PaymentAuthorizeV2<T> for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Novalnet<T>
+    connector_types::PaymentSyncV2 for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Novalnet<T>
+    connector_types::PaymentSessionToken for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Novalnet<T>
+    connector_types::PaymentVoidV2 for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Novalnet<T>
+    connector_types::RefundSyncV2 for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Novalnet<T>
+    connector_types::RefundV2 for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Novalnet<T>
+    connector_types::PaymentCapture for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Novalnet<T>
+    connector_types::ValidationTrait for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Novalnet<T>
+    connector_types::PaymentOrderCreate for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Novalnet<T>
+    connector_types::SetupMandateV2<T> for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Novalnet<T>
+    connector_types::RepeatPaymentV2 for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Novalnet<T>
+    connector_types::AcceptDispute for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Novalnet<T>
+    connector_types::SubmitEvidenceV2 for Nexinets<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Novalnet<T>
+    connector_types::DisputeDefend for Nexinets<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::IncomingWebhook for Nexinets<T>
 {
 }
 
 macros::create_all_prerequisites!(
-    connector_name: Novalnet,
+    connector_name: Nexinets,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: NovalnetPaymentsRequest<T>,
-            response_body: NovalnetPaymentsResponse,
+            request_body: NexinetsPaymentsRequest<T>,
+            response_body: NexinetsPreAuthOrDebitResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            request_body: NovalnetSyncRequest,
-            response_body: NovalnetPSyncResponse,
+            response_body: NexinetsPaymentResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: NovalnetCaptureRequest,
-            response_body: NovalnetCaptureResponse,
+            request_body: NexinetsCaptureOrVoidRequest,
+            response_body: NexinetsCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: NovalnetRefundRequest,
-            response_body: NovalnetRefundResponse,
+            request_body: NexinetsRefundRequest,
+            response_body: NexinetsRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: NovalnetRSyncRequest,
-            response_body: NovalnetRefundSyncResponse,
+            response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: Void,
-            request_body: NovalnetCancelRequest,
-            response_body: NovalnetCancelResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: NovalnetPaymentsRequestMandate<T>,
-            response_body: NovalnetPaymentsResponseMandate,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: RepeatPayment,
-            request_body: NovalnetRepeatPaymentsRequest<T>,
-            response_body: NovalnetRepeatPaymentsResponse,
-            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
+    amount_converters: [],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -193,88 +242,23 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.novalnet.base_url
+            &req.resource_common_data.connectors.nexinets.base_url
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            &req.resource_common_data.connectors.novalnet.base_url
+            &req.resource_common_data.connectors.nexinets.base_url
         }
     }
 );
 
-// Stub implementation for CreateSessionToken
-
-// After adding the ConnectorIntegrationV2 implementation, we can now implement PaymentSessionToken
-// Type alias for non-generic trait implementations
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Novalnet<T>
-{
-    fn id(&self) -> &'static str {
-        "novalnet"
-    }
-
-    fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Minor
-    }
-
-    fn common_get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.novalnet.base_url.as_ref()
-    }
-
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, hyperswitch_masking::Maskable<String>)>, errors::ConnectorError>
-    {
-        let auth = novalnet::NovalnetAuthType::try_from(auth_type)
-            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-        let api_key: String = auth.payment_access_key.expose();
-        let encoded_api_key = BASE64_ENGINE.encode(api_key);
-        Ok(vec![(
-            headers::X_NN_ACCESS_KEY.to_string(),
-            encoded_api_key.into_masked(),
-        )])
-    }
-
-    fn build_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: novalnet::NovalnetErrorResponse = res
-            .response
-            .parse_struct("NovalnetErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_error_response_body!(event_builder, response);
-
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response.code,
-            message: response.message,
-            reason: response.reason,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_advice_code: None,
-            network_decline_code: None,
-            network_error_message: None,
-            raw_connector_response: None,
-        })
-    }
-}
-
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetPaymentsRequest),
-    curl_response: NovalnetPaymentsResponse,
+    connector: Nexinets,
+    curl_request: Json(NexinetsPaymentsRequest),
+    curl_response: NexinetsPreAuthOrDebitResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -293,28 +277,29 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let url = if req.request.is_auto_capture()? {
-                format!("{}/payment",self.connector_base_url_payments(req))
-            }
-            else {
-                format!("{}/authorize",self.connector_base_url_payments(req))
-            };
-
-            Ok(url)
+                    let url = if matches!(
+            req.request.capture_method,
+            Some(common_enums::CaptureMethod::Automatic) | Some(common_enums::CaptureMethod::SequentialAutomatic)
+        ) {
+            format!("{}/orders/debit", self.connector_base_url_payments(req))
+        } else {
+            format!("{}/orders/preauth", self.connector_base_url_payments(req))
+        };
+        Ok(url)
         }
     }
 );
 
+// Macro implementations for PSync, Capture, Refund, and RSync flows
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetSyncRequest),
-    curl_response: NovalnetPSyncResponse,
+    connector: Nexinets,
+    curl_response: NexinetsPreAuthOrDebitResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
-    http_method: Post,
+    http_method: Get,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -328,8 +313,10 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+        let transaction_id = req.request.get_connector_transaction_id()?;
+        let order_id = &req.resource_common_data.connector_request_reference_id;
             Ok(format!(
-                "{}/transaction/details",
+                "{}/orders/{order_id}/transactions/{transaction_id}",
                 self.connector_base_url_payments(req),
             ))
         }
@@ -338,9 +325,9 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetCaptureRequest),
-    curl_response: NovalnetCaptureResponse,
+    connector: Nexinets,
+    curl_request: Json(NexinetsCaptureOrVoidRequest),
+    curl_response: NexinetsCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
@@ -359,19 +346,25 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!(
-                "{}/transaction/capture",
-                self.connector_base_url_payments(req)
-            ))
+        let order_id = &req.resource_common_data.connector_request_reference_id;
+        let transaction_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        Ok(format!(
+            "{}/orders/{order_id}/transactions/{transaction_id}/capture",
+            self.connector_base_url_payments(req),
+        ))
         }
     }
 );
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetRefundRequest),
-    curl_response: NovalnetRefundResponse,
+    connector: Nexinets,
+    curl_request: Json(NexinetsRefundRequest),
+    curl_response: NexinetsRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -386,13 +379,41 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            let connector_metadata = req
+                .request
+                .get_connector_metadata()
+                .change_context(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_metadata",
+                })?;
+
+            // connector_metadata is a Value::String, so extract and parse
+            let metadata_str = connector_metadata
+                .as_str()
+                .ok_or(errors::ConnectorError::InvalidDataFormat {
+                    field_name: "connector_metadata as string",
+                })?;
+
+            let parsed_metadata: serde_json::Value =
+                serde_json::from_str(metadata_str).change_context(
+                    errors::ConnectorError::ParsingFailed
+                )?;
+
+            let order_id = parsed_metadata
+                .get("order_id")
+                .and_then(|v| v.as_str())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "order_id in connector_metadata",
+                })?;
+
             Ok(format!(
-                "{}/transaction/refund",
-                self.connector_base_url_refunds(req)
+                "{}/orders/{order_id}/transactions/{}/refund",
+                self.connector_base_url_refunds(req),
+                req.request.connector_transaction_id
             ))
         }
     }
@@ -400,14 +421,13 @@ macros::macro_connector_implementation!(
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetSyncRequest),
-    curl_response: NovalnetRefundSyncResponse,
+    connector: Nexinets,
+    curl_response: RefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
-    http_method: Post,
+    http_method: Get,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -417,153 +437,92 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             self.build_headers(req)
         }
+
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
+            let transaction_id = req
+                .request
+                .connector_refund_id
+                .clone();
+
+            let order_id = req
+                .request
+                .refund_connector_metadata
+                .clone()
+                .and_then(|secret| {
+                    secret
+                        .expose()
+                        .get("request_ref_id")?
+                        .get("id_type")?
+                        .get("Id")?
+                        .as_str()
+                        .map(|s| s.to_string())
+                })
+                .ok_or(
+                    errors::ConnectorError::MissingConnectorRelatedTransactionID {
+                        id: "order_id".to_string(),
+                    },
+                )?;
+
             Ok(format!(
-                "{}/transaction/details",
-                self.connector_base_url_refunds(req)
+                "{}/orders/{order_id}/transactions/{transaction_id}",
+                self.connector_base_url_refunds(req),
             ))
         }
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetCancelRequest),
-    curl_response: NovalnetCancelResponse,
-    flow_name: Void,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentVoidData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/transaction/cancel", self.connector_base_url_payments(req)))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetPaymentsRequest),
-    curl_response: NovalnetPaymentsResponse,
-    flow_name: SetupMandate,
-    resource_common_data: PaymentFlowData,
-    flow_request: SetupMandateRequestData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/payment", self.connector_base_url_payments(req)))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Novalnet,
-    curl_request: Json(NovalnetRepeatPaymentsRequest),
-    curl_response: NovalnetRepeatPaymentsResponse,
-    flow_name: RepeatPayment,
-    resource_common_data: PaymentFlowData,
-    flow_request: RepeatPaymentData,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let url = if req.request.is_auto_capture()? {
-                format!("{}/payment",self.connector_base_url_payments(req))
-            }
-            else {
-                format!("{}/authorize",self.connector_base_url_payments(req))
-            };
-
-            Ok(url)
-        }
-    }
-);
-
-// Stub implementations for unsupported flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateOrder,
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Novalnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Novalnet<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Novalnet<T>
-{
-}
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         CreateSessionToken,
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Novalnet<T>
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Nexinets<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Nexinets<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Nexinets<T>
 {
 }
 
@@ -574,7 +533,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -584,7 +543,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -594,7 +553,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -604,7 +563,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateSessionToken,
+        PaymentFlowData,
+        SessionTokenRequestData,
+        SessionTokenResponseData,
+    > for Nexinets<T>
 {
 }
 
@@ -614,7 +582,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -624,7 +592,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -634,7 +602,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -644,7 +612,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -654,7 +622,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -664,7 +632,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -674,7 +642,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
@@ -684,16 +652,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData,
         PaymentsResponseData,
-    > for Novalnet<T>
+    > for Nexinets<T>
 {
 }
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateSessionToken,
-        PaymentFlowData,
-        SessionTokenRequestData,
-        SessionTokenResponseData,
-    > for Novalnet<T>
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Nexinets<T>
 {
 }

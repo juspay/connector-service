@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ucs.v2;
 
-import "google/protobuf/empty.proto";
 
 option go_package = "github.com/juspay/connector-service/backend/grpc-api-types/proto;proto";
 
@@ -37,6 +36,7 @@ message PaymentMethod {
     WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - SUPPORTED
     UpiCollect upi_collect = 3;                          // UPI Collect payment method - SUPPORTED
     UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
+    UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
     TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
     // BankTransferPaymentMethodType bank_transfer = 6;     // Bank transfer payment methods - TODO: Not yet supported
     // OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - TODO: Not yet supported
@@ -522,6 +522,10 @@ message UpiCollect {
 
 message UpiIntent {
   // No additional fields required for UPI Intent
+}
+
+message UpiQr {
+  // No additional fields required for UPI QR
 }
 
 // PIX - Brazilian instant payment ecosystem

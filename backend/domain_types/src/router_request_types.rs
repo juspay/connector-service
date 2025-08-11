@@ -209,3 +209,9 @@ pub struct RefundSyncIntegrityObject {
 pub struct SubmitEvidenceIntegrityObject {
     pub connector_dispute_id: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct SessionTokenIntegrityObject {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
