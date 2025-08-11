@@ -26,12 +26,7 @@ pub async fn server_builder(config: configs::Config) -> Result<(), Configuration
     if config.events.enabled {
         logger::info!("Checking Dapr connectivity...");
 
-        let dapr_client_config = dapr::DaprConfig {
-            host: config.dapr.host.clone(),
-            grpc_port: config.dapr.grpc_port,
-        };
-
-        match dapr::create_client(&dapr_client_config).await {
+        match dapr::create_client(&config.dapr).await {
             Ok(_) => logger::info!("Dapr connection test successful"),
             Err(e) => logger::warn!(
                 "Failed to connect to Dapr: {:?}. Events might not be published to Kafka.",
