@@ -9,7 +9,7 @@ level = "info"
 filtering_directive = "info"
 brokers = ["localhost:9092"]
 topic = "connector-service-logs"
-
+buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"

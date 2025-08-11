@@ -82,4 +82,7 @@ pub struct LogKafka {
     /// Flush interval in milliseconds (optional, defaults to Kafka default).
     #[serde(default)]
     pub flush_interval_ms: Option<u64>,
+    /// Buffer limit for Kafka messages (optional, defaults to Kafka default).
+    #[serde(default)]
+    pub buffer_limit: Option<usize>,
 }
