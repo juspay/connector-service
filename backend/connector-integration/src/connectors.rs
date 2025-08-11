@@ -46,5 +46,8 @@ pub use self::novalnet::Novalnet;
 pub mod nexinets;
 pub use self::nexinets::Nexinets;
 
+pub mod noon;
+pub use self::noon::Noon;
+
 pub mod bluecode;
 pub use self::bluecode::Bluecode;
