@@ -265,7 +265,6 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: false,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {

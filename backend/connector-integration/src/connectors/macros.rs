@@ -178,8 +178,8 @@ macro_rules! expand_fn_get_request_body {
 pub(crate) use expand_fn_get_request_body;
 
 macro_rules! expand_fn_handle_response {
-    // When preprocess_response is enabled
-    ($connector: ident, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, true) => {
+    // When preprocess_response is enabled - only for connectors that explicitly set it
+    ($connector: ident, $flow: ident, $resource_common_data: ty, $request: ty, $response: ty, preprocess_enabled) => {
         fn handle_response_v2(
             &self,
             data: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
@@ -189,6 +189,7 @@ macro_rules! expand_fn_handle_response {
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
             macro_types::ConnectorError,
         > {
+            use error_stack::ResultExt;
             paste::paste! {let bridge = self.[< $flow:snake >];}
 
             // Apply preprocessing if specified in the macro
@@ -282,18 +283,18 @@ macro_rules! expand_default_functions {
 pub(crate) use expand_default_functions;
 
 macro_rules! macro_connector_implementation {
-    // Version with preprocess_response parameter explicitly set
+    // MOST SPECIFIC PATTERNS FIRST - Version with preprocess_response: true and curl_request
     (
         connector_default_implementations: [$($function_name: ident), *],
         connector: $connector: ident,
-        $(curl_request: $content_type:ident($curl_req: ty),)?
+        curl_request: $content_type:ident($curl_req: ty),
         curl_response:$curl_res: ty,
         flow_name:$flow: ident,
         resource_common_data:$resource_common_data: ty,
         flow_request:$request: ty,
         flow_response:$response: ty,
         http_method: $http_method_type:ident,
-        preprocess_response: $preprocess_response: expr,
+        preprocess_response: true,
         generic_type: $generic_type:tt,
         [$($bounds:tt)*],
         other_functions: {
@@ -323,8 +324,8 @@ macro_rules! macro_connector_implementation {
             )*
             macros::expand_fn_get_request_body!(
                 $connector,
-                $($curl_req,)?
-                $($content_type,)?
+                $curl_req,
+                $content_type,
                 $curl_res,
                 $flow,
                 $resource_common_data,
@@ -337,12 +338,69 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-                $preprocess_response
+                preprocess_enabled
             );
         }
     };
 
-    // Version without preprocess_response parameter (defaults to false)
+    // Version with preprocess_response: true but no curl_request
+    (
+        connector_default_implementations: [$($function_name: ident), *],
+        connector: $connector: ident,
+        curl_response:$curl_res: ty,
+        flow_name:$flow: ident,
+        resource_common_data:$resource_common_data: ty,
+        flow_request:$request: ty,
+        flow_response:$response: ty,
+        http_method: $http_method_type:ident,
+        preprocess_response: true,
+        generic_type: $generic_type:tt,
+        [$($bounds:tt)*],
+        other_functions: {
+            $($function_def: tt)*
+        }
+    ) => {
+        impl <$generic_type: $($bounds)*>
+            ConnectorIntegrationV2<
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+            > for $connector<$generic_type>
+        {
+            fn get_http_method(&self) -> common_utils::request::Method {
+                common_utils::request::Method::$http_method_type
+            }
+            $($function_def)*
+            $(
+                macros::expand_default_functions!(
+                    function: $function_name,
+                    flow_name:$flow,
+                    resource_common_data:$resource_common_data,
+                    flow_request:$request,
+                    flow_response:$response,
+                );
+            )*
+            macros::expand_fn_get_request_body!(
+                $connector,
+                $curl_res,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response
+            );
+            macros::expand_fn_handle_response!(
+                $connector,
+                $flow,
+                $resource_common_data,
+                $request,
+                $response,
+                preprocess_enabled
+            );
+        }
+    };
+
+    //Version without preprocess_response parameter (defaults to false)
     (
         connector_default_implementations: [$($function_name:ident), *],
         connector: $connector:ident,
@@ -505,7 +563,7 @@ macro_rules! macro_connector_implementation {
                 $resource_common_data,
                 $request,
                 $response,
-                $preprocess_response
+                preprocess_enabled
             );
         }
     };
