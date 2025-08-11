@@ -205,8 +205,188 @@ impl<
                         ),
                     ))
                 }
-                grpc_api_types::payments::payment_method::PaymentMethod::Reward(_reward) => {
+                grpc_api_types::payments::payment_method::PaymentMethod::Reward(_) => {
                     Ok(PaymentMethodData::Reward)
+                },
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::ApplePay(apple_wallet)) => {
+                            let payment_data = apple_wallet.payment_data.ok_or_else(|| {
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "MISSING_APPLE_PAY_PAYMENT_DATA".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Apple Pay payment data is required".to_owned(),
+                                    error_object: None,
+                                })
+                            })?;
+
+                            let applepay_payment_data = match payment_data.payment_data {
+                                Some(grpc_api_types::payments::apple_wallet::payment_data::PaymentData::EncryptedData(encrypted_data)) => {
+                                    payment_method_data::ApplePayPaymentData::Encrypted(encrypted_data)
+                                },
+                                Some(grpc_api_types::payments::apple_wallet::payment_data::PaymentData::DecryptedData(decrypted_data)) => {
+                                    payment_method_data::ApplePayPaymentData::Decrypted(
+                                        payment_method_data::ApplePayPredecryptData {
+                                            application_primary_account_number: cards::CardNumber::from_str(&decrypted_data.application_primary_account_number).change_context(
+                                                ApplicationErrorResponse::BadRequest(ApiError {
+                                                    sub_code: "INVALID_CARD_NUMBER".to_owned(),
+                                                    error_identifier: 400,
+                                                    error_message: "Invalid card number in Apple Pay data".to_owned(),
+                                                    error_object: None,
+                                                })
+                                            )?,
+                                            application_expiration_month: Secret::new(decrypted_data.application_expiration_month),
+                                            application_expiration_year: Secret::new(decrypted_data.application_expiration_year),
+                                            payment_data: payment_method_data::ApplePayCryptogramData {
+                                                online_payment_cryptogram: Secret::new(decrypted_data.payment_data.clone().map(|pd| pd.online_payment_cryptogram).unwrap_or_default()),
+                                                eci_indicator: decrypted_data.payment_data.map(|pd| pd.eci_indicator),
+                                            },
+                                        }
+                                    )
+                                },
+                                None => {
+                                    return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "MISSING_APPLE_PAY_DATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Apple Pay payment data is required".to_owned(),
+                                        error_object: None,
+                                    })));
+                                }
+                            };
+
+                            let payment_method = apple_wallet.payment_method.ok_or_else(|| {
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "MISSING_APPLE_PAY_PAYMENT_METHOD".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Apple Pay payment method is required".to_owned(),
+                                    error_object: None,
+                                })
+                            })?;
+
+                            let wallet_data = payment_method_data::ApplePayWalletData {
+                                payment_data: applepay_payment_data,
+                                payment_method: payment_method_data::ApplepayPaymentMethod {
+                                    display_name: payment_method.display_name,
+                                    network: payment_method.network,
+                                    pm_type: payment_method.r#type,
+                                },
+                                transaction_identifier: apple_wallet.transaction_identifier,
+                            };
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::ApplePay(wallet_data)))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::GooglePay(google_wallet)) => {
+                            let info = google_wallet.info.ok_or_else(|| {
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "MISSING_GOOGLE_PAY_INFO".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Google Pay payment method info is required".to_owned(),
+                                    error_object: None,
+                                })
+                            })?;
+
+                            let tokenization_data = google_wallet.tokenization_data.ok_or_else(|| {
+                                ApplicationErrorResponse::BadRequest(ApiError {
+                                    sub_code: "MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(),
+                                    error_identifier: 400,
+                                    error_message: "Google Pay tokenization data is required".to_owned(),
+                                    error_object: None,
+                                })
+                            })?;
+
+                            // Handle the new oneof tokenization_data structure
+                            let gpay_tokenization_data = match tokenization_data.tokenization_data {
+                                Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::DecryptedData(predecrypt_data)) => {
+                                    payment_method_data::GpayTokenizationData::Decrypted(
+                                        payment_method_data::GPayPredecryptData {
+                                            card_exp_month: Secret::new(predecrypt_data.card_exp_month),
+                                            card_exp_year: Secret::new(predecrypt_data.card_exp_year),
+                                            application_primary_account_number: cards::CardNumber::from_str(&predecrypt_data.application_primary_account_number).change_context(
+                                                ApplicationErrorResponse::BadRequest(ApiError {
+                                                    sub_code: "INVALID_CARD_NUMBER".to_owned(),
+                                                    error_identifier: 400,
+                                                    error_message: "Invalid card number in Google Pay predecrypted data".to_owned(),
+                                                    error_object: None,
+                                                })
+                                            )?,
+                                            cryptogram: Some(Secret::new(predecrypt_data.cryptogram)),
+                                            eci_indicator: predecrypt_data.eci_indicator,
+                                        }
+                                    )
+                                },
+                                Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::EncryptedData(encrypted_data)) => {
+                                    payment_method_data::GpayTokenizationData::Encrypted(
+                                        payment_method_data::GpayEcryptedTokenizationData {
+                                            token_type: encrypted_data.token_type,
+                                            token: encrypted_data.token,
+                                        }
+                                    )
+                                },
+                                None => {
+                                    return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Google Pay tokenization data variant is required".to_owned(),
+                                        error_object: None,
+                                    })));
+                                }
+                            };
+
+                            let wallet_data = payment_method_data::GooglePayWalletData {
+                                pm_type: google_wallet.r#type,
+                                description: google_wallet.description,
+                                info: payment_method_data::GooglePayPaymentMethodInfo {
+                                    card_network: info.card_network,
+                                    card_details: info.card_details,
+                                    assurance_details: info.assurance_details.map(|details| {
+                                        payment_method_data::GooglePayAssuranceDetails {
+                                            card_holder_authenticated: details.card_holder_authenticated,
+                                            account_verified: details.account_verified,
+                                        }
+                                    }),
+                                },
+                                tokenization_data: gpay_tokenization_data,
+                            };
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::GooglePay(wallet_data)))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::AmazonPayRedirect(_)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::AmazonPayRedirect(Box::new(payment_method_data::AmazonPayRedirectData {}))))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::CashappQr(_)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::CashappQr(Box::new(payment_method_data::CashappQr {}))))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::RevolutPay(_)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::RevolutPay(payment_method_data::RevolutPayData {})))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::AliPayRedirect(_)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::AliPayRedirect(payment_method_data::AliPayRedirection {})))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::WeChatPayQr(_)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::WeChatPayQr(Box::new(payment_method_data::WeChatPayQr {}))))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::PaypalRedirect(paypal_redirect)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::PaypalRedirect(payment_method_data::PaypalRedirection {
+                                email: match paypal_redirect.email {
+                                    Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
+                                        error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                            sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                                            error_identifier: 400,
+                                            error_message: "Invalid email".to_owned(),
+                                            error_object: None,
+                                        }))
+                                    })?),
+                                    None => None,
+                                },
+                            })))
+                        }
+                        _ => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This Wallet type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -275,6 +455,42 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         })))
                     }
                 },
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::ApplePay(_)) => {
+                            Ok(Some(PaymentMethodType::ApplePay))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::GooglePay(_)) => {
+                            Ok(Some(PaymentMethodType::GooglePay))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::AmazonPayRedirect(_)) => {
+                            Ok(Some(PaymentMethodType::AmazonPay))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::RevolutPay(_)) => {
+                            Ok(Some(PaymentMethodType::RevolutPay))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::PaypalRedirect(_)) => {
+                            Ok(Some(PaymentMethodType::Paypal))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::WeChatPayQr(_)) => {
+                            Ok(Some(PaymentMethodType::WeChatPay))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::AliPayRedirect(_)) => {
+                            Ok(Some(PaymentMethodType::AliPay))
+                        }
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::CashappQr(_)) => {
+                            Ok(Some(PaymentMethodType::Cashapp))
+                        }
+                        _ => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This Wallet type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
