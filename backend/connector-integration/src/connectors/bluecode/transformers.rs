@@ -1,14 +1,16 @@
 use crate::types::ResponseRouterData;
 use common_enums::{self, enums, AttemptStatus};
 use common_utils::{
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     request::Method,
     types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
 };
 use domain_types::{
     connector_flow::Authorize,
-    connector_types::{PaymentsSyncData, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+    },
     errors::{self},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
@@ -66,6 +68,54 @@ pub struct BluecodePaymentsRequest<
     pub failure_url: String,
     #[serde(skip)]
     _phantom: PhantomData<T>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct BluecodeWebhookResponse {
+    pub id: Option<i64>,
+    pub order_id: String,
+    pub user_id: Option<i64>,
+    pub customer_id: Option<String>,
+    pub customer_email: Option<common_utils::Email>,
+    pub customer_phone: Option<String>,
+    pub status: BluecodePaymentStatus,
+    pub payment_provider: Option<String>,
+    pub payment_connector: Option<String>,
+    pub payment_method: Option<String>,
+    pub payment_method_type: Option<String>,
+    pub shop_name: Option<String>,
+    pub sender_name: Option<String>,
+    pub sender_email: Option<String>,
+    pub description: Option<String>,
+    pub amount: FloatMajorUnit,
+    pub currency: enums::Currency,
+    pub charged_amount: Option<FloatMajorUnit>,
+    pub charged_amount_currency: Option<String>,
+    pub charged_fx_amount: Option<FloatMajorUnit>,
+    pub charged_fx_amount_currency: Option<enums::Currency>,
+    pub is_underpaid: Option<bool>,
+    pub billing_amount: Option<FloatMajorUnit>,
+    pub billing_currency: Option<String>,
+    pub language: Option<String>,
+    pub ip_address: Option<Secret<String, common_utils::pii::IpAddress>>,
+    pub first_name: Option<Secret<String>>,
+    pub last_name: Option<Secret<String>>,
+    pub billing_address_line1: Option<Secret<String>>,
+    pub billing_address_city: Option<Secret<String>>,
+    pub billing_address_postal_code: Option<Secret<String>>,
+    pub billing_address_country: Option<String>,
+    pub billing_address_country_code_iso: Option<enums::CountryAlpha2>,
+    pub shipping_address_country_code_iso: Option<enums::CountryAlpha2>,
+    pub success_url: Option<String>,
+    pub failure_url: Option<String>,
+    pub source: Option<String>,
+    pub bonus_code: Option<String>,
+    pub dob: Option<String>,
+    pub fees_amount: Option<f64>,
+    pub fx_margin_amount: Option<f64>,
+    pub fx_margin_percent: Option<f64>,
+    pub fees_percent: Option<f64>,
+    pub reseller_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -293,43 +343,43 @@ impl<F> TryFrom<ResponseRouterData<BluecodeSyncResponse, Self>>
             router_data,
             http_code,
         } = item;
-                let status = AttemptStatus::from(response.status.clone());
-                let response = if status == common_enums::AttemptStatus::Failure {
-                    Err(ErrorResponse {
-                        code: NO_ERROR_CODE.to_string(),
-                        message: NO_ERROR_MESSAGE.to_string(),
-                        reason: Some(NO_ERROR_MESSAGE.to_string()),
-                        attempt_status: Some(status),
-                        connector_transaction_id: Some(response.order_id.clone()),
-                        status_code: http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
-                } else {
-                    Ok(PaymentsResponseData::TransactionResponse {
-                        resource_id: ResponseId::ConnectorTransactionId(response.order_id.clone()),
-                        redirection_data: None,
-                        mandate_reference: None,
-                        connector_metadata: None,
-                        network_txn_id: None,
-                        connector_response_reference_id: None,
-                        incremental_authorization_allowed: None,
-                        raw_connector_response: None,
-                        status_code: http_code,
-                    })
-                };
-                Ok(Self {
-                    response,
-                    resource_common_data: PaymentFlowData {
-                        status,
-                        ..router_data.resource_common_data
-                    },
-                    ..router_data
-                })
-        }
+        let status = AttemptStatus::from(response.status);
+        let response = if status == common_enums::AttemptStatus::Failure {
+            Err(ErrorResponse {
+                code: NO_ERROR_CODE.to_string(),
+                message: NO_ERROR_MESSAGE.to_string(),
+                reason: Some(NO_ERROR_MESSAGE.to_string()),
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.order_id.clone()),
+                status_code: http_code,
+                network_advice_code: None,
+                network_decline_code: None,
+                network_error_message: None,
+                raw_connector_response: None,
+            })
+        } else {
+            Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(response.order_id.clone()),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                raw_connector_response: None,
+                status_code: http_code,
+            })
+        };
+        Ok(Self {
+            response,
+            resource_common_data: PaymentFlowData {
+                status,
+                ..router_data.resource_common_data
+            },
+            ..router_data
+        })
     }
+}
 
 // Error
 #[derive(Debug, Serialize, Deserialize)]

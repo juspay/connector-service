@@ -1,19 +1,24 @@
 pub mod transformers;
 
 use common_enums::{enums, PaymentMethodType};
-use common_utils::{consts, errors::CustomResult, ext_traits::BytesExt};
+use common_utils::{
+    consts,
+    errors::CustomResult,
+    ext_traits::{ByteSliceExt, BytesExt},
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
+        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, SupportedPaymentMethodsExt, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::{DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes},
@@ -51,10 +56,82 @@ pub(crate) mod headers {
 
 const BLUECODE_API_VERSION: &str = "v1";
 
-// Type alias for non-generic trait implementations
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Bluecode<T>
 {
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> CustomResult<bool, errors::ConnectorError> {
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets.secret,
+            None => return Ok(false),
+        };
+
+        let security_header = request
+            .headers
+            .get("x-eorder-webhook-signature")
+            .ok_or(domain_types::errors::ConnectorError::WebhookSignatureNotFound)?
+            .clone();
+
+        let signature = hex::decode(security_header)
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+        let parsed: serde_json::Value = serde_json::from_slice(&request.body)
+            .map_err(|_| errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let sorted_payload = transformers::sort_and_minify_json(&parsed)?;
+
+        let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA512, &connector_webhook_secrets);
+
+        let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
+            .map(|_| true)
+            .map_err(|_| errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        Ok(verify)
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<ConnectorError>> {
+        let request_body_copy = request.body.clone();
+        let webhook_body: transformers::BluecodeWebhookResponse = request
+            .body
+            .parse_struct("BluecodeWebhookResponse")
+            .change_context(ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable_lazy(|| {
+                "Failed to parse Authorize.Net payment webhook body structure"
+            })?;
+
+        let transaction_id = webhook_body.order_id.clone();
+
+        let status: common_enums::AttemptStatus = webhook_body.status.into();
+
+        Ok(WebhookDetailsResponse {
+            resource_id: Some(ResponseId::ConnectorTransactionId(transaction_id.clone())),
+            status,
+            status_code: 200,
+            connector_response_reference_id: Some(transaction_id),
+            error_code: None,
+            error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            response_headers: None,
+        })
+    }
+
+    fn get_event_type(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, error_stack::Report<ConnectorError>> {
+        Ok(EventType::Payment)
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Bluecode<T>
