@@ -39,13 +39,16 @@ jobs:
           COMMIT_SHA=${{ github.sha }}
           SHORT_SHA=${COMMIT_SHA::7}
           
+          # Sanitize the branch name by replacing slashes with hyphens for Docker compatibility.
+          SANITIZED_REF_NAME=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
+
           # Check if triggered by tag push
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             # Use the tag name directly
             VERSION="${{ github.ref_name }}"
           elif [[ "${{ github.ref_type }}" == "branch" ]] && [[ -n "${{ github.ref_name }}" ]]; then
             # Use the branch name with short SHA
-            VERSION="${{ github.ref_name }}-${SHORT_SHA}"
+            VERSION="${SANITIZED_REF_NAME}-${SHORT_SHA}"
           else
             # Default to commit SHA if not a tag or branch
             VERSION="commit-${SHORT_SHA}"
