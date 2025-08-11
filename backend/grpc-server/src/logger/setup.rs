@@ -112,6 +112,11 @@ pub fn setup(
                     builder.flush_interval(std::time::Duration::from_millis(flush_interval_ms));
             }
 
+            // Add buffer_limit if configured
+            if let Some(buffer_limit) = kafka_config.buffer_limit {
+                builder = builder.queue_buffering_max_messages(buffer_limit);
+            }
+
             let kafka_layer = match builder.build() {
                 Ok(layer) => Some(
                     layer.with_filter(
