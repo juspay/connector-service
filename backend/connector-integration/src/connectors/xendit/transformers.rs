@@ -406,6 +406,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             })
         };
 
@@ -470,6 +471,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
                         status_code: Some(http_code),
+                        state: None,
                     })
                 };
                 Ok(Self {
@@ -583,6 +585,7 @@ impl<F> TryFrom<ResponseRouterData<XenditPaymentResponse, Self>>
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             })
         };
         Ok(Self {
@@ -659,6 +662,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             }),
             ..router_data
         })
@@ -691,6 +695,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 refund_status: common_enums::RefundStatus::from(response.status),
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             }),
             ..router_data
         })

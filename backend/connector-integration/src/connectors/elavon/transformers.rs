@@ -765,6 +765,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPaymentsResponse, Self>>
                     mandate_reference: None,
                     raw_connector_response: None,
                     status_code: Some(http_code),
+                    state: None,
                 })
             }
             (_, Some(err_resp)) => Err(err_resp),
@@ -999,6 +1000,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     mandate_reference: None,
                     raw_connector_response: None,
                     status_code: Some(http_code),
+                    state: None,
                 })
             }
             (_, Some(err_resp)) => Err(err_resp),
@@ -1149,6 +1151,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 refund_status,
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             }),
             (_, Some(err_resp)) => Err(err_resp),
             (ElavonResult::Error(error_payload), None) => Err(ErrorResponse {
@@ -1296,6 +1299,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonRSyncResponse, Self>>
             refund_status,
             raw_connector_response: None,
             status_code: Some(value.http_code),
+            state: None,
         };
 
         Ok(Self {
@@ -1383,6 +1387,7 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
             mandate_reference: None,
             raw_connector_response: None,
             status_code: Some(value.http_code),
+            state: None,
         };
 
         Ok(RouterDataV2 {

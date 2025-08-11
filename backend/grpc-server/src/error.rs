@@ -314,6 +314,7 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             error_code: error.error_code,
             raw_connector_response: error.raw_connector_response,
             status_code: error.status_code,
+            state: None,
         }
     }
 }

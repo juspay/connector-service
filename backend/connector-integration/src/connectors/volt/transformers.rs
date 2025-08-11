@@ -1,0 +1,590 @@
+use common_enums::AttemptStatus; 
+use common_utils::{
+    pii::Email,
+    request::Method,
+    types::MinorUnit,
+};
+use hyperswitch_masking::ExposeInterface;
+use domain_types::{
+    connector_flow::Authorize, 
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData,
+        PaymentsResponseData, PaymentsSyncData, ResponseId,
+    },
+    errors,
+    payment_method_data::{BankRedirectData, PaymentMethodData},
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+};
+use hyperswitch_masking::Secret;
+use serde::{Deserialize, Serialize};
+
+use super::VoltRouterData;
+use crate::types::ResponseRouterData;
+
+type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VoltAuthType {
+    pub username: Secret<String>,
+    pub password: Secret<String>,
+    pub client_id: Secret<String>,
+    pub client_secret: Secret<String>,
+}
+
+impl TryFrom<&ConnectorAuthType> for VoltAuthType {
+    type Error = Error;
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        match auth_type {
+            ConnectorAuthType::MultiAuthKey {
+                api_key,
+                key1,
+                api_secret,
+                key2,
+            } => Ok(Self {
+                username: api_key.to_owned(),
+                password: api_secret.to_owned(),
+                client_id: key1.to_owned(),
+                client_secret: key2.to_owned(),
+            }),
+            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
+        }
+    }
+}
+
+
+#[derive(Debug, Serialize)]
+pub struct VoltAuthUpdateRequest {
+    pub grant_type: String,
+    pub client_id: Secret<String>,
+    pub client_secret: Secret<String>,
+    pub username: Secret<String>,
+    pub password: Secret<String>,
+}
+
+const PASSWORD: &str = "password";
+
+impl TryFrom<&domain_types::router_data_v2::RouterDataV2<(), domain_types::connector_types::PaymentFlowData, (), grpc_api_types::payments::AccessToken>> for VoltAuthUpdateRequest {
+    type Error = Error;
+    fn try_from(item: &domain_types::router_data_v2::RouterDataV2<(), domain_types::connector_types::PaymentFlowData, (), grpc_api_types::payments::AccessToken>) -> Result<Self, Self::Error> {
+        let auth = VoltAuthType::try_from(&item.connector_auth_type)?;
+        Ok(Self {
+            grant_type: PASSWORD.to_string(),
+            username: auth.username,
+            password: auth.password,
+            client_id: auth.client_id,
+            client_secret: auth.client_secret,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VoltAuthUpdateResponse {
+    pub access_token: Secret<String>,
+    pub token_type: String,
+    pub expires_in: i64,
+    pub refresh_token: Secret<String>,
+}
+
+impl<F> TryFrom<crate::types::ResponseRouterData<VoltAuthUpdateResponse, domain_types::router_data_v2::RouterDataV2<F, domain_types::connector_types::PaymentFlowData, (), grpc_api_types::payments::AccessToken>>>
+    for domain_types::router_data_v2::RouterDataV2<F, domain_types::connector_types::PaymentFlowData, (), grpc_api_types::payments::AccessToken>
+{
+    type Error = Error;
+    fn try_from(
+        item: crate::types::ResponseRouterData<VoltAuthUpdateResponse, domain_types::router_data_v2::RouterDataV2<F, domain_types::connector_types::PaymentFlowData, (), grpc_api_types::payments::AccessToken>>,
+    ) -> Result<Self, Self::Error> {
+        let current_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+
+        Ok(Self {
+            response: Ok(grpc_api_types::payments::AccessToken {
+                token: item.response.access_token.expose(),
+                expires_in_seconds: current_time + item.response.expires_in,
+                token_type: item.response.token_type,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltPaymentRequest {
+    pub amount: MinorUnit,
+    pub currency_code: common_enums::Currency,
+    #[serde(rename = "type")]
+    pub transaction_type: VoltTransactionType,
+    pub merchant_internal_reference: String,
+    pub shopper: VoltShopper,
+    pub payment_success_url: Option<String>,
+    pub payment_failure_url: Option<String>,
+    pub payment_pending_url: Option<String>,
+    pub payment_cancel_url: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum VoltTransactionType {
+    Bills,
+    Goods,
+    PersonToPerson,
+    Other,
+    Services,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltShopper {
+    pub reference: String,
+    pub email: Option<Email>,
+    pub first_name: Secret<String>,
+    pub last_name: Secret<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltPaymentResponse {
+    pub id: String,
+    pub checkout_url: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltBankRedirectDetails {
+    pub url: String,
+    pub method: Option<Method>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum VoltPaymentStatus {
+    NewPayment,
+    BankRedirect,
+    AwaitingCheckoutAuthorisation,
+    Received,
+    Completed,
+    Settled,
+    Failed,
+    Cancelled,
+    DelayedAtBank,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltPSyncResponse {
+    pub id: String,
+    pub amount: MinorUnit,
+    pub currency: VoltCurrency,
+    pub status: VoltPaymentStatus,
+    pub merchant_internal_reference: String,
+    pub bank_redirect_details: Option<VoltBankRedirectDetails>,
+    // Add optional fields that might be present
+    pub active: Option<bool>,
+    pub created_at: Option<String>,
+    #[serde(rename = "type")]
+    pub payment_type: Option<String>,
+    pub account: Option<serde_json::Value>,
+    pub bank: Option<serde_json::Value>,
+    pub unique_reference: Option<String>,
+    pub status_updates: Option<Vec<serde_json::Value>>,
+    pub beneficiary: Option<serde_json::Value>,
+    pub callback: Option<serde_json::Value>,
+    pub transfer_type: Option<String>,
+    pub is_connect: Option<bool>,
+    pub sender: Option<serde_json::Value>,
+    pub refund_available: Option<serde_json::Value>,
+    pub notifications: Option<Vec<serde_json::Value>>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct VoltCurrency {
+    pub id: String,
+    pub name: Option<String>,
+    pub decimal: Option<u8>,
+    pub active: Option<bool>,
+}
+
+// Capture structures commented out for now
+// #[derive(Debug, Serialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct VoltCaptureRequest {
+//     pub amount: MinorUnit,
+// }
+
+// #[derive(Debug, Deserialize, Serialize)]
+// pub struct VoltCaptureResponse(VoltPaymentResponse);
+
+
+// Refund structures commented out for now
+// #[derive(Debug, Serialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct VoltRefundRequest {
+//     pub amount: MinorUnit,
+//     pub reason: Option<String>,
+//     pub merchant_internal_reference: String,
+// }
+
+// #[derive(Debug, Deserialize, Serialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct VoltRefundResponse {
+//     pub id: String,
+//     pub amount: MinorUnit,
+//     pub currency_code: String,
+//     pub status: VoltRefundStatus,
+//     pub merchant_internal_reference: String,
+// }
+
+// Refund status enum commented out for now
+// #[derive(Debug, Clone, Deserialize, Serialize)]
+// #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+// pub enum VoltRefundStatus {
+//     Pending,
+//     Completed,
+//     Failed,
+// }
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct VoltErrorResponse {
+    pub exception: VoltErrorException,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct VoltAuthErrorResponse {
+    pub code: u64,
+    pub message: String,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct VoltErrorException {
+    pub code: u64,
+    pub message: String,
+    pub error_list: Option<Vec<VoltErrorList>>,
+}
+
+#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
+pub struct VoltErrorList {
+    pub property: String,
+    pub message: String,
+}
+
+
+impl TryFrom<VoltRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>>
+    for VoltPaymentRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        item: VoltRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::BankRedirect(BankRedirectData::OpenBankingUk { .. }) => {
+                let return_url = item.router_data.request.router_return_url.clone()
+                    .ok_or_else(|| errors::ConnectorError::MissingRequiredField { 
+                        field_name: "return_url" 
+                    })?;
+
+                let billing_address = item.router_data.resource_common_data.address
+                    .get_payment_method_billing()
+                    .and_then(|billing| billing.address.as_ref());
+
+                let first_name = billing_address
+                    .and_then(|addr| addr.first_name.clone())
+                    .or_else(|| item.router_data.request.customer_name.clone().map(Secret::new))
+                    .unwrap_or_else(|| Secret::new("Customer".to_string()));
+
+                let last_name = billing_address
+                    .and_then(|addr| addr.last_name.clone())
+                    .unwrap_or_else(|| first_name.clone());
+
+                let shopper = VoltShopper {
+                    reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                    email: item.router_data.request.email.clone(),
+                    first_name,
+                    last_name,
+                };
+
+                Ok(VoltPaymentRequest {
+                    amount: item.router_data.request.minor_amount,
+                    currency_code: item.router_data.request.currency,
+                    transaction_type: VoltTransactionType::Services, // Following hyperswitch pattern
+                    merchant_internal_reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+                    shopper,
+                    payment_success_url: Some(return_url.clone()),
+                    payment_failure_url: Some(return_url.clone()),
+                    payment_pending_url: Some(return_url.clone()),
+                    payment_cancel_url: Some(return_url),
+                })
+            }
+            _ => Err(errors::ConnectorError::NotImplemented("Payment method".into()).into()),
+        }
+    }
+}
+
+// Capture request transformation commented out for now
+// impl TryFrom<VoltRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+//     for VoltCaptureRequest
+// {
+//     type Error = Error;
+
+//     fn try_from(
+//         item: VoltRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
+//     ) -> Result<Self, Self::Error> {
+//         Ok(VoltCaptureRequest {
+//             amount: item.router_data.request.minor_amount_to_capture,
+//         })
+//     }
+// }
+
+// Refund request transformation commented out for now
+// impl TryFrom<VoltRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>>
+//     for VoltRefundRequest
+// {
+//     type Error = Error;
+
+//     fn try_from(
+//         item: VoltRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
+//     ) -> Result<Self, Self::Error> {
+//         Ok(VoltRefundRequest {
+//             amount: item.router_data.request.minor_refund_amount,
+//             reason: item.router_data.request.reason.clone(),
+//             merchant_internal_reference: item.router_data.request.refund_id.clone(),
+//         })
+//     }
+// }
+
+impl<F> TryFrom<ResponseRouterData<VoltPaymentResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<VoltPaymentResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            mut router_data,
+            http_code,
+        } = value;
+
+        // For authorization response, status is always AuthenticationPending
+        // because user needs to complete payment on Volt's checkout page
+        let status = AttemptStatus::AuthenticationPending;
+        
+        // Create redirection data from checkout URL
+        let redirection_data = Some(domain_types::router_response_types::RedirectForm::Form {
+            endpoint: response.checkout_url,
+            method: Method::Get,
+            form_fields: std::collections::HashMap::new(),
+        });
+
+        // Create state with access token if available  
+        let state = router_data.request.access_token.as_ref().map(|token| {
+            grpc_api_types::payments::ConnectorState {
+                access_token: Some(token.clone()),
+            }
+        });
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response.id.clone()),
+            redirection_data: redirection_data.map(Box::new),
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(response.id),
+            incremental_authorization_allowed: None,
+            mandate_reference: None,
+            raw_connector_response: None,
+            status_code: Some(http_code),
+            state,
+        };
+
+        router_data.resource_common_data.status = status;
+        router_data.response = Ok(payments_response_data);
+
+        Ok(router_data)
+    }
+    
+}
+
+impl<F> TryFrom<ResponseRouterData<VoltPSyncResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = Error;
+
+    fn try_from(
+        value: ResponseRouterData<VoltPSyncResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let ResponseRouterData {
+            response,
+            mut router_data,
+            http_code,
+        } = value;
+
+        let status = get_volt_payment_status(response.status.clone());
+        let error_response = if status == AttemptStatus::Failure {
+            Some(ErrorResponse {
+                code: "PAYMENT_FAILED".to_string(),
+                message: format!("Payment failed with status: {:?}", response.status),
+                reason: Some(format!("Payment failed with status: {:?}", response.status)),
+                status_code: http_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(response.id.clone()),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+                raw_connector_response: None,
+            })
+        } else {
+            None
+        };
+
+        // Create state with access token if available  
+        let state = router_data.request.access_token.as_ref().map(|token| {
+            grpc_api_types::payments::ConnectorState {
+                access_token: Some(token.clone()),
+            }
+        });
+
+        let payments_response_data = PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(response.id),
+            redirection_data: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: Some(response.merchant_internal_reference),
+            incremental_authorization_allowed: None,
+            mandate_reference: None,
+            raw_connector_response: None,
+            status_code: Some(http_code),
+            state,
+        };
+
+        router_data.resource_common_data.status = status;
+        router_data.response = error_response.map_or_else(|| Ok(payments_response_data), Err);
+
+        Ok(router_data)
+    }
+}
+
+// Capture response transformation commented out for now
+// impl<F> TryFrom<ResponseRouterData<VoltCaptureResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+//     for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+// {
+//     type Error = Error;
+
+//     fn try_from(
+//         value: ResponseRouterData<VoltCaptureResponse, Self>,
+//     ) -> Result<Self, Self::Error> {
+//         let ResponseRouterData {
+//             response: VoltCaptureResponse(response),
+//             mut router_data,
+//             http_code,
+//         } = value;
+
+//         let status = get_volt_payment_status(response.status.clone());
+//         let error_response = if status == AttemptStatus::Failure {
+//             Some(ErrorResponse {
+//                 code: "CAPTURE_FAILED".to_string(),
+//                 message: format!("Capture failed with status: {:?}", response.status),
+//                 reason: Some(format!("Capture failed with status: {:?}", response.status)),
+//                 status_code: http_code,
+//                 attempt_status: Some(status),
+//                 connector_transaction_id: Some(response.id.clone()),
+//                 network_decline_code: None,
+//                 network_advice_code: None,
+//                 network_error_message: None,
+//                 raw_connector_response: None,
+//             })
+//         } else {
+//             None
+//         };
+
+//         let payments_response_data = PaymentsResponseData::TransactionResponse {
+//             resource_id: ResponseId::ConnectorTransactionId(response.id),
+//             redirection_data: None,
+//             connector_metadata: None,
+//             network_txn_id: None,
+//             connector_response_reference_id: Some(response.merchant_internal_reference),
+//             incremental_authorization_allowed: None,
+//             mandate_reference: None,
+//             raw_connector_response: None,
+//             status_code: Some(http_code),
+//         };
+
+//         router_data.resource_common_data.status = status;
+//         router_data.response = error_response.map_or_else(|| Ok(payments_response_data), Err);
+
+//         Ok(router_data)
+//     }
+// }
+
+// Refund response transformation commented out for now
+// impl<F> TryFrom<ResponseRouterData<VoltRefundResponse, RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>>
+//     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
+// {
+//     type Error = Error;
+
+//     fn try_from(
+//         value: ResponseRouterData<VoltRefundResponse, Self>,
+//     ) -> Result<Self, Self::Error> {
+//         let ResponseRouterData {
+//             response,
+//             mut router_data,
+//             http_code,
+//         } = value;
+
+//         let status = get_volt_refund_status(response.status.clone());
+//         let error_response = if status == RefundStatus::Failure {
+//             Some(ErrorResponse {
+//                 code: "REFUND_FAILED".to_string(),
+//                 message: format!("Refund failed with status: {:?}", response.status),
+//                 reason: Some(format!("Refund failed with status: {:?}", response.status)),
+//                 status_code: http_code,
+//                 attempt_status: None,
+//                 connector_transaction_id: Some(response.id.clone()),
+//                 network_decline_code: None,
+//                 network_advice_code: None,
+//                 network_error_message: None,
+//                 raw_connector_response: None,
+//             })
+//         } else {
+//             None
+//         };
+
+//         let refunds_response_data = RefundsResponseData {
+//             connector_refund_id: response.id,
+//             refund_status: status,
+//             raw_connector_response: None,
+//             status_code: Some(http_code),
+//         };
+
+//         router_data.response = error_response.map_or_else(|| Ok(refunds_response_data), Err);
+
+//         Ok(router_data)
+//     }
+// }
+
+pub fn get_volt_payment_status(status: VoltPaymentStatus) -> AttemptStatus {
+    match status {
+        VoltPaymentStatus::NewPayment => AttemptStatus::Started,
+        VoltPaymentStatus::BankRedirect => AttemptStatus::AuthenticationPending,
+        VoltPaymentStatus::AwaitingCheckoutAuthorisation => AttemptStatus::AuthenticationPending,
+        VoltPaymentStatus::Received => AttemptStatus::Charged,
+        VoltPaymentStatus::Completed => AttemptStatus::Charged,
+        VoltPaymentStatus::Settled => AttemptStatus::Charged,
+        VoltPaymentStatus::Failed => AttemptStatus::Failure,
+        VoltPaymentStatus::Cancelled => AttemptStatus::Voided,
+        VoltPaymentStatus::DelayedAtBank => AttemptStatus::Pending,
+    }
+}
+
+// Refund status helper commented out for now
+// pub fn get_volt_refund_status(status: VoltRefundStatus) -> RefundStatus {
+//     match status {
+//         VoltRefundStatus::Pending => RefundStatus::Pending,
+//         VoltRefundStatus::Completed => RefundStatus::Success,
+//         VoltRefundStatus::Failed => RefundStatus::Failure,
+//     }
+// }
+

@@ -796,6 +796,9 @@ message AccessToken {
   
   // Expiration timestamp of the token (seconds since epoch).
   int64 expires_in_seconds = 2;
+  
+  // Token type (e.g., "Bearer", "Basic").
+  string token_type = 3;
 }
 
 // Additional authentication data, typically from 3DS.
@@ -928,6 +931,12 @@ message HtmlData {
 message UriData {
   // The URI for redirection (e.g., UPI deep link).
   string uri = 1;
+}
+
+// State data to be sent back to Hyperswitch for storage
+message ConnectorState {
+  // Access token obtained from connector
+  optional AccessToken access_token = 1;
 }
 
 // Details of an HTTP request, typically for incoming webhooks.
@@ -1101,6 +1110,9 @@ message PaymentServiceAuthorizeResponse {
   
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
+  
+  // State
+  optional ConnectorState state = 11; // State data to be stored by Hyperswitch
 }
 
 // Request message for synchronizing payment status.
@@ -1110,6 +1122,9 @@ message PaymentServiceGetRequest {
   
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
+  
+  // Session and Token Information
+  optional AccessToken access_token = 3; // Access token for secure communication
 }
 
 // Response message for a payment status synchronization.
@@ -1153,6 +1168,9 @@ message PaymentServiceGetResponse {
   
   // Raw Response
   optional string raw_connector_response = 25; // Raw response from the connector for debugging
+  
+  // State
+  optional ConnectorState state = 27; // State data to be stored by Hyperswitch
 }
 
 // Request message for voiding a payment.
@@ -1164,6 +1182,9 @@ message PaymentServiceVoidRequest {
   // Void Details
   optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment
   optional bool all_keys_required = 4;
+  
+  // Session and Token Information
+  optional AccessToken access_token = 5; // Access token for secure communication
 }
 
 // Response message for a payment void operation.
@@ -1179,6 +1200,9 @@ message PaymentServiceVoidResponse {
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
+  
+  // State
+  optional ConnectorState state = 7; // State data to be stored by Hyperswitch
 }
 
 // Request message for capturing a payment.
@@ -1196,6 +1220,9 @@ message PaymentServiceCaptureRequest {
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
+  
+  // Session and Token Information
+  optional AccessToken access_token = 7; // Access token for secure communication
 }
 
 // Response message for a payment capture operation.
@@ -1211,6 +1238,9 @@ message PaymentServiceCaptureResponse {
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from response_reference_id
+  
+  // State
+  optional ConnectorState state = 7; // State data to be stored by Hyperswitch
 }
 
 // Request message for processing a refund.
@@ -1239,6 +1269,9 @@ message PaymentServiceRefundRequest {
   
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
+  
+  // Session and Token Information
+  optional AccessToken access_token = 16; // Access token for secure communication
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -1278,6 +1311,9 @@ message RefundResponse {
   
   // Raw Response
   optional string raw_connector_response = 21; // Raw response from the connector for debugging
+  
+  // State
+  optional ConnectorState state = 23; // State data to be stored by Hyperswitch
 }
 
 // Request message for creating a dispute.
@@ -1475,6 +1511,9 @@ message RefundServiceGetRequest {
   
   // Refund Details
   optional string refund_reason = 4; // Reason for the refund, if provided during sync
+  
+  // Session and Token Information
+  optional AccessToken access_token = 5; // Access token for secure communication
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead

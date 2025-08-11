@@ -337,6 +337,7 @@ impl
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
                             status_code: Some(item.http_code),
+                            state: None,
                         }),
                         ..item.router_data
                     })
@@ -359,6 +360,7 @@ impl
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
                             status_code: Some(item.http_code),
+                            state: None,
                         }),
                         ..item.router_data
                     })

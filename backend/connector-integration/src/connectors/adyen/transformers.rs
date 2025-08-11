@@ -1153,6 +1153,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             mandate_reference: None,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         };
 
         Ok(Self {
@@ -1228,6 +1229,7 @@ pub fn get_adyen_response(
         mandate_reference: mandate_reference.map(Box::new),
         raw_connector_response: None,
         status_code: Some(status_code),
+        state: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1304,6 +1306,7 @@ pub fn get_redirection_response(
         mandate_reference: None,
         raw_connector_response: None,
         status_code: Some(status_code),
+        state: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1881,6 +1884,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
             refund_status: status,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         };
 
         Ok(Self {
@@ -1981,6 +1985,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 mandate_reference: None,
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending,

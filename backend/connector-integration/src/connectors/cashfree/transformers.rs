@@ -615,6 +615,7 @@ impl
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: Some(item.http_code),
+                state: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,

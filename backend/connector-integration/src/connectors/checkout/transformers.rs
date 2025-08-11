@@ -493,6 +493,7 @@ impl<F>
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             });
         }
 
@@ -670,7 +671,8 @@ impl<F>
             psync_flow: CheckoutPaymentIntent::Capture,
         });
 
-        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
+        router_data.response = Ok(
+            PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(resource_id),
             redirection_data: None,
             mandate_reference: None,
@@ -680,6 +682,7 @@ impl<F>
             incremental_authorization_allowed: None,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         });
 
         Ok(router_data)
@@ -732,6 +735,7 @@ impl<F>
             incremental_authorization_allowed: None,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         });
 
         Ok(router_data)
@@ -809,6 +813,7 @@ impl<F>
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: Some(http_code),
+                state: None,
             });
         }
 
@@ -853,6 +858,7 @@ impl<F>
             refund_status,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         });
 
         Ok(router_data)
@@ -890,6 +896,7 @@ impl<F>
             refund_status,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         });
 
         Ok(router_data)
@@ -963,6 +970,7 @@ impl<F>
             refund_status,
             raw_connector_response: None,
             status_code: Some(http_code),
+            state: None,
         });
 
         Ok(router_data)

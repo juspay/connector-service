@@ -860,6 +860,7 @@ dependencies = [
  "domain_types",
  "encoding_rs",
  "error-stack 0.4.1",
+ "grpc-api-types",
  "hex",
  "image",
  "interfaces",
