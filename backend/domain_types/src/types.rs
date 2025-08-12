@@ -67,6 +67,7 @@ pub struct Connectors {
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
+    pub noon: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -999,7 +1000,7 @@ impl<
             setup_future_usage: None,
             mandate_id: None,
             off_session: None,
-            order_category: None,
+            order_category: value.order_category,
             session_token: None,
             enrolled_for_3ds: false,
             related_transaction_id: None,
@@ -1693,7 +1694,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                     error_object: None,
                 }))?,
             connector_customer: value.connector_customer_id,
-            description: None,
+            description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
@@ -3493,7 +3494,7 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
                 .unwrap_or_default(),
             customer_id: None,
             connector_customer: None,
-            description: None,
+            description: value.metadata.get("description").cloned(),
             return_url: None,
             connector_meta_data: None,
             amount_captured: None,
@@ -3598,7 +3599,17 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: None,
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            },
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
