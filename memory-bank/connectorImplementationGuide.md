@@ -133,14 +133,14 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -263,6 +263,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for New_connector_name<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentSessionToken for Nexinets<T>
 {
 }
 ```
@@ -2079,4 +2083,14 @@ Ok(Self {
         ..item.router_data.resource_common_data
     },
     response: //..
+```
+
+### File: backend/connector-integration/src/connectors/new_connector.rs
+
+120. Remove the following unused code, dont fix any errors and dont combine multiple steps
+```rust
+impl ConnectorValidation
+impl ConnectorIntegration
+impl IncomingWebhook
+impl ConnectorSpecifications
 ```
