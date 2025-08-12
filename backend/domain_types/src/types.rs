@@ -231,7 +231,11 @@ impl<
                         Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Klarna(_)) => {
                             Ok(PaymentMethodData::PayLater(payment_method_data::PayLaterData::KlarnaRedirect {  }))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Walley(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Alma(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Atome(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::PayBright(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -284,7 +288,18 @@ impl<
                                 )?),
                             }))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingThailand(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingCzechRepublic(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFinland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingPoland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingSlovakia(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFpx(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Trustly(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingPis(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::LocalBankRedirect(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Pse(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -347,7 +362,14 @@ impl<
                                 bank_account_holder_name: Some(bacs.bank_account_holder_name.into())
                             }))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Benefit(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BniVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::CimbVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::DanamonVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::MandiriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Knet(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -371,7 +393,13 @@ impl<
                         Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::MultibancoBankTransfer(_)) => {
                             Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::MultibancoBankTransfer {  })))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Eft(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Fps(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::LocalBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::PermataBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::BcaBankTransfer(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -386,7 +414,21 @@ impl<
                         Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Blik(blik)) => {
                             Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Blik { blik_code: blik.blik_code }))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Bizum(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Dana(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::GoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Gcash(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::KakaoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MbWay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MobilePay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Momo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MomoAtm(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Swish(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::TouchNGo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Twint(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Vipps(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -456,7 +498,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     match reward.reward_type() {
                         grpc_api_types::payments::RewardType::Classicreward => Ok(Some(PaymentMethodType::ClassicReward)),
                         grpc_api_types::payments::RewardType::EVoucher => Ok(Some(PaymentMethodType::Evoucher)),
-                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        grpc_api_types::payments::RewardType::Unspecified => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "UNSUPPORTED_REWARD_TYPE".to_owned(),
                             error_identifier: 400,
                             error_message: "Unsupported reward type".to_owned(),
@@ -475,7 +517,11 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Klarna(_)) => {
                             Ok(Some(PaymentMethodType::Klarna))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Walley(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Alma(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Atome(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::PayBright(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -502,7 +548,18 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Eps(_)) => {
                             Ok(Some(PaymentMethodType::Eps))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingThailand(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingCzechRepublic(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFinland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingPoland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingSlovakia(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFpx(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Trustly(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingPis(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::LocalBankRedirect(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Pse(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -528,7 +585,14 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Bacs(_)) => {
                             Ok(Some(PaymentMethodType::Bacs))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Benefit(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BniVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::CimbVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::DanamonVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::MandiriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Knet(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -552,7 +616,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::MultibancoBankTransfer(_)) => {
                             Ok(Some(PaymentMethodType::Multibanco))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Eft(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Fps(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::LocalBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::PermataBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::BcaBankTransfer(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
@@ -567,7 +637,21 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Blik(_)) => {
                             Ok(Some(PaymentMethodType::Blik))
                         }
-                        _ => {
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Bizum(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Dana(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::GoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Gcash(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::KakaoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MbWay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MobilePay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Momo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MomoAtm(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Swish(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::TouchNGo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Twint(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Vipps(_))
+                        | None => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
