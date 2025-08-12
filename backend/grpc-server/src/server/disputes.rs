@@ -105,7 +105,8 @@ impl DisputeService for Disputes {
             let (connector, _merchant_id, _tenant_id, request_id) =
                 crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
                     .map_err(|e| e.into_grpc_status())?;
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,

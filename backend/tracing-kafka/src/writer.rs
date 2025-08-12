@@ -7,7 +7,7 @@ use std::time::Duration;
 use rdkafka::{
     config::ClientConfig,
     error::KafkaError,
-    message::{OwnedHeaders},
+    message::OwnedHeaders,
     producer::{BaseRecord, DefaultProducerContext, Producer, ThreadedProducer},
 };
 

@@ -1,9 +1,9 @@
 use anyhow::Result;
+use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
 use std::sync::Arc;
 use tracing_kafka::KafkaWriter;
-use once_cell::sync::OnceCell;
 
 // Use the centralized event definitions from the events module
 use crate::events::{Event, EventConfig};
@@ -51,7 +51,9 @@ impl EventPublisher {
 
         let mut headers: OwnedHeaders = OwnedHeaders::new();
 
-        let key = if let Some(partition_key_value) = event.get(partition_key_field).and_then(|v| v.as_str()) {
+        let key = if let Some(partition_key_value) =
+            event.get(partition_key_field).and_then(|v| v.as_str())
+        {
             headers = headers.insert(Header {
                 key: PARTITION_KEY_METADATA,
                 value: Some(partition_key_value.as_bytes()),
@@ -82,7 +84,6 @@ impl EventPublisher {
         base_event: Event,
         config: &EventConfig,
     ) -> Result<()> {
-
         let processed_event = self.process_event(&base_event)?;
 
         self.publish_event(processed_event, &config.topic, &config.partition_key_field)

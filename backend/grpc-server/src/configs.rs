@@ -1,8 +1,6 @@
 use std::path::PathBuf;
 
-use common_utils::{
-    consts, events::EventConfig
-};
+use common_utils::{consts, events::EventConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
