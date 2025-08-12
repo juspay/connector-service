@@ -9,7 +9,7 @@ grpc-api-types = { path = "../grpc-api-types" }
 base64 = "0.21"
 common_enums = { path = "../common_enums" }
 common_utils = { path = "../common_utils" }
-interfaces = { path = "../interfaces"}
+interfaces = { path = "../interfaces" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
@@ -21,11 +21,18 @@ error-stack = "0.4.0"
 strum = { version = "0.26", features = ["derive"] }
 time = "0.3.35"
 url = "2.5.0"
-cards = {  path = "../cards"}
+cards = { path = "../cards" }
 paste = "1.0"
-reqwest = { version = "0.11.27", features = ["json", "rustls-tls", "gzip", "multipart"] }
+reqwest = { version = "0.11.27", features = [
+    "json",
+    "rustls-tls",
+    "gzip",
+    "multipart",
+] }
 bytes = "1.6.0"
-ring = "0.17" 
+ring = "0.17"
+aes = "0.8"
+cbc = "0.1"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 tracing = { version = "0.1.40" }
 encoding_rs = "0.8"

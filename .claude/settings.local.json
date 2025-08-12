@@ -215,7 +215,25 @@
       "Bash(rg -A 15 -B 5 \"enum VoltPaymentStatus\" /Users/kanika.c/connector-service/backend/connector-integration/src/connectors/volt/transformers.rs)",
       "Bash(grep -n \"ConnectorAccessToken\\|get_access_token\\|set_access_token\" /Users/kanika.c/code/hyperswitch/crates/router/src/db.rs)",
       "Bash(rg -n \"feature.*v2\" /Users/kanika.c/code/hyperswitch/crates/router/src/core/payments.rs)",
-      "Bash(rg -n \"decide_unified_connector_service_call\" /Users/kanika.c/code/hyperswitch/crates/router/src/core/payments.rs -A 2 -B 2)"
+      "Bash(rg -n \"decide_unified_connector_service_call\" /Users/kanika.c/code/hyperswitch/crates/router/src/core/payments.rs -A 2 -B 2)",
+      "Bash(cargo check -p connector-integration)",
+      "Bash(rg -A 10 -B 2 \"state.*Some.*serde_json\" backend/connector-integration/src/connectors/fiuu/transformers.rs)",
+      "Bash(rg -C 5 \"state.*Some\" backend/connector-integration/src/connectors/fiuu/transformers.rs)",
+      "Bash(rg -C 10 \"impl.*TryFrom.*for RazorpayPaymentRequest\" backend/connector-integration/src/connectors/razorpay/transformers.rs)",
+      "Bash(rg -C 5 \"pub struct.*RouterData\" backend/connector-integration/src/connectors/razorpay/transformers.rs)",
+      "Bash(rg -n \"PaymentsResponseData::TransactionResponse\" backend/connector-integration/src/connectors/novalnet/transformers.rs)",
+      "Bash(rg -n \"RefundsResponseData\" backend/connector-integration/src/connectors/novalnet/transformers.rs)",
+      "Bash(rg -n \"PaymentsResponseData::TransactionResponse\\|RefundsResponseData\" backend/connector-integration/src/connectors/nexinets/transformers.rs)",
+      "Bash(rg -n \"PaymentsResponseData::TransactionResponse\" backend/connector-integration/src/connectors/nexinets/transformers.rs)",
+      "Bash(rg -n \"RefundsResponseData\" backend/connector-integration/src/connectors/nexinets/transformers.rs)",
+      "Bash(rg -n \"PaymentsResponseData::TransactionResponse\\|RefundsResponseData\" backend/connector-integration/src/connectors/noon/transformers.rs)",
+      "Bash(rg -n \"PaymentsResponseData::TransactionResponse\" backend/connector-integration/src/connectors/noon/transformers.rs)",
+      "Bash(rg -n \"RefundsResponseData\" backend/connector-integration/src/connectors/noon/transformers.rs)",
+      "Bash(rg -A 5 \"trait PaymentAuthorizeV2\" backend/interfaces/src/connector_types.rs)",
+      "Bash(rg -B 5 -A 5 \"process_authorization_internal\" backend/grpc-server/src/server/payments.rs)",
+      "Bash(grep -n \"message PaymentServiceAuthorizeResponse\" /Users/kanika.c/connector-service/backend/grpc-api-types/proto/payment.proto)",
+      "Bash(grep -n -A 10 \"message ConnectorState\" /Users/kanika.c/connector-service/backend/grpc-api-types/proto/payment.proto)",
+      "Bash(grep -n -A 10 \"message AccessToken\" /Users/kanika.c/connector-service/backend/grpc-api-types/proto/payment.proto)"
     ],
     "deny": []
   }

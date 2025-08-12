@@ -28,6 +28,9 @@ pub use self::phonepe::Phonepe;
 pub mod cashfree;
 pub use self::cashfree::Cashfree;
 
+pub mod paytm;
+pub use self::paytm::Paytm;
+
 pub mod fiuu;
 pub use self::fiuu::Fiuu;
 
@@ -39,3 +42,12 @@ pub use self::cashtocode::Cashtocode;
 
 pub mod volt;
 pub use self::volt::Volt;
+
+pub mod novalnet;
+pub use self::novalnet::Novalnet;
+
+pub mod nexinets;
+pub use self::nexinets::Nexinets;
+
+pub mod noon;
+pub use self::noon::Noon;

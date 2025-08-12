@@ -80,12 +80,15 @@ impl AccessTokenManager {
     }
 
     /// Handle OAuth token generation for ConnectorData directly
-    pub async fn ensure_access_token_for_connector_data(
-        connector_data: &crate::types::ConnectorData,
+    pub async fn ensure_access_token_for_connector_data<T>(
+        connector_data: &crate::types::ConnectorData<T>,
         payment_flow_data: &mut domain_types::connector_types::PaymentFlowData,
         connector_auth_details: &ConnectorAuthType,
         connector_name: &str,
-    ) -> CustomResult<(), ConnectorError> {
+    ) -> CustomResult<(), ConnectorError> 
+    where
+        T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Default + Send + Sync + 'static + serde::Serialize,
+    {
         if Self::supports_access_token(connector_name, payment_flow_data.payment_method) 
             && Self::should_refresh_token(&payment_flow_data.access_token) {
             
@@ -93,7 +96,7 @@ impl AccessTokenManager {
             
             match connector_data.connector_name {
                 domain_types::connector_types::ConnectorEnum::Volt => {
-                    let volt = crate::connectors::Volt::new();
+                    let volt = crate::connectors::Volt::<T>::new();
                     
                     let token_router_data = RouterDataV2::<(), domain_types::connector_types::PaymentFlowData, (), AccessToken> {
                         flow: std::marker::PhantomData,

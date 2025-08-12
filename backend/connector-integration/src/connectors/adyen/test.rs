@@ -9,7 +9,7 @@ mod tests {
             connector_types::{
                 ConnectorEnum, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
             },
-            payment_method_data::PaymentMethodData,
+            payment_method_data::{DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
             types::{ConnectorParams, Connectors},
@@ -28,7 +28,7 @@ mod tests {
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = RouterDataV2 {
                 flow: PhantomData::<domain_types::connector_flow::Authorize>,
@@ -66,6 +66,7 @@ mod tests {
                         ..Default::default()
                     },
                     external_latency: None,
+                    connector_response_headers: None,
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -75,10 +76,10 @@ mod tests {
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(
                         domain_types::payment_method_data::Card {
-                            card_number: cards::CardNumber::from_str(
+                            card_number: RawCardNumber(cards::CardNumber::from_str(
                                 "5123456789012346",
                             )
-                            .unwrap(),
+                            .unwrap()),
                             card_cvc: Secret::new("100".into()),
                             card_exp_month: Secret::new("03".into()),
                             card_exp_year: Secret::new("2030".into()),
@@ -151,7 +152,7 @@ mod tests {
                 response: Err(ErrorResponse::default()),
             };
 
-            let connector: BoxedConnector = Box::new(Adyen::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Adyen::new());
             let connector_data = ConnectorData {
                 connector,
                 connector_name: ConnectorEnum::Adyen,
@@ -161,7 +162,7 @@ mod tests {
                 '_,
                 Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = connector_data.connector.get_connector_integration_v2();
 
@@ -194,7 +195,7 @@ mod tests {
             let req: RouterDataV2<
                 Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = RouterDataV2 {
                 flow: PhantomData::<Authorize>,
@@ -232,6 +233,7 @@ mod tests {
                         ..Default::default()
                     },
                     external_latency: None,
+                    connector_response_headers: None,
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -276,7 +278,7 @@ mod tests {
                 response: Err(ErrorResponse::default()),
             };
 
-            let connector: BoxedConnector = Box::new(Adyen::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Adyen::new());
             let connector_data = ConnectorData {
                 connector,
                 connector_name: ConnectorEnum::Adyen,
@@ -286,7 +288,7 @@ mod tests {
                 '_,
                 Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
                 PaymentsResponseData,
             > = connector_data.connector.get_connector_integration_v2();
 
