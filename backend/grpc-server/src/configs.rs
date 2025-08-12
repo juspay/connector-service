@@ -12,6 +12,7 @@ pub struct Config {
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+    pub events: common_utils::events::EventConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]

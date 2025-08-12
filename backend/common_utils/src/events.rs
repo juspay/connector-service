@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     global_id::{
@@ -18,28 +18,22 @@ pub enum ApiEventsType {
     Payout {
         payout_id: String,
     },
-
     Payment {
         payment_id: GlobalPaymentId,
     },
-
     Refund {
         payment_id: Option<GlobalPaymentId>,
         refund_id: GlobalRefundId,
     },
-
     PaymentMethod {
         payment_method_id: GlobalPaymentMethodId,
         payment_method_type: Option<common_enums::PaymentMethod>,
         payment_method_subtype: Option<common_enums::PaymentMethodType>,
     },
-
     PaymentMethodCreate,
-
     Customer {
         customer_id: Option<GlobalCustomerId>,
     },
-
     BusinessProfile {
         profile_id: id_type::ProfileId,
     },
@@ -52,23 +46,19 @@ pub enum ApiEventsType {
     PaymentMethodList {
         payment_id: Option<String>,
     },
-
     PaymentMethodListForPaymentMethods {
         payment_method_id: GlobalPaymentMethodId,
     },
-
     Webhooks {
         connector: MerchantConnectorAccountId,
         payment_id: Option<GlobalPaymentId>,
     },
     Routing,
     ResourceListAPI,
-
     PaymentRedirectionResponse {
         payment_id: GlobalPaymentId,
     },
     Gsm,
-    // TODO: This has to be removed once the corresponding apiEventTypes are created
     Miscellaneous,
     Keymanager,
     RustLocker,
@@ -89,15 +79,12 @@ pub enum ApiEventsType {
         poll_id: String,
     },
     Analytics,
-
     ClientSecret {
         key_id: id_type::ClientSecretId,
     },
-
     PaymentMethodSession {
         payment_method_session_id: GlobalPaymentMethodSessionId,
     },
-
     Token {
         token_id: Option<GlobalTokenId>,
     },
@@ -134,7 +121,6 @@ impl<Q: ApiEventMetric, E> ApiEventMetric for Result<Q, E> {
     }
 }
 
-// TODO: Ideally all these types should be replaced by newtype responses
 impl<T> ApiEventMetric for Vec<T> {
     fn get_api_event_type(&self) -> Option<ApiEventsType> {
         Some(ApiEventsType::Miscellaneous)
@@ -172,3 +158,99 @@ impl<T: ApiEventMetric> ApiEventMetric for &T {
 }
 
 impl ApiEventMetric for TimeRange {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Event {
+    pub request_id: String,
+    pub timestamp: i128,
+    pub flow_type: FlowName,
+    pub connector: String,
+    pub url: Option<String>,
+    pub stage: EventStage,
+    pub latency: Option<u64>,
+    pub status_code: Option<u16>,
+    pub request_data: Option<serde_json::Value>,
+    pub connector_request_data: Option<serde_json::Value>,
+    pub connector_response_data: Option<serde_json::Value>,
+    #[serde(flatten)]
+    pub additional_fields: std::collections::HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FlowName {
+    Authorize,
+    Refund,
+    Capture,
+    Void,
+    Psync,
+    Rsync,
+    AcceptDispute,
+    SubmitEvidence,
+    DefendDispute,
+    Dsync,
+    IncomingWebhook,
+    SetupMandate,
+    CreateOrder,
+}
+
+impl FlowName {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Authorize => "Authorize",
+            Self::Refund => "Refund",
+            Self::Capture => "Capture",
+            Self::Void => "Void",
+            Self::Psync => "Psync",
+            Self::Rsync => "Rsync",
+            Self::AcceptDispute => "AcceptDispute",
+            Self::SubmitEvidence => "SubmitEvidence",
+            Self::DefendDispute => "DefendDispute",
+            Self::Dsync => "Dsync",
+            Self::IncomingWebhook => "IncomingWebhook",
+            Self::SetupMandate => "SetupMandate",
+            Self::CreateOrder => "CreateOrder",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EventStage {
+    ConnectorCall,
+}
+
+impl EventStage {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::ConnectorCall => "CONNECTOR_CALL",
+        }
+    }
+}
+
+/// Configuration for events system
+#[derive(Debug, Clone, Deserialize)]
+pub struct EventConfig {
+    pub enabled: bool,
+    pub topic: String,
+    pub brokers: Vec<String>,
+    pub partition_key_field: String,
+    #[serde(default)]
+    pub transformations: std::collections::HashMap<String, String>, // target_path → source_field
+    #[serde(default)]
+    pub static_values: std::collections::HashMap<String, String>, // target_path → static_value
+    #[serde(default)]
+    pub extractions: std::collections::HashMap<String, String>, // target_path → extraction_path
+}
+
+impl Default for EventConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            topic: "events".to_string(),
+            brokers: vec!["localhost:9092".to_string()],
+            partition_key_field: "request_id".to_string(),
+            transformations: std::collections::HashMap::new(),
+            static_values: std::collections::HashMap::new(),
+            extractions: std::collections::HashMap::new(),
+        }
+    }
+}

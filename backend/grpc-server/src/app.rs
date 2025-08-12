@@ -1,7 +1,7 @@
 use std::{future::Future, net, sync::Arc};
 
 use axum::{extract::Request, http};
-use common_utils::{consts, dapr};
+use common_utils::{consts, event_publisher};
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
@@ -23,15 +23,6 @@ use crate::{configs, error::ConfigurationError, logger, utils};
 ///
 /// Will panic if redis connection establishment fails or signal handling fails
 pub async fn server_builder(config: configs::Config) -> Result<(), ConfigurationError> {
-    logger::info!("Checking Dapr connectivity...");
-
-    match dapr::create_client().await {
-        Ok(_) => logger::info!("Dapr connection test successful"),
-        Err(e) => logger::warn!(
-            "Failed to connect to Dapr: {:?}. Events might not be published to Kafka.",
-            e
-        ),
-    }
 
     let server_config = config.server.clone();
     let socket_addr = net::SocketAddr::new(server_config.host.parse()?, server_config.port);
@@ -103,6 +94,7 @@ pub struct Service {
     pub payments_service: crate::server::payments::Payments,
     pub refunds_service: crate::server::refunds::Refunds,
     pub disputes_service: crate::server::disputes::Disputes,
+    pub event_publisher: Arc<event_publisher::EventPublisher>,
 }
 
 impl Service {
@@ -112,6 +104,12 @@ impl Service {
     /// deserialize any of the above keys
     #[allow(clippy::expect_used)]
     pub async fn new(config: Arc<configs::Config>) -> Self {
+        // Create the EventPublisher once at startup
+        let event_publisher: Arc<event_publisher::EventPublisher> = Arc::new(
+            event_publisher::EventPublisher::new(&config.events)
+                .expect("Failed to create event publisher"),
+        );
+
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             payments_service: crate::server::payments::Payments {
@@ -121,6 +119,7 @@ impl Service {
                 config: Arc::clone(&config),
             },
             disputes_service: crate::server::disputes::Disputes { config },
+            event_publisher,
         }
     }
 
