@@ -51,7 +51,7 @@ noon.base_url = "https://api-test.noonpayments.com/"
 
 # Generic Events Configuration
 [events]
-enabled = false
+enabled = true
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"

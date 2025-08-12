@@ -12,9 +12,7 @@ use rdkafka::{
 };
 
 use crate::{
-    KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_DROPS_MSG_TOO_LARGE,
-    KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED,
-    KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE,
+    KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_AUDIT_EVENT_QUEUE_SIZE, KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE
 };
 
 /// Kafka writer that implements std::io::Write for seamless integration with tracing
@@ -92,7 +90,15 @@ impl KafkaWriter {
         payload: &[u8],
         headers: Option<OwnedHeaders>,
     ) -> Result<(), KafkaError> {
-        let mut record = BaseRecord::to(topic).payload(payload);
+        let queue_size = self.producer.in_flight_count();
+        KAFKA_AUDIT_EVENT_QUEUE_SIZE.set(queue_size as i64); // only the last seen queue size
+
+        let mut record = BaseRecord::to(topic).payload(payload).timestamp(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as i64)
+                .unwrap_or(0),
+        );
 
         if let Some(k) = key {
             record = record.key(k);

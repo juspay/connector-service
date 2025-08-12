@@ -215,8 +215,12 @@ where
                             };
 
                             match emit_event_with_config(event, &event_config).await {
-                                Ok(_) => tracing::info!(
+                                Ok(true) => tracing::info!(
                                     "Successfully published response event for {}",
+                                    connector_name
+                                ),
+                                Ok(false) => tracing::info!(
+                                    "Event publishing is disabled for {}",
                                     connector_name
                                 ),
                                 Err(e) => {
@@ -260,8 +264,12 @@ where
                             };
 
                             match emit_event_with_config(event, &event_config).await {
-                                Ok(_) => tracing::info!(
+                                Ok(true) => tracing::info!(
                                     "Successfully published error response event for {}",
+                                    connector_name
+                                ),
+                                Ok(false) => tracing::info!(
+                                    "Event publishing is disabled for {}",
                                     connector_name
                                 ),
                                 Err(e) => tracing::error!(
@@ -305,8 +313,12 @@ where
                             };
 
                             match emit_event_with_config(event, &event_config).await {
-                                Ok(_) => tracing::info!(
+                                Ok(true) => tracing::info!(
                                     "Successfully published network error event for {}",
+                                    connector_name
+                                ),
+                                Ok(false) => tracing::info!(
+                                    "Event publishing is disabled for {}",
                                     connector_name
                                 ),
                                 Err(e) => tracing::error!(

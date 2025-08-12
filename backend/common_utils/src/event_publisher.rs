@@ -1,3 +1,5 @@
+#![cfg(feature = "kafka")]
+
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
@@ -67,14 +69,12 @@ impl EventPublisher {
             None
         };
 
-        if let Err(e) = self.writer.publish_event(
+        self.writer.publish_event(
             &self.config.topic,
             key,
             &serde_json::to_vec(&event)?,
             Some(headers),
-        ) {
-            tracing::error!("Failed to queue event for Kafka: {:?}", e);
-        }
+        )?;
 
         Ok(())
     }
@@ -97,16 +97,15 @@ impl EventPublisher {
             .transformations
             .iter()
             .for_each(|(target_path, source_field)| {
-                result.get(source_field).cloned().map(|value| {
-                    self.set_nested_value(&mut result, target_path, value)
-                        .unwrap_or_else(|e| {
-                            tracing::warn!(
-                                "Failed to set transformation for path {}: {}",
-                                target_path,
-                                e
-                            )
-                        })
-                });
+                if let Some(value) = result.get(source_field).cloned() {
+                    if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                        tracing::warn!(
+                            "Failed to set transformation for path {}: {}",
+                            target_path,
+                            e
+                        );
+                    }
+                }
             });
 
         self.config
@@ -114,27 +113,20 @@ impl EventPublisher {
             .iter()
             .for_each(|(target_path, static_value)| {
                 let value = serde_json::json!(static_value);
-                self.set_nested_value(&mut result, target_path, value)
-                    .unwrap_or_else(|e| {
-                        tracing::warn!("Failed to set static value for path {}: {}", target_path, e)
-                    });
+                if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                    tracing::warn!("Failed to set static value for path {}: {}", target_path, e);
+                }
             });
 
         self.config
             .extractions
             .iter()
             .for_each(|(target_path, extraction_path)| {
-                self.extract_from_request(&serde_json::to_value(event).unwrap(), extraction_path)
-                    .map(|value| {
-                        self.set_nested_value(&mut result, target_path, value)
-                            .unwrap_or_else(|e| {
-                                tracing::warn!(
-                                    "Failed to set extraction for path {}: {}",
-                                    target_path,
-                                    e
-                                )
-                            })
-                    });
+                if let Some(value) = self.extract_from_request(&result, extraction_path) {
+                    if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                        tracing::warn!("Failed to set extraction for path {}: {}", target_path, e);
+                    }
+                }
             });
 
         Ok(result)
@@ -142,7 +134,7 @@ impl EventPublisher {
 
     fn extract_from_request(
         &self,
-        event: &serde_json::Value,
+        event_value: &serde_json::Value,
         extraction_path: &str,
     ) -> Option<serde_json::Value> {
         let mut path_parts = extraction_path.split('.');
@@ -150,7 +142,7 @@ impl EventPublisher {
         let first_part = path_parts.next()?;
 
         let source = match first_part {
-            "req" => event.get("request_data")?.clone(),
+            "req" => event_value.get("request_data")?.clone(),
             _ => return None,
         };
 
@@ -216,11 +208,12 @@ fn get_event_publisher(config: &EventConfig) -> Result<&'static EventPublisher> 
 }
 
 /// Standalone function to emit events using the global EventPublisher
-pub async fn emit_event_with_config(event: Event, config: &EventConfig) -> Result<()> {
+pub async fn emit_event_with_config(event: Event, config: &EventConfig) -> Result<bool> {
     if !config.enabled {
-        return Ok(());
+        return Ok(false);
     }
 
-    let publisher = get_event_publisher(config)?;
-    publisher.emit_event_with_config(event, config).await
+    let publisher: &'static EventPublisher = get_event_publisher(config)?;
+    publisher.emit_event_with_config(event, config).await?;
+    Ok(true)
 }

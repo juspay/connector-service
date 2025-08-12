@@ -19,8 +19,8 @@ pub struct KafkaLayer {
 
 impl KafkaLayer {
     /// Creates a new builder for configuring a KafkaLayer.
-    pub fn builder() -> crate::KafkaLayerBuilder {
-        crate::KafkaLayerBuilder::new()
+    pub fn builder() -> super::builder::KafkaLayerBuilder {
+        super::builder::KafkaLayerBuilder::new()
     }
 
     /// Creates a new KafkaLayer from a pre-configured KafkaWriter.
