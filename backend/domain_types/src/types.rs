@@ -1106,7 +1106,7 @@ pub fn generate_create_order_response(
                 error_code: None,
                 raw_connector_response: None,
                 status_code: Some(200),
-                state: None, // State will be populated by infrastructure layer
+                state: None,
             }
         }
         Err(err) => {
@@ -1133,7 +1133,7 @@ pub fn generate_create_order_response(
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
                 status_code: Some(err.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None,
             }
         }
     };
@@ -1226,7 +1226,7 @@ pub fn generate_payment_authorize_response(
                     error_code: None,
                     raw_connector_response,
                     status_code: Some(status_code.unwrap_or(200) as u32),
-                    state: None, // State will be populated by infrastructure layer
+                    state: None, 
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1258,7 +1258,7 @@ pub fn generate_payment_authorize_response(
                 error_code: Some(err.code),
                 raw_connector_response: err.raw_connector_response,
                 status_code: Some(err.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None, 
             }
         }
     };
@@ -1548,7 +1548,7 @@ pub fn generate_payment_void_response(
                     error_code: None,
                     error_message: None,
                     status_code: Some(status_code.unwrap_or(200) as u32),
-                    state: None, // State will be populated by infrastructure layer
+                    state: None, 
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1580,7 +1580,7 @@ pub fn generate_payment_void_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 status_code: Some(e.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None, 
             })
         }
     }
@@ -1650,7 +1650,7 @@ pub fn generate_payment_sync_response(
                     metadata: std::collections::HashMap::new(),
                     raw_connector_response,
                     status_code: Some(status_code.unwrap_or(200) as u32),
-                    state: None, // State will be populated by infrastructure layer
+                    state: None, 
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1698,7 +1698,7 @@ pub fn generate_payment_sync_response(
                 metadata: std::collections::HashMap::new(),
                 raw_connector_response: None,
                 status_code: Some(e.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None,
             })
         }
     }
@@ -1954,7 +1954,7 @@ pub fn generate_refund_sync_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: response.raw_connector_response,
                 status_code: Some(response.status_code.unwrap_or(200) as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None, 
             })
         }
         Err(e) => {
@@ -1999,7 +1999,7 @@ pub fn generate_refund_sync_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: e.raw_connector_response,
                 status_code: Some(e.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None,
             })
         }
     }
@@ -2043,7 +2043,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             metadata: std::collections::HashMap::new(),
             raw_connector_response: value.raw_connector_response,
             status_code: Some(value.status_code.unwrap_or(200) as u32),
-            state: None, // State will be populated by infrastructure layer
+            state: None, 
         })
     }
 }
@@ -2106,7 +2106,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             refund_metadata: std::collections::HashMap::new(),
             raw_connector_response: value.raw_connector_response,
             status_code: Some(value.status_code.unwrap_or(200) as u32),
-            state: None, // State will be populated by infrastructure layer
+            state: None, 
         })
     }
 }
@@ -2388,7 +2388,7 @@ pub fn generate_refund_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: response.raw_connector_response,
                 status_code: Some(response.status_code.unwrap_or(200) as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None, 
             })
         }
         Err(e) => {
@@ -2426,7 +2426,7 @@ pub fn generate_refund_response(
                 refund_metadata: std::collections::HashMap::new(),
                 raw_connector_response: e.raw_connector_response,
                 status_code: Some(e.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None, 
             })
         }
     }
@@ -2578,7 +2578,7 @@ pub fn generate_payment_capture_response(
                     error_message: None,
                     status: grpc_status.into(),
                     status_code: Some(status_code.unwrap_or(200) as u32),
-                    state: None, // State will be populated by infrastructure layer
+                    state: None, 
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2610,7 +2610,7 @@ pub fn generate_payment_capture_response(
                 error_message: Some(e.message),
                 error_code: Some(e.code),
                 status_code: Some(e.status_code as u32),
-                state: None, // State will be populated by infrastructure layer
+                state: None, 
             })
         }
     }
