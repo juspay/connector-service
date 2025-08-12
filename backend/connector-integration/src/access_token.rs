@@ -43,7 +43,6 @@ impl AccessTokenManager {
         access_token.is_none()
     }
 
-    /// Check if connector supports access tokens
     pub fn supports_access_token(connector_name: &str, payment_method: common_enums::PaymentMethod) -> bool {
         matches!(
             (connector_name, payment_method),
@@ -51,20 +50,17 @@ impl AccessTokenManager {
         )
     }
 
-    /// Handle OAuth token generation for connectors that support it using trait-based approach
     pub async fn ensure_access_token<T: AccessTokenAuth<(), (), AccessToken>>(
         connector: &T,
         payment_flow_data: &mut domain_types::connector_types::PaymentFlowData,
         connector_auth_details: &ConnectorAuthType,
         connector_name: &str,
     ) -> CustomResult<(), ConnectorError> {
-        // Check if connector supports OAuth and needs token refresh
         if Self::supports_access_token(connector_name, payment_flow_data.payment_method) 
             && Self::should_refresh_token(&payment_flow_data.access_token) {
             
             tracing::info!("Generating access token for connector: {}", connector_name);
             
-            // Create router data for token generation
             let token_router_data = RouterDataV2::<(), domain_types::connector_types::PaymentFlowData, (), AccessToken> {
                 flow: std::marker::PhantomData,
                 resource_common_data: payment_flow_data.clone(),
@@ -73,14 +69,12 @@ impl AccessTokenManager {
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
             
-            // Call the trait method generically
             let access_token = connector.get_access_token(&token_router_data).await?;
             
             tracing::info!("Successfully generated access token for connector: {}", connector_name);
             payment_flow_data.access_token = Some(access_token.token);
             Ok(())
         } else {
-            // No token refresh needed
             Ok(())
         }
     }
@@ -92,18 +86,15 @@ impl AccessTokenManager {
         connector_auth_details: &ConnectorAuthType,
         connector_name: &str,
     ) -> CustomResult<(), ConnectorError> {
-        // Check if connector supports OAuth and needs token refresh
         if Self::supports_access_token(connector_name, payment_flow_data.payment_method) 
             && Self::should_refresh_token(&payment_flow_data.access_token) {
             
             tracing::info!("Generating access token for connector: {}", connector_name);
             
-            // Handle OAuth by connector type
             match connector_data.connector_name {
                 domain_types::connector_types::ConnectorEnum::Volt => {
                     let volt = crate::connectors::Volt::new();
                     
-                    // Create router data for token generation
                     let token_router_data = RouterDataV2::<(), domain_types::connector_types::PaymentFlowData, (), AccessToken> {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data.clone(),
@@ -119,7 +110,6 @@ impl AccessTokenManager {
                     Ok(())
                 }
                 _ => {
-                    // No OAuth needed for other connectors
                     Ok(())
                 }
             }
@@ -130,27 +120,22 @@ impl AccessTokenManager {
     }
 }
 
-/// Result of access token operation
 pub struct AddAccessTokenResult {
     pub access_token_result: Result<Option<AccessToken>, ConnectorError>,
     pub connector_supports_access_token: bool,
 }
 
-/// Trait for connectors that support access token authentication
 pub trait AccessTokenAuth<F, Req, Res> {
-    /// Get access token from connector
     fn get_access_token(
         &self,
         router_data: &RouterDataV2<F, PaymentFlowData, Req, Res>,
     ) -> impl std::future::Future<Output = CustomResult<AccessToken, ConnectorError>> + Send;
 }
 
-/// Generic access token request structure following Hyperswitch pattern
 #[derive(Debug, Clone)]
 pub struct AccessTokenRequestData {
     pub app_id: Secret<String>,
     pub id: Option<Secret<String>>,
-    // Add more keys if required
 }
 
 impl TryFrom<&ConnectorAuthType> for AccessTokenRequestData {
@@ -179,7 +164,6 @@ impl TryFrom<&ConnectorAuthType> for AccessTokenRequestData {
     }
 }
 
-/// Helper function to create authorization header from access token
 pub fn create_auth_header(access_token: &AccessToken) -> String {
     format!("{} {}", access_token.token_type, access_token.token)
 }
