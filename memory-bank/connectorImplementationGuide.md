@@ -1128,14 +1128,14 @@ fn get_request_body(
 }
 fn handle_response(
     //..
-    let response: new_connector_name::New_connector_nameCatureResponse = res //This one is the response struct i.e New_connector_nameCaptureResponse
+    let response: new_connector_name::New_connector_nameCaptureResponse = res //This one is the response struct i.e New_connector_nameCaptureResponse
 }
 ```
 
 52.c. Add the request struct name and response struct name to import from transformers
 ```rust
 use transformers::{
-    self as new_connector_name, New_connector_nameCaptureRequest, New_connector_nameCatureResponse,
+    self as new_connector_name, New_connector_nameCaptureRequest, New_connector_nameCaptureResponse,
 };
 ```
 
@@ -1144,7 +1144,7 @@ use transformers::{
 (
     flow: Capture,
     request_body: New_connector_nameCaptureRequest,
-    response_body: New_connector_nameCatureResponse,
+    response_body: New_connector_nameCaptureResponse,
     router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
 )
 ```
@@ -1154,7 +1154,7 @@ use transformers::{
 macros::macro_connector_implementation!(
     //..
     curl_request: Format(New_connector_nameCaptureRequest),
-    curl_response: New_connector_nameCatureResponse,
+    curl_response: New_connector_nameCaptureResponse,
     flow_name: Capture,
 )
 ```
@@ -1241,12 +1241,12 @@ fn get_request_body(
     &self,
     req: &PaymentsCancelRouterData,
     //..
-    let connector_req = new_connector_name::New_connector_nameCancelRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameCancleRequest
+    let connector_req = new_connector_name::New_connector_nameCancelRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameCancelRequest
     Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
 }
 fn handle_response(
     //..
-    let response: new_connector_name::New_connector_nameCancelResponse = res //This one is the response struct i.e New_connector_nameCancleResponse
+    let response: new_connector_name::New_connector_nameCancelResponse = res //This one is the response struct i.e New_connector_nameCancelResponse
 }
 ```
 
