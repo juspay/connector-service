@@ -1,9 +1,11 @@
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
 use common_utils::{new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email};
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use time::Date;
 use utoipa::ToSchema;
 
@@ -13,8 +15,8 @@ use crate::{
 };
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize, Default)]
-pub struct Card {
-    pub card_number: cards::CardNumber,
+pub struct Card<T: PaymentMethodDataTypes> {
+    pub card_number: RawCardNumber<T>,
     pub card_exp_month: Secret<String>,
     pub card_exp_year: Secret<String>,
     pub card_cvc: Secret<String>,
@@ -28,7 +30,42 @@ pub struct Card {
     pub co_badged_card_data: Option<CoBadgedCardData>,
 }
 
-impl Card {
+pub trait PaymentMethodDataTypes: Clone {
+    type Inner: Default + Debug + Send + Eq + PartialEq + Serialize + DeserializeOwned + Clone;
+}
+
+/// PCI holder implementation for handling raw PCI data
+#[derive(Default, Debug, Eq, PartialEq, Serialize, Deserialize, Clone)]
+pub struct DefaultPCIHolder;
+
+/// Vault token holder implementation for handling vault token data
+#[derive(Default, Debug, Eq, PartialEq, Serialize, Deserialize, Clone)]
+pub struct VaultTokenHolder;
+/// Generic CardNumber struct that uses PaymentMethodDataTypes trait
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct RawCardNumber<T: PaymentMethodDataTypes>(pub T::Inner);
+
+impl RawCardNumber<DefaultPCIHolder> {
+    pub fn peek(&self) -> &str {
+        self.0.peek()
+    }
+}
+
+impl RawCardNumber<VaultTokenHolder> {
+    pub fn peek(&self) -> &str {
+        &self.0
+    }
+}
+
+impl PaymentMethodDataTypes for DefaultPCIHolder {
+    type Inner = cards::CardNumber;
+}
+
+impl PaymentMethodDataTypes for VaultTokenHolder {
+    type Inner = String; //Token
+}
+
+impl Card<DefaultPCIHolder> {
     pub fn get_card_expiry_year_2_digit(
         &self,
     ) -> Result<Secret<String>, crate::errors::ConnectorError> {
@@ -104,8 +141,8 @@ impl Card {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
-pub enum PaymentMethodData {
-    Card(Card),
+pub enum PaymentMethodData<T: PaymentMethodDataTypes> {
+    Card(Card<T>),
     CardDetailsForNetworkTransactionId(CardDetailsForNetworkTransactionId),
     CardRedirect(CardRedirectData),
     Wallet(WalletData),

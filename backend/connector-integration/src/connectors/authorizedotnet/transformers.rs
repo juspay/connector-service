@@ -1,11 +1,5 @@
-use cards::CardNumberStrategy;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{
-    consts,
-    ext_traits::{OptionExt, ValueExt},
-    pii::Email,
-};
-use domain_types::errors::ConnectorError;
+use common_utils::{consts, ext_traits::OptionExt, pii::Email};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
@@ -14,7 +8,11 @@ use domain_types::{
         RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
         SetupMandateRequestData,
     },
-    payment_method_data::PaymentMethodData,
+    errors::ConnectorError,
+    payment_method_data::{
+        DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
+        VaultTokenHolder,
+    },
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
@@ -25,7 +23,7 @@ type HsInterfacesConnectorError = ConnectorError;
 use std::str::FromStr;
 
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret, StrongSecret};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -35,6 +33,87 @@ type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 // Constants
 const MAX_ID_LENGTH: usize = 20;
+
+// Helper functions for creating RawCardNumber from string
+fn create_raw_card_number_for_default_pci(
+    card_string: String,
+) -> Result<RawCardNumber<DefaultPCIHolder>, Error> {
+    let card_number = cards::CardNumber::from_str(&card_string)
+        .change_context(ConnectorError::RequestEncodingFailed)?;
+    Ok(RawCardNumber(card_number))
+}
+
+fn create_raw_card_number_for_vault_token(card_string: String) -> RawCardNumber<VaultTokenHolder> {
+    RawCardNumber(card_string)
+}
+
+// // Helper traits for working with generic types
+// trait RawCardNumberExt<T: PaymentMethodDataTypes> {
+//     fn peek(&self) -> &str;
+// }
+
+// trait CardExt<T: PaymentMethodDataTypes> {
+//     fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String>;
+// }
+
+// // Implementations for DefaultPCIHolder
+// impl RawCardNumberExt<DefaultPCIHolder> for RawCardNumber<DefaultPCIHolder> {
+//     fn peek(&self) -> &str {
+//         self.0.peek()
+//     }
+// }
+
+// impl CardExt<DefaultPCIHolder> for domain_types::payment_method_data::Card<DefaultPCIHolder> {
+//     fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+//         Secret::new(format!("{}{}{}",
+//             self.card_exp_year.peek(),
+//             separator,
+//             self.card_exp_month.peek()
+//         ))
+//     }
+// }
+
+// // Implementations for VaultTokenHolder
+// impl RawCardNumberExt<VaultTokenHolder> for RawCardNumber<VaultTokenHolder> {
+//     fn peek(&self) -> &str {
+//         &self.0
+//     }
+// }
+
+// impl CardExt<VaultTokenHolder> for domain_types::payment_method_data::Card<VaultTokenHolder> {
+//     fn get_expiry_date_as_yyyymm(&self, separator: &str) -> Secret<String> {
+//         Secret::new(format!("{}{}{}",
+//             self.card_exp_year.peek(),
+//             separator,
+//             self.card_exp_month.peek()
+//         ))
+//     }
+// }
+
+// Wrapper for RawCardNumber to provide construction methods
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct AuthorizedotnetRawCardNumber<T: PaymentMethodDataTypes>(pub RawCardNumber<T>);
+
+impl AuthorizedotnetRawCardNumber<DefaultPCIHolder> {
+    pub fn from_card_number_string(card_number: String) -> Result<Self, Error> {
+        let card_number = cards::CardNumber::from_str(&card_number)
+            .change_context(ConnectorError::RequestEncodingFailed)?;
+        Ok(AuthorizedotnetRawCardNumber(RawCardNumber(card_number)))
+    }
+}
+
+impl AuthorizedotnetRawCardNumber<VaultTokenHolder> {
+    pub fn from_token_string(token: String) -> Self {
+        AuthorizedotnetRawCardNumber(RawCardNumber(token))
+    }
+}
+
+// Implement From to convert back to RawCardNumber
+impl<T: PaymentMethodDataTypes> From<AuthorizedotnetRawCardNumber<T>> for RawCardNumber<T> {
+    fn from(wrapper: AuthorizedotnetRawCardNumber<T>) -> Self {
+        wrapper.0
+    }
+}
 
 // Re-export common enums for use in this file
 pub mod api_enums {
@@ -92,16 +171,16 @@ impl ForeignTryFrom<serde_json::Value> for Vec<UserField> {
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct CreditCardDetails {
-    card_number: StrongSecret<String, CardNumberStrategy>,
+pub struct CreditCardDetails<T: PaymentMethodDataTypes> {
+    card_number: RawCardNumber<T>,
     expiration_date: Secret<String>, // YYYY-MM
     card_code: Option<Secret<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub enum PaymentDetails {
-    CreditCard(CreditCardDetails),
+pub enum PaymentDetails<T: PaymentMethodDataTypes> {
+    CreditCard(CreditCardDetails<T>),
 }
 
 #[skip_serializing_none]
@@ -242,12 +321,12 @@ struct AuthorizationIndicatorType {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetTransactionRequest {
+pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     // General structure for transaction details in Authorize
     transaction_type: TransactionType,
     amount: Option<String>,
     currency_code: Option<api_enums::Currency>,
-    payment: Option<PaymentDetails>,
+    payment: Option<PaymentDetails<T>>,
     profile: Option<ProfileDetails>,
     order: Option<Order>,
     customer: Option<CustomerDetails>,
@@ -275,32 +354,51 @@ pub struct TransactionSetting {
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateTransactionRequest {
+pub struct CreateTransactionRequest<T: PaymentMethodDataTypes> {
     // Used by Authorize Flow, wraps the general transaction request
     merchant_authentication: AuthorizedotnetAuthType,
     ref_id: Option<String>,
-    transaction_request: AuthorizedotnetTransactionRequest,
+    transaction_request: AuthorizedotnetTransactionRequest<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetPaymentsRequest {
+pub struct AuthorizedotnetPaymentsRequest<T: PaymentMethodDataTypes> {
     // Top-level wrapper for Authorize Flow
-    create_transaction_request: CreateTransactionRequest,
+    create_transaction_request: CreateTransactionRequest<T>,
 }
 
 // Implementation for owned RouterData that doesn't depend on reference version
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
-    > for AuthorizedotnetPaymentsRequest
+    > for AuthorizedotnetPaymentsRequest<T>
 {
     type Error = Error;
     fn try_from(
         item: AuthorizedotnetRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
@@ -336,12 +434,20 @@ impl
 }
 
 // Helper function to create regular transaction request (non-mandate)
-fn create_regular_transaction_request(
+fn create_regular_transaction_request<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     item: &AuthorizedotnetRouterData<
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        T,
     >,
     currency: api_enums::Currency,
-) -> Result<AuthorizedotnetTransactionRequest, Error> {
+) -> Result<AuthorizedotnetTransactionRequest<T>, Error> {
     let card_data = match &item.router_data.request.payment_method_data {
         PaymentMethodData::Card(card) => Ok(card),
         _ => Err(ConnectorError::RequestEncodingFailed),
@@ -357,7 +463,7 @@ fn create_regular_transaction_request(
     let expiration_date = format!("{expiry_year}-{expiry_month}");
 
     let credit_card_details = CreditCardDetails {
-        card_number: StrongSecret::new(card_data.card_number.peek().to_string()),
+        card_number: card_data.card_number.clone(),
         expiration_date: Secret::new(expiration_date),
         card_code: Some(card_data.card_cvc.clone()),
     };
@@ -511,10 +617,18 @@ pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
 }
 
 // Implementation for RepeatPayment request conversion
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
         >,
     > for AuthorizedotnetRepeatPaymentRequest
 {
@@ -522,6 +636,7 @@ impl
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let merchant_authentication =
@@ -683,7 +798,14 @@ pub struct AuthorizedotnetCaptureRequest {
 }
 
 // New direct implementation for capture without relying on the reference version
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
@@ -692,6 +814,7 @@ impl
                 PaymentsCaptureData,
                 PaymentsResponseData,
             >,
+            T,
         >,
     > for AuthorizedotnetCaptureRequest
 {
@@ -704,6 +827,7 @@ impl
                 PaymentsCaptureData,
                 PaymentsResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -793,7 +917,14 @@ impl TryFrom<&ConnectorAuthType> for AuthorizedotnetAuthType {
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
@@ -802,6 +933,7 @@ impl
                 domain_types::connector_types::PaymentVoidData,
                 PaymentsResponseData,
             >,
+            T,
         >,
     > for AuthorizedotnetVoidRequest
 {
@@ -815,6 +947,7 @@ impl
                 domain_types::connector_types::PaymentVoidData,
                 PaymentsResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &item.router_data;
@@ -884,10 +1017,18 @@ pub struct AuthorizedotnetRSyncRequest {
     pub get_transaction_details_request: TransactionDetails,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for AuthorizedotnetCreateSyncRequest
 {
@@ -896,6 +1037,7 @@ impl
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Extract connector_transaction_id from the request
@@ -924,10 +1066,18 @@ impl
 }
 
 // Implementation for the RSync flow to support refund synchronization
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     > for AuthorizedotnetRSyncRequest
 {
@@ -936,6 +1086,7 @@ impl
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         // Extract connector_refund_id from the request
@@ -973,34 +1124,34 @@ pub struct AuthorizedotnetRefundCardDetails {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-enum AuthorizedotnetRefundPaymentDetails {
-    CreditCard(CreditCardDetails),
+enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
+    CreditCard(CreditCardDetails<T>),
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRefundTransactionDetails {
+pub struct AuthorizedotnetRefundTransactionDetails<T: PaymentMethodDataTypes> {
     transaction_type: TransactionType,
     amount: String,
-    payment: PaymentDetails,
+    payment: PaymentDetails<T>,
     ref_trans_id: String,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetRefundRequest {
-    create_transaction_request: CreateTransactionRefundRequest,
+pub struct AuthorizedotnetRefundRequest<T: PaymentMethodDataTypes> {
+    create_transaction_request: CreateTransactionRefundRequest<T>,
 }
 
 #[skip_serializing_none]
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateTransactionRefundRequest {
+pub struct CreateTransactionRefundRequest<T: PaymentMethodDataTypes> {
     merchant_authentication: AuthorizedotnetAuthType,
     ref_id: Option<String>,
-    transaction_request: AuthorizedotnetRefundTransactionDetails,
+    transaction_request: AuthorizedotnetRefundTransactionDetails<T>,
 }
 
 #[skip_serializing_none]
@@ -1018,18 +1169,21 @@ pub struct CreditCardInfo {
     expiration_date: String,
 }
 
+// Specific implementation for DefaultPCIHolder
 impl
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            DefaultPCIHolder,
         >,
-    > for AuthorizedotnetRefundRequest
+    > for AuthorizedotnetRefundRequest<DefaultPCIHolder>
 {
     type Error = Error;
 
     fn try_from(
         item: AuthorizedotnetRouterData<
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            DefaultPCIHolder,
         >,
     ) -> Result<Self, Self::Error> {
         // Get connector metadata which contains payment details
@@ -1048,26 +1202,168 @@ impl
             AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
 
         // Handle the payment details which might be a JSON string or a serde_json::Value
-        // We need to peek into the Secret to get the actual Value
         let payment_details_inner = payment_details.peek();
         let payment_details_value = match payment_details_inner {
             serde_json::Value::String(s) => {
-                // If it's a string, try to parse it as JSON first
                 serde_json::from_str::<serde_json::Value>(s.as_str())
                     .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
             }
             _ => payment_details_inner.clone(),
         };
 
+        // For refunds, we need to reconstruct the payment details from the metadata
+        let payment_details = match payment_details_value.get("payment") {
+            Some(payment_obj) => {
+                if let Some(credit_card) = payment_obj.get("creditCard") {
+                    let card_number = credit_card
+                        .get("cardNumber")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("****")
+                        .to_string();
+                    let expiration_date = credit_card
+                        .get("expirationDate")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("YYYY-MM")
+                        .to_string();
+
+                    // For DefaultPCIHolder, create a proper CardNumber
+                    let raw_card_number = create_raw_card_number_for_default_pci(card_number)?;
+
+                    let credit_card_details = CreditCardDetails {
+                        card_number: raw_card_number,
+                        expiration_date: Secret::new(expiration_date),
+                        card_code: None, // Not needed for refunds
+                    };
+                    PaymentDetails::CreditCard(credit_card_details)
+                } else {
+                    return Err(error_stack::report!(
+                        HsInterfacesConnectorError::MissingRequiredField {
+                            field_name: "credit_card_details",
+                        }
+                    ));
+                }
+            }
+            None => {
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "payment_details",
+                    }
+                ));
+            }
+        };
+
         // Build the refund transaction request with parsed payment details
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
             amount: item.router_data.request.minor_refund_amount.to_string(),
-            payment: payment_details_value
-                .parse_value("PaymentDetails")
-                .change_context(HsInterfacesConnectorError::MissingRequiredField {
-                    field_name: "payment_details",
-                })?,
+            payment: payment_details,
+            ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
+        };
+
+        Ok(Self {
+            create_transaction_request: CreateTransactionRefundRequest {
+                merchant_authentication,
+                ref_id: Some(format!(
+                    "refund_{}",
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                )),
+                transaction_request,
+            },
+        })
+    }
+}
+
+// Specific implementation for VaultTokenHolder
+impl
+    TryFrom<
+        AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            VaultTokenHolder,
+        >,
+    > for AuthorizedotnetRefundRequest<VaultTokenHolder>
+{
+    type Error = Error;
+
+    fn try_from(
+        item: AuthorizedotnetRouterData<
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+            VaultTokenHolder,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Get connector metadata which contains payment details
+        let payment_details = item
+            .router_data
+            .request
+            .refund_connector_metadata
+            .as_ref()
+            .get_required_value("refund_connector_metadata")
+            .change_context(HsInterfacesConnectorError::MissingRequiredField {
+                field_name: "refund_connector_metadata",
+            })?
+            .clone();
+
+        let merchant_authentication =
+            AuthorizedotnetAuthType::try_from(&item.router_data.connector_auth_type)?;
+
+        // Handle the payment details which might be a JSON string or a serde_json::Value
+        let payment_details_inner = payment_details.peek();
+        let payment_details_value = match payment_details_inner {
+            serde_json::Value::String(s) => {
+                serde_json::from_str::<serde_json::Value>(s.as_str())
+                    .change_context(HsInterfacesConnectorError::RequestEncodingFailed)?
+            }
+            _ => payment_details_inner.clone(),
+        };
+
+        // For refunds, we need to reconstruct the payment details from the metadata
+        let payment_details = match payment_details_value.get("payment") {
+            Some(payment_obj) => {
+                if let Some(credit_card) = payment_obj.get("creditCard") {
+                    let card_number = credit_card
+                        .get("cardNumber")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("****")
+                        .to_string();
+                    let expiration_date = credit_card
+                        .get("expirationDate")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("YYYY-MM")
+                        .to_string();
+
+                    // For VaultTokenHolder, use the string directly as a token
+                    let raw_card_number = create_raw_card_number_for_vault_token(card_number);
+
+                    let credit_card_details = CreditCardDetails {
+                        card_number: raw_card_number,
+                        expiration_date: Secret::new(expiration_date),
+                        card_code: None, // Not needed for refunds
+                    };
+                    PaymentDetails::CreditCard(credit_card_details)
+                } else {
+                    return Err(error_stack::report!(
+                        HsInterfacesConnectorError::MissingRequiredField {
+                            field_name: "credit_card_details",
+                        }
+                    ));
+                }
+            }
+            None => {
+                return Err(error_stack::report!(
+                    HsInterfacesConnectorError::MissingRequiredField {
+                        field_name: "payment_details",
+                    }
+                ));
+            }
+        };
+
+        // Build the refund transaction request with parsed payment details
+        let transaction_request = AuthorizedotnetRefundTransactionDetails {
+            transaction_type: TransactionType::RefundTransaction,
+            amount: item.router_data.request.minor_refund_amount.to_string(),
+            payment: payment_details,
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
 
@@ -1142,32 +1438,60 @@ pub struct AuthorizedotnetRefundResponse {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateCustomerProfileRequest {
-    create_customer_profile_request: AuthorizedotnetZeroMandateRequest,
+pub struct CreateCustomerProfileRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    create_customer_profile_request: AuthorizedotnetZeroMandateRequest<T>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AuthorizedotnetZeroMandateRequest {
+pub struct AuthorizedotnetZeroMandateRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     merchant_authentication: AuthorizedotnetAuthType,
-    profile: Profile,
+    profile: Profile<T>,
     validation_mode: ValidationMode,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Profile {
+struct Profile<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     merchant_customer_id: Option<String>,
     description: String,
     email: Option<String>,
-    payment_profiles: Vec<PaymentProfiles>,
+    payment_profiles: Vec<PaymentProfiles<T>>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PaymentProfiles {
+struct PaymentProfiles<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     customer_type: CustomerType,
-    payment: PaymentDetails,
+    payment: PaymentDetails<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1222,8 +1546,17 @@ impl From<AuthorizedotnetPaymentsResponse> for AuthorizedotnetRepeatPaymentRespo
 
 // TryFrom implementations for the router data conversions
 
-impl<F> TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    > TryFrom<ResponseRouterData<AuthorizedotnetAuthorizeResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<HsInterfacesConnectorError>;
     fn try_from(
@@ -1436,7 +1769,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
                 connector_refund_id: transaction_response.transaction_id.clone(),
                 refund_status,
                 raw_connector_response,
-                status_code: Some(http_code),
+                status_code: http_code,
                 state: None,
             }),
         };
@@ -1489,7 +1822,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
                     raw_connector_response,
-                    status_code: Some(http_code),
+                    status_code: http_code,
                     state: None,
                 });
 
@@ -1777,7 +2110,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response: raw_connector_response.clone(),
-                status_code: Some(http_status_code),
+                status_code: http_status_code,
                 state: None,
             })
         }
@@ -1814,7 +2147,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response: raw_connector_response.clone(),
-                status_code: Some(http_status_code),
+                status_code: http_status_code,
                 state: None,
             })
         }
@@ -1961,7 +2294,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                     connector_refund_id: transaction.transaction_id,
                     refund_status,
                     raw_connector_response,
-                    status_code: Some(http_code),
+                    status_code: http_code,
                     state: None,
                 });
 
@@ -2009,17 +2342,25 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
 }
 
 // SetupMandate (Zero Mandate) implementation
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         AuthorizedotnetRouterData<
             RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
-                SetupMandateRequestData,
+                SetupMandateRequestData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
-    > for CreateCustomerProfileRequest
+    > for CreateCustomerProfileRequest<T>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -2027,9 +2368,10 @@ impl
             RouterDataV2<
                 SetupMandate,
                 PaymentFlowData,
-                SetupMandateRequestData,
+                SetupMandateRequestData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, error_stack::Report<ConnectorError>> {
         let ccard = match &item.router_data.request.payment_method_data {
@@ -2042,6 +2384,16 @@ impl
             Some(true) | None => ValidationMode::TestMode,
             Some(false) => ValidationMode::LiveMode,
         };
+        // Create expiry date manually since we can't use the trait method generically
+        let expiry_month = ccard.card_exp_month.peek().clone();
+        let year = ccard.card_exp_year.peek().clone();
+        let expiry_year = if year.len() == 2 {
+            format!("20{year}")
+        } else {
+            year
+        };
+        let expiration_date = format!("{expiry_year}-{expiry_month}");
+
         let profile = Profile {
             merchant_customer_id: item
                 .router_data
@@ -2063,10 +2415,8 @@ impl
             payment_profiles: vec![PaymentProfiles {
                 customer_type: CustomerType::Individual,
                 payment: PaymentDetails::CreditCard(CreditCardDetails {
-                    card_number: StrongSecret::new(ccard.card_number.peek().to_string()),
-                    expiration_date: Secret::new(
-                        ccard.get_expiry_date_as_yyyymm("-").peek().clone(),
-                    ),
+                    card_number: ccard.card_number.clone(),
+                    expiration_date: Secret::new(expiration_date),
                     card_code: Some(ccard.card_cvc.clone()),
                 }),
             }],
@@ -2090,8 +2440,20 @@ pub struct CreateCustomerProfileResponse {
     pub messages: ResponseMessages,
 }
 
-impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
-    for RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
+    for RouterDataV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    >
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -2140,7 +2502,7 @@ impl TryFrom<ResponseRouterData<CreateCustomerProfileResponse, Self>>
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 raw_connector_response,
-                status_code: Some(http_code),
+                status_code: http_code,
                 state: None,
             });
         } else {
@@ -2187,4 +2549,212 @@ fn get_the_truncate_id(id: Option<String>, max_length: usize) -> Option<String> 
             s
         }
     })
+}
+
+// Webhook-related structures
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetWebhookObjectId {
+    pub webhook_id: String,
+    pub event_type: AuthorizedotnetWebhookEvent,
+    pub payload: AuthorizedotnetWebhookPayload,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetWebhookPayload {
+    pub id: Option<String>,
+    // Fields specific to customer creation webhooks
+    pub payment_profiles: Option<Vec<PaymentProfileInfo>>,
+    pub merchant_customer_id: Option<String>,
+    pub description: Option<String>,
+    pub entity_name: Option<String>,
+    // Fields specific to customer payment profile creation webhooks
+    pub customer_profile_id: Option<u64>,
+    pub customer_type: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentProfileInfo {
+    pub id: String,
+    pub customer_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizedotnetWebhookEventType {
+    pub event_type: AuthorizedotnetIncomingWebhookEventType,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub enum AuthorizedotnetWebhookEvent {
+    #[serde(rename = "net.authorize.payment.authorization.created")]
+    AuthorizationCreated,
+    #[serde(rename = "net.authorize.payment.priorAuthCapture.created")]
+    PriorAuthCapture,
+    #[serde(rename = "net.authorize.payment.authcapture.created")]
+    AuthCapCreated,
+    #[serde(rename = "net.authorize.payment.capture.created")]
+    CaptureCreated,
+    #[serde(rename = "net.authorize.payment.void.created")]
+    VoidCreated,
+    #[serde(rename = "net.authorize.payment.refund.created")]
+    RefundCreated,
+    #[serde(rename = "net.authorize.customer.created")]
+    CustomerCreated,
+    #[serde(rename = "net.authorize.customer.paymentProfile.created")]
+    CustomerPaymentProfileCreated,
+}
+
+/// Including Unknown to map unknown webhook events
+#[derive(Debug, Clone, Deserialize)]
+pub enum AuthorizedotnetIncomingWebhookEventType {
+    #[serde(rename = "net.authorize.payment.authorization.created")]
+    AuthorizationCreated,
+    #[serde(rename = "net.authorize.payment.priorAuthCapture.created")]
+    PriorAuthCapture,
+    #[serde(rename = "net.authorize.payment.authcapture.created")]
+    AuthCapCreated,
+    #[serde(rename = "net.authorize.payment.capture.created")]
+    CaptureCreated,
+    #[serde(rename = "net.authorize.payment.void.created")]
+    VoidCreated,
+    #[serde(rename = "net.authorize.payment.refund.created")]
+    RefundCreated,
+    #[serde(rename = "net.authorize.customer.created")]
+    CustomerCreated,
+    #[serde(rename = "net.authorize.customer.paymentProfile.created")]
+    CustomerPaymentProfileCreated,
+    #[serde(other)]
+    Unknown,
+}
+
+impl From<AuthorizedotnetIncomingWebhookEventType> for interfaces::webhooks::IncomingWebhookEvent {
+    fn from(event_type: AuthorizedotnetIncomingWebhookEventType) -> Self {
+        match event_type {
+            AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated
+            | AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
+            | AuthorizedotnetIncomingWebhookEventType::AuthCapCreated
+            | AuthorizedotnetIncomingWebhookEventType::CaptureCreated
+            | AuthorizedotnetIncomingWebhookEventType::VoidCreated
+            | AuthorizedotnetIncomingWebhookEventType::CustomerCreated
+            | AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
+                Self::PaymentIntentSuccess
+            }
+            AuthorizedotnetIncomingWebhookEventType::RefundCreated => Self::RefundSuccess,
+            AuthorizedotnetIncomingWebhookEventType::Unknown => Self::EventNotSupported,
+        }
+    }
+}
+
+impl From<AuthorizedotnetWebhookEvent> for enums::AttemptStatus {
+    // status mapping reference https://developer.authorize.net/api/reference/features/webhooks.html#Event_Types_and_Payloads
+    fn from(event_type: AuthorizedotnetWebhookEvent) -> Self {
+        match event_type {
+            AuthorizedotnetWebhookEvent::AuthorizationCreated => Self::Authorized,
+            AuthorizedotnetWebhookEvent::CaptureCreated
+            | AuthorizedotnetWebhookEvent::AuthCapCreated
+            | AuthorizedotnetWebhookEvent::PriorAuthCapture => Self::Charged,
+            AuthorizedotnetWebhookEvent::VoidCreated => Self::Voided,
+            AuthorizedotnetWebhookEvent::RefundCreated => Self::PartialCharged, // This will be used for refund status
+            AuthorizedotnetWebhookEvent::CustomerCreated => Self::Charged, // Customer profile creation indicates successful setup mandate
+            AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Self::Charged, // Payment profile creation indicates successful setup mandate
+        }
+    }
+}
+
+impl From<AuthorizedotnetWebhookEvent> for SyncStatus {
+    // status mapping reference https://developer.authorize.net/api/reference/features/webhooks.html#Event_Types_and_Payloads
+    fn from(event_type: AuthorizedotnetWebhookEvent) -> Self {
+        match event_type {
+            AuthorizedotnetWebhookEvent::AuthorizationCreated => Self::AuthorizedPendingCapture,
+            AuthorizedotnetWebhookEvent::CaptureCreated
+            | AuthorizedotnetWebhookEvent::AuthCapCreated => Self::CapturedPendingSettlement,
+            AuthorizedotnetWebhookEvent::PriorAuthCapture => Self::SettledSuccessfully,
+            AuthorizedotnetWebhookEvent::VoidCreated => Self::Voided,
+            AuthorizedotnetWebhookEvent::RefundCreated => Self::RefundSettledSuccessfully,
+            AuthorizedotnetWebhookEvent::CustomerCreated => Self::SettledSuccessfully, // Customer profile successfully created and settled
+            AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => Self::SettledSuccessfully, // Payment profile successfully created and settled
+        }
+    }
+}
+
+pub fn get_trans_id(details: &AuthorizedotnetWebhookObjectId) -> Result<String, ConnectorError> {
+    match details.event_type {
+        AuthorizedotnetWebhookEvent::CustomerPaymentProfileCreated => {
+            // For payment profile creation, use the customer_profile_id as the primary identifier
+            if let Some(customer_profile_id) = details.payload.customer_profile_id {
+                tracing::debug!(
+                    target: "authorizedotnet_webhook",
+                    "Extracted customer profile ID {} for payment profile creation webhook",
+                    customer_profile_id
+                );
+                Ok(customer_profile_id.to_string())
+            } else {
+                match details.payload.id.clone() {
+                    Some(id) => {
+                        tracing::debug!(
+                            target: "authorizedotnet_webhook",
+                            "Extracted transaction ID {} from payment profile webhook payload",
+                            id
+                        );
+                        Ok(id)
+                    }
+                    None => {
+                        tracing::error!(
+                            target: "authorizedotnet_webhook",
+                            "No customer_profile_id or id found in CustomerPaymentProfileCreated webhook payload"
+                        );
+                        Err(ConnectorError::WebhookReferenceIdNotFound)
+                    }
+                }
+            }
+        }
+        _ => {
+            // For all other events, use the standard id field
+            match details.payload.id.clone() {
+                Some(id) => {
+                    tracing::debug!(
+                        target: "authorizedotnet_webhook",
+                        "Extracted transaction ID {} for webhook event type: {:?}",
+                        id,
+                        details.event_type
+                    );
+                    Ok(id)
+                }
+                None => {
+                    tracing::error!(
+                        target: "authorizedotnet_webhook",
+                        "No transaction ID found in webhook payload for event type: {:?}",
+                        details.event_type
+                    );
+                    Err(ConnectorError::WebhookReferenceIdNotFound)
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<AuthorizedotnetWebhookObjectId> for AuthorizedotnetPSyncResponse {
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: AuthorizedotnetWebhookObjectId) -> Result<Self, Self::Error> {
+        Ok(Self {
+            transaction: Some(SyncTransactionResponse {
+                transaction_id: get_trans_id(&item)?,
+                transaction_status: SyncStatus::from(item.event_type),
+                response_code: Some(1),
+                response_reason_code: Some(1),
+                response_reason_description: Some("Approved".to_string()),
+                network_trans_id: None,
+            }),
+            messages: ResponseMessages {
+                result_code: ResultCode::Ok,
+                message: vec![ResponseMessage {
+                    code: "I00001".to_string(),
+                    text: "Successful.".to_string(),
+                }],
+            },
+        })
+    }
 }
