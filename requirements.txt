@@ -1,0 +1,12 @@
+# Locust load testing framework
+locust>=2.17.0
+
+# Gevent for proper async handling
+gevent>=23.9.0
+
+# gRPC support (optional, for future native gRPC implementation)
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+
+# Additional utilities
+requests>=2.31.0

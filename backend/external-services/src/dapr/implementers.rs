@@ -9,7 +9,8 @@ use crate::dapr::core::DaprClient;
 #[async_trait::async_trait]
 impl EventInterface for DaprClient {
     async fn emit_event(&self, event_type: &str, data: &[u8]) -> CustomResult<(), EventError> {
-        self.emit_event(event_type, data)
+        // Call the DaprClient's emit_event method directly to avoid recursion
+        DaprClient::emit_event(self, event_type, data)
             .await
             .change_context(EventError::EventEmissionFailed)
     }

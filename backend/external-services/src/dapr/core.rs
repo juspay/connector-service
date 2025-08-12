@@ -1,7 +1,6 @@
 //! Interactions with the Dapr SDK
 
-use std::{sync::Arc, time::Instant};
-use tokio::sync::Mutex;
+use std::time::Instant;
 
 use common_utils::errors::CustomResult;
 use error_stack::ResultExt;
@@ -26,7 +25,7 @@ pub struct DaprConfig {
 
 /// Client for Dapr operations.
 pub struct DaprClient {
-    dapr_client: Arc<Mutex<dapr::Client<dapr::client::TonicClient>>>,
+    client: dapr::Client<dapr::client::TonicClient>,
     pubsub_component: String,
     topic: String,
 }
@@ -34,7 +33,7 @@ pub struct DaprClient {
 impl Clone for DaprClient {
     fn clone(&self) -> Self {
         Self {
-            dapr_client: Arc::clone(&self.dapr_client),
+            client: self.client.clone(),
             pubsub_component: self.pubsub_component.clone(),
             topic: self.topic.clone(),
         }
@@ -44,21 +43,31 @@ impl Clone for DaprClient {
 impl DaprClient {
     /// Constructs a new Dapr client.
     ///
-    /// Creates a single-instance client that will be stored in the application state.
+    /// Creates a single client connection that will be reused for all operations.
     pub async fn new(config: &DaprConfig) -> CustomResult<Self, DaprError> {
-        let dapr_endpoint = format!("http://{}:{}", config.host, config.grpc_port);
+        // Set environment variables that Dapr SDK expects
+        std::env::set_var("DAPR_GRPC_PORT", config.grpc_port.to_string());
+        std::env::set_var("DAPR_HTTP_PORT", "3500"); // Default HTTP port
+
+        // In the new Dapr SDK, we only pass the protocol and host
+        // The SDK will automatically append the port from DAPR_GRPC_PORT
+        let addr = format!("http://{}", config.host);
         logger::info!(
-            dapr_endpoint = %dapr_endpoint,
+            dapr_host = %config.host,
+            dapr_grpc_port = %config.grpc_port,
             pubsub_component = %config.pubsub_component,
             topic = %config.topic,
             "Attempting to connect to Dapr"
         );
+        logger::info!("DAPR_GRPC_PORT set to: {}", config.grpc_port);
 
-        let dapr_client = dapr::Client::<dapr::client::TonicClient>::connect(dapr_endpoint.clone())
+        // Create the client connection
+        let client = dapr::Client::<dapr::client::TonicClient>::connect(addr)
             .await
             .inspect_err(|error| {
                 logger::error!(
-                    dapr_endpoint = %dapr_endpoint,
+                    dapr_host = %config.host,
+                    dapr_grpc_port = %config.grpc_port,
                     dapr_connection_error=?error,
                     "Failed to connect to Dapr"
                 );
@@ -66,12 +75,13 @@ impl DaprClient {
             .change_context(DaprError::ConnectionFailed)?;
 
         logger::info!(
-            dapr_endpoint = %dapr_endpoint,
+            dapr_host = %config.host,
+            dapr_grpc_port = %config.grpc_port,
             "Successfully connected to Dapr"
         );
 
         Ok(Self {
-            dapr_client: Arc::new(Mutex::new(dapr_client)),
+            client,
             pubsub_component: config.pubsub_component.clone(),
             topic: config.topic.clone(),
         })
@@ -79,7 +89,7 @@ impl DaprClient {
 
     /// Publishes an event to the configured topic
     ///
-    /// This method uses interior mutability to work with the DAPR SDK requirements.
+    /// Clones the client to avoid borrowing issues.
     pub async fn emit_event(&self, event_type: &str, data: &[u8]) -> CustomResult<(), DaprError> {
         let start = Instant::now();
 
@@ -89,13 +99,15 @@ impl DaprClient {
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
 
-        let mut client = self.dapr_client.lock().await;
+        // Clone the client to get a mutable reference
+        let mut client = self.client.clone();
 
+        let content_type = "application/json".to_string();
         client
             .publish_event(
                 &self.pubsub_component,
                 &self.topic,
-                &"application/json".to_string(),
+                &content_type,
                 serde_json::to_vec(&event_data).unwrap_or_default(),
                 None,
             )

@@ -124,9 +124,19 @@ impl Default for DaprConfig {
 
 /// Create a Dapr client connection using configuration
 pub async fn create_client(config: &DaprConfig) -> Result<Client<dapr::client::TonicClient>> {
-    let addr = format!("http://{}:{}", config.host, config.grpc_port);
+    // Set environment variables that Dapr SDK expects
+    std::env::set_var("DAPR_GRPC_PORT", config.grpc_port.to_string());
+    std::env::set_var("DAPR_HTTP_PORT", "3500"); // Default HTTP port
 
-    info!("Connecting to Dapr sidecar at: {}", addr);
+    // In the new Dapr SDK, we only pass the protocol and host
+    // The SDK will automatically append the port from DAPR_GRPC_PORT
+    let addr = format!("http://{}", config.host);
+
+    info!(
+        "Connecting to Dapr sidecar at: {}:{}",
+        config.host, config.grpc_port
+    );
+    info!("DAPR_GRPC_PORT set to: {}", config.grpc_port);
 
     let client = Client::<dapr::client::TonicClient>::connect(addr)
         .await

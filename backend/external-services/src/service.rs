@@ -37,6 +37,7 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
+use crate::shared_metrics::EVENT_PUBLISHING_METRICS;
 use common_utils::pii::SecretSerdeValue;
 use error_stack::{report, ResultExt};
 use interfaces::event_interface::EventInterface;
@@ -187,45 +188,75 @@ where
                     let status_code = body.status_code;
 
                     // Emit success response event using new interface
-                    tokio::spawn({
-                        let connector_name = event_params.connector_name.to_string();
-                        let event_client = Arc::clone(&event_params.event_client);
-                        let request_data = req.clone();
-                        let response_data = res_body.clone();
-                        let raw_request_data_clone = event_params.raw_request_data.clone();
-                        let url_clone = url.clone();
-                        let flow_name = event_params.flow_name.to_string();
+                    for event_index in 0..10 {
+                        tokio::spawn({
+                            let connector_name = event_params.connector_name.to_string();
+                            let event_client = Arc::clone(&event_params.event_client);
+                            let request_data = req.clone();
+                            let response_data = res_body.clone();
+                            let raw_request_data_clone = event_params.raw_request_data.clone();
+                            let url_clone = url.clone();
+                            let flow_name = event_params.flow_name.to_string();
+                            let request_id_clone = request_id.clone();
 
-                        async move {
-                            let event_data = serde_json::json!({
-                                "request_id": request_id.to_string(),
-                                "timestamp": chrono::Utc::now().timestamp(),
-                                "flow_type": flow_name,
-                                "connector": connector_name.clone(),
-                                "url": url_clone,
-                                "stage": "connector_call",
-                                "latency": latency,
-                                "status_code": status_code,
-                                "request_data": raw_request_data_clone,
-                                "connector_request_data": request_data,
-                                "connector_response_data": response_data,
-                            });
+                            async move {
+                                let event_data = serde_json::json!({
+                                    "request_id": request_id_clone,
+                                    "event_index": event_index,
+                                    "timestamp": chrono::Utc::now().timestamp(),
+                                    "flow_type": flow_name,
+                                    "connector": connector_name.clone(),
+                                    "url": url_clone,
+                                    "stage": "connector_call",
+                                    "latency": latency,
+                                    "status_code": status_code,
+                                    "request_data": raw_request_data_clone,
+                                    "connector_request_data": request_data,
+                                    "connector_response_data": response_data,
+                                });
 
-                            let event_bytes = serde_json::to_vec(&event_data).unwrap_or_default();
-                            match event_client
-                                .emit_event("connector_response", &event_bytes)
-                                .await
-                            {
-                                Ok(_) => tracing::info!(
-                                    "Successfully published response event for {}",
-                                    connector_name
-                                ),
-                                Err(e) => {
-                                    tracing::error!("Failed to publish response event: {:?}", e)
+                                let event_bytes =
+                                    serde_json::to_vec(&event_data).unwrap_or_default();
+                                match event_client
+                                    .emit_event("connector_response", &event_bytes)
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        EVENT_PUBLISHING_METRICS
+                                            .with_label_values(&[
+                                                &flow_name,
+                                                &connector_name,
+                                                "success",
+                                                "none",
+                                                "none",
+                                            ])
+                                            .inc();
+                                        tracing::info!(
+                                            "Successfully published response event for {} (index: {})",
+                                            connector_name,
+                                            event_index
+                                        );
+                                    }
+                                    Err(e) => {
+                                        EVENT_PUBLISHING_METRICS
+                                            .with_label_values(&[
+                                                &flow_name,
+                                                &connector_name,
+                                                "error",
+                                                "publish_failed",
+                                                "event_emission",
+                                            ])
+                                            .inc();
+                                        tracing::error!(
+                                            "Failed to publish response event (index: {}): {:?}",
+                                            event_index,
+                                            e
+                                        );
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
                 Ok(Err(error_body)) => {
                     let error_res_body =
@@ -235,46 +266,74 @@ where
                     let status_code = error_body.status_code;
 
                     // Emit error response event using new interface
-                    tokio::spawn({
-                        let connector_name = event_params.connector_name.to_string();
-                        let event_client = Arc::clone(&event_params.event_client);
-                        let request_data = req.clone();
-                        let response_data = error_res_body.clone();
-                        let raw_request_data_clone = event_params.raw_request_data.clone();
-                        let url_clone = url.clone();
-                        let flow_name = event_params.flow_name.to_string();
+                    for event_index in 0..10 {
+                        tokio::spawn({
+                            let connector_name = event_params.connector_name.to_string();
+                            let event_client = Arc::clone(&event_params.event_client);
+                            let request_data = req.clone();
+                            let response_data = error_res_body.clone();
+                            let raw_request_data_clone = event_params.raw_request_data.clone();
+                            let url_clone = url.clone();
+                            let flow_name = event_params.flow_name.to_string();
+                            let request_id_clone = request_id.clone();
 
-                        async move {
-                            let event_data = serde_json::json!({
-                                "request_id": request_id.to_string(),
-                                "timestamp": chrono::Utc::now().timestamp(),
-                                "flow_type": flow_name,
-                                "connector": connector_name.clone(),
-                                "url": url_clone,
-                                "stage": "connector_call",
-                                "latency": latency,
-                                "status_code": status_code,
-                                "request_data": raw_request_data_clone,
-                                "connector_request_data": request_data,
-                                "connector_response_data": response_data,
-                            });
+                            async move {
+                                let event_data = serde_json::json!({
+                                    "request_id": request_id_clone,
+                                    "event_index": event_index,
+                                    "timestamp": chrono::Utc::now().timestamp(),
+                                    "flow_type": flow_name,
+                                    "connector": connector_name.clone(),
+                                    "url": url_clone,
+                                    "stage": "connector_call",
+                                    "latency": latency,
+                                    "status_code": status_code,
+                                    "request_data": raw_request_data_clone,
+                                    "connector_request_data": request_data,
+                                    "connector_response_data": response_data,
+                                });
 
-                            let event_bytes = serde_json::to_vec(&event_data).unwrap_or_default();
-                            match event_client
-                                .emit_event("connector_error_response", &event_bytes)
-                                .await
-                            {
-                                Ok(_) => tracing::info!(
-                                    "Successfully published error response event for {}",
-                                    connector_name
-                                ),
-                                Err(e) => tracing::error!(
-                                    "Failed to publish error response event: {:?}",
-                                    e
-                                ),
+                                let event_bytes =
+                                    serde_json::to_vec(&event_data).unwrap_or_default();
+                                match event_client
+                                    .emit_event("connector_error_response", &event_bytes)
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        EVENT_PUBLISHING_METRICS
+                                            .with_label_values(&[
+                                                &flow_name,
+                                                &connector_name,
+                                                "error_response",
+                                                "none",
+                                                "connector_error",
+                                            ])
+                                            .inc();
+                                        tracing::info!(
+                                            "Successfully published error response event for {} (index: {})",
+                                            connector_name,
+                                            event_index
+                                        );
+                                    }
+                                    Err(e) => {
+                                        EVENT_PUBLISHING_METRICS
+                                            .with_label_values(&[
+                                                &flow_name,
+                                                &connector_name,
+                                                "error",
+                                                "publish_failed",
+                                                "event_emission",
+                                            ])
+                                            .inc();
+                                        tracing::error!(
+                                            "Failed to publish error response event (index: {}): {:?}",
+                                            event_index, e
+                                        );
+                                    }
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
                 Err(network_error) => {
                     tracing::error!(
@@ -284,45 +343,73 @@ where
                     );
 
                     // Emit network error event using new interface
-                    tokio::spawn({
-                        let connector_name = event_params.connector_name.to_string();
-                        let event_client = Arc::clone(&event_params.event_client);
-                        let request_data = req.clone();
-                        let raw_request_data_clone = event_params.raw_request_data.clone();
-                        let url_clone = url.clone();
-                        let flow_name = event_params.flow_name.to_string();
+                    for event_index in 0..10 {
+                        tokio::spawn({
+                            let connector_name = event_params.connector_name.to_string();
+                            let event_client = Arc::clone(&event_params.event_client);
+                            let request_data = req.clone();
+                            let raw_request_data_clone = event_params.raw_request_data.clone();
+                            let url_clone = url.clone();
+                            let flow_name = event_params.flow_name.to_string();
+                            let request_id_clone = request_id.clone();
 
-                        async move {
-                            let event_data = serde_json::json!({
-                                "request_id": request_id.to_string(),
-                                "timestamp": chrono::Utc::now().timestamp(),
-                                "flow_type": flow_name,
-                                "connector": connector_name.clone(),
-                                "url": url_clone,
-                                "stage": "connector_call",
-                                "latency": null,
-                                "status_code": null,
-                                "request_data": raw_request_data_clone,
-                                "connector_request_data": request_data,
-                                "connector_response_data": null,
-                            });
+                            async move {
+                                let event_data = serde_json::json!({
+                                    "request_id": request_id_clone,
+                                    "event_index": event_index,
+                                    "timestamp": chrono::Utc::now().timestamp(),
+                                    "flow_type": flow_name,
+                                    "connector": connector_name.clone(),
+                                    "url": url_clone,
+                                    "stage": "connector_call",
+                                    "latency": null,
+                                    "status_code": null,
+                                    "request_data": raw_request_data_clone,
+                                    "connector_request_data": request_data,
+                                    "connector_response_data": null,
+                                });
 
-                            let event_bytes = serde_json::to_vec(&event_data).unwrap_or_default();
-                            match event_client
-                                .emit_event("connector_network_error", &event_bytes)
-                                .await
-                            {
-                                Ok(_) => tracing::info!(
-                                    "Successfully published network error event for {}",
-                                    connector_name
-                                ),
-                                Err(e) => tracing::error!(
-                                    "Failed to publish network error event: {:?}",
-                                    e
-                                ),
+                                let event_bytes =
+                                    serde_json::to_vec(&event_data).unwrap_or_default();
+                                match event_client
+                                    .emit_event("connector_network_error", &event_bytes)
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        EVENT_PUBLISHING_METRICS
+                                            .with_label_values(&[
+                                                &flow_name,
+                                                &connector_name,
+                                                "network_error",
+                                                "none",
+                                                "network_failure",
+                                            ])
+                                            .inc();
+                                        tracing::info!(
+                                            "Successfully published network error event for {} (index: {})",
+                                            connector_name,
+                                            event_index
+                                        );
+                                    }
+                                    Err(e) => {
+                                        EVENT_PUBLISHING_METRICS
+                                            .with_label_values(&[
+                                                &flow_name,
+                                                &connector_name,
+                                                "error",
+                                                "publish_failed",
+                                                "event_emission",
+                                            ])
+                                            .inc();
+                                        tracing::error!(
+                                            "Failed to publish network error event (index: {}): {:?}",
+                                            event_index, e
+                                        );
+                                    }
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                 }
             }
 

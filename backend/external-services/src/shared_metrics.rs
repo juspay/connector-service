@@ -57,6 +57,18 @@ lazy_static! {
         &["method", "service", "connector", "error"]
     )
     .unwrap();
+    pub static ref EVENT_PUBLISHING_METRICS: IntCounterVec = register_int_counter_vec!(
+        "EVENT_PUBLISHING_METRICS_TOTAL",
+        "Comprehensive event publishing metrics with status and error details",
+        &[
+            "flow_type",
+            "connector",
+            "status",
+            "error_type",
+            "error_category"
+        ]
+    )
+    .unwrap();
 }
 
 // Middleware Layer that automatically handles all gRPC methods
