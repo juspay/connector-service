@@ -913,11 +913,53 @@ macros::macro_connector_implementation!(
 impl ConnectorIntegration<Execute, RefundsData, RefundsResponseData> for New_connector_name
 ```
 
-40. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+40.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
     //..
+    flow_name: Refund,
+)
+```
+
+40.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 39
+```rust
+fn get_request_body(
+    &self,
+    req: &RefundsRouterData<Execute>,
+    //..
+    let connector_req = new_connector_name::New_connector_nameRefundRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameRefundRequest
+    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
+}
+fn handle_response(
+    //..
+    let response: new_connector_name::New_connector_nameRefundResponse = res //This one is the response struct i.e New_connector_nameRefundResponse
+}
+```
+
+40.c. Add the request struct name and response struct name to import from transformers
+```rust
+use transformers::{
+    self as new_connector_name, New_connector_nameRefundRequest, New_connector_nameRefundResponse,
+};
+```
+
+40.d. Add the request struct name and response struct name in the flow: Refund of api: [] block in macros::create_all_prerequisites,
+```rust
+(
+    flow: Refund,
+    request_body: New_connector_nameRefundRequest,
+    response_body: New_connector_nameRefundResponse,
+    router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+)
+```
+
+40.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Refund
+```rust
+macros::macro_connector_implementation!(
+    //..
+    curl_request: Format(New_connector_nameRefundRequest),
+    curl_response: New_connector_nameRefundResponse,
     flow_name: Refund,
 )
 ```
@@ -1067,11 +1109,52 @@ macros::macro_connector_implementation!(
 impl ConnectorIntegration<Capture, PaymentsCaptureData, PaymentsResponseData>  for New_connector_name
 ```
 
-52. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+52.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
     //..
+    flow_name: Capture,
+)
+```
+52.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 51
+```rust
+fn get_request_body(
+    &self,
+    req: &PaymentsCaptureRouterData,
+    //..
+    let connector_req = new_connector_name::New_connector_nameCaptureRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameCaptureRequest
+    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
+}
+fn handle_response(
+    //..
+    let response: new_connector_name::New_connector_nameCatureResponse = res //This one is the response struct i.e New_connector_nameCaptureResponse
+}
+```
+
+52.c. Add the request struct name and response struct name to import from transformers
+```rust
+use transformers::{
+    self as new_connector_name, New_connector_nameCaptureRequest, New_connector_nameCatureResponse,
+};
+```
+
+52.d. Add the request struct name and response struct name in the flow: Capture of api: [] block in macros::create_all_prerequisites,
+```rust
+(
+    flow: Capture,
+    request_body: New_connector_nameCaptureRequest,
+    response_body: New_connector_nameCatureResponse,
+    router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+)
+```
+
+52.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Capture
+```rust
+macros::macro_connector_implementation!(
+    //..
+    curl_request: Format(New_connector_nameCaptureRequest),
+    curl_response: New_connector_nameCatureResponse,
     flow_name: Capture,
 )
 ```
@@ -1144,11 +1227,52 @@ macros::macro_connector_implementation!(
 impl ConnectorIntegration<Void, PaymentsCancelData, PaymentsResponseData>  for New_connector_name
 ```
 
-58. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+58.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
     //..
+    flow_name: Void,
+)
+```
+58.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 57
+```rust
+fn get_request_body(
+    &self,
+    req: &PaymentsCancelRouterData,
+    //..
+    let connector_req = new_connector_name::New_connector_nameCancelRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameCancleRequest
+    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
+}
+fn handle_response(
+    //..
+    let response: new_connector_name::New_connector_nameCancelResponse = res //This one is the response struct i.e New_connector_nameCancleResponse
+}
+```
+
+58.c. Add the request struct name and response struct name to import from transformers
+```rust
+use transformers::{
+    self as new_connector_name, New_connector_nameCancelRequest, New_connector_nameCancelResponse,
+};
+```
+
+58.d. Add the request struct name and response struct name in the flow: Void of api: [] block in macros::create_all_prerequisites,
+```rust
+(
+    flow: Void,
+    request_body: New_connector_nameCancelRequest,
+    response_body: New_connector_nameCancelResponse,
+    router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+)
+```
+
+58.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Void
+```rust
+macros::macro_connector_implementation!(
+    //..
+    curl_request: Format(New_connector_nameCancelRequest),
+    curl_response: New_connector_nameCancelResponse,
     flow_name: Void,
 )
 ```
