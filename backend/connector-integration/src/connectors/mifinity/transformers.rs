@@ -15,7 +15,6 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-use std::marker::PhantomData;
 
 use super::MifinityRouterData;
 use hyperswitch_masking::Secret;
@@ -46,14 +45,7 @@ impl TryFrom<&Option<pii::SecretSerdeValue>> for MifinityConnectorMetadataObject
 
 #[derive(Debug, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct MifinityPaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct MifinityPaymentsRequest {
     money: Money,
     client: MifinityClient,
     address: MifinityAddress,
@@ -66,8 +58,6 @@ pub struct MifinityPaymentsRequest<
     return_url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     language_preference: Option<String>,
-    #[serde(skip)]
-    _phantom: PhantomData<T>,
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -114,7 +104,7 @@ impl<
             >,
             T,
         >,
-    > for MifinityPaymentsRequest<T>
+    > for MifinityPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -153,6 +143,10 @@ impl<
                     };
                     let phone_details =
                         item.router_data.resource_common_data.get_billing_phone()?;
+                    let billing_country = item
+                        .router_data
+                        .resource_common_data
+                        .get_billing_country()?;
                     let client = MifinityClient {
                         first_name: item
                             .router_data
@@ -164,19 +158,13 @@ impl<
                             .get_billing_last_name()?,
                         phone: phone_details.get_number()?,
                         dialing_code: phone_details.get_country_code()?,
-                        nationality: item
-                            .router_data
-                            .resource_common_data
-                            .get_billing_country()?,
+                        nationality: billing_country,
                         email_address: item.router_data.resource_common_data.get_billing_email()?,
                         dob: data.date_of_birth.clone(),
                     };
                     let address = MifinityAddress {
                         address_line1: item.router_data.resource_common_data.get_billing_line1()?,
-                        country_code: item
-                            .router_data
-                            .resource_common_data
-                            .get_billing_country()?,
+                        country_code: billing_country,
                         city: item.router_data.resource_common_data.get_billing_city()?,
                     };
                     let validation_key = format!(
@@ -215,7 +203,6 @@ impl<
                         brand_id,
                         return_url: item.router_data.request.get_router_return_url()?,
                         language_preference,
-                        _phantom: PhantomData,
                     })
                 }
                 WalletData::AliPayQr(_)
@@ -410,59 +397,11 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let payload = item.response.payload.first();
 
-        match payload {
-            Some(payload) => {
-                let status = payload.status.clone();
-                let payment_response = payload.payment_response.clone();
-
-                match payment_response {
-                    Some(payment_response) => {
-                        let transaction_reference = payment_response.transaction_reference.clone();
-
-                        Ok(Self {
-                            response: Ok(PaymentsResponseData::TransactionResponse {
-                                resource_id: ResponseId::ConnectorTransactionId(
-                                    transaction_reference,
-                                ),
-                                redirection_data: None,
-                                mandate_reference: None,
-                                connector_metadata: None,
-                                network_txn_id: None,
-                                connector_response_reference_id: None,
-                                incremental_authorization_allowed: None,
-                                raw_connector_response: None,
-                                status_code: item.http_code,
-                            }),
-                            resource_common_data: PaymentFlowData {
-                                status: enums::AttemptStatus::from(status),
-                                ..item.router_data.resource_common_data
-                            },
-                            ..item.router_data
-                        })
-                    }
-                    None => Ok(Self {
-                        response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::NoResponseId,
-                            redirection_data: None,
-                            mandate_reference: None,
-                            connector_metadata: None,
-                            network_txn_id: None,
-                            connector_response_reference_id: None,
-                            incremental_authorization_allowed: None,
-                            raw_connector_response: None,
-                            status_code: item.http_code,
-                        }),
-                        resource_common_data: PaymentFlowData {
-                            status: enums::AttemptStatus::from(status),
-                            ..item.router_data.resource_common_data
-                        },
-                        ..item.router_data
-                    }),
-                }
-            }
-            None => Ok(Self {
+        // Helper function to create common response body
+        let create_response = |resource_id: ResponseId, status: enums::AttemptStatus| -> Self {
+            Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::NoResponseId,
+                    resource_id,
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
@@ -473,11 +412,36 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
-                    status: item.router_data.resource_common_data.status,
+                    status,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
-            }),
+            }
+        };
+
+        match payload {
+            Some(payload) => {
+                let status = payload.status.clone();
+                let payment_response = payload.payment_response.clone();
+
+                match payment_response {
+                    Some(payment_response) => {
+                        let transaction_reference = payment_response.transaction_reference.clone();
+                        Ok(create_response(
+                            ResponseId::ConnectorTransactionId(transaction_reference),
+                            enums::AttemptStatus::from(status),
+                        ))
+                    }
+                    None => Ok(create_response(
+                        ResponseId::NoResponseId,
+                        enums::AttemptStatus::from(status),
+                    )),
+                }
+            }
+            None => Ok(create_response(
+                ResponseId::NoResponseId,
+                item.router_data.resource_common_data.status,
+            )),
         }
     }
 }

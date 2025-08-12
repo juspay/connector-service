@@ -118,7 +118,7 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: MifinityPaymentsRequest<T>,
+            request_body: MifinityPaymentsRequest,
             response_body: MifinityPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
