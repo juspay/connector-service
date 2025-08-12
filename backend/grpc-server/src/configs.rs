@@ -1,8 +1,7 @@
 use std::path::PathBuf;
 
 use common_utils::{
-    consts,
-    dapr::{DaprConfig, EventConfig},
+    consts, events::EventConfig
 };
 use domain_types::types::{Connectors, Proxy};
 
@@ -18,8 +17,6 @@ pub struct Config {
     pub connectors: Connectors,
     #[serde(default)]
     pub events: EventConfig,
-    #[serde(default)]
-    pub dapr: DaprConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -83,7 +80,9 @@ impl Config {
                     .list_separator(",")
                     .with_list_parse_key("proxy.bypass_proxy_urls")
                     .with_list_parse_key("redis.cluster_urls")
-                    .with_list_parse_key("database.tenants"),
+                    .with_list_parse_key("database.tenants")
+                    .with_list_parse_key("log.kafka.brokers")
+                    .with_list_parse_key("event.brokers"),
             )
             .build()?;
 

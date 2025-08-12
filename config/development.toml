@@ -6,6 +6,14 @@ enabled = true
 level = "TRACE"
 log_format = "default"
 
+[log.kafka]
+enabled = true
+level = "info"
+filtering_directive = "info"
+brokers = ["localhost:9092"]
+topic = "connector-service-logs"
+buffer_limit = 100000
+
 [server]
 host = "127.0.0.1"
 port = 8000
@@ -44,13 +52,9 @@ noon.base_url = "https://api-test.noonpayments.com/"
 # Generic Events Configuration
 [events]
 enabled = false
-pubsub_component = "kafka-pubsub"
+brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
-
-[events.dapr]
-host = "127.0.0.1"
-grpc_port = 50001
 
 # Euler-compatible configuration
 [events.transformations]

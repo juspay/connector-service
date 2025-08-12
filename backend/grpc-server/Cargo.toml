@@ -13,6 +13,7 @@ interfaces = { path = "../interfaces" }
 cards = { path = "../cards" }
 common_enums = { path = "../common_enums" }
 common_utils = { path = "../common_utils" }
+tracing-kafka = { path = "../tracing-kafka", optional = true }
 
 # Third-party dependencies
 config = "0.14.0"
@@ -73,6 +74,10 @@ rand = "0.8.5"
 uuid = { version = "1.0", features = ["v4"] }
 reqwest = { version = "0.11", features = ["json"] }
 
+
+[features]
+default = ["kafka"]
+kafka = ["tracing-kafka"]
 
 [lints]
 workspace = true

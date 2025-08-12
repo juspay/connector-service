@@ -6,6 +6,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 use super::config;
 
+#[cfg(feature = "kafka")]
+use tracing_kafka::KafkaLayer;
+
 /// Contains guards necessary for logging
 #[derive(Debug)]
 pub struct TelemetryGuard {
@@ -62,7 +65,7 @@ pub fn setup(
     };
 
     let logger_config = log_utils::LoggerConfig {
-        static_top_level_fields,
+        static_top_level_fields: static_top_level_fields.clone(),
         top_level_keys: HashSet::new(),
         persistent_keys: HashSet::new(),
         log_span_lifecycles: true,
@@ -79,6 +82,73 @@ pub fn setup(
     subscriber_layers.push(logging_components.storage_layer.boxed());
     if let Some(console_layer) = logging_components.console_log_layer {
         subscriber_layers.push(console_layer);
+    }
+    
+    // Add Kafka layer if configured
+    #[cfg(feature = "kafka")]
+    if let Some(kafka_config) = &config.kafka {
+        if kafka_config.enabled {
+            let kafka_filter_directive =
+                kafka_config.filtering_directive.clone().unwrap_or_else(|| {
+                    get_envfilter_directive(
+                        tracing::Level::WARN,
+                        kafka_config.level.into_level(),
+                        crates_to_filter.as_ref(),
+                    )
+                });
+
+            let brokers: Vec<&str> = kafka_config.brokers.iter().map(|s| s.as_str()).collect();
+            let mut builder = KafkaLayer::builder()
+                .brokers(&brokers)
+                .topic(&kafka_config.topic)
+                .static_fields(static_top_level_fields.clone());
+
+            // Add batch_size if configured
+            if let Some(batch_size) = kafka_config.batch_size {
+                builder = builder.batch_size(batch_size);
+            }
+
+            // Add flush_interval if configured
+            if let Some(flush_interval_ms) = kafka_config.flush_interval_ms {
+                builder =
+                    builder.flush_interval(std::time::Duration::from_millis(flush_interval_ms));
+            }
+
+            // Add buffer_limit if configured
+            if let Some(buffer_limit) = kafka_config.buffer_limit {
+                builder = builder.queue_buffering_max_messages(buffer_limit);
+            }
+
+            let kafka_layer = match builder.build() {
+                Ok(layer) => {
+                    // Create filter with infinite loop prevention
+                    let kafka_filter = tracing_subscriber::EnvFilter::builder()
+                        .with_default_directive(kafka_config.level.into_level().into())
+                        .parse_lossy(kafka_filter_directive)
+                        // Add self filter to avoid infinite loop during TRACE level logging
+                        .add_directive("rdkafka=off".parse().unwrap())
+                        .add_directive("librdkafka=off".parse().unwrap())
+                        .add_directive("kafka=off".parse().unwrap())
+                        .add_directive("kafka_writer=off".parse().unwrap())
+                        .add_directive("tracing_kafka=off".parse().unwrap());
+                    
+                    Some(layer.with_filter(kafka_filter))
+                },
+                Err(e) => {
+                    eprintln!("[WARN] Failed to enable Kafka logging: {}", e);
+                    // Continue without Kafka - non-blocking
+                    None
+                }
+            };
+
+            if let Some(layer) = kafka_layer {
+                subscriber_layers.push(layer.boxed());
+                eprintln!(
+                    "[INFO] Kafka logging enabled for topic: {}",
+                    kafka_config.topic
+                );
+            }
+        }
     }
 
     tracing_subscriber::registry()

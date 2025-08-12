@@ -210,7 +210,7 @@ impl Payments {
         let event_params = external_services::service::EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
-            flow_name: common_utils::dapr::FlowName::Authorize,
+            flow_name: common_utils::events::FlowName::Authorize,
             event_config: &self.config.events,
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(&payload).unwrap_or_default(),
@@ -367,7 +367,7 @@ impl Payments {
         let external_event_params = external_services::service::EventProcessingParams {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
-            flow_name: common_utils::dapr::FlowName::CreateOrder,
+            flow_name: common_utils::events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
@@ -466,7 +466,7 @@ impl Payments {
         let external_event_params = external_services::service::EventProcessingParams {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
-            flow_name: common_utils::dapr::FlowName::CreateOrder,
+            flow_name: common_utils::events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
@@ -1155,7 +1155,7 @@ impl PaymentService for Payments {
                 let event_params = external_services::service::EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: common_utils::dapr::FlowName::SetupMandate,
+                    flow_name: common_utils::events::FlowName::SetupMandate,
                     event_config: &self.config.events,
                     raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
@@ -1265,7 +1265,7 @@ impl PaymentService for Payments {
                 let event_params = external_services::service::EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: common_utils::dapr::FlowName::Authorize,
+                    flow_name: common_utils::events::FlowName::Authorize,
                     event_config: &self.config.events,
                     raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),

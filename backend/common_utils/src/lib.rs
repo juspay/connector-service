@@ -21,11 +21,12 @@ pub use types::{
     AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector, MinorUnit, MinorUnitForConnector,
     StringMajorUnit, StringMajorUnitForConnector, StringMinorUnit,
 };
-pub mod dapr;
+pub use event_publisher::{emit_event_with_config, init_event_publisher};
 pub mod events;
 pub mod global_id;
 
 pub mod consts;
+pub mod event_publisher;
 
 fn generate_ref_id_with_default_length<const MAX_LENGTH: u8, const MIN_LENGTH: u8>(
     prefix: &str,

@@ -14,7 +14,7 @@ use http::request::Request;
 use tonic::metadata;
 
 use crate::error::ResultExtGrpc;
-use common_utils::dapr::FlowName;
+use common_utils::events::FlowName;
 use domain_types::connector_flow::{Capture, PSync, Refund, SetupMandate, Void};
 
 // Helper function to map flow markers to flow names
