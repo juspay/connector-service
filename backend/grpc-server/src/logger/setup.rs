@@ -83,7 +83,7 @@ pub fn setup(
     if let Some(console_layer) = logging_components.console_log_layer {
         subscriber_layers.push(console_layer);
     }
-    
+
     // Add Kafka layer if configured
     #[cfg(feature = "kafka")]
     if let Some(kafka_config) = &config.kafka {
@@ -131,9 +131,9 @@ pub fn setup(
                         .add_directive("kafka=off".parse().unwrap())
                         .add_directive("kafka_writer=off".parse().unwrap())
                         .add_directive("tracing_kafka=off".parse().unwrap());
-                    
+
                     Some(layer.with_filter(kafka_filter))
-                },
+                }
                 Err(e) => {
                     eprintln!("[WARN] Failed to enable Kafka logging: {}", e);
                     // Continue without Kafka - non-blocking

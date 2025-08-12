@@ -11,7 +11,8 @@ use crate::{
         token::GlobalTokenId,
     },
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
-    types::TimeRange, SecretSerdeValue,
+    types::TimeRange,
+    SecretSerdeValue,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -189,7 +190,7 @@ pub struct Event {
     pub connector_request_data: Option<SecretSerdeValue>,
     pub connector_response_data: Option<SecretSerdeValue>,
     #[serde(flatten)]
-    pub additional_fields: HashMap<String, SecretSerdeValue>
+    pub additional_fields: HashMap<String, SecretSerdeValue>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -265,7 +266,7 @@ impl Default for EventConfig {
             brokers: vec!["localhost:9092".to_string()],
             partition_key_field: "request_id".to_string(),
             transformations: std::collections::HashMap::new(),
-        static_values: std::collections::HashMap::new(),
+            static_values: std::collections::HashMap::new(),
             extractions: std::collections::HashMap::new(),
         }
     }

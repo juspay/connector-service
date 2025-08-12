@@ -554,13 +554,21 @@ impl Payments {
         };
 
         // Execute connector processing
+        let event_params = external_services::service::EventProcessingParams {
+            connector_name,
+            service_name,
+            flow_name: common_utils::events::FlowName::Authorize, // Use Authorize as fallback since CreateSessionToken doesn't exist
+            event_config: &self.config.events,
+            raw_request_data: None, // Don't serialize P since it doesn't implement Serialize
+            request_id: "session_token_request", // TODO: Pass actual request_id
+        };
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
             None,
-            connector_name,
-            service_name,
+            event_params,
         )
         .await
         .switch()
@@ -715,6 +723,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            &request_id,
                                         ))
                                         .await
                                         {
@@ -728,6 +737,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            &request_id,
                                         ))
                                         .await
                                         {
@@ -743,6 +753,7 @@ impl PaymentService for Payments {
                                     connector,
                                     connector_auth_details,
                                     &service_name,
+                                    &request_id,
                                 ))
                                 .await
                                 {
@@ -758,6 +769,7 @@ impl PaymentService for Payments {
                             connector,
                             connector_auth_details,
                             &service_name,
+                            &request_id,
                         ))
                         .await
                         {
