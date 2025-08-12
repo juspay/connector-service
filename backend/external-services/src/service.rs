@@ -37,7 +37,6 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
-use common_utils::dapr::{emit_event_with_config, Event, EventConfig, EventStage};
 use common_utils::pii::SecretSerdeValue;
 use error_stack::{report, ResultExt};
 use interfaces::{
@@ -50,17 +49,19 @@ use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tracing::field::Empty;
-
+use common_utils::events::{Event, EventConfig, EventStage, FlowName};
+use common_utils::emit_event_with_config;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
 #[derive(Debug)]
 pub struct EventProcessingParams<'a> {
     pub connector_name: &'a str,
     pub service_name: &'a str,
-    pub flow_name: common_utils::dapr::FlowName,
+    pub flow_name: FlowName,
     pub event_config: &'a EventConfig,
     pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
+
 }
 
 #[tracing::instrument(

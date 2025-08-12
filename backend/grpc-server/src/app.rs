@@ -1,7 +1,7 @@
 use std::{future::Future, net, sync::Arc};
 
 use axum::{extract::Request, http};
-use common_utils::{consts, dapr};
+use common_utils::{consts};
 use external_services::shared_metrics as metrics;
 use grpc_api_types::{
     health_check::health_server,
@@ -23,19 +23,6 @@ use crate::{configs, error::ConfigurationError, logger, utils};
 ///
 /// Will panic if redis connection establishment fails or signal handling fails
 pub async fn server_builder(config: configs::Config) -> Result<(), ConfigurationError> {
-    if config.events.enabled {
-        logger::info!("Checking Dapr connectivity...");
-
-        match dapr::create_client(&config.dapr).await {
-            Ok(_) => logger::info!("Dapr connection test successful"),
-            Err(e) => logger::warn!(
-                "Failed to connect to Dapr: {:?}. Events might not be published to Kafka.",
-                e
-            ),
-        }
-    } else {
-        logger::info!("Dapr is disabled via configuration, skipping connectivity check");
-    }
 
     let server_config = config.server.clone();
     let socket_addr = net::SocketAddr::new(server_config.host.parse()?, server_config.port);
@@ -116,6 +103,13 @@ impl Service {
     /// deserialize any of the above keys
     #[allow(clippy::expect_used)]
     pub async fn new(config: Arc<configs::Config>) -> Self {
+        // Initialize the global EventPublisher
+        if let Err(e) = common_utils::init_event_publisher(&config.events) {
+            logger::warn!("Failed to initialize global EventPublisher: {:?}", e);
+        } else {
+            logger::info!("Global EventPublisher initialized successfully");
+        }
+
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             payments_service: crate::server::payments::Payments {
