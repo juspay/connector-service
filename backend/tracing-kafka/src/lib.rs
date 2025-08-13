@@ -48,9 +48,9 @@
 //! }
 //! ```
 
+pub mod builder;
 mod layer;
 mod writer;
-pub mod builder;
 
 pub use layer::{KafkaLayer, KafkaLayerError};
 pub use writer::{KafkaWriter, KafkaWriterError};
