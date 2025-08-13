@@ -1101,7 +1101,6 @@ message PaymentServiceAuthorizeResponse {
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
   uint32 status_code = 10; // HTTP status code from the connector
-  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
@@ -1111,14 +1110,15 @@ message PaymentServiceAuthorizeResponse {
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
   
-  // Metadata
-  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
-  
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
   
   // State
-  optional ConnectorState state = 13; // State data to be stored by Hyperswitch
+  optional ConnectorState state = 11; // State data to be stored by Hyperswitch
+  
+  // Additional fields added later
+  map<string, string> response_headers = 12; // Optional HTTP response headers from the connector
+  map<string, string> connector_metadata = 13; // Connector-specific metadata for the transaction
 }
 
 // Request message for synchronizing payment status.
@@ -1143,7 +1143,6 @@ message PaymentServiceGetResponse {
   optional string error_code = 3; // Error code if synchronization encountered an issue
   optional string error_message = 4; // Error message if synchronization encountered an issue
   uint32 status_code = 26; // HTTP status code from the connector
-  map<string, string> response_headers = 27; // Optional HTTP response headers from the connector
   
   // Transaction Details
   optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
@@ -1177,7 +1176,10 @@ message PaymentServiceGetResponse {
   optional string raw_connector_response = 25; // Raw response from the connector for debugging
   
   // State
-  optional ConnectorState state = 28; // State data to be stored by Hyperswitch
+  optional ConnectorState state = 27; // State data to be stored by Hyperswitch
+  
+  // Additional fields added later
+  map<string, string> response_headers = 28; // Optional HTTP response headers from the connector
 }
 
 // Request message for voiding a payment.
