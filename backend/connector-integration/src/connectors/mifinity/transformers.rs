@@ -397,11 +397,59 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
         let payload = item.response.payload.first();
 
-        // Helper function to create common response body
-        let create_response = |resource_id: ResponseId, status: enums::AttemptStatus| -> Self {
-            Self {
+        match payload {
+            Some(payload) => {
+                let status = payload.status.clone();
+                let payment_response = payload.payment_response.clone();
+
+                match payment_response {
+                    Some(payment_response) => {
+                        let transaction_reference = payment_response.transaction_reference.clone();
+
+                        Ok(Self {
+                            response: Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(
+                                    transaction_reference,
+                                ),
+                                redirection_data: None,
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: None,
+                                incremental_authorization_allowed: None,
+                                raw_connector_response: None,
+                                status_code: item.http_code,
+                            }),
+                            resource_common_data: PaymentFlowData {
+                                status: enums::AttemptStatus::from(status),
+                                ..item.router_data.resource_common_data
+                            },
+                            ..item.router_data
+                        })
+                    }
+                    None => Ok(Self {
+                        response: Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::NoResponseId,
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: None,
+                            incremental_authorization_allowed: None,
+                            raw_connector_response: None,
+                            status_code: item.http_code,
+                        }),
+                        resource_common_data: PaymentFlowData {
+                            status: enums::AttemptStatus::from(status),
+                            ..item.router_data.resource_common_data
+                        },
+                        ..item.router_data
+                    }),
+                }
+            }
+            None => Ok(Self {
                 response: Ok(PaymentsResponseData::TransactionResponse {
-                    resource_id,
+                    resource_id: ResponseId::NoResponseId,
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
@@ -412,36 +460,11 @@ impl<F> TryFrom<ResponseRouterData<MifinityPsyncResponse, Self>>
                     status_code: item.http_code,
                 }),
                 resource_common_data: PaymentFlowData {
-                    status,
+                    status: item.router_data.resource_common_data.status,
                     ..item.router_data.resource_common_data
                 },
                 ..item.router_data
-            }
-        };
-
-        match payload {
-            Some(payload) => {
-                let status = payload.status.clone();
-                let payment_response = payload.payment_response.clone();
-
-                match payment_response {
-                    Some(payment_response) => {
-                        let transaction_reference = payment_response.transaction_reference.clone();
-                        Ok(create_response(
-                            ResponseId::ConnectorTransactionId(transaction_reference),
-                            enums::AttemptStatus::from(status),
-                        ))
-                    }
-                    None => Ok(create_response(
-                        ResponseId::NoResponseId,
-                        enums::AttemptStatus::from(status),
-                    )),
-                }
-            }
-            None => Ok(create_response(
-                ResponseId::NoResponseId,
-                item.router_data.resource_common_data.status,
-            )),
+            }),
         }
     }
 }
