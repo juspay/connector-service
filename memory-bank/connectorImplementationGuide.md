@@ -266,7 +266,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Nexinets<T>
+    connector_types::PaymentSessionToken for New_connector_name<T>
 {
 }
 ```
@@ -1339,7 +1339,7 @@ use common_utils::{
     types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
-    connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void},
+    connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
     connector_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
@@ -1831,7 +1831,7 @@ Ok(Self {
     },
     response: //..
 ```
-100. See the name of the request struct in Refund flow in new_connector_name.rs file
+100. See the name of the request struct in Capture flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1903,7 +1903,7 @@ Ok(Self {
     response: //..
 ```
 
-105. See the name of the request struct in Refund flow in new_connector_name.rs file
+105. See the name of the request struct in Capture flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1960,7 +1960,7 @@ Ok(Self {
     },
     response: //..
 ```
-110. See the name of the request struct in Refund flow in new_connector_name.rs file
+110. See the name of the request struct in Void flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2084,6 +2084,12 @@ Ok(Self {
     },
     response: //..
 ```
+
+120. Follow the following steps to remove the common errors
+
+a. Replace all the "enums" with "common_enums"
+
+b. Replace all "Box::new(None)" with "None"
 
 ### File: backend/connector-integration/src/connectors/new_connector.rs
 
