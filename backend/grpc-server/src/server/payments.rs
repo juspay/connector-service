@@ -168,29 +168,32 @@ impl Payments {
 
         // Handle access token generation for OAuth connectors
         let mut payment_flow_data = payment_flow_data;
-        if let Err(err) = AccessTokenManager::ensure_access_token_for_connector_data(
+        let generated_access_token = match AccessTokenManager::ensure_access_token_for_connector_data(
             &connector_data_for_oauth,
             &mut payment_flow_data,
             &connector_auth_details,
             &connector.to_string(),
         ).await {
-            tracing::error!("Failed to ensure access token for connector {}: {:?}", connector.to_string(), err);
-            return Ok(PaymentServiceAuthorizeResponse {
-                transaction_id: None,
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                incremental_authorization_allowed: None,
-                status: grpc_api_types::payments::PaymentStatus::Failure as i32,
-                error_message: Some("Failed to generate access token".to_string()),
-                error_code: Some("ACCESS_TOKEN_GENERATION_FAILED".to_string()),
-                raw_connector_response: None,
-                status_code: 500,
-                state: None,
-                connector_metadata: std::collections::HashMap::new(),
-                response_headers: std::collections::HashMap::new(),
-            });
-        }
+            Ok(access_token) => access_token,
+            Err(err) => {
+                tracing::error!("Failed to ensure access token for connector {}: {:?}", connector.to_string(), err);
+                return Ok(PaymentServiceAuthorizeResponse {
+                    transaction_id: None,
+                    redirection_data: None,
+                    network_txn_id: None,
+                    response_ref_id: None,
+                    incremental_authorization_allowed: None,
+                    status: grpc_api_types::payments::PaymentStatus::Failure as i32,
+                    error_message: Some("Failed to generate access token".to_string()),
+                    error_code: Some("ACCESS_TOKEN_GENERATION_FAILED".to_string()),
+                    raw_connector_response: None,
+                    status_code: 500,
+                    state: None,
+                    connector_metadata: std::collections::HashMap::new(),
+                    response_headers: std::collections::HashMap::new(),
+                });
+            }
+        };
 
         // Create connector request data  
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
@@ -232,10 +235,14 @@ impl Payments {
         )
         .await;
 
+        // The generated access token is already in gRPC format
+        let grpc_access_token = generated_access_token;
+
         // Generate response - pass both success and error cases
         let authorize_response = match response {
             Ok(success_response) => domain_types::types::generate_payment_authorize_response(
                 success_response,
+                grpc_access_token.clone(),
             )
             .map_err(|err| {
                 tracing::error!("Failed to generate authorize response: {:?}", err);
@@ -284,7 +291,7 @@ impl Payments {
                         raw_connector_response: None,
                     }),
                 };
-                domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
+                domain_types::types::generate_payment_authorize_response::<T>(error_router_data, grpc_access_token)
                     .map_err(|err| {
                         tracing::error!(
                             "Failed to generate authorize response for connector error: {:?}",
@@ -432,15 +439,18 @@ impl Payments {
 
         // Handle access token generation for OAuth connectors
         let mut payment_flow_data = payment_flow_data;
-        if let Err(err) = AccessTokenManager::ensure_access_token_for_connector_data(
+        let _generated_access_token_psync = match AccessTokenManager::ensure_access_token_for_connector_data(
             &connector_data_for_oauth,
             &mut payment_flow_data,
             &connector_auth_details,
             &connector.to_string(),
         ).await {
-            tracing::error!("Failed to ensure access token for connector {}: {:?}", connector.to_string(), err);
-            return Err(tonic::Status::internal("Failed to generate access token"));
-        }
+            Ok(access_token) => access_token,
+            Err(err) => {
+                tracing::error!("Failed to ensure access token for connector {}: {:?}", connector.to_string(), err);
+                return Err(tonic::Status::internal("Failed to generate access token"));
+            }
+        };
 
         // Create connector request data  
         let payment_sync_data = PaymentsSyncData::foreign_try_from(payload.clone())

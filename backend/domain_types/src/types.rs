@@ -5,13 +5,13 @@ use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType}
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
+    AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
     DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 use serde_json::json;
 use utoipa::ToSchema;
@@ -1102,7 +1102,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             },
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: value.access_token.as_ref().map(|t| t.token.clone()),
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -1154,7 +1154,7 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: value.access_token.as_ref().map(|t| t.token.clone()),
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -1268,6 +1268,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
     >,
+    generated_access_token: Option<grpc_api_types::payments::AccessToken>,
 ) -> Result<PaymentServiceAuthorizeResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
@@ -1276,6 +1277,13 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+    
+    // Create state with access token if UCS generated a new one
+    let state = generated_access_token.map(|access_token| {
+        ConnectorState {
+            access_token: Some(access_token),
+        }
+    });
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -1350,7 +1358,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     raw_connector_response,
                     status_code: status_code as u32,
                     response_headers,
-                    state: None, 
+                    state, 
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1535,7 +1543,7 @@ impl
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: value.access_token.as_ref().map(|t| t.token.clone()),
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -2785,7 +2793,7 @@ impl
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: value.access_token.as_ref().map(|t| t.token.clone()),
             session_token: None,
             reference_id: None,
             payment_method_token: None,

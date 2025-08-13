@@ -10,7 +10,6 @@ use grpc_api_types::payments::AccessToken;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
-/// State structure to send back to Hyperswitch for storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorState {
     pub access_token: Option<AccessToken>,
@@ -40,7 +39,13 @@ pub struct AccessTokenManager;
 
 impl AccessTokenManager {
     pub fn should_refresh_token(access_token: &Option<String>) -> bool {
-        access_token.is_none()
+        match access_token {
+            None => true,
+            Some(_token) => {
+                // Token exists, so we don't need to refresh it
+                false
+            }
+        }
     }
 
     pub fn supports_access_token(connector_name: &str, payment_method: common_enums::PaymentMethod) -> bool {
@@ -79,13 +84,12 @@ impl AccessTokenManager {
         }
     }
 
-    /// Handle OAuth token generation for ConnectorData directly
     pub async fn ensure_access_token_for_connector_data<T>(
         connector_data: &crate::types::ConnectorData<T>,
         payment_flow_data: &mut domain_types::connector_types::PaymentFlowData,
         connector_auth_details: &ConnectorAuthType,
         connector_name: &str,
-    ) -> CustomResult<(), ConnectorError> 
+    ) -> CustomResult<Option<AccessToken>, ConnectorError> 
     where
         T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Default + Send + Sync + 'static + serde::Serialize,
     {
@@ -107,18 +111,18 @@ impl AccessTokenManager {
                     };
                     
                     let access_token = volt.get_access_token(&token_router_data).await?;
-                    payment_flow_data.access_token = Some(access_token.token);
+                    payment_flow_data.access_token = Some(access_token.token.clone());
                     
                     tracing::info!("Successfully generated access token for connector: {}", connector_name);
-                    Ok(())
+                    Ok(Some(access_token))
                 }
                 _ => {
-                    Ok(())
+                    Ok(None)
                 }
             }
         } else {
             // No token refresh needed
-            Ok(())
+            Ok(None)
         }
     }
 }
