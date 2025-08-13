@@ -12,7 +12,9 @@ use rdkafka::{
 };
 
 use crate::{
-    KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_AUDIT_EVENT_QUEUE_SIZE, KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE
+    KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_AUDIT_EVENT_QUEUE_SIZE,
+    KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT,
+    KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE,
 };
 
 /// Kafka writer that implements std::io::Write for seamless integration with tracing
@@ -113,9 +115,9 @@ impl KafkaWriter {
                 KAFKA_AUDIT_EVENTS_SENT.inc();
                 Ok(())
             }
-            Err((kafka_error, _)) => {
+            Err((_kafka_error, _)) => {
                 KAFKA_AUDIT_EVENTS_DROPPED.inc();
-                Err(kafka_error)
+                Ok(())
             }
         }
     }
