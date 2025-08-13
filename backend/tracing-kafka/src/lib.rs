@@ -50,7 +50,7 @@
 
 mod layer;
 mod writer;
-mod builder;
+pub mod builder;
 
 pub use layer::{KafkaLayer, KafkaLayerError};
 pub use writer::{KafkaWriter, KafkaWriterError};

@@ -1,10 +1,9 @@
-#![cfg(feature = "kafka")]
-
 use anyhow::Result;
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
 use std::sync::Arc;
+use tracing_kafka::builder::KafkaWriterBuilder;
 use tracing_kafka::KafkaWriter;
 
 // Use the centralized event definitions from the events module
@@ -25,16 +24,10 @@ pub struct EventPublisher {
 impl EventPublisher {
     /// Creates a new EventPublisher, initializing the KafkaWriter.
     pub fn new(config: &EventConfig) -> Result<Self> {
-        let writer = KafkaWriter::new(
-            config.brokers.clone(),
-            config.topic.clone(),
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )?;
+        let writer = KafkaWriterBuilder::new()
+            .brokers(config.brokers.clone())
+            .topic(config.topic.clone())
+            .build()?;
 
         Ok(Self {
             writer: Arc::new(writer),

@@ -8,7 +8,9 @@ use log_utils::{
 use tracing::Subscriber;
 use tracing_subscriber::Layer;
 
+use crate::builder::KafkaWriterBuilder;
 use crate::writer::{KafkaWriter, KafkaWriterError};
+use std::time::Duration;
 
 /// Tracing layer that sends JSON-formatted logs to Kafka
 ///
@@ -19,8 +21,8 @@ pub struct KafkaLayer {
 
 impl KafkaLayer {
     /// Creates a new builder for configuring a KafkaLayer.
-    pub fn builder() -> super::builder::KafkaLayerBuilder {
-        super::builder::KafkaLayerBuilder::new()
+    pub fn builder() -> KafkaLayerBuilder {
+        KafkaLayerBuilder::new()
     }
 
     /// Creates a new KafkaLayer from a pre-configured KafkaWriter.
@@ -36,7 +38,7 @@ impl KafkaLayer {
             additional_fields_placement: AdditionalFieldsPlacement::TopLevel,
         };
 
-        let inner =
+        let inner: JsonFormattingLayer<KafkaWriter, serde_json::ser::CompactFormatter> =
             JsonFormattingLayer::new(config, kafka_writer, serde_json::ser::CompactFormatter)?;
 
         Ok(Self { inner })
@@ -98,4 +100,85 @@ pub enum KafkaLayerError {
 
     #[error("Missing topic configuration")]
     MissingTopic,
+}
+
+/// Builder for creating a KafkaLayer with custom configuration.
+#[derive(Debug, Clone, Default)]
+pub struct KafkaLayerBuilder {
+    writer_builder: KafkaWriterBuilder,
+    static_fields: HashMap<String, serde_json::Value>,
+}
+
+impl KafkaLayerBuilder {
+    /// Creates a new builder with default settings.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the Kafka brokers to connect to.
+    pub fn brokers(mut self, brokers: &[&str]) -> Self {
+        self.writer_builder = self.writer_builder.brokers(brokers.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
+    /// Sets the Kafka topic to send logs to.
+    pub fn topic(mut self, topic: impl Into<String>) -> Self {
+        self.writer_builder = self.writer_builder.topic(topic);
+        self
+    }
+
+    /// Sets the batch size for buffering messages before sending.
+    pub fn batch_size(mut self, size: usize) -> Self {
+        self.writer_builder = self.writer_builder.batch_size(size);
+        self
+    }
+
+    /// Sets the linger time in milliseconds.
+    pub fn linger_ms(mut self, ms: u64) -> Self {
+        self.writer_builder = self.writer_builder.linger_ms(ms);
+        self
+    }
+
+    /// Sets the linger time as a Duration.
+    pub fn linger(mut self, duration: Duration) -> Self {
+        self.writer_builder = self.writer_builder.linger(duration);
+        self
+    }
+
+    /// Sets the maximum number of messages to buffer in the producer's queue.
+    pub fn queue_buffering_max_messages(mut self, size: usize) -> Self {
+        self.writer_builder = self.writer_builder.queue_buffering_max_messages(size);
+        self
+    }
+
+    /// Sets the maximum size of the producer's queue in kilobytes.
+    pub fn queue_buffering_max_kbytes(mut self, size: usize) -> Self {
+        self.writer_builder = self.writer_builder.queue_buffering_max_kbytes(size);
+        self
+    }
+
+    /// Sets the reconnect backoff times.
+    pub fn reconnect_backoff(mut self, min: Duration, max: Duration) -> Self {
+        self.writer_builder = self.writer_builder.reconnect_backoff(min, max);
+        self
+    }
+
+    /// Adds static fields that will be included in every log entry.
+    /// These fields are added at the top level of the JSON output.
+    pub fn static_fields(mut self, fields: HashMap<String, serde_json::Value>) -> Self {
+        self.static_fields = fields;
+        self
+    }
+
+    /// Adds a single static field that will be included in every log entry.
+    pub fn add_static_field(mut self, key: String, value: serde_json::Value) -> Self {
+        self.static_fields.insert(key, value);
+        self
+    }
+
+    /// Builds the KafkaLayer with the configured settings.
+    pub fn build(self) -> Result<KafkaLayer, KafkaLayerError> {
+        let kafka_writer = self.writer_builder.build()?;
+        KafkaLayer::from_writer(kafka_writer, self.static_fields)
+    }
 }
