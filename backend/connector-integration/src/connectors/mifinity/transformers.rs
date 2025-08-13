@@ -1,4 +1,4 @@
-use common_enums::enums;
+use common_enums::{enums, Currency};
 use common_utils::{
     pii::{self, Email},
     types::StringMajorUnit,
@@ -63,7 +63,7 @@ pub struct MifinityPaymentsRequest {
 #[derive(Debug, Serialize, PartialEq)]
 pub struct Money {
     amount: StringMajorUnit,
-    currency: String,
+    currency: Currency,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -139,7 +139,7 @@ impl<
                                 item.router_data.request.currency,
                             )
                             .change_context(ConnectorError::RequestEncodingFailed)?,
-                        currency: item.router_data.request.currency.to_string(),
+                        currency: item.router_data.request.currency,
                     };
                     let phone_details =
                         item.router_data.resource_common_data.get_billing_phone()?;
