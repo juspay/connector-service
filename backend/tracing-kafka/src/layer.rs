@@ -117,7 +117,9 @@ impl KafkaLayerBuilder {
 
     /// Sets the Kafka brokers to connect to.
     pub fn brokers(mut self, brokers: &[&str]) -> Self {
-        self.writer_builder = self.writer_builder.brokers(brokers.iter().map(|s| s.to_string()).collect());
+        self.writer_builder = self
+            .writer_builder
+            .brokers(brokers.iter().map(|s| s.to_string()).collect());
         self
     }
 

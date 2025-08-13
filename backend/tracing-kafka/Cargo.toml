@@ -21,7 +21,9 @@ prometheus = { version = "0.13", optional = true }
 name = "tracing_kafka"
 path = "src/lib.rs"
 
-
 [features]
 default = ["kafka-metrics"]
 kafka-metrics = ["dep:once_cell", "dep:prometheus"]
+
+[lints]
+workspace = true
