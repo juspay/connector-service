@@ -11,7 +11,8 @@ use rdkafka::{
     producer::{BaseRecord, DefaultProducerContext, Producer, ThreadedProducer},
 };
 
-use crate::{
+#[cfg(feature = "kafka-metrics")]
+use super::metrics::{
     KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_AUDIT_EVENT_QUEUE_SIZE,
     KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT,
     KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE,
@@ -35,6 +36,7 @@ impl std::fmt::Debug for KafkaWriter {
 impl KafkaWriter {
     /// Creates a new KafkaWriter with the specified brokers and topic.
     /// Optionally accepts batch_size and linger_ms for custom configuration.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         brokers: Vec<String>,
         topic: String,
@@ -48,6 +50,7 @@ impl KafkaWriter {
         let mut config = ClientConfig::new();
         config.set("bootstrap.servers", brokers.join(","));
 
+        // Only set custom values if provided, otherwise use Kafka defaults
         if let Some(min_backoff) = reconnect_backoff_min_ms {
             config.set("reconnect.backoff.ms", min_backoff.to_string());
         }
@@ -60,8 +63,6 @@ impl KafkaWriter {
         if let Some(max_kbytes) = queue_buffering_max_kbytes {
             config.set("queue.buffering.max.kbytes", max_kbytes.to_string());
         }
-
-        // Only set custom values if provided, otherwise use Kafka defaults
         if let Some(size) = batch_size {
             config.set("batch.size", size.to_string());
         }
@@ -93,12 +94,12 @@ impl KafkaWriter {
         headers: Option<OwnedHeaders>,
     ) -> Result<(), KafkaError> {
         let queue_size = self.producer.in_flight_count();
-        KAFKA_AUDIT_EVENT_QUEUE_SIZE.set(queue_size as i64); // only the last seen queue size
+        KAFKA_AUDIT_EVENT_QUEUE_SIZE.set(queue_size.into()); // only the last seen queue size
 
         let mut record = BaseRecord::to(topic).payload(payload).timestamp(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis() as i64)
+                .map(|d| d.as_millis().try_into().unwrap_or(0))
                 .unwrap_or(0),
         );
 
@@ -115,53 +116,66 @@ impl KafkaWriter {
                 KAFKA_AUDIT_EVENTS_SENT.inc();
                 Ok(())
             }
-            Err((_kafka_error, _)) => {
+            Err((kafka_error, _)) => {
                 KAFKA_AUDIT_EVENTS_DROPPED.inc();
-                Ok(())
+                Err(kafka_error)
             }
         }
+    }
+
+    /// Creates a new builder for constructing a KafkaWriter
+    pub fn builder() -> crate::builder::KafkaWriterBuilder {
+        crate::builder::KafkaWriterBuilder::new()
     }
 }
 
 impl Write for KafkaWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        // Track queue depth for monitoring
-        let queue_size = self.producer.in_flight_count();
-        KAFKA_QUEUE_SIZE.set(queue_size as i64);
-
+        #[cfg(feature = "kafka-metrics")]
+        {
+            // Track queue depth for monitoring
+            let queue_size = self.producer.in_flight_count();
+            KAFKA_QUEUE_SIZE.set(queue_size.into());
+        }
         // Attach timestamp for event ordering in Kafka
         let record: BaseRecord<'_, (), [u8]> = BaseRecord::to(&self.topic).payload(buf).timestamp(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis() as i64)
+                .map(|d| d.as_millis().try_into().unwrap_or(0))
                 .unwrap_or(0),
         );
 
         match self.producer.send(record) {
             Ok(_) => {
+                #[cfg(feature = "kafka-metrics")]
                 KAFKA_LOGS_SENT.inc();
                 Ok(buf.len())
             }
             Err((kafka_error, _)) => {
-                KAFKA_LOGS_DROPPED.inc();
+                #[cfg(feature = "kafka-metrics")]
+                {
+                    KAFKA_LOGS_DROPPED.inc();
 
-                // Track specific drop reasons
-                match &kafka_error {
-                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull) => {
-                        KAFKA_DROPS_QUEUE_FULL.inc();
-                    }
-                    KafkaError::MessageProduction(
-                        rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
-                    ) => {
-                        KAFKA_DROPS_MSG_TOO_LARGE.inc();
-                    }
-                    KafkaError::MessageProduction(
-                        rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
-                    ) => {
-                        KAFKA_DROPS_TIMEOUT.inc();
-                    }
-                    _ => {
-                        KAFKA_DROPS_OTHER.inc();
+                    // Track specific drop reasons
+                    match &kafka_error {
+                        KafkaError::MessageProduction(
+                            rdkafka::error::RDKafkaErrorCode::QueueFull,
+                        ) => {
+                            KAFKA_DROPS_QUEUE_FULL.inc();
+                        }
+                        KafkaError::MessageProduction(
+                            rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
+                        ) => {
+                            KAFKA_DROPS_MSG_TOO_LARGE.inc();
+                        }
+                        KafkaError::MessageProduction(
+                            rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
+                        ) => {
+                            KAFKA_DROPS_TIMEOUT.inc();
+                        }
+                        _ => {
+                            KAFKA_DROPS_OTHER.inc();
+                        }
                     }
                 }
 
@@ -183,9 +197,9 @@ impl Write for KafkaWriter {
 #[derive(Debug, thiserror::Error)]
 pub enum KafkaWriterError {
     #[error("Failed to create Kafka producer: {0}")]
-    ProducerCreation(rdkafka::error::KafkaError),
+    ProducerCreation(KafkaError),
     #[error("Failed to fetch Kafka metadata: {0}")]
-    MetadataFetch(rdkafka::error::KafkaError),
+    MetadataFetch(KafkaError),
 }
 
 /// Make KafkaWriter compatible with tracing_appender's MakeWriter trait.
