@@ -5,7 +5,8 @@ mod tests {
     use hyperswitch_masking::Secret;
 
     use crate::connectors::volt::transformers::{
-        get_volt_payment_status, get_volt_webhook_event_type, VoltAuthType, VoltEventType, VoltPaymentStatus,
+        get_volt_payment_status, get_volt_webhook_event_type, VoltAuthType, VoltEventType,
+        VoltPaymentStatus,
     };
 
     #[test]
@@ -31,7 +32,7 @@ mod tests {
     #[test]
     fn test_volt_webhook_event_mapping() {
         use domain_types::connector_types::EventType;
-        
+
         assert_eq!(
             get_volt_webhook_event_type(VoltEventType::PaymentCompleted),
             EventType::Payment
