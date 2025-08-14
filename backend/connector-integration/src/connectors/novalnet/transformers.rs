@@ -352,6 +352,140 @@ impl<
                     custom,
                 })
             }
+            PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
+                WalletDataPaymentMethod::GooglePay(ref req_wallet) => {
+                    let novalnet_google_pay: NovalNetPaymentData<T> =
+                        NovalNetPaymentData::GooglePay(NovalnetGooglePay {
+                            wallet_data: Secret::new(
+                                req_wallet
+                                    .tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::MissingRequiredField {
+                                        field_name: "gpay wallet_token",
+                                    })?
+                                    .clone(),
+                            ),
+                        });
+
+                    let transaction = NovalnetPaymentsRequestTransaction {
+                        test_mode,
+                        payment_type: NovalNetPaymentTypes::GOOGLEPAY,
+                        amount: NovalNetAmount::StringMinor(amount.clone()),
+                        currency: item.router_data.request.currency,
+                        order_no: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        hook_url: Some(hook_url),
+                        return_url: None,
+                        error_return_url: None,
+                        payment_data: Some(novalnet_google_pay),
+                        enforce_3d,
+                        create_token,
+                        scheme_tid: None,
+                    };
+
+                    Ok(Self {
+                        merchant,
+                        transaction,
+                        customer,
+                        custom,
+                    })
+                }
+                WalletDataPaymentMethod::ApplePay(payment_method_data) => {
+                    let transaction = NovalnetPaymentsRequestTransaction {
+                        test_mode,
+                        payment_type: NovalNetPaymentTypes::APPLEPAY,
+                        amount: NovalNetAmount::StringMinor(amount.clone()),
+                        currency: item.router_data.request.currency,
+                        order_no: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        hook_url: Some(hook_url),
+                        return_url: None,
+                        error_return_url: None,
+                        payment_data: Some(NovalNetPaymentData::ApplePay(NovalnetApplePay {
+                            wallet_data: payment_method_data.get_applepay_decoded_payment_data()?,
+                        })),
+                        enforce_3d: None,
+                        create_token,
+                        scheme_tid: None,
+                    };
+
+                    Ok(Self {
+                        merchant,
+                        transaction,
+                        customer,
+                        custom,
+                    })
+                }
+                WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::AliPayRedirect(_)
+                | WalletDataPaymentMethod::AliPayHkRedirect(_)
+                | WalletDataPaymentMethod::AmazonPayRedirect(_)
+                | WalletDataPaymentMethod::MomoRedirect(_)
+                | WalletDataPaymentMethod::KakaoPayRedirect(_)
+                | WalletDataPaymentMethod::GoPayRedirect(_)
+                | WalletDataPaymentMethod::GcashRedirect(_)
+                | WalletDataPaymentMethod::ApplePayRedirect(_)
+                | WalletDataPaymentMethod::ApplePayThirdPartySdk(_)
+                | WalletDataPaymentMethod::DanaRedirect {}
+                | WalletDataPaymentMethod::GooglePayRedirect(_)
+                | WalletDataPaymentMethod::GooglePayThirdPartySdk(_)
+                | WalletDataPaymentMethod::MbWayRedirect(_)
+                | WalletDataPaymentMethod::MobilePayRedirect(_)
+                | WalletDataPaymentMethod::RevolutPay(_) => {
+                    Err(errors::ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    )
+                    .into())
+                }
+                WalletDataPaymentMethod::PaypalRedirect(_) => {
+                    let transaction = NovalnetPaymentsRequestTransaction {
+                        test_mode,
+                        payment_type: NovalNetPaymentTypes::PAYPAL,
+                        amount: NovalNetAmount::StringMinor(amount.clone()),
+                        currency: item.router_data.request.currency,
+                        order_no: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        hook_url: Some(hook_url),
+                        return_url: Some(return_url.clone()),
+                        error_return_url: Some(return_url.clone()),
+                        payment_data: None,
+                        enforce_3d: None,
+                        create_token,
+                        scheme_tid: None,
+                    };
+                    Ok(Self {
+                        merchant,
+                        transaction,
+                        customer,
+                        custom,
+                    })
+                }
+                WalletDataPaymentMethod::PaypalSdk(_)
+                | WalletDataPaymentMethod::Paze(_)
+                | WalletDataPaymentMethod::SamsungPay(_)
+                | WalletDataPaymentMethod::TwintRedirect {}
+                | WalletDataPaymentMethod::VippsRedirect {}
+                | WalletDataPaymentMethod::TouchNGoRedirect(_)
+                | WalletDataPaymentMethod::WeChatPayRedirect(_)
+                | WalletDataPaymentMethod::CashappQr(_)
+                | WalletDataPaymentMethod::SwishQr(_)
+                | WalletDataPaymentMethod::WeChatPayQr(_)
+                | WalletDataPaymentMethod::Mifinity(_) => {
+                    Err(errors::ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    )
+                    .into())
+                }
+            },
             _ => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             )
@@ -1805,7 +1939,15 @@ impl<
                 WalletDataPaymentMethod::GooglePay(ref req_wallet) => {
                     let novalnet_google_pay: NovalNetPaymentData<T> =
                         NovalNetPaymentData::GooglePay(NovalnetGooglePay {
-                            wallet_data: Secret::new(req_wallet.tokenization_data.token.clone()),
+                            wallet_data: Secret::new(
+                                req_wallet
+                                    .tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::MissingRequiredField {
+                                        field_name: "gpay wallet_token",
+                                    })?
+                                    .clone(),
+                            ),
                         });
 
                     let transaction = NovalnetPaymentsRequestTransaction {
