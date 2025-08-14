@@ -8,20 +8,111 @@ use rdkafka::{
     config::ClientConfig,
     error::KafkaError,
     message::OwnedHeaders,
-    producer::{BaseRecord, DefaultProducerContext, Producer, ThreadedProducer},
+    producer::{BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer},
+    ClientContext,
 };
 
 #[cfg(feature = "kafka-metrics")]
 use super::metrics::{
-    KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT, KAFKA_AUDIT_EVENT_QUEUE_SIZE,
-    KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER, KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT,
-    KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT, KAFKA_QUEUE_SIZE,
+    KAFKA_AUDIT_DROPS_MSG_TOO_LARGE, KAFKA_AUDIT_DROPS_OTHER, KAFKA_AUDIT_DROPS_QUEUE_FULL,
+    KAFKA_AUDIT_DROPS_TIMEOUT, KAFKA_AUDIT_EVENTS_DROPPED, KAFKA_AUDIT_EVENTS_SENT,
+    KAFKA_AUDIT_EVENT_QUEUE_SIZE, KAFKA_DROPS_MSG_TOO_LARGE, KAFKA_DROPS_OTHER,
+    KAFKA_DROPS_QUEUE_FULL, KAFKA_DROPS_TIMEOUT, KAFKA_LOGS_DROPPED, KAFKA_LOGS_SENT,
+    KAFKA_QUEUE_SIZE,
 };
+
+/// A `ProducerContext` that handles delivery callbacks to increment metrics.
+#[derive(Clone)]
+struct MetricsProducerContext;
+
+impl ClientContext for MetricsProducerContext {}
+
+impl ProducerContext for MetricsProducerContext {
+    type DeliveryOpaque = Box<KafkaMessageType>;
+
+    fn delivery(&self, delivery_result: &DeliveryResult<'_>, opaque: Self::DeliveryOpaque) {
+        let message_type = *opaque;
+        let is_success = delivery_result.is_ok();
+
+        #[cfg(feature = "kafka-metrics")]
+        {
+            match (message_type, is_success) {
+                (KafkaMessageType::Event, true) => KAFKA_AUDIT_EVENTS_SENT.inc(),
+                (KafkaMessageType::Event, false) => KAFKA_AUDIT_EVENTS_DROPPED.inc(),
+                (KafkaMessageType::Log, true) => KAFKA_LOGS_SENT.inc(),
+                (KafkaMessageType::Log, false) => KAFKA_LOGS_DROPPED.inc(),
+            }
+        }
+
+        if let Err((kafka_error, _)) = delivery_result {
+            #[cfg(feature = "kafka-metrics")]
+            match (message_type, &kafka_error) {
+                (
+                    KafkaMessageType::Event,
+                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull),
+                ) => {
+                    KAFKA_AUDIT_DROPS_QUEUE_FULL.inc();
+                }
+                (
+                    KafkaMessageType::Event,
+                    KafkaError::MessageProduction(
+                        rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
+                    ),
+                ) => {
+                    KAFKA_AUDIT_DROPS_MSG_TOO_LARGE.inc();
+                }
+                (
+                    KafkaMessageType::Event,
+                    KafkaError::MessageProduction(
+                        rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
+                    ),
+                ) => {
+                    KAFKA_AUDIT_DROPS_TIMEOUT.inc();
+                }
+                (KafkaMessageType::Event, _) => {
+                    KAFKA_AUDIT_DROPS_OTHER.inc();
+                }
+                (
+                    KafkaMessageType::Log,
+                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull),
+                ) => {
+                    KAFKA_DROPS_QUEUE_FULL.inc();
+                }
+                (
+                    KafkaMessageType::Log,
+                    KafkaError::MessageProduction(
+                        rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
+                    ),
+                ) => {
+                    KAFKA_DROPS_MSG_TOO_LARGE.inc();
+                }
+                (
+                    KafkaMessageType::Log,
+                    KafkaError::MessageProduction(
+                        rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
+                    ),
+                ) => {
+                    KAFKA_DROPS_TIMEOUT.inc();
+                }
+                (KafkaMessageType::Log, _) => {
+                    KAFKA_DROPS_OTHER.inc();
+                }
+            }
+        }
+    }
+}
+
+/// This enum helps the callback distinguish between logs and events.
+#[derive(Clone, Copy, Debug)]
+enum KafkaMessageType {
+    Event,
+    Log,
+}
 
 /// Kafka writer that implements std::io::Write for seamless integration with tracing
 #[derive(Clone)]
 pub struct KafkaWriter {
-    producer: Arc<ThreadedProducer<DefaultProducerContext>>,
+    producer: Arc<ThreadedProducer<MetricsProducerContext>>,
     topic: String,
 }
 
@@ -35,7 +126,6 @@ impl std::fmt::Debug for KafkaWriter {
 
 impl KafkaWriter {
     /// Creates a new KafkaWriter with the specified brokers and topic.
-    /// Optionally accepts batch_size and linger_ms for custom configuration.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         brokers: Vec<String>,
@@ -50,7 +140,6 @@ impl KafkaWriter {
         let mut config = ClientConfig::new();
         config.set("bootstrap.servers", brokers.join(","));
 
-        // Only set custom values if provided, otherwise use Kafka defaults
         if let Some(min_backoff) = reconnect_backoff_min_ms {
             config.set("reconnect.backoff.ms", min_backoff.to_string());
         }
@@ -70,8 +159,8 @@ impl KafkaWriter {
             config.set("linger.ms", ms.to_string());
         }
 
-        let producer: ThreadedProducer<DefaultProducerContext> = config
-            .create()
+        let producer: ThreadedProducer<MetricsProducerContext> = config
+            .create_with_context(MetricsProducerContext)
             .map_err(KafkaWriterError::ProducerCreation)?;
 
         producer
@@ -85,7 +174,8 @@ impl KafkaWriter {
         })
     }
 
-    /// Publishes a single event to Kafka with an optional key and headers.
+    /// Publishes a single event to Kafka. This method is non-blocking.
+    /// Returns an error if the message cannot be enqueued to the producer's buffer.
     pub fn publish_event(
         &self,
         topic: &str,
@@ -93,15 +183,20 @@ impl KafkaWriter {
         payload: &[u8],
         headers: Option<OwnedHeaders>,
     ) -> Result<(), KafkaError> {
-        let queue_size = self.producer.in_flight_count();
-        KAFKA_AUDIT_EVENT_QUEUE_SIZE.set(queue_size.into()); // only the last seen queue size
+        #[cfg(feature = "kafka-metrics")]
+        {
+            let queue_size = self.producer.in_flight_count();
+            KAFKA_AUDIT_EVENT_QUEUE_SIZE.set(queue_size.into());
+        }
 
-        let mut record = BaseRecord::to(topic).payload(payload).timestamp(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis().try_into().unwrap_or(0))
-                .unwrap_or(0),
-        );
+        let mut record = BaseRecord::with_opaque_to(topic, Box::new(KafkaMessageType::Event))
+            .payload(payload)
+            .timestamp(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis().try_into().unwrap_or(0))
+                    .unwrap_or(0),
+            );
 
         if let Some(k) = key {
             record = record.key(k);
@@ -112,12 +207,24 @@ impl KafkaWriter {
         }
 
         match self.producer.send(record) {
-            Ok(_) => {
-                KAFKA_AUDIT_EVENTS_SENT.inc();
-                Ok(())
-            }
+            Ok(_) => Ok(()),
             Err((kafka_error, _)) => {
-                KAFKA_AUDIT_EVENTS_DROPPED.inc();
+                #[cfg(feature = "kafka-metrics")]
+                {
+                    KAFKA_AUDIT_EVENTS_DROPPED.inc();
+
+                    // Only QUEUE_FULL can happen during send() - others happen during delivery
+                    match &kafka_error {
+                        KafkaError::MessageProduction(
+                            rdkafka::error::RDKafkaErrorCode::QueueFull,
+                        ) => {
+                            KAFKA_AUDIT_DROPS_QUEUE_FULL.inc();
+                        }
+                        _ => {
+                            KAFKA_AUDIT_DROPS_OTHER.inc();
+                        }
+                    }
+                }
                 Err(kafka_error)
             }
         }
@@ -133,60 +240,41 @@ impl Write for KafkaWriter {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         #[cfg(feature = "kafka-metrics")]
         {
-            // Track queue depth for monitoring
             let queue_size = self.producer.in_flight_count();
             KAFKA_QUEUE_SIZE.set(queue_size.into());
         }
-        // Attach timestamp for event ordering in Kafka
-        let record: BaseRecord<'_, (), [u8]> = BaseRecord::to(&self.topic).payload(buf).timestamp(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_millis().try_into().unwrap_or(0))
-                .unwrap_or(0),
-        );
 
-        match self.producer.send(record) {
-            Ok(_) => {
-                #[cfg(feature = "kafka-metrics")]
-                KAFKA_LOGS_SENT.inc();
-                Ok(buf.len())
-            }
-            Err((kafka_error, _)) => {
-                #[cfg(feature = "kafka-metrics")]
-                {
-                    KAFKA_LOGS_DROPPED.inc();
+        let record = BaseRecord::with_opaque_to(&self.topic, Box::new(KafkaMessageType::Log))
+            .payload(buf)
+            .timestamp(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_millis().try_into().unwrap_or(0))
+                    .unwrap_or(0),
+            );
 
-                    // Track specific drop reasons
-                    match &kafka_error {
-                        KafkaError::MessageProduction(
-                            rdkafka::error::RDKafkaErrorCode::QueueFull,
-                        ) => {
-                            KAFKA_DROPS_QUEUE_FULL.inc();
-                        }
-                        KafkaError::MessageProduction(
-                            rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
-                        ) => {
-                            KAFKA_DROPS_MSG_TOO_LARGE.inc();
-                        }
-                        KafkaError::MessageProduction(
-                            rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
-                        ) => {
-                            KAFKA_DROPS_TIMEOUT.inc();
-                        }
-                        _ => {
-                            KAFKA_DROPS_OTHER.inc();
-                        }
+        if let Err((kafka_error, _)) = self.producer.send::<(), [u8]>(record) {
+            #[cfg(feature = "kafka-metrics")]
+            {
+                KAFKA_LOGS_DROPPED.inc();
+
+                match &kafka_error {
+                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull) => {
+                        KAFKA_DROPS_QUEUE_FULL.inc();
+                    }
+                    _ => {
+                        KAFKA_DROPS_OTHER.inc();
                     }
                 }
-
-                // Non-blocking: drop logs rather than block the app
-                Ok(buf.len())
             }
         }
+
+        // Return Ok to not block the application. The actual delivery result
+        // is handled by the callback in the background.
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        // Flush the producer to ensure messages are sent
         self.producer
             .flush(rdkafka::util::Timeout::After(Duration::from_secs(5)))
             .map_err(|e: KafkaError| io::Error::other(format!("Kafka flush failed: {e}")))

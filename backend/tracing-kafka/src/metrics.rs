@@ -93,7 +93,7 @@ pub static KAFKA_AUDIT_EVENTS_DROPPED: Lazy<IntCounter> = Lazy::new(|| {
     .expect("Failed to register kafka_audit_events_dropped_total metric")
 });
 
-/// Total number of audit events dropped due to Kafka queue full or errors
+/// Current size of Kafka audit event producer queue
 #[allow(clippy::expect_used)]
 pub static KAFKA_AUDIT_EVENT_QUEUE_SIZE: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
@@ -101,4 +101,44 @@ pub static KAFKA_AUDIT_EVENT_QUEUE_SIZE: Lazy<IntGauge> = Lazy::new(|| {
         "Current size of Kafka audit event producer queue"
     )
     .expect("Failed to register kafka_audit_event_queue_size metric")
+});
+
+/// Audit events dropped due to queue full
+#[allow(clippy::expect_used)]
+pub static KAFKA_AUDIT_DROPS_QUEUE_FULL: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_audit_drops_queue_full_total",
+        "Total number of audit events dropped due to Kafka queue being full"
+    )
+    .expect("Failed to register kafka_audit_drops_queue_full_total metric")
+});
+
+/// Audit events dropped due to message too large
+#[allow(clippy::expect_used)]
+pub static KAFKA_AUDIT_DROPS_MSG_TOO_LARGE: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_audit_drops_msg_too_large_total",
+        "Total number of audit events dropped due to message size exceeding limit"
+    )
+    .expect("Failed to register kafka_audit_drops_msg_too_large_total metric")
+});
+
+/// Audit events dropped due to timeout
+#[allow(clippy::expect_used)]
+pub static KAFKA_AUDIT_DROPS_TIMEOUT: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_audit_drops_timeout_total",
+        "Total number of audit events dropped due to timeout"
+    )
+    .expect("Failed to register kafka_audit_drops_timeout_total metric")
+});
+
+/// Audit events dropped due to other errors
+#[allow(clippy::expect_used)]
+pub static KAFKA_AUDIT_DROPS_OTHER: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "kafka_audit_drops_other_total",
+        "Total number of audit events dropped due to other errors"
+    )
+    .expect("Failed to register kafka_audit_drops_other_total metric")
 });
