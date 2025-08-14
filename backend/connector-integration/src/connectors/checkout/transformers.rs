@@ -739,8 +739,7 @@ impl<F>
             psync_flow: CheckoutPaymentIntent::Capture,
         });
 
-        router_data.response = Ok(
-            PaymentsResponseData::TransactionResponse {
+        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(resource_id),
             redirection_data: None,
             mandate_reference: None,

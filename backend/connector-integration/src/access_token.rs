@@ -1,10 +1,8 @@
 use common_enums;
 use common_utils::errors::CustomResult;
 use domain_types::{
-    errors::ConnectorError,
-    router_data::ConnectorAuthType,
+    connector_types::PaymentFlowData, errors::ConnectorError, router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    connector_types::PaymentFlowData,
 };
 use grpc_api_types::payments::AccessToken;
 use hyperswitch_masking::Secret;
@@ -17,9 +15,7 @@ pub struct ConnectorState {
 
 impl ConnectorState {
     pub fn new() -> Self {
-        Self {
-            access_token: None,
-        }
+        Self { access_token: None }
     }
 
     pub fn with_access_token(access_token: AccessToken) -> Self {
@@ -48,11 +44,11 @@ impl AccessTokenManager {
         }
     }
 
-    pub fn supports_access_token(connector_name: &str, payment_method: common_enums::PaymentMethod) -> bool {
-        matches!(
-            (connector_name, payment_method),
-            ("volt", _)
-        )
+    pub fn supports_access_token(
+        connector_name: &str,
+        payment_method: common_enums::PaymentMethod,
+    ) -> bool {
+        matches!((connector_name, payment_method), ("volt", _))
     }
 
     pub async fn ensure_access_token<T: AccessTokenAuth<(), (), AccessToken>>(
@@ -61,22 +57,30 @@ impl AccessTokenManager {
         connector_auth_details: &ConnectorAuthType,
         connector_name: &str,
     ) -> CustomResult<(), ConnectorError> {
-        if Self::supports_access_token(connector_name, payment_flow_data.payment_method) 
-            && Self::should_refresh_token(&payment_flow_data.access_token) {
-            
+        if Self::supports_access_token(connector_name, payment_flow_data.payment_method)
+            && Self::should_refresh_token(&payment_flow_data.access_token)
+        {
             tracing::info!("Generating access token for connector: {}", connector_name);
-            
-            let token_router_data = RouterDataV2::<(), domain_types::connector_types::PaymentFlowData, (), AccessToken> {
+
+            let token_router_data = RouterDataV2::<
+                (),
+                domain_types::connector_types::PaymentFlowData,
+                (),
+                AccessToken,
+            > {
                 flow: std::marker::PhantomData,
                 resource_common_data: payment_flow_data.clone(),
                 connector_auth_type: connector_auth_details.clone(),
                 request: (),
                 response: Err(domain_types::router_data::ErrorResponse::default()),
             };
-            
+
             let access_token = connector.get_access_token(&token_router_data).await?;
-            
-            tracing::info!("Successfully generated access token for connector: {}", connector_name);
+
+            tracing::info!(
+                "Successfully generated access token for connector: {}",
+                connector_name
+            );
             payment_flow_data.access_token = Some(access_token.token);
             Ok(())
         } else {
@@ -89,36 +93,48 @@ impl AccessTokenManager {
         payment_flow_data: &mut domain_types::connector_types::PaymentFlowData,
         connector_auth_details: &ConnectorAuthType,
         connector_name: &str,
-    ) -> CustomResult<Option<AccessToken>, ConnectorError> 
+    ) -> CustomResult<Option<AccessToken>, ConnectorError>
     where
-        T: domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + Default + Send + Sync + 'static + serde::Serialize,
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + Default
+            + Send
+            + Sync
+            + 'static
+            + serde::Serialize,
     {
-        if Self::supports_access_token(connector_name, payment_flow_data.payment_method) 
-            && Self::should_refresh_token(&payment_flow_data.access_token) {
-            
+        if Self::supports_access_token(connector_name, payment_flow_data.payment_method)
+            && Self::should_refresh_token(&payment_flow_data.access_token)
+        {
             tracing::info!("Generating access token for connector: {}", connector_name);
-            
+
             match connector_data.connector_name {
                 domain_types::connector_types::ConnectorEnum::Volt => {
                     let volt = crate::connectors::Volt::<T>::new();
-                    
-                    let token_router_data = RouterDataV2::<(), domain_types::connector_types::PaymentFlowData, (), AccessToken> {
+
+                    let token_router_data = RouterDataV2::<
+                        (),
+                        domain_types::connector_types::PaymentFlowData,
+                        (),
+                        AccessToken,
+                    > {
                         flow: std::marker::PhantomData,
                         resource_common_data: payment_flow_data.clone(),
                         connector_auth_type: connector_auth_details.clone(),
                         request: (),
                         response: Err(domain_types::router_data::ErrorResponse::default()),
                     };
-                    
+
                     let access_token = volt.get_access_token(&token_router_data).await?;
                     payment_flow_data.access_token = Some(access_token.token.clone());
-                    
-                    tracing::info!("Successfully generated access token for connector: {}", connector_name);
+
+                    tracing::info!(
+                        "Successfully generated access token for connector: {}",
+                        connector_name
+                    );
                     Ok(Some(access_token))
                 }
-                _ => {
-                    Ok(None)
-                }
+                _ => Ok(None),
             }
         } else {
             // No token refresh needed
@@ -147,7 +163,7 @@ pub struct AccessTokenRequestData {
 
 impl TryFrom<&ConnectorAuthType> for AccessTokenRequestData {
     type Error = ConnectorError;
-    
+
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
             ConnectorAuthType::HeaderKey { api_key } => Ok(Self {

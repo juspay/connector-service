@@ -5,8 +5,8 @@ use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType}
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
-    DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
+    AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
+    DisputeResponse, DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
@@ -1277,12 +1277,10 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-    
+
     // Create state with access token if UCS generated a new one
-    let state = generated_access_token.map(|access_token| {
-        ConnectorState {
-            access_token: Some(access_token),
-        }
+    let state = generated_access_token.map(|access_token| ConnectorState {
+        access_token: Some(access_token),
     });
     let response = match transaction_response {
         Ok(response) => match response {
@@ -1358,7 +1356,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     raw_connector_response,
                     status_code: status_code as u32,
                     response_headers,
-                    state, 
+                    state,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1392,7 +1390,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code as u32,
                 response_headers,
                 connector_metadata: std::collections::HashMap::new(),
-                state: None, 
+                state: None,
             }
         }
     };
@@ -1699,7 +1697,7 @@ pub fn generate_payment_void_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
-                    state: None, 
+                    state: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -1734,7 +1732,7 @@ pub fn generate_payment_void_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                state: None, 
+                state: None,
             })
         }
     }
@@ -1809,13 +1807,16 @@ pub fn generate_payment_sync_response(
                     merchant_order_reference_id: None,
                     metadata: connector_metadata
                         .and_then(|value| value.as_object().cloned())
-                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
-                            .map(|s| (k, s.to_string())))
-                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
+                        .map(|map| {
+                            map.into_iter()
+                                .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+                                .collect::<HashMap<_, _>>()
+                        })
+                        .unwrap_or_default(),
                     raw_connector_response,
                     status_code: status_code as u32,
                     response_headers,
-                    state: None, 
+                    state: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2157,7 +2158,7 @@ pub fn generate_refund_sync_response(
                 raw_connector_response: response.raw_connector_response,
                 status_code: response.status_code as u32,
                 response_headers,
-                state: None, 
+                state: None,
             })
         }
         Err(e) => {
@@ -2265,7 +2266,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             raw_connector_response: value.raw_connector_response,
             status_code: value.status_code as u32,
             response_headers,
-            state: None, 
+            state: None,
         })
     }
 }
@@ -2347,7 +2348,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             raw_connector_response: value.raw_connector_response,
             status_code: value.status_code as u32,
             response_headers,
-            state: None, 
+            state: None,
         })
     }
 }
@@ -2651,7 +2652,7 @@ pub fn generate_refund_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                state: None, 
+                state: None,
             })
         }
         Err(e) => {
@@ -2692,7 +2693,7 @@ pub fn generate_refund_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                state: None, 
+                state: None,
             })
         }
     }
@@ -2852,7 +2853,7 @@ pub fn generate_payment_capture_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
-                    state: None, 
+                    state: None,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2887,7 +2888,7 @@ pub fn generate_payment_capture_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
-                state: None, 
+                state: None,
             })
         }
     }

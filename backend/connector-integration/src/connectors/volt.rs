@@ -5,19 +5,19 @@ use std::sync::LazyLock;
 
 use base64::Engine;
 use common_enums::{CaptureMethod, EventClass, PaymentMethod, PaymentMethodType};
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt,
-};
-use grpc_api_types::payments::AccessToken;
-use hyperswitch_masking::Secret;
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
-    connector_flow::{Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void},
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        RepeatPayment, SetupMandate, SubmitEvidence, Void,
+    },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, PaymentVoidData, RefundFlowData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId,
-        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, ResponseId, SetupMandateRequestData, SubmitEvidenceData,
+        SupportedPaymentMethodsExt,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -29,6 +29,8 @@ use domain_types::{
         SupportedPaymentMethods,
     },
 };
+use grpc_api_types::payments::AccessToken;
+use hyperswitch_masking::Secret;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
@@ -37,8 +39,11 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
-    self as volt, VoltPaymentRequest, VoltPaymentResponse, VoltPSyncResponse,
-    // VoltCaptureRequest, VoltCaptureResponse, VoltRefundRequest, VoltRefundResponse, 
+    self as volt,
+    VoltPSyncResponse,
+    // VoltCaptureRequest, VoltCaptureResponse, VoltRefundRequest, VoltRefundResponse,
+    VoltPaymentRequest,
+    VoltPaymentResponse,
 };
 
 use super::macros;
@@ -233,7 +238,8 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Volt<T>
+    > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
+    for Volt<T>
 {
 }
 impl<
@@ -243,7 +249,9 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData> for Volt<T>
+    >
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Volt<T>
 {
 }
 impl<
@@ -253,7 +261,8 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData> for Volt<T>
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Volt<T>
 {
 }
 impl<
@@ -263,7 +272,13 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData> for Volt<T>
+    >
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Volt<T>
 {
 }
 impl<
@@ -273,7 +288,9 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData> for Volt<T>
+    >
+    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
+    for Volt<T>
 {
 }
 impl<
@@ -283,7 +300,13 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse> for Volt<T>
+    >
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Volt<T>
 {
 }
 impl<
@@ -293,7 +316,13 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<domain_types::connector_flow::CreateSessionToken, PaymentFlowData, domain_types::connector_types::SessionTokenRequestData, domain_types::connector_types::SessionTokenResponseData> for Volt<T>
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateSessionToken,
+        PaymentFlowData,
+        domain_types::connector_types::SessionTokenRequestData,
+        domain_types::connector_types::SessionTokenResponseData,
+    > for Volt<T>
 {
 }
 impl<
@@ -303,7 +332,8 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Volt<T>
+    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+    for Volt<T>
 {
 }
 impl<
@@ -313,7 +343,8 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> for Volt<T>
+    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+    for Volt<T>
 {
 }
 impl<
@@ -333,7 +364,8 @@ impl<
             + std::marker::Send
             + 'static
             + serde::Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData> for Volt<T>
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Volt<T>
 {
 }
 
@@ -375,7 +407,7 @@ macros::create_all_prerequisites!(
             // Check if we need to refresh the access token
             if router_data.resource_common_data.access_token.is_none() {
                 tracing::info!("Access token not available, requesting new token from Volt");
-                
+
                 // Get new access token from Volt's OAuth endpoint
                 let auth = volt::VoltAuthType::try_from(&router_data.connector_auth_type)?;
                 let request = VoltAccessTokenRequest {
@@ -385,7 +417,7 @@ macros::create_all_prerequisites!(
                     client_id: auth.client_id,
                     client_secret: auth.client_secret,
                 };
-                
+
                 let body = serde_urlencoded::to_string(&[
                     ("grant_type", request.grant_type.as_str()),
                     ("username", &request.username.expose()),
@@ -394,9 +426,9 @@ macros::create_all_prerequisites!(
                     ("client_secret", &request.client_secret.expose()),
                 ])
                 .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-                
+
                 let url = format!("{}oauth", router_data.resource_common_data.connectors.volt.base_url);
-                
+
                 // Make HTTP request to OAuth endpoint
                 let client = reqwest::Client::new();
                 let response = client
@@ -427,7 +459,7 @@ macros::create_all_prerequisites!(
 
                 // Convert to access token string and store in router_data
                 router_data.resource_common_data.access_token = Some(token_response.access_token.clone());
-                
+
                 tracing::info!("Successfully obtained access token from Volt");
             }
             Ok(())
@@ -441,7 +473,7 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )];
-            
+
             // Use access token if available, otherwise fallback to basic auth
             if let Some(access_token) = &req.resource_common_data.access_token {
                 let auth_header = (
@@ -453,7 +485,7 @@ macros::create_all_prerequisites!(
                 let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
                 headers.append(&mut api_key);
             }
-            
+
             Ok(headers)
         }
 
@@ -465,10 +497,10 @@ macros::create_all_prerequisites!(
                 headers::CONTENT_TYPE.to_string(),
                 "application/json".to_string().into(),
             )];
-            
+
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             headers.append(&mut api_key);
-            
+
             Ok(headers)
         }
 
@@ -490,25 +522,30 @@ macros::create_all_prerequisites!(
 );
 
 // Implement access token support for Volt
-impl<T, F: Sync, Req: Sync, Res: Sync> AccessTokenAuth<F, Req, Res> for Volt<T> 
+impl<T, F: Sync, Req: Sync, Res: Sync> AccessTokenAuth<F, Req, Res> for Volt<T>
 where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
 {
     async fn get_access_token(
         &self,
         router_data: &RouterDataV2<F, domain_types::connector_types::PaymentFlowData, Req, Res>,
     ) -> CustomResult<grpc_api_types::payments::AccessToken, errors::ConnectorError> {
         let auth = volt::VoltAuthType::try_from(&router_data.connector_auth_type)?;
-        
+
         // Debug log credential mapping (without exposing secrets)
         tracing::debug!(
             "OAuth credential mapping - username_len: {}, password_len: {}, client_id_len: {}, client_secret_len: {}",
             auth.username.clone().expose().len(),
-            auth.password.clone().expose().len(), 
+            auth.password.clone().expose().len(),
             auth.client_id.clone().expose().len(),
             auth.client_secret.clone().expose().len()
         );
-        
+
         let request = VoltAccessTokenRequest {
             grant_type: "password".to_string(),
             username: auth.username,
@@ -516,11 +553,12 @@ where
             client_id: auth.client_id,
             client_secret: auth.client_secret,
         };
-        
-        let _headers: Vec<(String, hyperswitch_masking::Maskable<String>)> = vec![
-            ("Content-Type".to_string(), "application/x-www-form-urlencoded".to_string().into()),
-        ];
-        
+
+        let _headers: Vec<(String, hyperswitch_masking::Maskable<String>)> = vec![(
+            "Content-Type".to_string(),
+            "application/x-www-form-urlencoded".to_string().into(),
+        )];
+
         let body = serde_urlencoded::to_string(&[
             ("grant_type", request.grant_type.as_str()),
             ("username", &request.username.expose()),
@@ -529,9 +567,12 @@ where
             ("client_secret", &request.client_secret.expose()),
         ])
         .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-        
-        let url = format!("{}oauth", router_data.resource_common_data.connectors.volt.base_url);
-        
+
+        let url = format!(
+            "{}oauth",
+            router_data.resource_common_data.connectors.volt.base_url
+        );
+
         // Make HTTP request to OAuth endpoint
         let client = reqwest::Client::new();
         let response = client
@@ -548,21 +589,22 @@ where
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
-            tracing::error!("OAuth request failed with status {}: {}", status, error_text);
+            tracing::error!(
+                "OAuth request failed with status {}: {}",
+                status,
+                error_text
+            );
             return Err(errors::ConnectorError::RequestEncodingFailed.into());
         }
 
-        let token_response: VoltAccessTokenResponse = response
-            .json()
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to parse OAuth response from Volt: {}", e);
-                errors::ConnectorError::ResponseDeserializationFailed
-            })?;
+        let token_response: VoltAccessTokenResponse = response.json().await.map_err(|e| {
+            tracing::error!("Failed to parse OAuth response from Volt: {}", e);
+            errors::ConnectorError::ResponseDeserializationFailed
+        })?;
 
         // Convert to domain AccessToken
         let access_token = grpc_api_types::payments::AccessToken::from(token_response);
-        
+
         tracing::info!("Successfully obtained access token from Volt");
         Ok(access_token)
     }
@@ -593,13 +635,16 @@ impl<
         // In production, OAuth token management should be handled at infrastructure level
         let auth = volt::VoltAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-        
-        let basic_auth = format!("Basic {}", 
-            base64::engine::general_purpose::STANDARD.encode(
-                format!("{}:{}", auth.client_id.expose(), auth.client_secret.expose())
-            )
+
+        let basic_auth = format!(
+            "Basic {}",
+            base64::engine::general_purpose::STANDARD.encode(format!(
+                "{}:{}",
+                auth.client_id.expose(),
+                auth.client_secret.expose()
+            ))
         );
-        
+
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
             basic_auth.into_masked(),
@@ -661,7 +706,7 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
     other_functions: {
-        
+
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
@@ -689,8 +734,8 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
     other_functions: {
-        
-        
+
+
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -768,7 +813,6 @@ macros::macro_connector_implementation!(
 //         }
 //     }
 // );
-
 
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
@@ -953,7 +997,6 @@ impl<
 {
 }
 
-
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1006,10 +1049,7 @@ impl<
 }
 
 static VOLT_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
-    let _volt_supported_capture_methods = vec![
-        CaptureMethod::Automatic,
-        CaptureMethod::Manual,
-    ];
+    let _volt_supported_capture_methods = vec![CaptureMethod::Automatic, CaptureMethod::Manual];
 
     let mut volt_supported_payment_methods = SupportedPaymentMethods::new();
 
@@ -1018,8 +1058,8 @@ static VOLT_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyL
         PaymentMethodType::OpenBankingUk,
         PaymentMethodDetails {
             mandates: FeatureStatus::NotSupported,
-            refunds: FeatureStatus::NotSupported, 
-            supported_capture_methods: vec![CaptureMethod::Automatic], 
+            refunds: FeatureStatus::NotSupported,
+            supported_capture_methods: vec![CaptureMethod::Automatic],
             specific_features: None,
         },
     );
@@ -1071,7 +1111,12 @@ impl ConnectorValidation for Volt<domain_types::payment_method_data::DefaultPCIH
 }
 
 // Empty webhook implementation - uses default "not supported" behavior from trait
-impl<T> connector_types::IncomingWebhook for Volt<T> 
-where
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
-{}
+impl<T> connector_types::IncomingWebhook for Volt<T> where
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize
+{
+}
