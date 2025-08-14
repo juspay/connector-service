@@ -1080,6 +1080,8 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+
+  optional bool test_mode = 31;
 }
 
 // Response message for a payment authorization.
