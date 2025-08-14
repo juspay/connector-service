@@ -151,7 +151,7 @@ use domain_types::{
 };
 use serde::Serialize;
 use std::fmt::Debug;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
@@ -807,7 +807,7 @@ impl ConnectorIntegration<Authorize, PaymentsAuthorizeData, PaymentsResponseData
 )
 ```
 
-32. Copy and paste the following code block as it is in the file under ConnectorCommon impl
+32. Copy and paste the following code block as it is in the file under ConnectorCommon impl, dont fix any errors and dont combine multiple steps
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -846,6 +846,46 @@ get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
     //..
+    flow_name: PSync,
+)
+```
+34.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 33
+```rust
+fn get_request_body(
+    &self,
+    req: &PaymentsSyncRouterData,
+    //..
+    let connector_req = new_connector_name::New_connector_nameSyncRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameSyncRequest
+    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
+}
+fn handle_response(
+    //..
+    let response: new_connector_name::New_connector_nameSyncResponse = res //This one is the response struct i.e New_connector_nameSyncResponse
+}
+```
+
+34.c. Add the request struct name and response struct name to import from transformers
+```rust
+use transformers::{
+    self as new_connector_name, New_connector_nameSyncRequest, New_connector_nameSyncResponse,
+};
+```
+
+34.d. Add the request struct name and response struct name in the flow: PSync of api: [] block in macros::create_all_prerequisites,
+```rust
+(
+    flow: PSync,
+    request_body: New_connector_nameSyncRequest<T>,
+    response_body: New_connector_nameSyncResponse,
+    router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+```
+
+34.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: PSync
+```rust
+macros::macro_connector_implementation!(
+    //..
+    curl_request: Format(New_connector_nameSyncRequest),
+    curl_response: New_connector_nameSyncResponse,
     flow_name: PSync,
 )
 ```
@@ -926,7 +966,7 @@ macros::macro_connector_implementation!(
 )
 ```
 
-40.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 39
+40.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 39, dont fix any errors and dont combine multiple steps
 ```rust
 fn get_request_body(
     &self,
@@ -1036,11 +1076,51 @@ macros::macro_connector_implementation!(
 impl ConnectorIntegration<RSync, RefundsData, RefundsResponseData> for New_connector_name
 ```
 
-46. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+46.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
     //..
+    flow_name: RSync,
+)
+```
+46.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 45
+```rust
+fn get_request_body(
+    &self,
+    req: &RefundSyncRouterData,
+    //..
+    let connector_req = new_connector_name::New_connector_nameRSyncRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_nameRSyncRequest
+    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
+}
+fn handle_response(
+    //..
+    let response: new_connector_name::New_connector_nameRSyncResponse = res //This one is the response struct i.e New_connector_nameRSyncResponse
+}
+```
+
+46.c. Add the request struct name and response struct name to import from transformers
+```rust
+use transformers::{
+    self as new_connector_name, New_connector_nameRSyncRequest, New_connector_nameRSyncResponse,
+};
+```
+
+46.d. Add the request struct name and response struct name in the flow: RSync of api: [] block in macros::create_all_prerequisites,
+```rust
+(
+    flow: RSync,
+    request_body: New_connector_nameRSyncRequest<T>,
+    response_body: New_connector_nameRSyncResponse,
+    router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+```
+
+46.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: RSync
+```rust
+macros::macro_connector_implementation!(
+    //..
+    curl_request: Format(New_connector_nameRSyncRequest),
+    curl_response: New_connector_nameRSyncResponse,
     flow_name: RSync,
 )
 ```
@@ -2085,12 +2165,6 @@ Ok(Self {
     response: //..
 ```
 
-120. Follow the following steps to remove the common errors
-
-a. Replace all the "enums" with "common_enums"
-
-b. Replace all "Box::new(None)" with "None"
-
 ### File: backend/connector-integration/src/connectors/new_connector.rs
 
 120. Remove the following unused code, dont fix any errors and dont combine multiple steps
@@ -2100,3 +2174,8 @@ impl ConnectorIntegration
 impl IncomingWebhook
 impl ConnectorSpecifications
 ```
+
+121. To resolve the common errors step by step run the instructions written in this file
+``
+./connectorErrorFixGuide.md
+``
