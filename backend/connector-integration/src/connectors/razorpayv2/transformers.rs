@@ -511,6 +511,7 @@ impl
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -555,6 +556,7 @@ impl
             refund_status: status,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -618,6 +620,7 @@ impl
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -698,6 +701,7 @@ impl<
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -752,6 +756,7 @@ impl<
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {

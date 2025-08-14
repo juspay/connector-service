@@ -1434,6 +1434,7 @@ impl<
             incremental_authorization_allowed: None,
             raw_connector_response,
             status_code: item.http_code,
+            state: None,
         });
 
         Ok(router_data)
@@ -1534,6 +1535,7 @@ impl
                 incremental_authorization_allowed: None,
                 raw_connector_response,
                 status_code: item.http_code,
+                state: None,
             }),
         };
 

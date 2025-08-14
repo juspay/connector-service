@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 domain_types = { path = "../domain_types" }
+grpc-api-types = { path = "../grpc-api-types" }
 base64 = "0.21"
 common_enums = { path = "../common_enums" }
 common_utils = { path = "../common_utils" }

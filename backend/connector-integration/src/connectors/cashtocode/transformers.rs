@@ -322,6 +322,7 @@ impl<
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
                         status_code: http_code,
+                        state: None,
                     }),
                 )
             }

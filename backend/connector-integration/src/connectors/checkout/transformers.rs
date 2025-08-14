@@ -534,6 +534,7 @@ impl<
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: http_code,
+                state: None,
             });
         }
 
@@ -748,6 +749,7 @@ impl<F>
             incremental_authorization_allowed: None,
             raw_connector_response: None,
             status_code: http_code,
+            state: None,
         });
 
         Ok(router_data)
@@ -800,6 +802,7 @@ impl<F>
             incremental_authorization_allowed: None,
             raw_connector_response: None,
             status_code: http_code,
+            state: None,
         });
 
         Ok(router_data)
@@ -877,6 +880,7 @@ impl<F>
                 incremental_authorization_allowed: None,
                 raw_connector_response: None,
                 status_code: http_code,
+                state: None,
             });
         }
 
@@ -921,6 +925,7 @@ impl<F>
             refund_status,
             raw_connector_response: None,
             status_code: http_code,
+            state: None,
         });
 
         Ok(router_data)
@@ -958,6 +963,7 @@ impl<F>
             refund_status,
             raw_connector_response: None,
             status_code: http_code,
+            state: None,
         });
 
         Ok(router_data)
@@ -1049,6 +1055,7 @@ impl<F>
             refund_status,
             raw_connector_response: None,
             status_code: http_code,
+            state: None,
         });
 
         Ok(router_data)

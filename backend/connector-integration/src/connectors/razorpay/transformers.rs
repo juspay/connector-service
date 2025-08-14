@@ -739,6 +739,7 @@ impl
             refund_status: status,
             raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
             status_code: http_code,
+            state: None,
         };
 
         Ok(Self {
@@ -775,6 +776,7 @@ impl
             refund_status: status,
             raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
             status_code: http_code,
+            state: None,
         };
 
         Ok(Self {
@@ -848,6 +850,7 @@ impl<F, Req>
                         .raw_connector_response
                         .clone(),
                     status_code: _http_code,
+                    state: None,
                 };
                 let error = None;
 
@@ -876,6 +879,7 @@ impl<F, Req>
                         .raw_connector_response
                         .clone(),
                     status_code: _http_code,
+                    state: None,
                 };
                 let error = None;
 
@@ -1362,6 +1366,7 @@ impl<F, Req>
                 mandate_reference: None,
                 raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
                 status_code: http_code,
+                state: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1701,6 +1706,7 @@ impl<F, Req>
             incremental_authorization_allowed: None,
             raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {

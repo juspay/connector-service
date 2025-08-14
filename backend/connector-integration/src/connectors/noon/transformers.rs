@@ -648,6 +648,7 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
                         status_code: item.http_code,
+                        state: None,
                     })
                 }
             },
@@ -901,6 +902,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 refund_status,
                 raw_connector_response: None,
                 status_code: item.http_code,
+                state: None,
             })
         };
         Ok(Self {
@@ -968,6 +970,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
                 refund_status,
                 raw_connector_response: None,
                 status_code: item.http_code,
+                state: None,
             })
         };
         Ok(Self {
@@ -1399,6 +1402,7 @@ impl<
                         incremental_authorization_allowed: None,
                         raw_connector_response: None,
                         status_code: item.http_code,
+                        state: None,
                     })
                 }
             },

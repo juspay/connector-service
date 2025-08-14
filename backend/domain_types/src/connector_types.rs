@@ -58,6 +58,7 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
+    Volt,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -83,6 +84,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
+            grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -220,6 +222,7 @@ pub struct PaymentsSyncData {
     pub amount: MinorUnit,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<PaymentSynIntegrityObject>,
+    pub access_token: Option<grpc_api_types::payments::AccessToken>,
 }
 
 impl PaymentsSyncData {
@@ -702,6 +705,7 @@ pub struct PaymentVoidData {
     pub integrity_object: Option<PaymentVoidIntegrityObject>,
     pub raw_connector_response: Option<String>,
     pub browser_info: Option<BrowserInformation>,
+    pub access_token: Option<grpc_api_types::payments::AccessToken>,
 }
 
 impl PaymentVoidData {
@@ -776,6 +780,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub integrity_object: Option<AuthoriseIntegrityObject>,
     pub merchant_config_currency: Option<common_enums::Currency>,
     pub all_keys_required: Option<bool>,
+    pub access_token: Option<grpc_api_types::payments::AccessToken>,
 }
 
 impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
@@ -996,6 +1001,7 @@ pub enum PaymentsResponseData {
         incremental_authorization_allowed: Option<bool>,
         raw_connector_response: Option<String>,
         status_code: u16,
+        state: Option<grpc_api_types::payments::ConnectorState>,
     },
     SessionResponse {
         session_token: String,
@@ -1043,6 +1049,7 @@ pub struct RefundSyncData {
     pub refund_status: common_enums::RefundStatus,
     pub all_keys_required: Option<bool>,
     pub integrity_object: Option<RefundSyncIntegrityObject>,
+    pub access_token: Option<grpc_api_types::payments::AccessToken>,
     pub browser_info: Option<BrowserInformation>,
 }
 
@@ -1054,12 +1061,13 @@ impl RefundSyncData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
+    pub state: Option<grpc_api_types::payments::ConnectorState>,
 }
 
 #[derive(Debug, Clone)]
@@ -1250,6 +1258,7 @@ pub struct RefundsData {
     pub merchant_account_id: Option<String>,
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub integrity_object: Option<RefundIntegrityObject>,
+    pub access_token: Option<grpc_api_types::payments::AccessToken>,
     pub browser_info: Option<BrowserInformation>,
 }
 
@@ -1293,6 +1302,7 @@ pub struct PaymentsCaptureData {
     pub multiple_capture_data: Option<MultipleCaptureRequestData>,
     pub connector_metadata: Option<serde_json::Value>,
     pub integrity_object: Option<CaptureIntegrityObject>,
+    pub access_token: Option<grpc_api_types::payments::AccessToken>,
     pub browser_info: Option<BrowserInformation>,
 }
 
