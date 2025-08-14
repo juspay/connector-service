@@ -45,6 +45,36 @@ use crate::{
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
+
+/// Trait implementation for converting CardDetails to TokenData
+impl From<&grpc_api_types::payments::CardDetails> for injector::TokenData {
+    fn from(card_details: &grpc_api_types::payments::CardDetails) -> Self {
+        injector::TokenData {
+            specific_token_data: injector::SpecificTokenData {
+                card_number: card_details.card_number.clone(),
+                cvv: card_details.card_cvc.clone(),
+                exp_month: card_details.card_exp_month.clone(),
+                exp_year: card_details.card_exp_year.clone(),
+            },
+            vault_type: injector::VaultType::Vgs, // Default to VGS, can be determined from headers
+        }
+    }
+}
+
+/// Trait implementation for converting owned CardDetails to TokenData
+impl From<grpc_api_types::payments::CardDetails> for injector::TokenData {
+    fn from(card_details: grpc_api_types::payments::CardDetails) -> Self {
+        injector::TokenData {
+            specific_token_data: injector::SpecificTokenData {
+                card_number: card_details.card_number,
+                cvv: card_details.card_cvc,
+                exp_month: card_details.card_exp_month,
+                exp_year: card_details.card_exp_year,
+            },
+            vault_type: injector::VaultType::Vgs, // Default to VGS, can be determined from headers
+        }
+    }
+}
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -92,6 +122,7 @@ impl Payments {
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
+        token_data: Option<injector::TokenData>,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -201,6 +232,7 @@ impl Payments {
             None,
             &connector.to_string(),
             service_name,
+            token_data,
         )
         .await;
 
@@ -349,6 +381,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None,  // no token data for non-proxy operations
         )
         .await
         .map_err(
@@ -439,6 +472,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None,  // no token data for non-proxy operations
         )
         .await
         .switch()
@@ -520,6 +554,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None,  // no token data for non-proxy operations
         )
         .await
         .switch()
@@ -664,12 +699,16 @@ impl PaymentService for Payments {
                         match pm.payment_method.as_ref() {
                             Some(payment_method::PaymentMethod::Card(card_details)) => {
                                 match card_details.card_type {
-                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
+                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
+                                        // Extract token data from the proxy card details using trait implementation
+                                        let token_data = proxy_card_details.into();
+                                        
                                         match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                                             payload,
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            Some(token_data), // pass the extracted token data
                                         ))
                                         .await
                                         {
@@ -683,6 +722,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            None, // no token data for non-proxy payments
                                         ))
                                         .await
                                         {
@@ -698,6 +738,7 @@ impl PaymentService for Payments {
                                     connector,
                                     connector_auth_details,
                                     &service_name,
+                                    None, // no token data for non-card payments
                                 ))
                                 .await
                                 {
@@ -713,6 +754,7 @@ impl PaymentService for Payments {
                             connector,
                             connector_auth_details,
                             &service_name,
+                            None, // no token data for payments without payment method
                         ))
                         .await
                         {
@@ -1106,6 +1148,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    false, // use_injector flag - set to false by default
                 )
                 .await
                 .switch()
@@ -1203,6 +1246,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    false, // use_injector flag - set to false by default
                 )
                 .await
                 .switch()

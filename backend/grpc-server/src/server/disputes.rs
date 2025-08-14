@@ -146,6 +146,7 @@ impl DisputeService for Disputes {
                 None,
                 &connector.to_string(),
                 &service_name,
+                None,  // no token data for dispute operations
             )
             .await
             .switch()
@@ -308,6 +309,7 @@ impl DisputeService for Disputes {
                 None,
                 &connector.to_string(),
                 &service_name,
+                None,  // no token data for dispute operations
             )
             .await
             .switch()

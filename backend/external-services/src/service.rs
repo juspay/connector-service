@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::Duration};
+use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use common_utils::ext_traits::AsyncExt;
 // use base64::engine::Engine;
@@ -27,7 +27,152 @@ use tracing::field::Empty;
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
 
+use injector::{self, InjectorRequest, TokenData, SpecificTokenData, VaultType, ConnectorPayload, ConnectionConfig, HttpMethod as InjectorHttpMethod};
+
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
+
+
+/// Trait for extracting token data from different request types
+trait ExtractTokenData {
+    fn extract_token_data(&self) -> TokenData;
+}
+
+/// Implementation for JSON Values - extracts token data from structured JSON
+impl ExtractTokenData for serde_json::Value {
+    fn extract_token_data(&self) -> TokenData {
+        let card_number = extract_card_field(self, &["card_number", "number", "pan"]);
+        let cvv = extract_card_field(self, &["card_cvc", "cvv", "cvc", "security_code"]);
+        let exp_month = extract_card_field(self, &["card_exp_month", "exp_month", "expiry_month", "month"]);
+        let exp_year = extract_card_field(self, &["card_exp_year", "exp_year", "expiry_year", "year"]);
+        
+        TokenData {
+            specific_token_data: SpecificTokenData {
+                card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number },
+                cvv: if cvv.is_empty() { "{{$cvv}}".to_string() } else { cvv },
+                exp_month: if exp_month.is_empty() { "{{$exp_month}}".to_string() } else { exp_month },
+                exp_year: if exp_year.is_empty() { "{{$exp_year}}".to_string() } else { exp_year },
+            },
+            vault_type: VaultType::Vgs,
+        }
+    }
+}
+
+/// Implementation for HashMap - useful for form data
+impl ExtractTokenData for std::collections::HashMap<String, String> {
+    fn extract_token_data(&self) -> TokenData {
+        let card_number = self.get("card_number").or_else(|| self.get("number")).or_else(|| self.get("pan")).unwrap_or(&String::new()).clone();
+        let cvv = self.get("card_cvc").or_else(|| self.get("cvv")).or_else(|| self.get("cvc")).unwrap_or(&String::new()).clone();
+        let exp_month = self.get("card_exp_month").or_else(|| self.get("exp_month")).or_else(|| self.get("month")).unwrap_or(&String::new()).clone();
+        let exp_year = self.get("card_exp_year").or_else(|| self.get("exp_year")).or_else(|| self.get("year")).unwrap_or(&String::new()).clone();
+        
+        TokenData {
+            specific_token_data: SpecificTokenData {
+                card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number },
+                cvv: if cvv.is_empty() { "{{$cvv}}".to_string() } else { cvv },
+                exp_month: if exp_month.is_empty() { "{{$exp_month}}".to_string() } else { exp_month },
+                exp_year: if exp_year.is_empty() { "{{$exp_year}}".to_string() } else { exp_year },
+            },
+            vault_type: VaultType::Vgs,
+        }
+    }
+}
+
+/// Implementation for Request types - extracts token data using Value to Value mapping
+impl ExtractTokenData for Request {
+    fn extract_token_data(&self) -> TokenData {
+        let mut card_data = json!({});
+        
+        // Extract card details from request body
+        if let Some(body) = &self.body {
+            match body {
+                RequestContent::Json(json_value) => {
+                    // Look for card details in various possible locations in the JSON structure
+                    if let Some(payment_method) = json_value.get("payment_method") {
+                        if let Some(card) = payment_method.get("card") {
+                            card_data = card.clone();
+                        }
+                    }
+                    // Also check direct card fields at root level
+                    if card_data.is_null() {
+                        card_data = json_value.clone();
+                    }
+                },
+                RequestContent::FormUrlEncoded(form_data) => {
+                    // Convert form data to JSON for consistent processing
+                    if let Ok(json_value) = serde_json::to_value(form_data) {
+                        card_data = json_value;
+                    }
+                },
+                _ => {
+                    // For other content types, use default token placeholders
+                }
+            }
+        }
+        
+        // Extract card fields with fallback to token placeholders
+        let card_number = extract_card_field(&card_data, &["card_number", "number", "pan"]);
+        let cvv = extract_card_field(&card_data, &["card_cvc", "cvv", "cvc", "security_code"]);
+        let exp_month = extract_card_field(&card_data, &["card_exp_month", "exp_month", "expiry_month", "month"]);
+        let exp_year = extract_card_field(&card_data, &["card_exp_year", "exp_year", "expiry_year", "year"]);
+        
+        TokenData {
+            specific_token_data: SpecificTokenData {
+                card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number },
+                cvv: if cvv.is_empty() { "{{$cvv}}".to_string() } else { cvv },
+                exp_month: if exp_month.is_empty() { "{{$exp_month}}".to_string() } else { exp_month },
+                exp_year: if exp_year.is_empty() { "{{$exp_year}}".to_string() } else { exp_year },
+            },
+            vault_type: VaultType::Vgs, // Will be overridden by proxy type from headers
+        }
+    }
+}
+
+/// Helper function to extract card field values from JSON with multiple possible field names
+fn extract_card_field(card_data: &serde_json::Value, field_names: &[&str]) -> String {
+    for field_name in field_names {
+        if let Some(value) = card_data.get(field_name) {
+            return match value {
+                serde_json::Value::String(s) => s.clone(),
+                serde_json::Value::Number(n) => n.to_string(),
+                _ => continue,
+            };
+        }
+    }
+    String::new()
+}
+
+/// Extracts proxy type from request headers (e.g., "vgs", "skyflow", etc.)
+fn extract_proxy_type_from_headers(headers: &Headers) -> VaultType {
+    // Look for proxy type indicators in headers
+    for (key, value) in headers {
+        let key_lower = key.to_lowercase();
+        let value_str = value.clone().into_inner().to_lowercase();
+        
+        if key_lower.contains("proxy") || key_lower.contains("vault") {
+            if value_str.contains("vgs") {
+                return VaultType::Vgs;
+            }
+            // Add other vault types as needed
+        }
+    }
+    
+    // Default to VGS if no specific proxy type found
+    VaultType::Vgs
+}
+
+/// Extracts token data from card details for credit_proxy/debit_proxy payments
+fn extract_token_data_from_card_details(card_number: &str, card_cvc: &str, card_exp_month: &str, card_exp_year: &str) -> TokenData {
+    TokenData {
+        specific_token_data: SpecificTokenData {
+            card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number.to_string() },
+            cvv: if card_cvc.is_empty() { "{{$cvv}}".to_string() } else { card_cvc.to_string() },
+            exp_month: if card_exp_month.is_empty() { "{{$exp_month}}".to_string() } else { card_exp_month.to_string() },
+            exp_year: if card_exp_year.is_empty() { "{{$exp_year}}".to_string() } else { card_exp_year.to_string() },
+        },
+        vault_type: VaultType::Vgs, // This will be set by extract_proxy_type_from_headers
+    }
+}
+
 
 #[tracing::instrument(
     name = "execute_connector_processing_step",
@@ -52,6 +197,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     all_keys_required: Option<bool>,
     connector_name: &str,
     service_name: &str,
+    token_data: Option<TokenData>,
 ) -> CustomResult<
     RouterDataV2<F, ResourceCommonData, Req, Resp>,
     domain_types::errors::ConnectorError,
@@ -115,18 +261,116 @@ where
             let external_service_start_latency = tokio::time::Instant::now();
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
-            let response = call_connector_api(proxy, request, "execute_connector_processing_step")
-                .await
-                .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
-                .inspect_err(|err| {
-                    info_log(
-                        "NETWORK_ERROR",
-                        &json!(format!(
-                            "Failed getting response from connector. Error: {:?}",
-                            err
-                        )),
-                    );
-                });
+            
+            // Use injector if token data is provided (indicating proxy payment)
+            // Token data is passed for credit_proxy/debit_proxy payments from payments.rs
+            
+            let response = if token_data.is_some() {
+                // Use injector for token processing
+                tracing::info!("Using injector for token processing");
+                
+                // Extract proxy type from headers
+                let proxy_type = extract_proxy_type_from_headers(&headers);
+                
+                // Use the token data passed from the calling layer, or extract from request as fallback
+                let token_data = match token_data {
+                    Some(data) => data,
+                    None => request.extract_token_data(),
+                };
+                
+                let injector_method = match method {
+                    common_utils::request::Method::Get => InjectorHttpMethod::Get,
+                    common_utils::request::Method::Post => InjectorHttpMethod::Post,
+                    common_utils::request::Method::Put => InjectorHttpMethod::Put,
+                    common_utils::request::Method::Patch => InjectorHttpMethod::Patch,
+                    common_utils::request::Method::Delete => InjectorHttpMethod::Delete,
+                    _ => InjectorHttpMethod::Post,
+                };
+                let injector_path = format!("/{}", url.path());
+                let injector_headers: HashMap<String, String> = headers
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone().into_inner()))
+                    .collect();
+                
+                let template = match &request.body {
+                    Some(body) => match body {
+                        common_utils::request::RequestContent::Json(json) => {
+                            serde_json::to_string(json).unwrap_or_default()
+                        }
+                        common_utils::request::RequestContent::FormUrlEncoded(form) => {
+                            serde_urlencoded::to_string(form).unwrap_or_default()
+                        }
+                        _ => "{}".to_string(),
+                    },
+                    None => "{}".to_string(),
+                };
+                
+                let mut token_data_with_proxy_type = token_data;
+                token_data_with_proxy_type.vault_type = proxy_type;
+                
+                let injector_request = InjectorRequest {
+                    token_data: token_data_with_proxy_type,
+                    connector_payload: ConnectorPayload {
+                        template,
+                    },
+                    connection_config: ConnectionConfig {
+                        base_url: url.clone(),
+                        endpoint_path: "/".to_string(),
+                        http_method: injector_method,
+                        headers: injector_headers,
+                        proxy_url: None,
+                        client_cert: None,
+                        client_key: None,
+                        ca_cert: None,
+                        insecure: None,
+                        cert_password: None,
+                        cert_format: None,
+                    },
+                };
+                
+                match injector::injector_core(injector_request).await {
+                    Ok(injector_response) => {
+                        tracing::info!("Injector call successful");
+                        // Convert injector response (serde_json::Value) back to our Response format
+                        let response_bytes = injector_response.to_string().into_bytes();
+                        Ok(Ok(domain_types::router_response_types::Response {
+                            headers: None,
+                            response: response_bytes.into(),
+                            status_code: 200, // Assume success for now
+                        }))
+                    }
+                    Err(injector_error) => {
+                        tracing::error!("Injector call failed: {:?}", injector_error);
+                        // Fall back to normal connector call
+                        call_connector_api(proxy, request, "execute_connector_processing_step")
+                            .await
+                            .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
+                            .inspect_err(|err| {
+                                info_log(
+                                    "NETWORK_ERROR",
+                                    &json!(format!(
+                                        "Injector failed, falling back to normal call. Injector error: {:?}, Connector error: {:?}",
+                                        injector_error, err
+                                    )),
+                                );
+                            })
+                    }
+                }
+            } else {
+                // Normal connector call without injector
+                call_connector_api(proxy, request, "execute_connector_processing_step")
+                    .await
+                    .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
+                    .inspect_err(|err| {
+                        info_log(
+                            "NETWORK_ERROR",
+                            &json!(format!(
+                                "Failed getting response from connector. Error: {:?}",
+                                err
+                            )),
+                        );
+                    })
+            };
             let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[&method.to_string(), service_name, connector_name])
