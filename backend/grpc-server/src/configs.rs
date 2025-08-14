@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use common_utils::consts;
+use common_utils::{consts, events::EventConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
@@ -13,6 +13,8 @@ pub struct Config {
     pub log: Log,
     pub proxy: Proxy,
     pub connectors: Connectors,
+    #[serde(default)]
+    pub events: EventConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
@@ -76,7 +78,9 @@ impl Config {
                     .list_separator(",")
                     .with_list_parse_key("proxy.bypass_proxy_urls")
                     .with_list_parse_key("redis.cluster_urls")
-                    .with_list_parse_key("database.tenants"),
+                    .with_list_parse_key("database.tenants")
+                    .with_list_parse_key("log.kafka.brokers")
+                    .with_list_parse_key("events.brokers"),
             )
             .build()?;
 
