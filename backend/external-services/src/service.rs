@@ -27,10 +27,41 @@ use tracing::field::Empty;
 // use base64::engine::Engine;
 use crate::shared_metrics as metrics;
 
-use injector::{self, InjectorRequest, TokenData, SpecificTokenData, VaultType, ConnectorPayload, ConnectionConfig, HttpMethod as InjectorHttpMethod};
+use injector::injector_core;
+use api_models::injector::{InjectorRequest, TokenData, VaultType, ConnectorPayload, ConnectionConfig, HttpMethod as InjectorHttpMethod};
+use common_utils::pii::SecretSerdeValue;
+use masking::Secret;
 
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+// Constants for token placeholders and common values
+const CARD_NUMBER_PLACEHOLDER: &str = "{{$card_number}}";
+const CVV_PLACEHOLDER: &str = "{{$cvv}}";
+const EXP_MONTH_PLACEHOLDER: &str = "{{$exp_month}}";
+const EXP_YEAR_PLACEHOLDER: &str = "{{$exp_year}}";
+const DEFAULT_ENDPOINT_PATH: &str = "";
+const SUCCESS_STATUS_CODE: u16 = 200;
+const CLIENT_ERROR_STATUS_CODE: u16 = 400;
+const PROXY_HEADER_NAME: &str = "x-proxy-headers";
+const VGS_VAULT_TYPE: &str = "VGS";
+
+// SSL/TLS configuration header names
+const CLIENT_CERT_HEADER: &str = "x-client-cert";
+const CLIENT_KEY_HEADER: &str = "x-client-key";
+const CA_CERT_HEADER: &str = "x-ca-cert";
+const CERT_PASSWORD_HEADER: &str = "x-cert-password";
+const CERT_FORMAT_HEADER: &str = "x-cert-format";
+const SSL_INSECURE_HEADER: &str = "x-ssl-insecure";
+
+
+/// Helper function to get token value or placeholder
+fn get_token_or_placeholder(value: &str, placeholder: &str) -> String {
+    if value.is_empty() {
+        placeholder.to_string()
+    } else {
+        value.to_string()
+    }
+}
 
 /// Trait for extracting token data from different request types
 trait ExtractTokenData {
@@ -47,10 +78,10 @@ impl ExtractTokenData for serde_json::Value {
         
         TokenData {
             specific_token_data: SpecificTokenData {
-                card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number },
-                cvv: if cvv.is_empty() { "{{$cvv}}".to_string() } else { cvv },
-                exp_month: if exp_month.is_empty() { "{{$exp_month}}".to_string() } else { exp_month },
-                exp_year: if exp_year.is_empty() { "{{$exp_year}}".to_string() } else { exp_year },
+                card_number: get_token_or_placeholder(&card_number, CARD_NUMBER_PLACEHOLDER),
+                cvv: get_token_or_placeholder(&cvv, CVV_PLACEHOLDER),
+                exp_month: get_token_or_placeholder(&exp_month, EXP_MONTH_PLACEHOLDER),
+                exp_year: get_token_or_placeholder(&exp_year, EXP_YEAR_PLACEHOLDER),
             },
             vault_type: VaultType::Vgs,
         }
@@ -67,10 +98,10 @@ impl ExtractTokenData for std::collections::HashMap<String, String> {
         
         TokenData {
             specific_token_data: SpecificTokenData {
-                card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number },
-                cvv: if cvv.is_empty() { "{{$cvv}}".to_string() } else { cvv },
-                exp_month: if exp_month.is_empty() { "{{$exp_month}}".to_string() } else { exp_month },
-                exp_year: if exp_year.is_empty() { "{{$exp_year}}".to_string() } else { exp_year },
+                card_number: get_token_or_placeholder(&card_number, CARD_NUMBER_PLACEHOLDER),
+                cvv: get_token_or_placeholder(&cvv, CVV_PLACEHOLDER),
+                exp_month: get_token_or_placeholder(&exp_month, EXP_MONTH_PLACEHOLDER),
+                exp_year: get_token_or_placeholder(&exp_year, EXP_YEAR_PLACEHOLDER),
             },
             vault_type: VaultType::Vgs,
         }
@@ -86,15 +117,20 @@ impl ExtractTokenData for Request {
         if let Some(body) = &self.body {
             match body {
                 RequestContent::Json(json_value) => {
-                    // Look for card details in various possible locations in the JSON structure
-                    if let Some(payment_method) = json_value.get("payment_method") {
-                        if let Some(card) = payment_method.get("card") {
-                            card_data = card.clone();
+                    // Convert ErasedMaskSerialize to JSON Value for processing
+                    if let Ok(serialized) = json_value.masked_serialize() {
+                        if let Ok(json_val) = serde_json::from_value::<serde_json::Value>(serialized) {
+                            // Look for card details in various possible locations in the JSON structure
+                            if let Some(payment_method) = json_val.get("payment_method") {
+                                if let Some(card) = payment_method.get("card") {
+                                    card_data = card.clone();
+                                }
+                            }
+                            // Also check direct card fields at root level
+                            if card_data.is_null() {
+                                card_data = json_val;
+                            }
                         }
-                    }
-                    // Also check direct card fields at root level
-                    if card_data.is_null() {
-                        card_data = json_value.clone();
                     }
                 },
                 RequestContent::FormUrlEncoded(form_data) => {
@@ -117,10 +153,10 @@ impl ExtractTokenData for Request {
         
         TokenData {
             specific_token_data: SpecificTokenData {
-                card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number },
-                cvv: if cvv.is_empty() { "{{$cvv}}".to_string() } else { cvv },
-                exp_month: if exp_month.is_empty() { "{{$exp_month}}".to_string() } else { exp_month },
-                exp_year: if exp_year.is_empty() { "{{$exp_year}}".to_string() } else { exp_year },
+                card_number: get_token_or_placeholder(&card_number, CARD_NUMBER_PLACEHOLDER),
+                cvv: get_token_or_placeholder(&cvv, CVV_PLACEHOLDER),
+                exp_month: get_token_or_placeholder(&exp_month, EXP_MONTH_PLACEHOLDER),
+                exp_year: get_token_or_placeholder(&exp_year, EXP_YEAR_PLACEHOLDER),
             },
             vault_type: VaultType::Vgs, // Will be overridden by proxy type from headers
         }
@@ -141,35 +177,78 @@ fn extract_card_field(card_data: &serde_json::Value, field_names: &[&str]) -> St
     String::new()
 }
 
-/// Extracts proxy type from request headers (e.g., "vgs", "skyflow", etc.)
+/// Helper function to extract header value by name
+fn get_header_value(headers: &Headers, header_name: &str) -> Option<String> {
+    for (key, value) in headers {
+        if key.to_lowercase() == header_name {
+            return Some(value.clone().into_inner());
+        }
+    }
+    None
+}
+
+/// Extracts SSL configuration from x-* headers
+fn extract_ssl_config_from_headers(headers: &Headers) -> (Option<String>, Option<String>, Option<String>, Option<String>, Option<String>, Option<bool>) {
+    let client_cert = get_header_value(headers, CLIENT_CERT_HEADER);
+    let client_key = get_header_value(headers, CLIENT_KEY_HEADER);
+    let ca_cert = get_header_value(headers, CA_CERT_HEADER);
+    let cert_password = get_header_value(headers, CERT_PASSWORD_HEADER);
+    let cert_format = get_header_value(headers, CERT_FORMAT_HEADER);
+    
+    // Parse insecure flag (true/false)
+    let insecure = get_header_value(headers, SSL_INSECURE_HEADER)
+        .and_then(|val| val.to_lowercase().parse::<bool>().ok());
+    
+    (client_cert, client_key, ca_cert, cert_password, cert_format, insecure)
+}
+
+/// Extracts proxy type from request headers, specifically looking for x-proxy-headers
 fn extract_proxy_type_from_headers(headers: &Headers) -> VaultType {
-    // Look for proxy type indicators in headers
+    // First check for the specific x-proxy-headers header
+    for (key, value) in headers {
+        let key_lower = key.to_lowercase();
+        
+        if key_lower == PROXY_HEADER_NAME {
+            let value_str = value.clone().into_inner().to_lowercase();
+            return match value_str.as_str() {
+                VGS_VAULT_TYPE => VaultType::Vgs,
+                _ => {
+                    tracing::warn!("Unknown proxy type in x-proxy-headers: {}", value_str);
+                    VaultType::Vgs // Default fallback
+                }
+            };
+        }
+    }
+    
+    // Fallback: Look for proxy type indicators in other headers
     for (key, value) in headers {
         let key_lower = key.to_lowercase();
         let value_str = value.clone().into_inner().to_lowercase();
         
         if key_lower.contains("proxy") || key_lower.contains("vault") {
-            if value_str.contains("vgs") {
-                return VaultType::Vgs;
+            if value_str.contains(VGS_VAULT_TYPE) {
+                return VaultType::VGS;
             }
-            // Add other vault types as needed
         }
     }
     
-    // Default to VGS if no specific proxy type found
-    VaultType::Vgs
+    // Default to VGS if no proxy type is specified
+    VaultType::VGS
 }
 
 /// Extracts token data from card details for credit_proxy/debit_proxy payments
 fn extract_token_data_from_card_details(card_number: &str, card_cvc: &str, card_exp_month: &str, card_exp_year: &str) -> TokenData {
+    // Create a JSON object with card details to use as SecretSerdeValue
+    let card_data = serde_json::json!({
+        "card_number": if card_number.is_empty() { "{{$card_number}}" } else { card_number },
+        "cvv": if card_cvc.is_empty() { "{{$cvv}}" } else { card_cvc },
+        "exp_month": if card_exp_month.is_empty() { "{{$exp_month}}" } else { card_exp_month },
+        "exp_year": if card_exp_year.is_empty() { "{{$exp_year}}" } else { card_exp_year }
+    });
+    
     TokenData {
-        specific_token_data: SpecificTokenData {
-            card_number: if card_number.is_empty() { "{{$card_number}}".to_string() } else { card_number.to_string() },
-            cvv: if card_cvc.is_empty() { "{{$cvv}}".to_string() } else { card_cvc.to_string() },
-            exp_month: if card_exp_month.is_empty() { "{{$exp_month}}".to_string() } else { card_exp_month.to_string() },
-            exp_year: if card_exp_year.is_empty() { "{{$exp_year}}".to_string() } else { card_exp_year.to_string() },
-        },
-        vault_type: VaultType::Vgs, // This will be set by extract_proxy_type_from_headers
+        specific_token_data: SecretSerdeValue::new(card_data),
+        vault_type: VaultType::VGS, // This will be set by extract_proxy_type_from_headers
     }
 }
 
@@ -212,13 +291,13 @@ where
     let start = tokio::time::Instant::now();
     let connector_request = connector.build_request_v2(&router_data)?;
 
-    let headers = connector_request
+    let original_headers = connector_request
         .as_ref()
         .map(|connector_request| connector_request.headers.clone())
         .unwrap_or_default();
-    tracing::info!(?headers, "headers of connector request");
+    tracing::info!(?original_headers, "headers of connector request");
 
-    let masked_headers = headers
+    let masked_headers = original_headers
         .iter()
         .fold(serde_json::Map::new(), |mut acc, (k, v)| {
             let value = match v {
@@ -230,8 +309,8 @@ where
             acc.insert(k.clone(), value);
             acc
         });
-    let headers = serde_json::Value::Object(masked_headers);
-    tracing::Span::current().record("request.headers", tracing::field::display(&headers));
+    let headers_for_logging = serde_json::Value::Object(masked_headers);
+    tracing::Span::current().record("request.headers", tracing::field::display(&headers_for_logging));
     let router_data = router_data.clone();
 
     let req = connector_request.as_ref().map(|connector_request| {
@@ -270,26 +349,31 @@ where
                 tracing::info!("Using injector for token processing");
                 
                 // Extract proxy type from headers
-                let proxy_type = extract_proxy_type_from_headers(&headers);
+                let proxy_type = extract_proxy_type_from_headers(&original_headers);
+                
+                // Extract SSL configuration from x-* headers
+                let (client_cert, client_key, ca_cert, cert_password, cert_format, insecure) = 
+                    extract_ssl_config_from_headers(&original_headers);
                 
                 // Use the token data passed from the calling layer, or extract from request as fallback
-                let token_data = match token_data {
+                let mut token_data = match token_data {
                     Some(data) => data,
                     None => request.extract_token_data(),
                 };
                 
+                // Override vault type with the one detected from headers
+                token_data.vault_type = proxy_type;
+                
                 let injector_method = match method {
-                    common_utils::request::Method::Get => InjectorHttpMethod::Get,
-                    common_utils::request::Method::Post => InjectorHttpMethod::Post,
-                    common_utils::request::Method::Put => InjectorHttpMethod::Put,
-                    common_utils::request::Method::Patch => InjectorHttpMethod::Patch,
-                    common_utils::request::Method::Delete => InjectorHttpMethod::Delete,
-                    _ => InjectorHttpMethod::Post,
+                    common_utils::request::Method::Get => InjectorHttpMethod::GET,
+                    common_utils::request::Method::Post => InjectorHttpMethod::POST,
+                    common_utils::request::Method::Put => InjectorHttpMethod::PUT,
+                    common_utils::request::Method::Patch => InjectorHttpMethod::PATCH,
+                    common_utils::request::Method::Delete => InjectorHttpMethod::DELETE,
                 };
-                let injector_path = format!("/{}", url.path());
-                let injector_headers: HashMap<String, String> = headers
+                let injector_headers: HashMap<String, Secret<String>> = original_headers
                     .iter()
-                    .map(|(k, v)| (k.clone(), v.clone().into_inner()))
+                    .map(|(k, v)| (k.clone(), Secret::new(v.clone().into_inner())))
                     .collect();
                 
                 let template = match &request.body {
@@ -305,30 +389,55 @@ where
                     None => "{}".to_string(),
                 };
                 
-                let mut token_data_with_proxy_type = token_data;
-                token_data_with_proxy_type.vault_type = proxy_type;
-                
                 let injector_request = InjectorRequest {
-                    token_data: token_data_with_proxy_type,
+                    token_data,
                     connector_payload: ConnectorPayload {
                         template,
                     },
                     connection_config: ConnectionConfig {
-                        base_url: url.clone(),
-                        endpoint_path: "/".to_string(),
+                        base_url: {
+                            // Parse URL to extract base URL and path
+                            if let Ok(parsed_url) = url::Url::parse(&url) {
+                                format!("{}://{}", parsed_url.scheme(), parsed_url.host_str().unwrap_or(""))
+                            } else {
+                                // Fallback to full URL if parsing fails
+                                url.clone()
+                            }
+                        },
+                        endpoint_path: {
+                            // Parse URL to extract path
+                            if let Ok(parsed_url) = url::Url::parse(&url) {
+                                parsed_url.path().to_string()
+                            } else {
+                                // Fallback to "/" if parsing fails
+                                "/".to_string()
+                            }
+                        },
                         http_method: injector_method,
                         headers: injector_headers,
-                        proxy_url: None,
-                        client_cert: None,
-                        client_key: None,
-                        ca_cert: None,
-                        insecure: None,
-                        cert_password: None,
-                        cert_format: None,
+                        proxy_url: {
+                            // Determine proxy URL based on the parsed URL scheme
+                            if let Ok(parsed_url) = url::Url::parse(&url) {
+                                if parsed_url.scheme() == "https" {
+                                    proxy.https_url.clone()
+                                } else {
+                                    proxy.http_url.clone()
+                                }
+                            } else {
+                                // Default to HTTP proxy if URL parsing fails
+                                proxy.http_url.clone()
+                            }
+                        },
+                        client_cert: client_cert.map(Secret::new),       // From x-client-cert header
+                        client_key: client_key.map(Secret::new),        // From x-client-key header
+                        ca_cert: ca_cert.map(Secret::new),           // From x-ca-cert header
+                        insecure,          // From x-ssl-insecure header
+                        cert_password: cert_password.map(Secret::new),     // From x-cert-password header
+                        cert_format        // From x-cert-format header
                     },
                 };
                 
-                match injector::injector_core(injector_request).await {
+                match injector_core(injector_request).await {
                     Ok(injector_response) => {
                         tracing::info!("Injector call successful");
                         // Convert injector response (serde_json::Value) back to our Response format
@@ -336,7 +445,7 @@ where
                         Ok(Ok(domain_types::router_response_types::Response {
                             headers: None,
                             response: response_bytes.into(),
-                            status_code: 200, // Assume success for now
+                            status_code: SUCCESS_STATUS_CODE, // Assume success for now
                         }))
                     }
                     Err(injector_error) => {

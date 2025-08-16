@@ -9,8 +9,8 @@ common_enums = { path = "../common_enums" }
 cards = { path = "../cards" }
 common_utils = { path = "../common_utils" }
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
-router_derive = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" } # verify this can be from framework-libs-rs
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", branch = "main", package = "masking" }
+router_derive = { git = "https://github.com/juspay/hyperswitch", branch = "main" } # verify this can be from framework-libs-rs
 
 #third party dependencies
 thiserror = "1.0.49"
