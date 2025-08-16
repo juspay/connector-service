@@ -362,6 +362,7 @@ macro_rules! implement_connector_operation {
                 $all_keys_required,
                 &connector.to_string(),
                 &service_name,
+                None,  // no token data for non-proxy payments
             )
             .await
             .switch()
