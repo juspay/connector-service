@@ -45,3 +45,6 @@ pub use self::novalnet::Novalnet;
 
 pub mod nexinets;
 pub use self::nexinets::Nexinets;
+
+pub mod braintree;
+pub use self::braintree::Braintree;

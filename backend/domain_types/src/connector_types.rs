@@ -25,9 +25,9 @@ use crate::{
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -57,6 +57,7 @@ pub enum ConnectorEnum {
     Cashtocode,
     Novalnet,
     Nexinets,
+    Braintree,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -81,6 +82,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
+            grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -671,6 +673,13 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_payment_method_token(mut self, payment_method_token: Option<String>) -> Self {
+        if payment_method_token.is_some() && self.payment_method_token.is_none() {
+            self.payment_method_token =
+                payment_method_token.map(|token| PaymentMethodToken::Token(Secret::new(token)));
+        }
+        self
+    }
 
     pub fn get_return_url(&self) -> Option<String> {
         self.return_url.clone()
@@ -1019,6 +1028,25 @@ pub struct PaymentCreateOrderData {
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
+    pub browser_info: Option<BrowserInformation>,
+    pub currency: Currency,
+    pub amount: Option<i64>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
+    pub setup_mandate_details: Option<MandateData>,
+    pub mandate_id: Option<MandateIds>,
+    pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
+    // pub split_payments: Option<SplitPaymentsRequest>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentMethodTokenResponse {
+    pub token: String,
 }
 
 #[derive(Debug, Clone)]

@@ -20,18 +20,19 @@ use utoipa::ToSchema;
 use crate::mandates::{self, MandateData};
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
+        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address,
@@ -67,6 +68,7 @@ pub struct Connectors {
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
+    pub braintree: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -582,6 +584,10 @@ impl<
             })?),
             None => None,
         };
+        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
+
+        // Extract merchant_account_id from metadata before moving it
+        let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
 
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -657,9 +663,9 @@ impl<
             merchant_order_reference_id: None,
             order_tax_amount: None,
             shipping_cost: None,
-            merchant_account_id: None,
+            merchant_account_id,
             integrity_object: None,
-            merchant_config_currency: None,
+            merchant_config_currency: Some(merchant_config_currency),
             all_keys_required: None, // Field not available in new proto structure
         })
     }
@@ -3236,6 +3242,29 @@ pub fn generate_session_token_response(
     }
 }
 
+pub fn generate_payment_method_token_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let payment_method_token_response = router_data_v2.response;
+
+    match payment_method_token_response {
+        Ok(response) => Ok(response.token),
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "PAYMENT_METHOD_TOKEN_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Payment method token creation failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
 #[derive(Debug, Clone, ToSchema, Serialize)]
 pub struct CardSpecificFeatures {
     /// Indicates whether three_ds card payments are supported
@@ -3474,6 +3503,63 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
         Ok(Self {
             amount: common_utils::types::MinorUnit::new(value.minor_amount),
             currency,
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + Default
+            + Debug
+            + Send
+            + Eq
+            + PartialEq
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + CardConversionHelper<T>,
+    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for PaymentMethodTokenizationData<T>
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
+            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
+                error_identifier: 400,
+                error_message: "Customer acceptance is missing".to_owned(),
+                error_object: None,
+            }))
+        })?;
+
+        Ok(Self {
+            amount: Some(value.amount),
+            currency,
+            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
+                value.payment_method.ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Payment method data is required".to_owned(),
+                        error_object: None,
+                    })
+                })?,
+            )?,
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
+            setup_future_usage: None,
+            mandate_id: None,
+            setup_mandate_details: None,
+            integrity_object: None,
         })
     }
 }
