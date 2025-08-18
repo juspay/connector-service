@@ -731,6 +731,7 @@ impl PaymentService for Payments {
                                             payload,
                                             connector,
                                             connector_auth_details,
+                                            &metadata,
                                             &service_name,
                                             &request_id,
                                         ))
@@ -747,6 +748,7 @@ impl PaymentService for Payments {
                                     payload,
                                     connector,
                                     connector_auth_details,
+                                    &metadata,
                                     &service_name,
                                     &request_id,
                                 ))
@@ -763,6 +765,7 @@ impl PaymentService for Payments {
                             payload,
                             connector,
                             connector_auth_details,
+                            &metadata,
                             &service_name,
                             &request_id,
                         ))

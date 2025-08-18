@@ -17,7 +17,7 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use crate::{configs, error::ConfigurationError, logger, request_logger::log_raw_request, utils};
+use crate::{configs, error::ConfigurationError, logger, utils};
 
 /// # Panics
 ///
@@ -152,7 +152,6 @@ impl Service {
             .merge(payment_service_handler(self.payments_service))
             .merge(refund_service_handler(self.refunds_service))
             .merge(dispute_service_handler(self.disputes_service))
-            .layer(axum::middleware::from_fn(log_raw_request))
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer);

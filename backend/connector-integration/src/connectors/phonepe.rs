@@ -1,8 +1,6 @@
 pub mod constants;
 pub mod headers;
 pub mod transformers;
-use hyperswitch_masking::Secret;
-
 use common_enums as enums;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::MinorUnit};
 use domain_types::{
@@ -26,7 +24,7 @@ use domain_types::{
     types::{ConnectorInfo, Connectors},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, PeekInterface};
+use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -220,7 +218,7 @@ macros::create_all_prerequisites!(
             flow: PSync,
             request_body: PhonepeSyncRequest,
             response_body: PhonepeSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -291,7 +289,11 @@ macros::macro_connector_implementation!(
 
             // Build the request to get the checksum for X-VERIFY header
             let amount = req.request.minor_amount;
-            let connector_router_data = phonepe::PhonepeRouterData::try_from((amount, req))?;
+            let connector_router_data = transformers::PhonepeRouterData {
+                amount,
+                router_data: req,
+                amount_converter: &common_utils::types::MinorUnitForConnector,
+            };
             let connector_req = phonepe::PhonepePaymentsRequest::try_from(&connector_router_data)?;
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
 
@@ -319,7 +321,8 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Get,
-    preprocess_response: false,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
         fn get_headers(
             &self,
@@ -335,7 +338,11 @@ macros::macro_connector_implementation!(
 
             // Build the request to get the checksum for X-VERIFY header
             let amount = req.request.amount;
-            let connector_router_data = phonepe::PhonepeRouterData::try_from((amount, req))?;
+            let connector_router_data = transformers::PhonepeRouterData {
+                amount,
+                router_data: req,
+                amount_converter: &common_utils::types::MinorUnitForConnector,
+            };
             let connector_req = phonepe::PhonepeSyncRequest::try_from(&connector_router_data)?;
 
             // Get merchant ID for X-MERCHANT-ID header
@@ -348,7 +355,7 @@ macros::macro_connector_implementation!(
             ))?;
 
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
-            headers.push(("X-MERCHANT-ID".to_string(), auth.merchant_id.peek().to_string().into()));
+            headers.push((headers::X_MERCHANT_ID.to_string(), auth.merchant_id.peek().to_string().into()));
 
             Ok(headers)
         }
@@ -479,17 +486,6 @@ impl<
 }
 
 // Default empty implementations for unsupported flows - the traits will use default implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Phonepe<T>
-{
-}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

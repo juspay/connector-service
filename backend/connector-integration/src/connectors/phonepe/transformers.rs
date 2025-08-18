@@ -627,10 +627,18 @@ fn generate_phonepe_checksum(
 
 // ===== SYNC REQUEST BUILDING =====
 
-impl
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         crate::connectors::phonepe::PhonepeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for PhonepeSyncRequest
 {
@@ -639,6 +647,7 @@ impl
     fn try_from(
         wrapper: crate::connectors::phonepe::PhonepeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         Self::try_from(&PhonepeRouterData {
@@ -748,7 +757,7 @@ impl
                             network_txn_id: Some(transaction_id.clone()),
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
-                            status_code: None,
+                            status_code: item.http_code,
                             raw_connector_response: Some(
                                 serde_json::to_string(&item.response).unwrap_or_default(),
                             ),
