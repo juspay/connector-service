@@ -80,19 +80,23 @@ impl Payments {
         session_id: Option<String>,
         request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
-        tracing::info!("Config check: test.enabled={}, mock_server_url={:?}", 
-                      self.config.test.enabled, 
-                      self.config.test.mock_server_url);
-        
+        tracing::info!(
+            "Config check: test.enabled={}, mock_server_url={:?}",
+            self.config.test.enabled,
+            self.config.test.mock_server_url
+        );
+
         let test_context = if self.config.test.enabled {
             let ctx = external_services::service::TestContext::new(
                 self.config.test.mock_server_url.clone(),
                 request_metadata,
             );
-            tracing::info!("Test context created: enabled={}, mock_server_url={:?}, is_test_env={}", 
-                          self.config.test.enabled, 
-                          self.config.test.mock_server_url, 
-                          ctx.is_test_env);
+            tracing::info!(
+                "Test context created: enabled={}, mock_server_url={:?}, is_test_env={}",
+                self.config.test.enabled,
+                self.config.test.mock_server_url,
+                ctx.is_test_env
+            );
             Some(ctx)
         } else {
             tracing::info!("Test mode disabled");
@@ -126,7 +130,7 @@ impl Payments {
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
-        let payment_flow_data = if should_do_order_create && !test_context.as_ref().map_or(false, |ctx| ctx.is_test_env) {
+        let payment_flow_data = if should_do_order_create {
             // Real order creation for production
             let order_id = self
                 .handle_order_creation(
@@ -143,11 +147,6 @@ impl Payments {
 
             tracing::info!("Order created successfully with order_id: {}", order_id);
             payment_flow_data.set_order_reference_id(Some(order_id))
-        } else if should_do_order_create && test_context.as_ref().map_or(false, |ctx| ctx.is_test_env) {
-            // Test mode: provide mock order response instead of making real API call
-            tracing::info!("Test mode enabled: using mock order_id instead of creating real order");
-            let mock_order_id = "test_order_12345".to_string();
-            payment_flow_data.set_order_reference_id(Some(mock_order_id))
         } else {
             // No order creation needed
             if test_context.as_ref().map_or(false, |ctx| ctx.is_test_env) {
