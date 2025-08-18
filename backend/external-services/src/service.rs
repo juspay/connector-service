@@ -173,15 +173,17 @@ impl TestContext {
     }
 
     /// Get test headers to be added to connector requests
-    pub fn get_test_headers(&self, original_url: &str) -> Vec<(String, Maskable<String>)> {
+    pub fn get_test_headers(&self, original_url: &str, api_tag: Option<String>) -> Vec<(String, Maskable<String>)> {
         let mut headers = Vec::new();
 
         if self.is_test_env {
             // Add x-api-url header with original connector URL
             headers.push((X_API_URL.to_string(), original_url.to_string().into()));
 
-            // Add x-api-tag header from metadata
-            if let Some(api_tag) = self.metadata.get(X_API_TAG) {
+            // Add x-api-tag header from parameter if provided, otherwise fallback to metadata
+            if let Some(tag) = api_tag {
+                headers.push((X_API_TAG.to_string(), tag.into()));
+            } else if let Some(api_tag) = self.metadata.get(X_API_TAG) {
                 headers.push((X_API_TAG.to_string(), api_tag.clone().into()));
             }
 
@@ -264,8 +266,9 @@ where
             // Replace URL with mock server URL
             request.url = test_ctx.get_request_url(request.url.clone());
             
-            // Add test headers from metadata
-            let test_headers = test_ctx.get_test_headers(&original_url);
+            // Add test headers with API tag from connector
+            let api_tag = connector.get_api_tag(&router_data);
+            let test_headers = test_ctx.get_test_headers(&original_url, api_tag);
             request.headers.extend(test_headers);
             
             tracing::info!("Test mode enabled: redirected {} to {}", original_url, request.url);

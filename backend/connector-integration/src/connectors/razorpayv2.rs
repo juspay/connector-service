@@ -265,6 +265,18 @@ impl<
         })
     }
 
+    fn get_api_tag(
+        &self,
+        _req: &domain_types::router_data_v2::RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    ) -> Option<String> {
+        Some("GW_CREATE_ORDER".to_string())
+    }
+
     fn get_error_response_v2(
         &self,
         res: Response,
@@ -459,6 +471,18 @@ impl<
                 .change_context(errors::ConnectorError::ResponseHandlingFailed)
             }
         }
+    }
+
+    fn get_api_tag(
+        &self,
+        _req: &domain_types::router_data_v2::RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
+    ) -> Option<String> {
+        Some("GW_INIT_INTENT".to_string())
     }
 
     fn get_error_response_v2(
