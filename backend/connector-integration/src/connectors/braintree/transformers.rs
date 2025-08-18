@@ -727,6 +727,49 @@ impl<
                     ..item.router_data
                 })
             }
+            BraintreePaymentsResponse::AuthResponse(auth_response) => {
+                let transaction_data = auth_response.data.authorize_credit_card.transaction;
+                let status = enums::AttemptStatus::from(transaction_data.status.clone());
+                let response = if domain_types::utils::is_payment_failure(status) {
+                    Err(domain_types::router_data::ErrorResponse {
+                        code: transaction_data.status.to_string().clone(),
+                        message: transaction_data.status.to_string().clone(),
+                        reason: Some(transaction_data.status.to_string().clone()),
+                        attempt_status: None,
+                        connector_transaction_id: Some(transaction_data.id),
+                        status_code: item.http_code,
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                        raw_connector_response: None,
+                    })
+                } else {
+                    Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
+                        redirection_data: None,
+                        mandate_reference: transaction_data.payment_method.as_ref().map(|pm| {
+                            Box::new(MandateReference {
+                                connector_mandate_id: Some(pm.id.clone().expose()),
+                                payment_method_id: None,
+                            })
+                        }),
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: None,
+                        incremental_authorization_allowed: None,
+                        raw_connector_response: None,
+                        status_code: item.http_code,
+                    })
+                };
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response,
+                    ..item.router_data
+                })
+            }
             BraintreePaymentsResponse::ClientTokenResponse(client_token_data) => Ok(Self {
                 resource_common_data: PaymentFlowData {
                     status: enums::AttemptStatus::AuthenticationPending,
@@ -766,6 +809,7 @@ pub struct PaymentsResponse {
 #[serde(untagged)]
 pub enum BraintreePaymentsResponse {
     PaymentsResponse(Box<PaymentsResponse>),
+    AuthResponse(Box<AuthResponse>),
     ClientTokenResponse(Box<ClientTokenResponse>),
     ErrorResponse(Box<ErrorResponse>),
 }

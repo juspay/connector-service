@@ -19,7 +19,8 @@ use grpc_api_types::{
         AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
         Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus, PaymentServiceVoidRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -61,7 +62,7 @@ fn add_braintree_metadata<T>(request: &mut Request<T>) {
         env::var(BRAINTREE_KEY1_ENV).expect("TEST_BRAINTREE_KEY1 environment variable is required");
     let api_secret = env::var(BRAINTREE_API_SECRET_ENV)
         .unwrap_or_else(|_| panic!("Environment variable {BRAINTREE_API_SECRET_ENV} must be set"));
-    
+
     request.metadata_mut().append(
         "x-connector",
         CONNECTOR_NAME.parse().expect("Failed to parse x-connector"),
@@ -127,10 +128,7 @@ fn create_payment_authorize_request(
         nick_name: None,
     });
     let mut metadata = HashMap::new();
-    metadata.insert(
-        "merchant_account_id".to_string(),
-        "Anand".to_string(),
-    );
+    metadata.insert("merchant_account_id".to_string(), "Anand".to_string());
     PaymentServiceAuthorizeRequest {
         amount: TEST_AMOUNT,
         minor_amount: TEST_AMOUNT,
@@ -157,9 +155,7 @@ fn create_payment_authorize_request(
 }
 
 // Helper function to create a payment sync request
-fn create_payment_sync_request(
-    transaction_id: &str,
-) -> PaymentServiceGetRequest {
+fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
@@ -170,9 +166,7 @@ fn create_payment_sync_request(
 }
 
 // Helper function to create a payment capture request
-fn create_payment_capture_request(
-    transaction_id: &str,
-) -> PaymentServiceCaptureRequest {
+fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCaptureRequest {
     PaymentServiceCaptureRequest {
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
@@ -237,7 +231,6 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
     }
 }
 
-
 // Test for basic health check
 #[tokio::test]
 async fn test_health() {
@@ -288,7 +281,6 @@ async fn test_payment_authorization_auto_capture() {
 #[tokio::test]
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-
         // Add delay of 4 seconds
         tokio::time::sleep(std::time::Duration::from_secs(4)).await;
 
@@ -343,7 +335,6 @@ async fn test_payment_authorization_manual_capture() {
 #[tokio::test]
 async fn test_payment_sync_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-
         // Add delay of 8 seconds
         tokio::time::sleep(std::time::Duration::from_secs(8)).await;
 

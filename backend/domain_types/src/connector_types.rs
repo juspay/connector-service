@@ -57,6 +57,7 @@ pub enum ConnectorEnum {
     Cashtocode,
     Novalnet,
     Nexinets,
+    Noon,
     Braintree,
 }
 
@@ -82,6 +83,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
+            grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1093,6 +1095,7 @@ pub struct RefundFlowData {
     pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
+    pub connector_request_reference_id: String,
     pub raw_connector_response: Option<String>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
@@ -1458,6 +1461,7 @@ pub struct DisputeFlowData {
     pub connector_dispute_id: String,
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
+    pub connector_request_reference_id: String,
     pub raw_connector_response: Option<String>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
