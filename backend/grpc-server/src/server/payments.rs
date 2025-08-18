@@ -45,6 +45,13 @@ use crate::{
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
+
+#[derive(Debug, Clone)]
+struct EventParams<'a> {
+    connector_name: &'a str,
+    service_name: &'a str,
+    request_id: &'a str,
+}
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -92,6 +99,7 @@ impl Payments {
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
+        request_id: &str,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -122,14 +130,19 @@ impl Payments {
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
         let payment_flow_data = if should_do_order_create {
+            let event_params = EventParams {
+                connector_name: &connector.to_string(),
+                service_name,
+                request_id,
+            };
+
             let order_id = self
                 .handle_order_creation(
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
+                    event_params,
                     &payload,
-                    &connector.to_string(),
-                    service_name,
                 )
                 .await?;
 
@@ -194,13 +207,23 @@ impl Payments {
         };
 
         // Execute connector processing
+        let event_params = external_services::service::EventProcessingParams {
+            connector_name: &connector.to_string(),
+            service_name,
+            flow_name: common_utils::events::FlowName::Authorize,
+            event_config: &self.config.events,
+            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(&payload).unwrap_or_default(),
+            )),
+            request_id,
+        };
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
             None,
-            &connector.to_string(),
-            service_name,
+            event_params,
         )
         .await;
 
@@ -292,9 +315,8 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
+        event_params: EventParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
-        connector_name: &str,
-        service_name: &str,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -342,13 +364,23 @@ impl Payments {
         };
 
         // Execute connector processing
+        let external_event_params = external_services::service::EventProcessingParams {
+            connector_name: event_params.connector_name,
+            service_name: event_params.service_name,
+            flow_name: common_utils::events::FlowName::CreateOrder,
+            event_config: &self.config.events,
+            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
+            request_id: event_params.request_id,
+        };
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
             None,
-            connector_name,
-            service_name,
+            external_event_params,
         )
         .await
         .map_err(
@@ -390,9 +422,8 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
+        event_params: EventParams<'_>,
         payload: &PaymentServiceRegisterRequest,
-        connector_name: &str,
-        service_name: &str,
     ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -432,13 +463,23 @@ impl Payments {
         };
 
         // Execute connector processing
+        let external_event_params = external_services::service::EventProcessingParams {
+            connector_name: event_params.connector_name,
+            service_name: event_params.service_name,
+            flow_name: common_utils::events::FlowName::CreateOrder,
+            event_config: &self.config.events,
+            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
+            request_id: event_params.request_id,
+        };
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
             None,
-            connector_name,
-            service_name,
+            external_event_params,
         )
         .await
         .switch()
@@ -513,13 +554,21 @@ impl Payments {
         };
 
         // Execute connector processing
+        let event_params = external_services::service::EventProcessingParams {
+            connector_name,
+            service_name,
+            flow_name: common_utils::events::FlowName::Authorize, // Use Authorize as fallback since CreateSessionToken doesn't exist
+            event_config: &self.config.events,
+            raw_request_data: None, // Don't serialize P since it doesn't implement Serialize
+            request_id: "session_token_request", // TODO: Pass actual request_id
+        };
+
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
             None,
-            connector_name,
-            service_name,
+            event_params,
         )
         .await
         .switch()
@@ -646,6 +695,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
+
         let service_name = request
             .extensions()
             .get::<String>()
@@ -653,7 +703,10 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -670,6 +723,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            &request_id,
                                         ))
                                         .await
                                         {
@@ -683,6 +737,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            &request_id,
                                         ))
                                         .await
                                         {
@@ -698,6 +753,7 @@ impl PaymentService for Payments {
                                     connector,
                                     connector_auth_details,
                                     &service_name,
+                                    &request_id,
                                 ))
                                 .await
                                 {
@@ -713,6 +769,7 @@ impl PaymentService for Payments {
                             connector,
                             connector_auth_details,
                             &service_name,
+                            &request_id,
                         ))
                         .await
                         {
@@ -1036,7 +1093,10 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -1065,14 +1125,19 @@ impl PaymentService for Payments {
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
+                    let event_params = EventParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        request_id: &request_id,
+                    };
+
                     Some(
                         self.handle_order_creation_for_setup_mandate(
                             connector_data.clone(),
                             &payment_flow_data,
                             connector_auth_details.clone(),
+                            event_params,
                             &payload,
-                            &connector.to_string(),
-                            &service_name,
                         )
                         .await?,
                     )
@@ -1099,13 +1164,23 @@ impl PaymentService for Payments {
                     response: Err(ErrorResponse::default()),
                 };
 
+                let event_params = external_services::service::EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: common_utils::events::FlowName::SetupMandate,
+                    event_config: &self.config.events,
+                    raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                        serde_json::to_value(payload).unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                };
+
                 let response = external_services::service::execute_connector_processing_step(
                     &self.config.proxy,
                     connector_integration,
                     router_data,
                     None,
-                    &connector.to_string(),
-                    &service_name,
+                    event_params,
                 )
                 .await
                 .switch()
@@ -1152,7 +1227,10 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
@@ -1196,13 +1274,23 @@ impl PaymentService for Payments {
                     response: Err(ErrorResponse::default()),
                 };
 
+                let event_params = external_services::service::EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: common_utils::events::FlowName::Authorize,
+                    event_config: &self.config.events,
+                    raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                        serde_json::to_value(payload).unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                };
+
                 let response = external_services::service::execute_connector_processing_step(
                     &self.config.proxy,
                     connector_integration,
                     router_data,
                     None,
-                    &connector.to_string(),
-                    &service_name,
+                    event_params,
                 )
                 .await
                 .switch()
