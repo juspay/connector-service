@@ -521,19 +521,18 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        //commenting out unused function for now
-        // fn preprocess_response_bytes<F, FCD, Req, Res>(
-        //     &self,
-        //     _req: &RouterDataV2<F, FCD, Req, Res>,
-        //     bytes: bytes::Bytes,
-        // ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-        //     // Check if the bytes begin with UTF-8 BOM (EF BB BF)
-        //     let encoding = encoding_rs::UTF_8;
-        //     let intermediate_response_bytes = encoding.decode_with_bom_removal(&bytes);
-        //     let processed_bytes = bytes::Bytes::copy_from_slice(intermediate_response_bytes.0.as_bytes());
+        fn preprocess_response_bytes<F, FCD, Req, Res>(
+            &self,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
+            bytes: bytes::Bytes,
+        ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
+            // Check if the bytes begin with UTF-8 BOM (EF BB BF)
+            let encoding = encoding_rs::UTF_8;
+            let intermediate_response_bytes = encoding.decode_with_bom_removal(&bytes);
+            let processed_bytes = bytes::Bytes::copy_from_slice(intermediate_response_bytes.0.as_bytes());
 
-        //     Ok(processed_bytes)
-        // }
+            Ok(processed_bytes)
+        }
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
@@ -575,6 +574,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsAuthorizeData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
@@ -604,6 +604,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsSyncData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
@@ -633,6 +634,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentsCaptureData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
@@ -662,6 +664,7 @@ macros::macro_connector_implementation!(
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
@@ -732,6 +735,7 @@ macros::macro_connector_implementation!(
     flow_request: RefundSyncData,
     flow_response: RefundsResponseData,
     http_method: Post,
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
@@ -763,7 +767,7 @@ macros::macro_connector_implementation!(
     flow_request: SetupMandateRequestData<T>,
     flow_response: PaymentsResponseData,
     http_method: Post,
-    preprocess_response: true, // Keeping true for Authorize.net which needs BOM handling
+    preprocess_response: true,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
     other_functions: {
