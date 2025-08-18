@@ -721,7 +721,7 @@ impl Payments {
             raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
-            request_id: "payment_method_token_request", // TODO: Pass actual request_id,
+            request_id: event_params.request_id,
         };
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,

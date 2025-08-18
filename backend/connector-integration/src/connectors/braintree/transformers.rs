@@ -265,13 +265,13 @@ impl<
             BraintreeMeta,
         ),
     ) -> Result<Self, Self::Error> {
-        let referance_id = Some(
+        let reference_id = Some(
             item.router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
         );
-        let order_id = referance_id.ok_or(
+        let order_id = reference_id.ok_or(
             errors::ConnectorError::MissingConnectorRelatedTransactionID {
                 id: "order_id".to_string(),
             },
@@ -1862,13 +1862,13 @@ impl<
             BraintreeMeta,
         ),
     ) -> Result<Self, Self::Error> {
-        let referance_id = Some(
+        let reference_id = Some(
             item.router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
         );
-        let order_id = referance_id.ok_or(
+        let order_id = reference_id.ok_or(
             errors::ConnectorError::MissingConnectorRelatedTransactionID {
                 id: "order_id".to_string(),
             },
