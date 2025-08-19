@@ -413,6 +413,70 @@ impl<
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentMethodType> for Option<PaymentMethodType> {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentMethodType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::PaymentMethodType::Unspecified => Ok(None),
+            grpc_api_types::payments::PaymentMethodType::Credit => {
+                Ok(Some(PaymentMethodType::Credit))
+            }
+            grpc_api_types::payments::PaymentMethodType::Debit => {
+                Ok(Some(PaymentMethodType::Debit))
+            }
+            grpc_api_types::payments::PaymentMethodType::UpiCollect => {
+                Ok(Some(PaymentMethodType::UpiCollect))
+            }
+            grpc_api_types::payments::PaymentMethodType::UpiIntent => {
+                Ok(Some(PaymentMethodType::UpiIntent))
+            }
+            grpc_api_types::payments::PaymentMethodType::UpiQr => {
+                Ok(Some(PaymentMethodType::UpiIntent))
+            } // UpiQr not yet implemented, fallback to UpiIntent
+            grpc_api_types::payments::PaymentMethodType::ClassicReward => {
+                Ok(Some(PaymentMethodType::ClassicReward))
+            }
+            grpc_api_types::payments::PaymentMethodType::Evoucher => {
+                Ok(Some(PaymentMethodType::Evoucher))
+            }
+            grpc_api_types::payments::PaymentMethodType::ApplePay => {
+                Ok(Some(PaymentMethodType::ApplePay))
+            }
+            grpc_api_types::payments::PaymentMethodType::GooglePay => {
+                Ok(Some(PaymentMethodType::GooglePay))
+            }
+            grpc_api_types::payments::PaymentMethodType::AmazonPay => {
+                Ok(Some(PaymentMethodType::AmazonPay))
+            }
+            grpc_api_types::payments::PaymentMethodType::RevolutPay => {
+                Ok(Some(PaymentMethodType::RevolutPay))
+            }
+            grpc_api_types::payments::PaymentMethodType::PayPal => {
+                Ok(Some(PaymentMethodType::Paypal))
+            }
+            grpc_api_types::payments::PaymentMethodType::WeChatPay => {
+                Ok(Some(PaymentMethodType::WeChatPay))
+            }
+            grpc_api_types::payments::PaymentMethodType::AliPay => {
+                Ok(Some(PaymentMethodType::AliPay))
+            }
+            grpc_api_types::payments::PaymentMethodType::Cashapp => {
+                Ok(Some(PaymentMethodType::Cashapp))
+            }
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_PAYMENT_METHOD_TYPE".to_owned(),
+                error_identifier: 400,
+                error_message: "This payment method type is not yet supported".to_owned(),
+                error_object: None,
+            })
+            .into()),
+        }
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentMethodType> {
     type Error = ApplicationErrorResponse;
 
@@ -3717,6 +3781,8 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         let amount = value.amount;
         let minor_amount = value.minor_amount;
         let currency = value.currency();
+        let payment_method_type =
+            <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
         let capture_method = match value.capture_method {
             Some(method) => {
                 let grpc_capture_method = grpc_api_types::payments::CaptureMethod::try_from(method)
@@ -3790,6 +3856,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
+            payment_method_type,
         })
     }
 }
@@ -3839,7 +3906,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: None,
+            test_mode: value.test_mode,
             connector_http_status_code: None,
             external_latency: None,
             connectors,

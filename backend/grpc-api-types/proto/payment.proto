@@ -504,6 +504,8 @@ enum PaymentMethodType {
   OPEN_BANKING_PIS = 95;
   DIRECT_CARRIER_BILLING = 96;
   INSTANT_BANK_TRANSFER = 97;
+  PAY_PAL = 98;
+  REVOLUT_PAY = 99;
 }
 
 
@@ -1081,7 +1083,7 @@ message PaymentServiceAuthorizeRequest {
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
 
-  optional bool test_mode = 31;
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment authorization.
@@ -1443,6 +1445,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
+
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
+  optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
 }
 
 // Response message for repeat payment operation.

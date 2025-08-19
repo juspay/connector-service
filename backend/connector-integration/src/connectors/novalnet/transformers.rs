@@ -2186,7 +2186,10 @@ impl<
                     token: Secret::new(connector_mandate_id),
                 });
 
-                let payment_type = NovalNetPaymentTypes::CREDITCARD;
+                let payment_type = match item.router_data.request.payment_method_type {
+                    Some(pm_type) => NovalNetPaymentTypes::try_from(&pm_type)?,
+                    None => NovalNetPaymentTypes::CREDITCARD,
+                };
 
                 let transaction = NovalnetPaymentsRequestTransaction {
                     test_mode,

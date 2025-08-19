@@ -1390,6 +1390,7 @@ pub struct RepeatPaymentData {
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 impl RepeatPaymentData {
