@@ -1102,7 +1102,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
             },
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: value.access_token.as_ref().map(|t| t.token.clone()),
+            access_token: value.access_token.as_ref().map(|access_token| access_token.token.clone()),
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -1248,7 +1248,7 @@ pub fn generate_create_order_response(
                 status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                raw_connector_response: None,
+                raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
@@ -1386,7 +1386,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                raw_connector_response: None,
+                raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
                 response_headers,
                 connector_metadata: std::collections::HashMap::new(),
@@ -1805,17 +1805,12 @@ pub fn generate_payment_sync_response(
                     email: None,
                     connector_customer_id: None,
                     merchant_order_reference_id: None,
-                    metadata: connector_metadata
-                        .and_then(|value| value.as_object().cloned())
-                        .map(|map| {
-                            map.into_iter()
-                                .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
-                                .collect::<HashMap<_, _>>()
-                        })
-                        .unwrap_or_default(),
+                    metadata: std::collections::HashMap::new(),
                     raw_connector_response,
                     status_code: status_code as u32,
-                    response_headers,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                     state: None,
                 })
             }
@@ -1864,7 +1859,9 @@ pub fn generate_payment_sync_response(
                 metadata: std::collections::HashMap::new(),
                 raw_connector_response: None,
                 status_code: e.status_code as u32,
-                response_headers: std::collections::HashMap::new(),
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
                 state: None,
             })
         }
@@ -3133,7 +3130,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 mandate_reference,
                 raw_connector_response,
                 status_code,
-                state: _,
+                state,
             } => {
                 PaymentServiceRegisterResponse {
                     registration_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
@@ -3190,7 +3187,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     status_code: status_code as u32,
                     response_headers: router_data_v2
                         .resource_common_data
-                        .get_connector_response_headers_as_map()
+                        .get_connector_response_headers_as_map(),
+                    state,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3220,6 +3218,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
             response_headers: router_data_v2
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
+            state: None,
         },
     };
     Ok(response)
@@ -3780,9 +3779,11 @@ pub fn generate_repeat_payment_response(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-                    raw_connector_response: None,
+                    raw_connector_response: err.raw_connector_response,
                     status_code: err.status_code as u32,
-                    response_headers: std::collections::HashMap::new(),
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
                     state: None,
                 },
             )

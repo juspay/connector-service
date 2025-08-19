@@ -935,7 +935,7 @@ message UriData {
   string uri = 1;
 }
 
-// State data to be sent back to Hyperswitch for storage
+// Connector- Specific State data persisted by the client and returned for subsequent requests.
 message ConnectorState {
   // Access token obtained from connector
   optional AccessToken access_token = 1;
@@ -1451,6 +1451,9 @@ message PaymentServiceRegisterResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+  
+  // Connector State
+  optional ConnectorState state = 12; // State data to be stored by Hyperswitch
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction).
@@ -1479,6 +1482,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
+  
+  // Session and Token Information
+  optional AccessToken access_token = 14; // Access token for secure communication
 }
 
 // Response message for repeat payment operation.

@@ -443,39 +443,38 @@ impl Payments {
         // Create common request data
         let payment_flow_data =
             PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|err| {
-                    tracing::error!("Failed to process payment flow data: {:?}", err);
-                    tonic::Status::internal("Failed to process payment flow data")
+                .map_err(|e| {
+                    tracing::error!("Failed to process payment flow data: {:?}", e);
+                    e.into_grpc_status()
                 })?;
 
         // Handle access token generation for OAuth connectors
         let mut payment_flow_data = payment_flow_data;
         let _generated_access_token_psync =
-            match AccessTokenManager::ensure_access_token_for_connector_data(
+            AccessTokenManager::ensure_access_token_for_connector_data(
                 &connector_data_for_oauth,
                 &mut payment_flow_data,
                 &connector_auth_details,
                 &connector.to_string(),
             )
             .await
-            {
-                Ok(access_token) => access_token,
-                Err(err) => {
-                    tracing::error!(
-                        "Failed to ensure access token for connector {}: {:?}",
-                        connector.to_string(),
-                        err
-                    );
-                    return Err(tonic::Status::internal("Failed to generate access token"));
-                }
-            };
+            .switch()
+            .map_err(|e| {
+                tracing::error!(
+                    "Failed to ensure access token for connector {}: {:?}",
+                    connector.to_string(),
+                    e
+                );
+                e.into_grpc_status()
+            })?;
 
         // Create connector request data
         let payment_sync_data =
-            PaymentsSyncData::foreign_try_from(payload.clone()).map_err(|err| {
-                tracing::error!("Failed to process payment sync data: {:?}", err);
-                tonic::Status::internal("Failed to process payment sync data")
-            })?;
+            PaymentsSyncData::foreign_try_from(payload.clone())
+                .map_err(|e| {
+                    tracing::error!("Failed to process payment sync data: {:?}", e);
+                    e.into_grpc_status()
+                })?;
 
         // Construct router data
         let router_data =
@@ -496,53 +495,46 @@ impl Payments {
             &connector.to_string(),
             service_name,
         )
-        .await;
+        .await
+        .switch()
+        .map_err(|e| {
+            tracing::error!("Failed to execute connector processing: {:?}", e);
+            e.into_grpc_status()
+        })?;
 
         // Generate response - pass both success and error cases
-        let sync_response = match response {
-            Ok(success_response) => {
-                generate_payment_sync_response(success_response).map_err(|err| {
-                    tracing::error!("Failed to generate sync response: {:?}", err);
-                    tonic::Status::internal("Failed to generate sync response")
-                })?
+        let sync_response = match response.response {
+            Ok(success_response_data) => {
+                // Create successful router data
+                let success_router_data = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: PaymentsSyncData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?,
+                    response: Ok(success_response_data),
+                };
+                generate_payment_sync_response(success_router_data)
+                    .map_err(|e| {
+                        tracing::error!("Failed to generate sync response: {:?}", e);
+                        e.into_grpc_status()
+                    })?
             }
-            Err(error_report) => {
-                // Convert error to RouterDataV2 with error response
+            Err(error_response) => {
+                // Create error router data
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
                     resource_common_data: payment_flow_data,
                     connector_auth_type: connector_auth_details,
-                    request: PaymentsSyncData::foreign_try_from(payload.clone()).map_err(
-                        |err| {
-                            tracing::error!(
-                                "Failed to process payment sync data in error path: {:?}",
-                                err
-                            );
-                            tonic::Status::internal(
-                                "Failed to process payment sync data in error path",
-                            )
-                        },
-                    )?,
-                    response: Err(ErrorResponse {
-                        status_code: 400,
-                        code: "CONNECTOR_ERROR".to_string(),
-                        message: format!("{error_report}"),
-                        reason: None,
-                        attempt_status: Some(common_enums::AttemptStatus::Failure),
-                        connector_transaction_id: None,
-                        network_decline_code: None,
-                        network_advice_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    }),
+                    request: PaymentsSyncData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?,
+                    response: Err(error_response),
                 };
-                generate_payment_sync_response(error_router_data).map_err(|err| {
-                    tracing::error!(
-                        "Failed to generate sync response for connector error: {:?}",
-                        err
-                    );
-                    tonic::Status::internal(format!("Connector error: {error_report}"))
-                })?
+                generate_payment_sync_response(error_router_data)
+                    .map_err(|e| {
+                        tracing::error!("Failed to generate sync response for connector error: {:?}", e);
+                        e.into_grpc_status()
+                    })?
             }
         };
 
@@ -1413,8 +1405,20 @@ impl PaymentService for Payments {
     }
 }
 
-async fn get_payments_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>,
+async fn get_payments_webhook_content<
+    T: PaymentMethodDataTypes
+        + Default
+        + Eq
+        + Debug
+        + Send
+        + serde::Serialize
+        + serde::de::DeserializeOwned
+        + Clone
+        + Sync
+        + domain_types::types::CardConversionHelper<T>
+        + 'static,
+>(
+    connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
@@ -1441,8 +1445,20 @@ async fn get_payments_webhook_content(
     })
 }
 
-async fn get_refunds_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>,
+async fn get_refunds_webhook_content<
+    T: PaymentMethodDataTypes
+        + Default
+        + Eq
+        + Debug
+        + Send
+        + serde::Serialize
+        + serde::de::DeserializeOwned
+        + Clone
+        + Sync
+        + domain_types::types::CardConversionHelper<T>
+        + 'static,
+>(
+    connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
@@ -1469,8 +1485,20 @@ async fn get_refunds_webhook_content(
     })
 }
 
-async fn get_disputes_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>,
+async fn get_disputes_webhook_content<
+    T: PaymentMethodDataTypes
+        + Default
+        + Eq
+        + Debug
+        + Send
+        + serde::Serialize
+        + serde::de::DeserializeOwned
+        + Clone
+        + Sync
+        + domain_types::types::CardConversionHelper<T>
+        + 'static,
+>(
+    connector_data: ConnectorData<T>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
