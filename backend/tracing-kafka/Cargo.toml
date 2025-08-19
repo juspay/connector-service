@@ -14,7 +14,6 @@ thiserror = "1.0"
 log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = ["tracing"] }
 
 # Optional dependencies for metrics
-once_cell = { version = "1.19", optional = true }
 prometheus = { version = "0.13", optional = true }
 
 [lib]
@@ -23,7 +22,7 @@ path = "src/lib.rs"
 
 [features]
 default = ["kafka-metrics"]
-kafka-metrics = ["dep:once_cell", "dep:prometheus"]
+kafka-metrics = ["dep:prometheus"]
 
 [lints]
 workspace = true
