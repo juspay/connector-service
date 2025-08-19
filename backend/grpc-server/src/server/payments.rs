@@ -37,7 +37,7 @@ use grpc_api_types::payments::{
     RefundResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use api_models::injector::{TokenData, VaultType};
+use external_services::service::TokenData;
 use common_utils::pii::SecretSerdeValue;
 use tracing::info;
 
@@ -61,7 +61,7 @@ fn card_details_to_token_data(card_details: &grpc_api_types::payments::CardDetai
     
     TokenData {
         specific_token_data: SecretSerdeValue::new(card_data),
-        vault_type: VaultType::VGS, // Default to VGS, can be determined from headers
+        vault_type: "VGS".to_string(), // Default to VGS, can be determined from headers
     }
 }
 // Helper trait for payment operations
@@ -689,9 +689,18 @@ impl PaymentService for Payments {
                             Some(payment_method::PaymentMethod::Card(card_details)) => {
                                 match &card_details.card_type {
                                     Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
+                                        tracing::info!("🔵 INJECTOR: Detected proxy payment (credit_proxy/debit_proxy) - preparing token data");
+                                        tracing::info!("🔵 INJECTOR: Proxy card details - number: {}, exp_month: {}, exp_year: {}", 
+                                            &proxy_card_details.card_number, 
+                                            &proxy_card_details.card_exp_month, 
+                                            &proxy_card_details.card_exp_year
+                                        );
+                                        
                                         // Extract token data from the proxy card details using helper function
                                         let token_data = card_details_to_token_data(&proxy_card_details);
+                                        tracing::info!("🔵 INJECTOR: Token data created with vault type: {}", token_data.vault_type);
                                         
+                                        tracing::info!("🔵 INJECTOR: Calling process_authorization_internal with token data");
                                         match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                                             payload,
                                             connector,
@@ -701,11 +710,18 @@ impl PaymentService for Payments {
                                         ))
                                         .await
                                         {
-                                            Ok(response) => response,
-                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                            Ok(response) => {
+                                                tracing::info!("🔵 INJECTOR: Authorization completed successfully with injector");
+                                                response
+                                            },
+                                            Err(error_response) => {
+                                                tracing::error!("🔴 INJECTOR: Authorization failed with injector - error: {:?}", error_response);
+                                                PaymentServiceAuthorizeResponse::from(error_response)
+                                            },
                                         }
                                     }
                                     _ => {
+                                        tracing::info!("⚪ REGULAR: Processing regular payment (no injector)");
                                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                                             payload,
                                             connector,
@@ -715,8 +731,14 @@ impl PaymentService for Payments {
                                         ))
                                         .await
                                         {
-                                            Ok(response) => response,
-                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                            Ok(response) => {
+                                                tracing::info!("⚪ REGULAR: Authorization completed successfully without injector");
+                                                response
+                                            },
+                                            Err(error_response) => {
+                                                tracing::error!("🔴 REGULAR: Authorization failed without injector - error: {:?}", error_response);
+                                                PaymentServiceAuthorizeResponse::from(error_response)
+                                            },
                                         }
                                     }
                                 }

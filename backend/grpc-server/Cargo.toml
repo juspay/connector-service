@@ -13,9 +13,7 @@ interfaces = { path = "../interfaces" }
 cards = { path = "../cards" }
 common_enums = { path = "../common_enums" }
 common_utils = { path = "../common_utils" }
-masking = { git = "https://github.com/juspay/hyperswitch", branch = "main", package = "masking"}
-injector = { git = "https://github.com/juspay/hyperswitch", branch = "addition_injector_crate", features = ["v2"] }
-api_models = { git = "https://github.com/juspay/hyperswitch", branch = "addition_injector_crate", features = ["v2"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", branch = "main", package = "masking" }
 
 # Third-party dependencies
 config = "0.14.0"
