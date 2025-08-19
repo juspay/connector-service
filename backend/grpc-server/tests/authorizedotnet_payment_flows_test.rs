@@ -201,6 +201,8 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         capture_method: None,
         email: None,
         browser_info: None,
+        test_mode: None,
+        payment_method_type: None,
     }
 }
 
