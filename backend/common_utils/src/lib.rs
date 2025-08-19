@@ -13,7 +13,6 @@ pub mod request;
 pub mod types;
 // Re-export commonly used items
 pub use errors::{CustomResult, EventPublisherError, ParsingError, ValidationError};
-
 #[cfg(feature = "kafka")]
 pub use event_publisher::{emit_event_with_config, init_event_publisher};
 #[cfg(not(feature = "kafka"))]

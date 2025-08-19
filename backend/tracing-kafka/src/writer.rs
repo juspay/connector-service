@@ -1,8 +1,10 @@
 //! Kafka writer implementation for sending formatted log messages to Kafka.
 
-use std::io::{self, Write};
-use std::sync::Arc;
-use std::time::Duration;
+use std::{
+    io::{self, Write},
+    sync::Arc,
+    time::Duration,
+};
 
 use rdkafka::{
     config::ClientConfig,

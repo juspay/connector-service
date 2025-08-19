@@ -31,7 +31,6 @@ fn extract_connector_request_reference_id(
 }
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
-use crate::mandates::{self, MandateData};
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -49,6 +48,7 @@ use crate::{
         WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    mandates::{self, MandateData},
     payment_address,
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
     payment_method_data,
