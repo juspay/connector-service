@@ -505,10 +505,14 @@ impl Payments {
         // Generate response - pass both success and error cases
         let sync_response = match response.response {
             Ok(success_response_data) => {
+                // Update the payment flow data with the correct status from connector response
+                let mut updated_payment_flow_data = payment_flow_data;
+                updated_payment_flow_data.status = response.resource_common_data.status;
+
                 // Create successful router data
                 let success_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
-                    resource_common_data: payment_flow_data,
+                    resource_common_data: updated_payment_flow_data,
                     connector_auth_type: connector_auth_details,
                     request: PaymentsSyncData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?,
@@ -521,10 +525,14 @@ impl Payments {
                     })?
             }
             Err(error_response) => {
+                // Update the payment flow data with the correct status from connector response
+                let mut updated_payment_flow_data = payment_flow_data;
+                updated_payment_flow_data.status = response.resource_common_data.status;
+
                 // Create error router data
                 let error_router_data = RouterDataV2 {
                     flow: std::marker::PhantomData,
-                    resource_common_data: payment_flow_data,
+                    resource_common_data: updated_payment_flow_data,
                     connector_auth_type: connector_auth_details,
                     request: PaymentsSyncData::foreign_try_from(payload.clone())
                         .map_err(|e| e.into_grpc_status())?,
