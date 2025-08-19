@@ -1311,7 +1311,6 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
             mandate_reference: None,
-            raw_connector_response: None,
             status_code: http_code,
         };
 
@@ -1359,7 +1358,6 @@ pub fn get_adyen_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1386,7 +1384,6 @@ pub fn get_adyen_response(
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payments_response_data))
@@ -1426,7 +1423,6 @@ pub fn get_redirection_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1462,7 +1458,6 @@ pub fn get_redirection_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payments_response_data))
@@ -2069,7 +2064,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.psp_reference,
             refund_status: status,
-            raw_connector_response: None,
             status_code: http_code,
         };
 
@@ -2178,7 +2172,6 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
-                raw_connector_response: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -2676,7 +2669,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                     .connector_dispute_id
                     .clone(),
                 connector_dispute_status: None,
-                raw_connector_response: None,
                 status_code: http_code,
             };
 
@@ -2704,7 +2696,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2889,7 +2880,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                     .connector_dispute_id
                     .clone(),
                 connector_dispute_status: None,
-                raw_connector_response: None,
                 status_code: http_code,
             };
 
@@ -2917,7 +2907,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -3030,7 +3019,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                             .resource_common_data
                             .connector_dispute_id
                             .clone(),
-                        raw_connector_response: None,
                         status_code: http_code,
                     }),
                     ..router_data
@@ -3048,7 +3036,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 ..router_data
             }),

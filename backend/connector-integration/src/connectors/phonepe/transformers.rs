@@ -386,9 +386,6 @@ impl<
                                 data.merchant_transaction_id.clone(),
                             ),
                             incremental_authorization_allowed: None,
-                            raw_connector_response: Some(
-                                serde_json::to_string(&item.response).unwrap_or_default(),
-                            ),
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -408,9 +405,6 @@ impl<
                                 data.merchant_transaction_id.clone(),
                             ),
                             incremental_authorization_allowed: None,
-                            raw_connector_response: Some(
-                                serde_json::to_string(&item.response).unwrap_or_default(),
-                            ),
                             status_code: item.http_code,
                         }),
                         ..item.router_data
@@ -466,9 +460,6 @@ impl<
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: Some(
-                        serde_json::to_string(&item.response).unwrap_or_default(),
-                    ),
                 }),
                 ..item.router_data
             })
