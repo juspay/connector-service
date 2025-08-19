@@ -340,7 +340,6 @@ macro_rules! implement_connector_operation {
             let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
                 .into_grpc_status()?;
 
-
             // Create router data
             let router_data = domain_types::router_data_v2::RouterDataV2::<
                 $flow_marker,
