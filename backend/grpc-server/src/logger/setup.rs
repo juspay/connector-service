@@ -2,12 +2,11 @@
 use std::collections::{HashMap, HashSet};
 
 use tracing_appender::non_blocking::WorkerGuard;
+#[cfg(feature = "kafka")]
+use tracing_kafka::KafkaLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 use super::config;
-
-#[cfg(feature = "kafka")]
-use tracing_kafka::KafkaLayer;
 
 /// Contains guards necessary for logging
 #[derive(Debug)]

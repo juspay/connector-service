@@ -36,21 +36,23 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
     }
 }
 // use base64::engine::Engine;
-use crate::shared_metrics as metrics;
-use common_utils::emit_event_with_config;
-use common_utils::events::{Event, EventConfig, EventStage, FlowName};
-use common_utils::pii::SecretSerdeValue;
+use common_utils::{
+    emit_event_with_config,
+    events::{Event, EventConfig, EventStage, FlowName},
+    pii::SecretSerdeValue,
+};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
-use masking::Secret;
-use masking::{ErasedMaskSerialize, Maskable};
+use masking::{ErasedMaskSerialize, Maskable, Secret};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::{json, Value};
 use tracing::field::Empty;
+
+use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
 #[derive(Debug)]

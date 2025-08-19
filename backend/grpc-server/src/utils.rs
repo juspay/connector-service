@@ -3,8 +3,10 @@ use std::str::FromStr;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
+    events::FlowName,
 };
 use domain_types::{
+    connector_flow::{Capture, PSync, Refund, SetupMandate, Void},
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
     router_data::ConnectorAuthType,
@@ -14,8 +16,6 @@ use http::request::Request;
 use tonic::metadata;
 
 use crate::error::ResultExtGrpc;
-use common_utils::events::FlowName;
-use domain_types::connector_flow::{Capture, PSync, Refund, SetupMandate, Void};
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> Option<FlowName>

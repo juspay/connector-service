@@ -770,7 +770,6 @@ pub fn get_elavon_attempt_status(
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         ),
     }
@@ -830,7 +829,6 @@ impl<
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: None,
                     status_code: http_code,
                 })
             }
@@ -848,7 +846,6 @@ impl<
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1090,7 +1087,6 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                     connector_response_reference_id: payment_resp_struct.ssl_approval_code.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: None,
                     status_code: http_code,
                 })
             }
@@ -1108,7 +1104,6 @@ impl<F> TryFrom<ResponseRouterData<ElavonCaptureResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1255,7 +1250,6 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
             (ElavonResult::Success(payment_resp_struct), None) => Ok(RefundsResponseData {
                 connector_refund_id: payment_resp_struct.ssl_txn_id.clone(),
                 refund_status,
-                raw_connector_response: None,
                 status_code: http_code,
             }),
             (_, Some(err_resp)) => Err(err_resp),
@@ -1272,7 +1266,6 @@ impl<F> TryFrom<ResponseRouterData<ElavonRefundResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1424,7 +1417,6 @@ impl<F> TryFrom<ResponseRouterData<ElavonRSyncResponse, Self>>
         let response_data = RefundsResponseData {
             connector_refund_id: response.ssl_txn_id.clone(),
             refund_status,
-            raw_connector_response: None,
             status_code: value.http_code,
         };
 
@@ -1511,7 +1503,6 @@ impl<F> TryFrom<ResponseRouterData<ElavonPSyncResponse, Self>>
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
             mandate_reference: None,
-            raw_connector_response: None,
             status_code: value.http_code,
         };
 

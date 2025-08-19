@@ -123,7 +123,6 @@ impl Payments {
                         Some("Failed to process payment flow data".to_string()),
                         Some("PAYMENT_FLOW_ERROR".to_string()),
                         None,
-                        None,
                     )
                 })?;
 
@@ -186,7 +185,6 @@ impl Payments {
                     Some("Failed to process payment authorize data".to_string()),
                     Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                     None,
-                    None,
                 )
             })?
             // Set session token from payment flow data if available
@@ -239,7 +237,6 @@ impl Payments {
                     Some("Failed to generate authorize response".to_string()),
                     Some("RESPONSE_GENERATION_ERROR".to_string()),
                     None,
-                    None,
                 )
             })?,
             Err(error_report) => {
@@ -262,7 +259,6 @@ impl Payments {
                                 ),
                                 Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                                 None,
-                                None,
                             )
                         },
                     )?,
@@ -276,7 +272,6 @@ impl Payments {
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
-                        raw_connector_response: None,
                     }),
                 };
                 domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
@@ -289,7 +284,6 @@ impl Payments {
                             grpc_api_types::payments::PaymentStatus::Pending,
                             Some(format!("Connector error: {error_report}")),
                             Some("CONNECTOR_ERROR".to_string()),
-                            None,
                             None,
                         )
                     })?
@@ -333,7 +327,6 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Currency conversion failed: {e}")),
                     Some("CURRENCY_ERROR".to_string()),
-                    None,
                     None,
                 )
             })?;
@@ -390,7 +383,6 @@ impl Payments {
                     Some(format!("Order creation failed: {e}")),
                     Some("ORDER_CREATION_ERROR".to_string()),
                     None,
-                    None,
                 )
             },
         )?;
@@ -401,7 +393,6 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.message.clone()),
                 Some(e.code.clone()),
-                e.raw_connector_response.clone(),
                 Some(e.status_code.into()),
             )),
         }
@@ -535,7 +526,6 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Session Token creation failed: {e}")),
                     Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                    None,
                     Some(400), // Bad Request - client data issue
                 )
             })?;
@@ -577,7 +567,6 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {e}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                None,
                 Some(500), // Internal Server Error - connector processing failed
             )
         })?;
@@ -598,7 +587,6 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {message}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                None,
                 Some(status_code.into()), // Use actual status code from ErrorResponse
             )),
         }

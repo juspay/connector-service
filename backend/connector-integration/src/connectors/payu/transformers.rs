@@ -660,7 +660,6 @@ impl<
                 network_error_message: None,
                 network_advice_code: None,
                 network_decline_code: None,
-                raw_connector_response: None,
             };
 
             return Ok(Self {
@@ -741,7 +740,6 @@ impl<
             network_txn_id: None,
             connector_response_reference_id: Some(transaction_id),
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
             status_code: item.http_code,
         };
 

@@ -31,7 +31,6 @@ fn extract_connector_request_reference_id(
 }
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
-use crate::mandates::{self, MandateData};
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -42,12 +41,14 @@ use crate::{
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    mandates::{self, MandateData},
     payment_address,
     payment_address::{Address, AddressDetails, PaymentAddress, PhoneDetails},
     payment_method_data,
@@ -1173,7 +1174,9 @@ pub fn generate_create_order_response(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
     let response = match transaction_response {
         Ok(response) => {
             // For successful order creation, return basic success response
@@ -1190,8 +1193,8 @@ pub fn generate_create_order_response(
                 status: grpc_status as i32,
                 error_message: None,
                 error_code: None,
-                raw_connector_response: None,
                 status_code: 200,
+                raw_connector_response,
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
@@ -1220,12 +1223,12 @@ pub fn generate_create_order_response(
                 status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 connector_metadata: std::collections::HashMap::new(),
+                raw_connector_response,
             }
         }
     };
@@ -1243,6 +1246,10 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let order_id = router_data_v2.resource_common_data.reference_id.clone();
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .raw_connector_response
+        .clone();
     let response_headers = router_data_v2
         .resource_common_data
         .get_connector_response_headers_as_map();
@@ -1257,7 +1264,6 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference: _,
-                raw_connector_response,
                 status_code,
             } => {
                 PaymentServiceAuthorizeResponse {
@@ -1349,9 +1355,9 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 status: status as i32,
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                raw_connector_response: err.raw_connector_response,
                 status_code: err.status_code as u32,
                 response_headers,
+                raw_connector_response,
                 connector_metadata: std::collections::HashMap::new(),
             }
         }
@@ -1625,7 +1631,6 @@ pub fn generate_payment_void_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
-                raw_connector_response: _,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -1701,6 +1706,9 @@ pub fn generate_payment_sync_response(
     router_data_v2: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
 ) -> Result<PaymentServiceGetResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
 
     match transaction_response {
         Ok(response) => match response {
@@ -1712,7 +1720,6 @@ pub fn generate_payment_sync_response(
                 connector_response_reference_id: _,
                 incremental_authorization_allowed: _,
                 mandate_reference,
-                raw_connector_response,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -1751,8 +1758,8 @@ pub fn generate_payment_sync_response(
                     connector_customer_id: None,
                     merchant_order_reference_id: None,
                     metadata: std::collections::HashMap::new(),
-                    raw_connector_response,
                     status_code: status_code as u32,
+                    raw_connector_response,
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
@@ -2073,6 +2080,9 @@ pub fn generate_refund_sync_response(
     router_data_v2: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
 ) -> Result<RefundResponse, error_stack::Report<ApplicationErrorResponse>> {
     let refunds_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
 
     match refunds_response {
         Ok(response) => {
@@ -2106,7 +2116,7 @@ pub fn generate_refund_sync_response(
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
-                raw_connector_response: response.raw_connector_response,
+                raw_connector_response,
                 status_code: response.status_code as u32,
                 response_headers,
             })
@@ -2151,10 +2161,10 @@ pub fn generate_refund_sync_response(
                 processed_at: None,
                 customer_name: None,
                 email: None,
+                raw_connector_response,
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
-                raw_connector_response: e.raw_connector_response,
                 status_code: e.status_code as u32,
                 response_headers,
             })
@@ -2212,8 +2222,8 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             connector_customer_id: None,
             merchant_order_reference_id: None,
             metadata: std::collections::HashMap::new(),
-            raw_connector_response: value.raw_connector_response,
             status_code: value.status_code as u32,
+            raw_connector_response: None,
             response_headers,
         })
     }
@@ -2239,8 +2249,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 })
                 .unwrap_or_default(),
             cancellation_reason: value.cancellation_reason,
-            integrity_object: None,
             raw_connector_response: None,
+            integrity_object: None,
         })
     }
 }
@@ -2278,6 +2288,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             }),
             error_code: value.error_code,
             error_message: value.error_message,
+            raw_connector_response: None,
             refund_amount: None,
             minor_refund_amount: None,
             refund_currency: None,
@@ -2292,7 +2303,6 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             merchant_order_reference_id: None,
             metadata: std::collections::HashMap::new(),
             refund_metadata: std::collections::HashMap::new(),
-            raw_connector_response: value.raw_connector_response,
             status_code: value.status_code as u32,
             response_headers,
         })
@@ -2565,6 +2575,9 @@ pub fn generate_refund_response(
     router_data_v2: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
 ) -> Result<RefundResponse, error_stack::Report<ApplicationErrorResponse>> {
     let refund_response = router_data_v2.response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
 
     match refund_response {
         Ok(response) => {
@@ -2590,9 +2603,9 @@ pub fn generate_refund_response(
                 customer_name: None,
                 email: None,
                 merchant_order_reference_id: None,
+                raw_connector_response,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
-                raw_connector_response: response.raw_connector_response,
                 status_code: response.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
@@ -2629,10 +2642,10 @@ pub fn generate_refund_response(
                 processed_at: None,
                 customer_name: None,
                 email: None,
+                raw_connector_response,
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
                 refund_metadata: std::collections::HashMap::new(),
-                raw_connector_response: e.raw_connector_response,
                 status_code: e.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data
@@ -2714,6 +2727,7 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
+            raw_connector_response: None,
             merchant_id: common_utils::id_type::MerchantId::default(),
             payment_id: "PAYMENT_ID".to_string(),
             attempt_id: "ATTEMPT_ID".to_string(),
@@ -2741,7 +2755,6 @@ impl
             connector_http_status_code: None,
             external_latency: None,
             connectors,
-            raw_connector_response: None,
             connector_response_headers: None,
         })
     }
@@ -2767,7 +2780,6 @@ pub fn generate_payment_capture_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
-                raw_connector_response: _,
                 status_code,
             } => {
                 let status = router_data_v2.resource_common_data.status;
@@ -3060,7 +3072,6 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
-                raw_connector_response: _,
                 status_code,
             } => {
                 PaymentServiceRegisterResponse {
@@ -3646,14 +3657,15 @@ pub fn generate_repeat_payment_response(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
                 resource_id,
                 network_txn_id,
                 connector_response_reference_id,
-                raw_connector_response,
                 status_code,
                 ..
             } => Ok(
@@ -3670,8 +3682,8 @@ pub fn generate_repeat_payment_response(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-                    raw_connector_response,
                     status_code: status_code as u32,
+                    raw_connector_response,
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
@@ -3705,7 +3717,7 @@ pub fn generate_repeat_payment_response(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-                    raw_connector_response: err.raw_connector_response,
+                    raw_connector_response: None,
                     status_code: err.status_code as u32,
                     response_headers: router_data_v2
                         .resource_common_data

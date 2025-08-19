@@ -999,7 +999,6 @@ impl<
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 }),
                 ..router_data
@@ -1015,7 +1014,6 @@ impl<
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 ..router_data
             }),
@@ -1043,7 +1041,6 @@ impl<
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
-                            raw_connector_response: None,
                             status_code: item.http_code,
                         }),
                         ..router_data
@@ -1091,7 +1088,6 @@ impl<
                             network_advice_code: None,
                             network_decline_code: None,
                             network_error_message: None,
-                            raw_connector_response: None,
                         })
                     } else {
                         Ok(PaymentsResponseData::TransactionResponse {
@@ -1102,7 +1098,6 @@ impl<
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
-                            raw_connector_response: None,
                             status_code: item.http_code,
                         })
                     };
@@ -1145,7 +1140,6 @@ impl<
                                 network_advice_code: None,
                                 network_decline_code: None,
                                 network_error_message: None,
-                                raw_connector_response: None,
                             })
                         } else {
                             Ok(PaymentsResponseData::TransactionResponse {
@@ -1156,7 +1150,6 @@ impl<
                                 network_txn_id: None,
                                 connector_response_reference_id: None,
                                 incremental_authorization_allowed: None,
-                                raw_connector_response: None,
                                 status_code: item.http_code,
                             })
                         };
@@ -1179,7 +1172,6 @@ impl<
                             network_txn_id: None,
                             connector_response_reference_id: None,
                             incremental_authorization_allowed: None,
-                            raw_connector_response: None,
                             status_code: item.http_code,
                         });
                         Self {
@@ -1318,7 +1310,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 ..router_data
             }),
@@ -1346,7 +1337,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                             network_advice_code: None,
                             network_decline_code: None,
                             network_error_message: None,
-                            raw_connector_response: None,
                         }),
                         ..router_data
                     })
@@ -1355,7 +1345,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundResponse, Self>>
                         response: Ok(RefundsResponseData {
                             connector_refund_id: refund_data.refund_id.clone().to_string(),
                             refund_status,
-                            raw_connector_response: None,
                             status_code: item.http_code,
                         }),
                         ..router_data
@@ -1578,7 +1567,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
-                        raw_connector_response: None,
                     })
                 } else {
                     None
@@ -1594,7 +1582,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                         .map(|id| id.clone().expose()),
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 };
                 Ok(Self {
@@ -1639,7 +1626,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                         network_advice_code: None,
                         network_decline_code: None,
                         network_error_message: None,
-                        raw_connector_response: None,
                     })
                 } else {
                     None
@@ -1652,7 +1638,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentResponse, Self>>
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 };
                 Ok(Self {
@@ -1853,7 +1838,6 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             None
@@ -1866,7 +1850,6 @@ impl<F> TryFrom<ResponseRouterData<PaymentCaptureResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
             status_code: item.http_code,
         };
         Ok(Self {
@@ -1995,7 +1978,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             None
@@ -2008,7 +1990,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuPaymentCancelResponse, Self>>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
             status_code: item.http_code,
         };
         Ok(Self {
@@ -2115,7 +2096,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 ..router_data
             }),
@@ -2131,7 +2111,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                     response: Ok(RefundsResponseData {
                         connector_refund_id: refund.refund_id.clone(),
                         refund_status: common_enums::RefundStatus::from(refund.status.clone()),
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..router_data
@@ -2143,7 +2122,6 @@ impl<F> TryFrom<ResponseRouterData<FiuuRefundSyncResponse, Self>>
                     refund_status: common_enums::RefundStatus::from(
                         fiuu_webhooks_refund_response.status.clone(),
                     ),
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 }),
                 ..router_data
