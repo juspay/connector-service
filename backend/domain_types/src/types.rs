@@ -16,6 +16,20 @@ use serde::Serialize;
 use serde_json::json;
 use utoipa::ToSchema;
 
+// Helper function for extracting connector request reference ID
+fn extract_connector_request_reference_id(
+    identifier: &Option<grpc_api_types::payments::Identifier>,
+) -> String {
+    identifier
+        .as_ref()
+        .and_then(|id| id.id_type.as_ref())
+        .and_then(|id_type| match id_type {
+            grpc_api_types::payments::identifier::IdType::Id(id) => Some(id.clone()),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::mandates::{self, MandateData};
 use crate::{
@@ -68,6 +82,7 @@ pub struct Connectors {
     pub cashtocode: ConnectorParams,
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
+    pub noon: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -627,7 +642,7 @@ impl<
             setup_future_usage: None,
             mandate_id: None,
             off_session: None,
-            order_category: None,
+            order_category: value.order_category,
             session_token: None,
             enrolled_for_3ds: false,
             related_transaction_id: None,
@@ -1042,14 +1057,9 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                 grpc_api_types::payments::AuthenticationType::try_from(value.auth_type)
                     .unwrap_or_default(),
             )?, // Use direct enum
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: value
                 .connector_customer_id
                 .clone()
@@ -1062,7 +1072,7 @@ impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors)> for PaymentFlo
                     error_object: None,
                 }))?,
             connector_customer: value.connector_customer_id,
-            description: None,
+            description: value.metadata.get("description").cloned(),
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
@@ -1108,14 +1118,9 @@ impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors)> for PaymentFlowData
             payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -1484,14 +1489,9 @@ impl
             payment_method: common_enums::PaymentMethod::Card, // Default
             address: payment_address::PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_else(|| "default_reference_id".to_string()),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -1862,7 +1862,7 @@ impl
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (_value, connectors): (
+        (value, connectors): (
             grpc_api_types::payments::RefundServiceGetRequest,
             Connectors,
         ),
@@ -1871,6 +1871,9 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             raw_connector_response: None,
             connector_response_headers: None,
         })
@@ -1895,6 +1898,9 @@ impl
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             raw_connector_response: None,
             connector_response_headers: None,
         })
@@ -1982,6 +1988,9 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
             connectors,
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             raw_connector_response: None,
             connector_response_headers: None,
         })
@@ -2058,6 +2067,9 @@ impl
             connectors,
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             raw_connector_response: None,
             connector_response_headers: None,
         })
@@ -2723,14 +2735,9 @@ impl
             payment_method: common_enums::PaymentMethod::Card, // Default
             address: payment_address::PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -2863,17 +2870,12 @@ impl ForeignTryFrom<(PaymentServiceRegisterRequest, Connectors, String)> for Pay
             payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
-            description: None,
+            description: value.metadata.get("description").cloned(),
             return_url: None,
             connector_meta_data: None,
             amount_captured: None,
@@ -2978,7 +2980,17 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             return_url: value.return_url.clone(),
             payment_method_type: None,
             request_incremental_authorization: false,
-            metadata: None,
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            },
             complete_authorize_url: None,
             capture_method: None,
             integrity_object: None,
@@ -3163,6 +3175,9 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
             connectors,
             connector_dispute_id: value.dispute_id,
             defense_reason_code: Some(value.reason_code.unwrap_or_default()),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             raw_connector_response: None,
             connector_response_headers: None,
         })
@@ -3602,14 +3617,9 @@ impl
             payment_method: common_enums::PaymentMethod::Card, // Default, actual method depends on mandate
             address,
             auth_type: common_enums::AuthenticationType::NoThreeDs, // MIT typically doesn't use 3DS
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: Some("Repeat payment transaction".to_string()),
