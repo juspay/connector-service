@@ -1483,7 +1483,7 @@ message PaymentServiceRepeatEverythingRequest {
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
   
-  // Session and Token Information
+  // Token Information
   optional AccessToken access_token = 14; // Access token for secure communication
 }
 

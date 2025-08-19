@@ -1805,7 +1805,14 @@ pub fn generate_payment_sync_response(
                     email: None,
                     connector_customer_id: None,
                     merchant_order_reference_id: None,
-                    metadata: std::collections::HashMap::new(),
+                    metadata: connector_metadata
+                        .and_then(|value| value.as_object().cloned())
+                        .map(|map| {
+                            map.into_iter()
+                                .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+                                .collect::<HashMap<_, _>>()
+                        })
+                        .unwrap_or_default(),
                     raw_connector_response,
                     status_code: status_code as u32,
                     response_headers: router_data_v2
