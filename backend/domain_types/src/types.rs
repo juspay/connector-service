@@ -2167,13 +2167,17 @@ impl
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (_value, connectors, _metadata): (
+        (value, connectors, _metadata): (
             grpc_api_types::payments::RefundServiceGetRequest,
             Connectors,
             &tonic::metadata::MetadataMap,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(RefundFlowData {
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+
             status: common_enums::RefundStatus::Pending,
             refund_id: None,
             connectors,
@@ -2227,6 +2231,10 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(RefundFlowData {
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+
             status: common_enums::RefundStatus::Pending,
             refund_id: Some(value.refund_id),
             connectors,
@@ -2343,6 +2351,10 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+
             dispute_id: None,
             connectors,
             connector_dispute_id: value.dispute_id,
@@ -2449,6 +2461,10 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+
             dispute_id: None,
             connectors,
             connector_dispute_id: value.dispute_id,
@@ -3714,6 +3730,10 @@ impl
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+
             dispute_id: Some(value.dispute_id.clone()),
             connectors,
             connector_dispute_id: value.dispute_id,
