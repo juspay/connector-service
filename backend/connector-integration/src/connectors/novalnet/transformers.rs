@@ -422,27 +422,6 @@ impl<
                         custom,
                     })
                 }
-                WalletDataPaymentMethod::AliPayQr(_)
-                | WalletDataPaymentMethod::AliPayRedirect(_)
-                | WalletDataPaymentMethod::AliPayHkRedirect(_)
-                | WalletDataPaymentMethod::AmazonPayRedirect(_)
-                | WalletDataPaymentMethod::MomoRedirect(_)
-                | WalletDataPaymentMethod::KakaoPayRedirect(_)
-                | WalletDataPaymentMethod::GoPayRedirect(_)
-                | WalletDataPaymentMethod::GcashRedirect(_)
-                | WalletDataPaymentMethod::ApplePayRedirect(_)
-                | WalletDataPaymentMethod::ApplePayThirdPartySdk(_)
-                | WalletDataPaymentMethod::DanaRedirect {}
-                | WalletDataPaymentMethod::GooglePayRedirect(_)
-                | WalletDataPaymentMethod::GooglePayThirdPartySdk(_)
-                | WalletDataPaymentMethod::MbWayRedirect(_)
-                | WalletDataPaymentMethod::MobilePayRedirect(_)
-                | WalletDataPaymentMethod::RevolutPay(_) => {
-                    Err(errors::ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("novalnet"),
-                    )
-                    .into())
-                }
                 WalletDataPaymentMethod::PaypalRedirect(_) => {
                     let transaction = NovalnetPaymentsRequestTransaction {
                         test_mode,
@@ -469,7 +448,23 @@ impl<
                         custom,
                     })
                 }
-                WalletDataPaymentMethod::PaypalSdk(_)
+                WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::AliPayRedirect(_)
+                | WalletDataPaymentMethod::AliPayHkRedirect(_)
+                | WalletDataPaymentMethod::AmazonPayRedirect(_)
+                | WalletDataPaymentMethod::MomoRedirect(_)
+                | WalletDataPaymentMethod::KakaoPayRedirect(_)
+                | WalletDataPaymentMethod::GoPayRedirect(_)
+                | WalletDataPaymentMethod::GcashRedirect(_)
+                | WalletDataPaymentMethod::ApplePayRedirect(_)
+                | WalletDataPaymentMethod::ApplePayThirdPartySdk(_)
+                | WalletDataPaymentMethod::DanaRedirect {}
+                | WalletDataPaymentMethod::GooglePayRedirect(_)
+                | WalletDataPaymentMethod::GooglePayThirdPartySdk(_)
+                | WalletDataPaymentMethod::MbWayRedirect(_)
+                | WalletDataPaymentMethod::MobilePayRedirect(_)
+                | WalletDataPaymentMethod::RevolutPay(_)
+                | WalletDataPaymentMethod::PaypalSdk(_)
                 | WalletDataPaymentMethod::Paze(_)
                 | WalletDataPaymentMethod::SamsungPay(_)
                 | WalletDataPaymentMethod::TwintRedirect {}
