@@ -62,7 +62,7 @@ use crate::{
     router_request_types,
     router_request_types::BrowserInformation,
     router_response_types,
-    utils::{ForeignFrom, ForeignTryFrom},
+    utils::{extract_merchant_id_from_metadata, ForeignFrom, ForeignTryFrom},
 };
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1057,36 +1057,7 @@ impl
             }
         };
 
-        let merchant_id_str = metadata
-            .get(common_utils::consts::X_MERCHANT_ID)
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing merchant ID in request metadata".to_owned(),
-                    error_object: None,
-                })
-            })?
-            .to_str()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                    error_object: None,
-                })
-            })?;
-
-        let merchant_id_from_header = merchant_id_str
-            .parse::<common_utils::id_type::MerchantId>()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Failed to parse merchant ID from header: {e}"),
-                    error_object: None,
-                })
-            })?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1165,36 +1136,7 @@ impl
             Some(false), // should_unify_address = false for repeat operations
         );
 
-        let merchant_id_str = metadata
-            .get(common_utils::consts::X_MERCHANT_ID)
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing merchant ID in request metadata".to_owned(),
-                    error_object: None,
-                })
-            })?
-            .to_str()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                    error_object: None,
-                })
-            })?;
-
-        let merchant_id_from_header = merchant_id_str
-            .parse::<common_utils::id_type::MerchantId>()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Failed to parse merchant ID from header: {e}"),
-                    error_object: None,
-                })
-            })?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1204,14 +1146,9 @@ impl
             payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -1259,36 +1196,7 @@ impl
             Some(false), // should_unify_address = false for sync operations
         );
 
-        let merchant_id_str = metadata
-            .get(common_utils::consts::X_MERCHANT_ID)
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing merchant ID in request metadata".to_owned(),
-                    error_object: None,
-                })
-            })?
-            .to_str()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                    error_object: None,
-                })
-            })?;
-
-        let merchant_id_from_header = merchant_id_str
-            .parse::<common_utils::id_type::MerchantId>()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Failed to parse merchant ID from header: {e}"),
-                    error_object: None,
-                })
-            })?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1354,36 +1262,7 @@ impl
             Some(false), // should_unify_address = false for void operations
         );
 
-        let merchant_id_str = metadata
-            .get(common_utils::consts::X_MERCHANT_ID)
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing merchant ID in request metadata".to_owned(),
-                    error_object: None,
-                })
-            })?
-            .to_str()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                    error_object: None,
-                })
-            })?;
-
-        let merchant_id_from_header = merchant_id_str
-            .parse::<common_utils::id_type::MerchantId>()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Failed to parse merchant ID from header: {e}"),
-                    error_object: None,
-                })
-            })?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3175,36 +3054,7 @@ impl
             &tonic::metadata::MetadataMap,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let merchant_id_str = metadata
-            .get(common_utils::consts::X_MERCHANT_ID)
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing merchant ID in request metadata".to_owned(),
-                    error_object: None,
-                })
-            })?
-            .to_str()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                    error_object: None,
-                })
-            })?;
-
-        let merchant_id_from_header = merchant_id_str
-            .parse::<common_utils::id_type::MerchantId>()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Failed to parse merchant ID from header: {e}"),
-                    error_object: None,
-                })
-            })?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -3214,14 +3064,9 @@ impl
             payment_method: common_enums::PaymentMethod::Card, // Default
             address: payment_address::PaymentAddress::default(),
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .request_ref_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -3360,36 +3205,7 @@ impl
             _ => Some(true),
         };
 
-        let merchant_id_str = metadata
-            .get(common_utils::consts::X_MERCHANT_ID)
-            .ok_or_else(|| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Missing merchant ID in request metadata".to_owned(),
-                    error_object: None,
-                })
-            })?
-            .to_str()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                    error_object: None,
-                })
-            })?;
-
-        let merchant_id_from_header = merchant_id_str
-            .parse::<common_utils::id_type::MerchantId>()
-            .map_err(|e| {
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: format!("Failed to parse merchant ID from header: {e}"),
-                    error_object: None,
-                })
-            })?;
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
