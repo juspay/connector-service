@@ -1,4 +1,5 @@
 use common_enums::{self, AttemptStatus, Currency};
+use common_utils::pii::IpAddress;
 use common_utils::Email;
 use domain_types::errors::ConnectorError;
 use domain_types::{
@@ -118,9 +119,9 @@ pub struct PayuPaymentRequest {
     pub vpa: Option<String>, // UPI VPA (for collect)
 
     // UPI specific fields
-    pub txn_s2s_flow: String,          // S2S flow type ("1" for UPI)
-    pub s2s_client_ip: Secret<String>, // Client IP
-    pub s2s_device_info: String,       // Device info
+    pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
+    pub s2s_client_ip: Secret<String, IpAddress>, // Client IP
+    pub s2s_device_info: String, // Device info
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_version: Option<String>, // API version ("2.0")
 
@@ -349,7 +350,6 @@ impl<
             s2s_client_ip: router_data
                 .request
                 .get_ip_address_as_optional()
-                .map(|ip_address| ip_address.expose().into())
                 .ok_or_else(|| {
                     report!(ConnectorError::MissingRequiredField {
                         field_name: "IP address"
