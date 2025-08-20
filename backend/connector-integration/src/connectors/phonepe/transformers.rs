@@ -23,29 +23,12 @@ use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::constants;
-use crate::types::ResponseRouterData;
+use crate::{connectors::phonepe::PhonepeRouterData, types::ResponseRouterData};
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
 // ===== AMOUNT CONVERSION =====
-
-pub struct PhonepeRouterData<T> {
-    pub amount: MinorUnit,
-    pub router_data: T,
-    pub amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
-}
-
-impl<T> TryFrom<(MinorUnit, T)> for PhonepeRouterData<T> {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount,
-            router_data: item,
-            amount_converter: &common_utils::types::MinorUnitForConnector,
-        })
-    }
-}
+// Using macro-generated PhonepeRouterData from crate::connectors::phonepe
 
 // ===== REQUEST STRUCTURES =====
 
@@ -185,7 +168,7 @@ pub struct PhonepeSyncResponseData {
 
 // ===== REQUEST BUILDING =====
 
-// TryFrom implementation for macro-generated PhonepeRouterData wrapper
+// TryFrom implementation for macro-generated PhonepeRouterData wrapper (owned)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -195,7 +178,7 @@ impl<
             + Serialize,
     >
     TryFrom<
-        crate::connectors::phonepe::PhonepeRouterData<
+        PhonepeRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -209,7 +192,7 @@ impl<
     type Error = Error;
 
     fn try_from(
-        wrapper: crate::connectors::phonepe::PhonepeRouterData<
+        wrapper: PhonepeRouterData<
             RouterDataV2<
                 Authorize,
                 PaymentFlowData,
@@ -219,14 +202,121 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&PhonepeRouterData {
-            amount: wrapper.router_data.request.minor_amount,
-            router_data: &wrapper.router_data,
-            amount_converter: &common_utils::types::MinorUnitForConnector,
+        let router_data = &wrapper.router_data;
+        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
+            &router_data.connector_auth_type,
+            Secret::new(
+                router_data
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ),
+        )?;
+
+        // Use amount converter to get proper amount in minor units
+        let amount_in_minor_units = common_utils::types::MinorUnitForConnector
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        // Get customer mobile number from billing address
+        let mobile_number = router_data
+            .resource_common_data
+            .get_optional_billing_phone_number()
+            .map(|phone| Secret::new(phone.peek().to_string()));
+
+        // Create payment instrument based on payment method data
+        let payment_instrument = match &router_data.request.payment_method_data {
+            PaymentMethodData::Upi(upi_data) => match upi_data {
+                UpiData::UpiIntent(_) => PhonepePaymentInstrument {
+                    instrument_type: constants::UPI_INTENT.to_string(),
+                    target_app: None, // Could be extracted from payment method details if needed
+                    vpa: None,
+                },
+                UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
+                    instrument_type: constants::UPI_COLLECT.to_string(),
+                    target_app: None,
+                    vpa: collect_data
+                        .vpa_id
+                        .as_ref()
+                        .map(|vpa| Secret::new(vpa.peek().to_string())),
+                },
+            },
+            _ => {
+                return Err(errors::ConnectorError::NotSupported {
+                    message: "Payment method not supported".to_string(),
+                    connector: "Phonepe",
+                }
+                .into())
+            }
+        };
+
+        // For UPI Intent, add device context with proper OS detection
+        let device_context = match &router_data.request.payment_method_data {
+            PaymentMethodData::Upi(UpiData::UpiIntent(_)) => {
+                let device_os = match router_data
+                    .request
+                    .browser_info
+                    .as_ref()
+                    .and_then(|info| info.os_type.clone())
+                    .unwrap_or_else(|| constants::DEFAULT_DEVICE_OS.to_string())
+                    .to_uppercase()
+                    .as_str()
+                {
+                    "IOS" | "IPHONE" | "IPAD" | "MACOS" | "DARWIN" => "IOS".to_string(),
+                    "ANDROID" => "ANDROID".to_string(),
+                    _ => "ANDROID".to_string(), // Default to ANDROID for unknown OS
+                };
+
+                Some(PhonepeDeviceContext {
+                    device_os: Some(device_os),
+                })
+            }
+            _ => None,
+        };
+
+        // Build payload
+        let payload = PhonepePaymentRequestPayload {
+            merchant_id: auth.merchant_id.clone(),
+            merchant_transaction_id: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
+            merchant_user_id: router_data
+                .resource_common_data
+                .customer_id
+                .clone()
+                .map(|id| id.get_string_repr().to_string()),
+            amount: amount_in_minor_units,
+            callback_url: router_data.request.get_webhook_url()?,
+            mobile_number,
+            payment_instrument,
+            device_context,
+        };
+
+        // Convert to JSON and encode
+        let json_payload = Encode::encode_to_string_of_json(&payload)
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+
+        // Base64 encode the payload
+        let base64_payload = base64::engine::general_purpose::STANDARD.encode(&json_payload);
+
+        // Generate checksum
+        let api_path = format!("/{}", constants::API_PAY_ENDPOINT);
+        let checksum =
+            generate_phonepe_checksum(&base64_payload, &api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            request: Secret::new(base64_payload),
+            checksum,
         })
     }
 }
 
+// TryFrom implementation for borrowed PhonepeRouterData wrapper (for header generation)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -243,6 +333,7 @@ impl<
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     > for PhonepePaymentsRequest
 {
@@ -256,6 +347,7 @@ impl<
                 PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
@@ -271,9 +363,11 @@ impl<
         )?;
 
         // Use amount converter to get proper amount in minor units
-        let amount_in_minor_units = item
-            .amount_converter
-            .convert(item.amount, router_data.request.currency)
+        let amount_in_minor_units = common_utils::types::MinorUnitForConnector
+            .convert(
+                router_data.request.minor_amount,
+                router_data.request.currency,
+            )
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         // Get customer mobile number from billing address
@@ -626,6 +720,7 @@ fn generate_phonepe_checksum(
 
 // ===== SYNC REQUEST BUILDING =====
 
+// TryFrom implementation for owned PhonepeRouterData wrapper (sync)
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
             + std::fmt::Debug
@@ -635,7 +730,7 @@ impl<
             + serde::Serialize,
     >
     TryFrom<
-        crate::connectors::phonepe::PhonepeRouterData<
+        PhonepeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
@@ -644,23 +739,58 @@ impl<
     type Error = Error;
 
     fn try_from(
-        wrapper: crate::connectors::phonepe::PhonepeRouterData<
+        wrapper: PhonepeRouterData<
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(&PhonepeRouterData {
-            amount: wrapper.router_data.request.amount,
-            router_data: &wrapper.router_data,
-            amount_converter: &common_utils::types::MinorUnitForConnector,
+        let router_data = &wrapper.router_data;
+        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
+            &router_data.connector_auth_type,
+            Secret::new(
+                router_data
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ),
+        )?;
+
+        let merchant_transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+        // Generate checksum for status API
+        let api_path = format!(
+            "/{}/{}/{}",
+            constants::API_STATUS_ENDPOINT,
+            auth.merchant_id.peek(),
+            merchant_transaction_id
+        );
+        let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            merchant_transaction_id,
+            checksum,
         })
     }
 }
 
-impl
+// TryFrom implementation for borrowed PhonepeRouterData wrapper (sync header generation)
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
     TryFrom<
         &PhonepeRouterData<
             &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     > for PhonepeSyncRequest
 {
@@ -669,6 +799,7 @@ impl
     fn try_from(
         item: &PhonepeRouterData<
             &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;

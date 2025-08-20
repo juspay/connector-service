@@ -288,11 +288,9 @@ macros::macro_connector_implementation!(
             ];
 
             // Build the request to get the checksum for X-VERIFY header
-            let amount = req.request.minor_amount;
-            let connector_router_data = transformers::PhonepeRouterData {
-                amount,
+            let connector_router_data = PhonepeRouterData {
+                connector: self.clone(),
                 router_data: req,
-                amount_converter: &common_utils::types::MinorUnitForConnector,
             };
             let connector_req = phonepe::PhonepePaymentsRequest::try_from(&connector_router_data)?;
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
@@ -337,11 +335,9 @@ macros::macro_connector_implementation!(
             ];
 
             // Build the request to get the checksum for X-VERIFY header
-            let amount = req.request.amount;
-            let connector_router_data = transformers::PhonepeRouterData {
-                amount,
+            let connector_router_data = PhonepeRouterData {
+                connector: self.clone(),
                 router_data: req,
-                amount_converter: &common_utils::types::MinorUnitForConnector,
             };
             let connector_req = phonepe::PhonepeSyncRequest::try_from(&connector_router_data)?;
 
