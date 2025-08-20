@@ -261,7 +261,6 @@ macros::create_all_prerequisites!(
             if is_upi_collect_flow(&req.request) {
                 // For UPI collect flows, we need to return base64 decoded response
                 let decoded_value = BASE64_ENGINE.decode(bytes.clone());
-                println!("{:?}<<>>10", decoded_value);
                 match decoded_value {
                     Ok(decoded_bytes) => Ok(decoded_bytes.into()),
                     Err(_) => Ok(bytes.clone())

@@ -362,15 +362,15 @@ impl<
             hash: String::new(),
 
             // User defined fields based on Haskell implementation logic
-            udf1: udf_fields.get(0).and_then(|f| f.clone()), // Transaction ID or metadata value
-            udf2: udf_fields.get(1).and_then(|f| f.clone()), // Merchant ID or metadata value
-            udf3: udf_fields.get(2).and_then(|f| f.clone()), // From metadata or order reference
-            udf4: udf_fields.get(3).and_then(|f| f.clone()), // From metadata or order reference
-            udf5: udf_fields.get(4).and_then(|f| f.clone()), // From metadata or order reference
-            udf6: udf_fields.get(5).and_then(|f| f.clone()), // From order reference (udf6)
-            udf7: udf_fields.get(6).and_then(|f| f.clone()), // From order reference (udf7)
-            udf8: udf_fields.get(7).and_then(|f| f.clone()), // From order reference (udf8)
-            udf9: udf_fields.get(8).and_then(|f| f.clone()), // From order reference (udf9)
+            udf1: udf_fields.first().and_then(|f| f.clone()), // Transaction ID or metadata value
+            udf2: udf_fields.get(1).and_then(|f| f.clone()),  // Merchant ID or metadata value
+            udf3: udf_fields.get(2).and_then(|f| f.clone()),  // From metadata or order reference
+            udf4: udf_fields.get(3).and_then(|f| f.clone()),  // From metadata or order reference
+            udf5: udf_fields.get(4).and_then(|f| f.clone()),  // From metadata or order reference
+            udf6: udf_fields.get(5).and_then(|f| f.clone()),  // From order reference (udf6)
+            udf7: udf_fields.get(6).and_then(|f| f.clone()),  // From order reference (udf7)
+            udf8: udf_fields.get(7).and_then(|f| f.clone()),  // From order reference (udf8)
+            udf9: udf_fields.get(8).and_then(|f| f.clone()),  // From order reference (udf9)
             udf10: udf_fields.get(9).and_then(|f| f.clone()), // Always empty string
 
             // Optional PayU fields for UPI
@@ -509,7 +509,7 @@ fn generate_payu_verify_hash(
     use sha2::{Digest, Sha512};
 
     // PayU verify hash format: key|command|var1|salt
-    let hash_fields = vec![
+    let hash_fields = [
         request.key.clone(),
         request.command.clone(),
         request.var1.clone(),
@@ -959,14 +959,14 @@ impl
                             status_code: item.http_code,
                         };
 
-                        return Ok(Self {
+                        Ok(Self {
                             response: Ok(payment_response_data),
                             resource_common_data: PaymentFlowData {
                                 status: attempt_status,
                                 ..item.router_data.resource_common_data
                             },
                             ..item.router_data
-                        });
+                        })
                     }
                     _ => {
                         // Transaction not found in PayU response
@@ -982,14 +982,14 @@ impl
                             network_decline_code: None,
                         };
 
-                        return Ok(Self {
+                        Ok(Self {
                             response: Err(error_response),
                             resource_common_data: PaymentFlowData {
                                 status: AttemptStatus::Failure,
                                 ..item.router_data.resource_common_data
                             },
                             ..item.router_data
-                        });
+                        })
                     }
                 }
             }
@@ -1007,14 +1007,14 @@ impl
                     network_decline_code: None,
                 };
 
-                return Ok(Self {
+                Ok(Self {
                     response: Err(error_response),
                     resource_common_data: PaymentFlowData {
                         status: AttemptStatus::Failure,
                         ..item.router_data.resource_common_data
                     },
                     ..item.router_data
-                });
+                })
             }
         }
     }
