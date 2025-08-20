@@ -1,19 +1,41 @@
-use common_enums::{self, AttemptStatus};
+use common_enums::{self, AttemptStatus, Currency};
+use common_utils::pii::IpAddress;
+use common_utils::Email;
+use domain_types::errors::ConnectorError;
 use domain_types::{
-    connector_flow::Authorize,
-    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, ResponseId},
-    errors::ConnectorError,
-    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData, WalletData},
+    connector_flow::{Authorize, PSync},
+    connector_types::{
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+    },
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_request_types::AuthoriseIntegrityObject,
     router_response_types::RedirectForm,
 };
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
+
+pub mod constants {
+    // Payu API versions
+    pub const API_VERSION: &str = "2.0";
+
+    // Payu device info
+    pub const DEVICE_INFO: &str = "web";
+
+    // Payu UPI specific constants
+    pub const PRODUCT_INFO: &str = "Payment"; // Default product info
+    pub const UPI_PG: &str = "UPI"; // UPI payment gateway
+    pub const UPI_COLLECT_BANKCODE: &str = "UPI"; // UPI Collect bank code
+    pub const UPI_INTENT_BANKCODE: &str = "INTENT"; // UPI Intent bank code
+    pub const UPI_S2S_FLOW: &str = "2"; // S2S flow type for UPI
+
+    // Payu PSync specific constants
+    pub const COMMAND: &str = "verify_payment";
+}
 
 // PayU Status enum to handle both integer and string status values
 #[derive(Debug, Serialize, Clone)]
@@ -74,15 +96,15 @@ pub struct PayuPaymentRequest {
     pub key: String,                                  // Merchant key
     pub txnid: String,                                // Transaction ID
     pub amount: common_utils::types::StringMajorUnit, // Amount in string major units
-    pub currency: String,                             // Currency code
+    pub currency: Currency,                           // Currency code
     pub productinfo: String,                          // Product description
 
     // Customer information
-    pub firstname: String,
+    pub firstname: Secret<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub lastname: Option<String>,
-    pub email: String,
-    pub phone: String,
+    pub lastname: Option<Secret<String>>,
+    pub email: Email,
+    pub phone: Secret<String>,
 
     // URLs
     pub surl: String, // Success URL
@@ -97,8 +119,8 @@ pub struct PayuPaymentRequest {
     pub vpa: Option<String>, // UPI VPA (for collect)
 
     // UPI specific fields
-    pub txn_s2s_flow: String,    // S2S flow type ("1" for UPI)
-    pub s2s_client_ip: String,   // Client IP
+    pub txn_s2s_flow: String, // S2S flow type ("2" for UPI)
+    pub s2s_client_ip: Secret<String, IpAddress>, // Client IP
     pub s2s_device_info: String, // Device info
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_version: Option<String>, // API version ("2.0")
@@ -290,46 +312,33 @@ impl<
                 .resource_common_data
                 .merchant_id
                 .get_string_repr(),
-            &router_data.resource_common_data,
+            router_data,
         );
 
         // Build base request
         let mut request = Self {
             key: auth.api_key.peek().to_string(),
-            txnid: router_data.resource_common_data.payment_id.clone(),
+            txnid: router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             amount,
-            currency: router_data.request.currency.to_string(),
-            productinfo: "Payment".to_string(), // Default product info
+            currency: router_data.request.currency,
+            productinfo: constants::PRODUCT_INFO.to_string(), // Default product info
 
             // Customer info - extract from billing address if available
-            firstname: router_data
-                .resource_common_data
-                .get_optional_billing_first_name()
-                .map(|name| name.peek().to_string())
-                .unwrap_or_else(|| "Customer".to_string()),
+            firstname: router_data.resource_common_data.get_billing_first_name()?,
             lastname: router_data
                 .resource_common_data
-                .get_optional_billing_last_name()
-                .map(|name| name.peek().to_string()),
-            email: router_data
-                .resource_common_data
-                .get_optional_billing_email()
-                .as_ref()
-                .map(|email| email.clone().expose().peek().to_string())
-                .unwrap_or("customer@example.com".to_string()),
+                .get_optional_billing_last_name(),
+            email: router_data.resource_common_data.get_billing_email()?,
             phone: router_data
                 .resource_common_data
-                .get_optional_billing_phone_number()
-                .map(|phone| phone.peek().to_string())
-                .unwrap_or_else(|| "9999999999".to_string()),
+                .get_billing_phone_number()?,
 
             // URLs - use router return URL if available
-            surl: router_data
-                .request
-                .router_return_url
-                .clone()
-                .unwrap_or_else(|| "https://example.com/success".to_string()),
-            furl: "https://example.com/failure".to_string(),
+            surl: router_data.request.get_router_return_url()?,
+            furl: router_data.request.get_router_return_url()?,
 
             // Payment method specific
             pg,
@@ -338,24 +347,31 @@ impl<
 
             // UPI specific - corrected based on PayU docs
             txn_s2s_flow: s2s_flow,
-            s2s_client_ip: "127.0.0.1".to_string(),
-            s2s_device_info: "web".to_string(),
-            api_version: Some("2.0".to_string()), // As per PayU analysis
+            s2s_client_ip: router_data
+                .request
+                .get_ip_address_as_optional()
+                .ok_or_else(|| {
+                    report!(ConnectorError::MissingRequiredField {
+                        field_name: "IP address"
+                    })
+                })?,
+            s2s_device_info: constants::DEVICE_INFO.to_string(),
+            api_version: Some(constants::API_VERSION.to_string()), // As per PayU analysis
 
             // Will be calculated after struct creation
             hash: String::new(),
 
             // User defined fields based on Haskell implementation logic
-            udf1: udf_fields[0].clone(), // Transaction ID or metadata value
-            udf2: udf_fields[1].clone(), // Merchant ID or metadata value
-            udf3: udf_fields[2].clone(), // From metadata or order reference
-            udf4: udf_fields[3].clone(), // From metadata or order reference
-            udf5: udf_fields[4].clone(), // From metadata or order reference
-            udf6: udf_fields[5].clone(), // From order reference (udf6)
-            udf7: udf_fields[6].clone(), // From order reference (udf7)
-            udf8: udf_fields[7].clone(), // From order reference (udf8)
-            udf9: udf_fields[8].clone(), // From order reference (udf9)
-            udf10: udf_fields[9].clone(), // Always empty string
+            udf1: udf_fields.first().and_then(|f| f.clone()), // Transaction ID or metadata value
+            udf2: udf_fields.get(1).and_then(|f| f.clone()),  // Merchant ID or metadata value
+            udf3: udf_fields.get(2).and_then(|f| f.clone()),  // From metadata or order reference
+            udf4: udf_fields.get(3).and_then(|f| f.clone()),  // From metadata or order reference
+            udf5: udf_fields.get(4).and_then(|f| f.clone()),  // From metadata or order reference
+            udf6: udf_fields.get(5).and_then(|f| f.clone()),  // From order reference (udf6)
+            udf7: udf_fields.get(6).and_then(|f| f.clone()),  // From order reference (udf7)
+            udf8: udf_fields.get(7).and_then(|f| f.clone()),  // From order reference (udf8)
+            udf9: udf_fields.get(8).and_then(|f| f.clone()),  // From order reference (udf9)
+            udf10: udf_fields.get(9).and_then(|f| f.clone()), // Always empty string
 
             // Optional PayU fields for UPI
             offer_key: None,
@@ -376,32 +392,207 @@ impl<
     }
 }
 
+// PayU Sync/Verify Payment Request structure
+#[derive(Debug, Serialize)]
+pub struct PayuSyncRequest {
+    pub key: String,     // Merchant key
+    pub command: String, // "verify_payment"
+    pub var1: String,    // Transaction ID to verify
+    pub hash: String,    // SHA-512 signature
+}
+
+// PayU Sync Response structure based on Haskell implementation
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuSyncResponse {
+    pub status: Option<i32>, // 0 = error, non-zero = success
+    pub msg: Option<String>, // Status message
+    pub transaction_details: Option<std::collections::HashMap<String, PayuTransactionDetail>>, // Map of txnId -> details
+    pub result: Option<serde_json::Value>, // Optional result field
+    #[serde(alias = "field3")]
+    pub field3: Option<String>, // Additional field
+}
+
+// PayU Transaction Detail structure from sync response
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PayuTransactionDetail {
+    pub mihpayid: Option<String>,         // PayU transaction ID
+    pub txnid: Option<String>,            // Merchant transaction ID
+    pub amount: Option<String>,           // Transaction amount
+    pub status: String, // Transaction status: "success", "failure", "pending", "cancel"
+    pub firstname: Option<String>, // Customer first name
+    pub lastname: Option<String>, // Customer last name
+    pub email: Option<String>, // Customer email
+    pub phone: Option<String>, // Customer phone
+    pub productinfo: Option<String>, // Product description
+    pub hash: Option<String>, // Response hash for verification
+    pub field1: Option<String>, // UPI transaction ID
+    pub field2: Option<String>, // Bank reference number
+    pub field3: Option<String>, // Payment source
+    pub field9: Option<String>, // Additional field
+    pub error_code: Option<String>, // Error code if failed
+    pub error_message: Option<String>, // Error message if failed
+    pub card_token: Option<String>, // Card token if applicable
+    pub card_category: Option<String>, // Card category
+    pub offer_key: Option<String>, // Offer key used
+    pub discount: Option<String>, // Discount applied
+    pub net_amount_debit: Option<String>, // Net amount debited
+    pub addedon: Option<String>, // Transaction timestamp
+    pub payment_source: Option<String>, // Payment method used
+    pub bank_ref_num: Option<String>, // Bank reference number
+    pub upi_va: Option<String>, // UPI virtual address
+    pub cardnum: Option<String>, // Masked card number
+    pub issuing_bank: Option<String>, // Card issuing bank
+}
+
+// PayU Sync Request conversion from RouterData
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        super::PayuRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for PayuSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: super::PayuRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &item.router_data;
+
+        // Extract authentication
+        let auth = PayuAuthType::try_from(&router_data.connector_auth_type)?;
+
+        // Extract transaction ID from connector_transaction_id
+        let transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(ConnectorError::MissingRequiredField {
+                field_name: "connector_transaction_id",
+            })?;
+
+        let command = constants::COMMAND;
+
+        // Build sync request
+        let mut request = Self {
+            key: auth.api_key.peek().to_string(),
+            command: command.to_string(),
+            var1: transaction_id,
+            hash: String::new(), // Will be calculated below
+        };
+
+        // Generate hash signature for verification request
+        // PayU verify hash: SHA512(key|command|var1|salt)
+        request.hash = generate_payu_verify_hash(&request, &auth.api_secret)?;
+
+        Ok(request)
+    }
+}
+
+// Hash generation for PayU verify payment request
+// Based on Haskell: makePayuVerifyHash payuDetails txnId command
+fn generate_payu_verify_hash(
+    request: &PayuSyncRequest,
+    merchant_salt: &Secret<String>,
+) -> Result<String, ConnectorError> {
+    use sha2::{Digest, Sha512};
+
+    // PayU verify hash format: key|command|var1|salt
+    let hash_fields = [
+        request.key.clone(),
+        request.command.clone(),
+        request.var1.clone(),
+        merchant_salt.peek().to_string(),
+    ];
+
+    // Join with pipe separator
+    let hash_string = hash_fields.join("|");
+
+    // Log hash string for debugging (remove in production)
+    #[cfg(debug_assertions)]
+    {
+        let masked_hash = format!(
+            "{}|***MASKED***",
+            hash_fields[..hash_fields.len() - 1].join("|")
+        );
+        tracing::debug!("PayU verify hash string (salt masked): {}", masked_hash);
+        tracing::debug!("PayU verify expected format: key|command|var1|salt");
+    }
+
+    // Generate SHA-512 hash
+    let mut hasher = Sha512::new();
+    hasher.update(hash_string.as_bytes());
+    let result = hasher.finalize();
+    Ok(hex::encode(result))
+}
+
 // UDF field generation based on Haskell implementation
 // Implements the logic from getUdf1-getUdf5 functions and orderReference fields
-fn generate_udf_fields(
+fn generate_udf_fields<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
     payment_id: &str,
     merchant_id: &str,
-    _payment_flow_data: &PaymentFlowData,
+    router_data: &RouterDataV2<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    >,
 ) -> [Option<String>; 10] {
     // Based on Haskell implementation:
     // udf1-udf5 come from PayuMetaData (if available) or default values
     // udf6-udf9 come from orderReference fields
     // udf10 is always empty string
 
-    // Default UDF values as per Haskell getUdf* functions
-    // In Haskell: getUdf1 returns txnId, getUdf2 returns merchantId, others are empty unless metadata exists
+    // Extract metadata from request
+    let metadata = router_data.request.metadata.as_ref();
+
+    // Helper function to get string value from metadata
+    let get_metadata_field = |field: &str| -> Option<String> {
+        metadata
+            .and_then(|m| m.get(field))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    };
 
     [
-        Some(payment_id.to_string()),  // udf1: Transaction ID (getUdf1 default)
-        Some(merchant_id.to_string()), // udf2: Merchant ID (getUdf2 default)
-        Some("".to_string()),          // udf3: Empty by default (getUdf3)
-        Some("".to_string()),          // udf4: Empty by default (getUdf4)
-        Some("".to_string()),          // udf5: Empty by default (getUdf5)
-        Some("".to_string()),          // udf6: Empty by default (orderReference.udf6)
-        Some("".to_string()),          // udf7: Empty by default (orderReference.udf7)
-        Some("".to_string()),          // udf8: Empty by default (orderReference.udf8)
-        Some("".to_string()),          // udf9: Empty by default (orderReference.udf9)
-        Some("".to_string()),          // udf10: Always empty string (just $ "")
+        // udf1: From metadata "udf1" or default to transaction ID
+        get_metadata_field("udf1").or(Some(payment_id.to_string())),
+        // udf2: From metadata "udf2" or default to merchant ID
+        get_metadata_field("udf2").or(Some(merchant_id.to_string())),
+        // udf3: From metadata "udf3" or empty
+        get_metadata_field("udf3"),
+        // udf4: From metadata "udf4" or empty
+        get_metadata_field("udf4"),
+        // udf5: From metadata "udf5" or empty
+        get_metadata_field("udf5"),
+        // udf6: From metadata "udf6" or empty
+        get_metadata_field("udf6"),
+        // udf7: From metadata "udf7" or empty
+        get_metadata_field("udf7"),
+        // udf8: From metadata "udf8" or empty
+        get_metadata_field("udf8"),
+        // udf9: From metadata "udf9" or empty
+        get_metadata_field("udf9"),
+        // udf9: From metadata "udf10" or empty
+        get_metadata_field("udf10"),
     ]
 }
 
@@ -441,19 +632,6 @@ fn determine_upi_app_name<
                 }
             }
         }
-        PaymentMethodData::Wallet(wallet_data) => {
-            match wallet_data {
-                WalletData::GooglePay(_) => {
-                    // Map GooglePay to googlepay as per Haskell
-                    Ok(Some("googlepay".to_string()))
-                }
-                // TODO: Add other wallet mappings as needed:
-                // PayTM -> "paytm"
-                // PhonePe -> "phonepe"
-                // Amazon -> "amazonpay"
-                _ => Ok(Some("genericintent".to_string())),
-            }
-        }
         _ => Ok(None),
     }
 }
@@ -475,38 +653,18 @@ fn determine_upi_flow<
     // getTxnS2SType isTxnS2SFlow4Enabled s2sEnabled isDirectOTPTxn isEmandateRegister isDirectAuthorization
 
     match &request.payment_method_data {
-        PaymentMethodData::Wallet(wallet_data) => {
-            match wallet_data {
-                WalletData::GooglePay(_) => {
-                    // Google Pay UPI Intent flow
-                    // From Haskell: For UPI Intent, typically uses flow "2" or "4"
-                    // pg=UPI, bankcode=INTENT for generic UPI intent
-                    Ok((
-                        Some("UPI".to_string()),
-                        Some("INTENT".to_string()),
-                        None,
-                        "2".to_string(),
-                    ))
-                }
-                _ => {
-                    // Other wallet types use CASH PG as per Haskell
-                    // Standard S2S flow
-                    Ok((Some("CASH".to_string()), None, None, "1".to_string()))
-                }
-            }
-        }
         PaymentMethodData::Upi(upi_data) => {
             match upi_data {
                 UpiData::UpiCollect(collect_data) => {
                     if let Some(vpa) = &collect_data.vpa_id {
                         // UPI Collect flow - based on Haskell implementation
-                        // For UPI Collect: pg=UPI, no specific bankcode (unless TPV), VPA required
+                        // For UPI Collect: pg = UPI, bankcode = UPI, VPA required
                         // The key is that VPA must be populated for sourceObject == "UPI_COLLECT"
                         Ok((
-                            Some("UPI".to_string()),
-                            Some("UPI".to_string()),
+                            Some(constants::UPI_PG.to_string()),
+                            Some(constants::UPI_COLLECT_BANKCODE.to_string()),
                             Some(vpa.peek().to_string()),
-                            "2".to_string(), // UPI Collect typically uses S2S flow "2"
+                            constants::UPI_S2S_FLOW.to_string(), // UPI Collect typically uses S2S flow "2"
                         ))
                     } else {
                         // Missing VPA for UPI Collect - this should be an error
@@ -519,18 +677,17 @@ fn determine_upi_flow<
                     // UPI Intent flow - uses S2S flow "2" for intent-based transactions
                     // pg=UPI, bankcode=INTENT for intent flows
                     Ok((
-                        Some("UPI".to_string()),
-                        Some("INTENT".to_string()),
+                        Some(constants::UPI_PG.to_string()),
+                        Some(constants::UPI_INTENT_BANKCODE.to_string()),
                         None,
-                        "2".to_string(),
+                        constants::UPI_S2S_FLOW.to_string(),
                     ))
                 }
             }
         }
         _ => Err(ConnectorError::NotSupported {
-            message:
-                "Payment method not supported by PayU. Only UPI and Wallet payments are supported"
-                    .to_string(),
+            message: "Payment method not supported by PayU. Only UPI payments are supported"
+                .to_string(),
             connector: "PayU",
         }),
     }
@@ -568,8 +725,8 @@ fn generate_payu_hash(
         request.txnid.clone(),                              // txnid
         request.amount.get_amount_as_string(),              // amount
         request.productinfo.clone(),                        // productinfo
-        request.firstname.clone(),                          // firstname
-        request.email.clone(),                              // email
+        request.firstname.peek().clone(),                   // firstname
+        request.email.peek().clone(),                       // email
         request.udf1.as_deref().unwrap_or("").to_string(),  // udf1
         request.udf2.as_deref().unwrap_or("").to_string(),  // udf2
         request.udf3.as_deref().unwrap_or("").to_string(),  // udf3
@@ -649,9 +806,9 @@ impl<
                 .or_else(|| response.txn_id.clone())
                 .or_else(|| response.token.clone());
 
-            // This is an error response - return error
+            // This is an error response - return error with actual status code
             let error_response = ErrorResponse {
-                status_code: 200, // PayU returns 200 even for errors
+                status_code: item.http_code, // Use actual HTTP response code instead of hardcoded 200
                 code: error_code.clone(),
                 message: response.message.clone().unwrap_or_default(),
                 reason: None,
@@ -751,5 +908,145 @@ impl<
             },
             ..item.router_data
         })
+    }
+}
+
+// PayU Sync Response conversion to RouterData
+impl
+    TryFrom<
+        ResponseRouterData<
+            PayuSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            PayuSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+        let error_message = response
+            .msg
+            .unwrap_or_else(|| "PayU PSync error".to_string());
+        // Check PayU status field - 0 means error, 1 means success response structure
+        match (response.status, response.transaction_details) {
+            (Some(1), Some(transaction_details)) => {
+                // PayU returned success status, check transaction_details
+                // Try to find the transaction in the response by iterating through all transactions
+                // Since PayU returns transaction details as a map with txnid as key
+                let txn_detail = transaction_details.values().next();
+
+                let connector_transaction_id = txn_detail.and_then(|detail| detail.txnid.clone());
+                match (txn_detail, connector_transaction_id) {
+                    (Some(txn_detail), Some(connector_transaction_id)) => {
+                        // Found transaction details, map status
+                        let attempt_status = map_payu_sync_status(&txn_detail.status, txn_detail);
+
+                        let payment_response_data = PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                connector_transaction_id.clone(),
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: txn_detail.field1.clone(), // UPI transaction ID
+                            connector_response_reference_id: txn_detail.mihpayid.clone(),
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        };
+
+                        Ok(Self {
+                            response: Ok(payment_response_data),
+                            resource_common_data: PaymentFlowData {
+                                status: attempt_status,
+                                ..item.router_data.resource_common_data
+                            },
+                            ..item.router_data
+                        })
+                    }
+                    _ => {
+                        // Transaction not found in PayU response
+                        let error_response = ErrorResponse {
+                            status_code: item.http_code,
+                            code: "TRANSACTION_NOT_FOUND".to_string(),
+                            message: error_message,
+                            reason: None,
+                            attempt_status: Some(AttemptStatus::Failure),
+                            connector_transaction_id: None,
+                            network_error_message: None,
+                            network_advice_code: None,
+                            network_decline_code: None,
+                        };
+
+                        Ok(Self {
+                            response: Err(error_response),
+                            resource_common_data: PaymentFlowData {
+                                status: AttemptStatus::Failure,
+                                ..item.router_data.resource_common_data
+                            },
+                            ..item.router_data
+                        })
+                    }
+                }
+            }
+            _ => {
+                // PayU returned error status
+                let error_response = ErrorResponse {
+                    status_code: item.http_code,
+                    code: "PAYU_SYNC_ERROR".to_string(),
+                    message: error_message,
+                    reason: None,
+                    attempt_status: Some(AttemptStatus::Failure),
+                    connector_transaction_id: None,
+                    network_error_message: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                };
+
+                Ok(Self {
+                    response: Err(error_response),
+                    resource_common_data: PaymentFlowData {
+                        status: AttemptStatus::Failure,
+                        ..item.router_data.resource_common_data
+                    },
+                    ..item.router_data
+                })
+            }
+        }
+    }
+}
+
+// Map PayU transaction status to internal AttemptStatus
+// Based on Haskell implementation analysis
+fn map_payu_sync_status(payu_status: &str, txn_detail: &PayuTransactionDetail) -> AttemptStatus {
+    match payu_status.to_lowercase().as_str() {
+        "success" => {
+            // For success, check if it's captured or just authorized
+            // Based on Haskell: "success" + "captured" -> CHARGED, "success" + "auth" -> AUTHORIZED
+            if txn_detail.field3.as_deref() == Some("captured") {
+                AttemptStatus::Charged
+            } else if txn_detail.field3.as_deref() == Some("auth") {
+                AttemptStatus::Authorized
+            } else {
+                // Default success case - treat as charged for UPI
+                AttemptStatus::Charged
+            }
+        }
+        "pending" => {
+            // Pending status - typically for UPI Collect waiting for customer approval
+            AttemptStatus::AuthenticationPending
+        }
+        "failure" | "failed" | "cancel" | "cancelled" => {
+            // Transaction failed
+            AttemptStatus::Failure
+        }
+        _ => {
+            // Unknown status - treat as failure for safety
+            AttemptStatus::Failure
+        }
     }
 }
