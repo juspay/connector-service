@@ -127,7 +127,6 @@ impl Payments {
                 Some("Failed to process payment flow data".to_string()),
                 Some("PAYMENT_FLOW_ERROR".to_string()),
                 None,
-                None,
             )
         })?;
 

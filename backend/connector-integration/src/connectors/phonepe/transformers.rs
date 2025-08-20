@@ -462,7 +462,6 @@ impl<
                             ),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
-                            raw_connector_response: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             status: common_enums::AttemptStatus::AuthenticationPending,
@@ -758,9 +757,6 @@ impl
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
-                            raw_connector_response: Some(
-                                serde_json::to_string(&item.response).unwrap_or_default(),
-                            ),
                         }),
                         resource_common_data: PaymentFlowData {
                             status,
@@ -781,9 +777,6 @@ impl
                             network_decline_code: None,
                             network_advice_code: None,
                             network_error_message: None,
-                            raw_connector_response: Some(
-                                serde_json::to_string(&item.response).unwrap_or_default(),
-                            ),
                         }),
                         ..item.router_data
                     })
@@ -810,9 +803,6 @@ impl
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: Some(
-                        serde_json::to_string(&item.response).unwrap_or_default(),
-                    ),
                 }),
                 ..item.router_data
             })
