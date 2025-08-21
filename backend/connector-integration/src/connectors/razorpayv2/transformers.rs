@@ -14,7 +14,7 @@ use domain_types::{
     },
     errors,
     payment_address::Address,
-    payment_method_data::{PaymentMethodData, UpiData},
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -77,14 +77,33 @@ impl TryFrom<&ConnectorAuthType> for RazorpayV2AuthType {
 
 // ============ Router Data Wrapper ============
 
-pub struct RazorpayV2RouterData<T> {
+pub struct RazorpayV2RouterData<
+    T,
+    U: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub amount: MinorUnit,
     pub order_id: Option<String>,
     pub router_data: T,
     pub billing_address: Option<Address>,
+    #[allow(dead_code)]
+    phantom: Option<std::marker::PhantomData<U>>,
 }
 
-impl<T> TryFrom<(MinorUnit, T, Option<String>, Option<Address>)> for RazorpayV2RouterData<T> {
+impl<
+        T,
+        U: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<(MinorUnit, T, Option<String>, Option<Address>)> for RazorpayV2RouterData<T, U>
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -95,12 +114,22 @@ impl<T> TryFrom<(MinorUnit, T, Option<String>, Option<Address>)> for RazorpayV2R
             order_id,
             router_data: item,
             billing_address,
+            phantom: None,
         })
     }
 }
 
 // Keep backward compatibility for existing usage
-impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
+impl<
+        T,
+        U: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T, U>
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(
@@ -111,6 +140,7 @@ impl<T> TryFrom<(MinorUnit, T, Option<String>)> for RazorpayV2RouterData<T> {
             order_id,
             router_data: item,
             billing_address: None,
+            phantom: None,
         })
     }
 }
@@ -277,10 +307,20 @@ pub struct RazorpayV2UpiResponseDetails {
 
 // ============ Request Transformations ============
 
-impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2CreateOrderRequest {
+impl<
+        U: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData, U>> for RazorpayV2CreateOrderRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RazorpayV2RouterData<&PaymentCreateOrderData>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: &RazorpayV2RouterData<&PaymentCreateOrderData, U>,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             amount: item.amount,
             currency: item.router_data.currency.to_string(),
@@ -297,17 +337,36 @@ impl TryFrom<&RazorpayV2RouterData<&PaymentCreateOrderData>> for RazorpayV2Creat
     }
 }
 
-impl
+impl<
+        U: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         &RazorpayV2RouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<U>,
+                PaymentsResponseData,
+            >,
+            U,
         >,
     > for RazorpayV2PaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: &RazorpayV2RouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<U>,
+                PaymentsResponseData,
+            >,
+            U,
         >,
     ) -> Result<Self, Self::Error> {
         // Determine UPI flow based on payment method data
@@ -325,6 +384,9 @@ impl
                     (Some(UpiFlow::Collect), Some(vpa_string))
                 }
                 UpiData::UpiIntent(_) => (Some(UpiFlow::Intent), None),
+                // UpiData::UpiQr(_) => {
+                //     return Err(errors::ConnectorError::NotImplemented("UPI QR flow not supported by RazorpayV2".to_string()).into());
+                // }
             },
             _ => (None, None),
         };
@@ -397,10 +459,18 @@ pub struct RazorpayV2RefundResponse {
     pub created_at: i64,
 }
 
-impl TryFrom<&RazorpayV2RouterData<&RefundsData>> for RazorpayV2RefundRequest {
+impl<
+        U: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<&RazorpayV2RouterData<&RefundsData, U>> for RazorpayV2RefundRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(item: &RazorpayV2RouterData<&RefundsData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RazorpayV2RouterData<&RefundsData, U>) -> Result<Self, Self::Error> {
         let amount_in_minor_units = item.amount.get_amount_as_i64();
         Ok(Self {
             amount: amount_in_minor_units,
@@ -421,7 +491,7 @@ impl
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, raw_response): (
+        (response, data, _status_code, _raw_response): (
             RazorpayV2RefundResponse,
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
             u16,
@@ -439,7 +509,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -465,7 +534,7 @@ impl
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, raw_response): (
+        (response, data, _status_code, _raw_response): (
             RazorpayV2RefundResponse,
             RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
             u16,
@@ -483,7 +552,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -509,7 +577,7 @@ impl
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (sync_response, data, _status_code, raw_response): (
+        (sync_response, data, _status_code, _raw_response): (
             RazorpayV2SyncResponse,
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
             u16,
@@ -546,7 +614,6 @@ impl
             network_txn_id: None,
             connector_response_reference_id: payment_response.order_id,
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -561,20 +628,33 @@ impl
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ForeignTryFrom<(
         RazorpayV2UpiPaymentsResponse,
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         u16,
         Vec<u8>, // raw_response
-    )> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    )>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (upi_response, data, _status_code, raw_response): (
+        (upi_response, data, _status_code, _raw_response): (
             RazorpayV2UpiPaymentsResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             u16,
             Vec<u8>,
         ),
@@ -613,7 +693,6 @@ impl
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 
@@ -628,20 +707,33 @@ impl
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     ForeignTryFrom<(
         RazorpayV2PaymentsResponse,
-        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         u16,
         Vec<u8>, // raw_response
-    )> for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+    )>
+    for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (response, data, _status_code, raw_response): (
+        (response, data, _status_code, __raw_response): (
             RazorpayV2PaymentsResponse,
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
             u16,
             Vec<u8>,
         ),
@@ -654,7 +746,6 @@ impl
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 

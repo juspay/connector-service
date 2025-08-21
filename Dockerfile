@@ -11,6 +11,8 @@ RUN apt-get update \
     && apt-get install -y \
        pkg-config \
        libssl-dev \
+       g++ \
+       make \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -41,7 +43,7 @@ ENV SCCACHE_CACHE_SIZE=5G
 
 # Cook dependencies using cargo-chef with caching
 RUN --mount=type=cache,target=/sccache \
-    cargo chef cook --release --recipe-path recipe.json
+    cargo chef cook --release --features kafka --recipe-path recipe.json
 
 # Install additional build-time dependencies
 RUN apt-get update \
@@ -54,7 +56,7 @@ RUN apt-get update \
 # Build the application
 COPY . .
 RUN --mount=type=cache,target=/sccache \
-    cargo build --release
+    cargo build --release --features kafka
 
 # Output sccache statistics
 RUN sccache --show-stats

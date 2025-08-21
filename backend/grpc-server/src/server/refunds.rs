@@ -6,6 +6,7 @@ use domain_types::{
     connector_flow::{FlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
     router_data::ConnectorAuthType,
     types::generate_refund_sync_response,
     utils::ForeignTryFrom,
@@ -173,7 +174,7 @@ impl RefundService for Refunds {
 }
 
 async fn get_refunds_webhook_content(
-    connector_data: ConnectorData,
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
