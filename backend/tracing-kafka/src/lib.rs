@@ -57,5 +57,15 @@ pub use writer::{KafkaWriter, KafkaWriterError};
 
 #[cfg(feature = "kafka-metrics")]
 mod metrics;
+
+/// Initializes the metrics for the tracing kafka.
+/// This function should be called once at application startup.
 #[cfg(feature = "kafka-metrics")]
-pub use metrics::*;
+pub fn init() {
+    metrics::initialize_all_metrics();
+}
+
+#[cfg(not(feature = "kafka-metrics"))]
+pub fn init() {
+    tracing::warn!("Kafka metrics feature is not enabled. Metrics will not be collected.");
+}
