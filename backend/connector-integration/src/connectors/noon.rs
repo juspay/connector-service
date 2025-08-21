@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
@@ -28,7 +30,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::fmt::Debug;
 pub mod transformers;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
@@ -268,7 +269,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }

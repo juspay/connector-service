@@ -2,12 +2,11 @@
 use std::collections::{HashMap, HashSet};
 
 use tracing_appender::non_blocking::WorkerGuard;
+#[cfg(feature = "kafka")]
+use tracing_kafka::KafkaLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, Layer};
 
 use super::config;
-
-#[cfg(feature = "kafka")]
-use tracing_kafka::KafkaLayer;
 
 /// Contains guards necessary for logging
 #[derive(Debug)]
@@ -90,6 +89,10 @@ pub fn setup(
     #[cfg(feature = "kafka")]
     if let Some(kafka_config) = &config.kafka {
         if kafka_config.enabled {
+            // Initialize kafka metrics if the feature is enabled.
+            // This will cause the application to panic at startup if metric registration fails.
+            tracing_kafka::init();
+
             let kafka_filter_directive =
                 kafka_config.filtering_directive.clone().unwrap_or_else(|| {
                     get_envfilter_directive(

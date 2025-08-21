@@ -1,13 +1,14 @@
+use std::sync::Arc;
+
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
-use std::sync::Arc;
-use tracing_kafka::builder::KafkaWriterBuilder;
-use tracing_kafka::KafkaWriter;
+use tracing_kafka::{builder::KafkaWriterBuilder, KafkaWriter};
 
-// Use the centralized event definitions from the events module
-use crate::events::{Event, EventConfig};
-use crate::{CustomResult, EventPublisherError};
+use crate::{
+    events::{Event, EventConfig},
+    CustomResult, EventPublisherError,
+};
 
 const PARTITION_KEY_METADATA: &str = "partitionKey";
 

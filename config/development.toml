@@ -16,8 +16,8 @@ buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"
-port = 8000
-type = "grpc"
+port = 8001
+type = "http"
 
 [metrics]
 host = "127.0.0.1"

@@ -3,8 +3,10 @@ use std::str::FromStr;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
+    events::FlowName,
 };
 use domain_types::{
+    connector_flow::{Capture, PSync, Refund, SetupMandate, Void},
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
     router_data::ConnectorAuthType,
@@ -14,8 +16,6 @@ use http::request::Request;
 use tonic::metadata;
 
 use crate::error::ResultExtGrpc;
-use common_utils::events::FlowName;
-use domain_types::connector_flow::{Capture, PSync, Refund, SetupMandate, Void};
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> Option<FlowName>
@@ -342,6 +342,7 @@ macro_rules! implement_connector_operation {
             let result = Box::pin(async{
             let (connector, _merchant_id, _tenant_id, request_id) = $crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
+            let metadata = request.metadata().clone();
             let payload = request.into_inner();
 
             // Get connector data
@@ -361,7 +362,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &metadata))
                 .into_grpc_status()?;
 
             // Create router data

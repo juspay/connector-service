@@ -504,7 +504,6 @@ impl<
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 };
@@ -537,7 +536,6 @@ impl<
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -589,7 +587,6 @@ fn get_error_response<T>(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
-        raw_connector_response: None,
     }))
 }
 
@@ -609,7 +606,6 @@ fn create_failure_error_response<T: ToString>(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
-        raw_connector_response: None,
     }
 }
 
@@ -724,7 +720,6 @@ impl<
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 };
@@ -760,7 +755,6 @@ impl<
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 };
@@ -794,7 +788,6 @@ impl<
                     network_txn_id: None,
                     connector_response_reference_id: None,
                     incremental_authorization_allowed: None,
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
@@ -989,7 +982,6 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRefundResponse, Self>>
                         Ok(RefundsResponseData {
                             connector_refund_id: refund_data.id.clone(),
                             refund_status,
-                            raw_connector_response: None,
                             status_code: item.http_code,
                         })
                     }
@@ -1169,7 +1161,6 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRSyncResponse, Self>>
                 let response = Ok(RefundsResponseData {
                     connector_refund_id: connector_refund_id.to_string(),
                     refund_status: enums::RefundStatus::from(edge_data.node.status.clone()),
-                    raw_connector_response: None,
                     status_code: item.http_code,
                 });
                 Ok(Self {
@@ -1503,7 +1494,6 @@ impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 };
@@ -1670,7 +1660,6 @@ impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 };
@@ -1794,7 +1783,6 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: None,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 };
