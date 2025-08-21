@@ -215,7 +215,9 @@ impl<
         )?;
 
         // Use amount converter to get proper amount in minor units
-        let amount_in_minor_units = common_utils::types::MinorUnitForConnector
+        let amount_in_minor_units = item
+            .connector
+            .amount_converter
             .convert(
                 router_data.request.minor_amount,
                 router_data.request.currency,
@@ -363,7 +365,9 @@ impl<
         )?;
 
         // Use amount converter to get proper amount in minor units
-        let amount_in_minor_units = common_utils::types::MinorUnitForConnector
+        let amount_in_minor_units = item
+            .connector
+            .amount_converter
             .convert(
                 router_data.request.minor_amount,
                 router_data.request.currency,

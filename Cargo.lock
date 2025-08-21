@@ -5232,7 +5232,6 @@ name = "tracing-kafka"
 version = "0.1.0"
 dependencies = [
  "log_utils",
- "once_cell",
  "prometheus",
  "rdkafka",
  "serde_json",
