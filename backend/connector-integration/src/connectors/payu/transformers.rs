@@ -1,12 +1,11 @@
 use common_enums::{self, AttemptStatus, Currency};
-use common_utils::pii::IpAddress;
-use common_utils::Email;
-use domain_types::errors::ConnectorError;
+use common_utils::{pii::IpAddress, Email};
 use domain_types::{
     connector_flow::{Authorize, PSync},
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
+    errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,

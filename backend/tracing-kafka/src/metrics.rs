@@ -1,7 +1,8 @@
 //! Prometheus metrics for Kafka writer
 
-use prometheus::{register_int_counter, register_int_gauge, IntCounter, IntGauge};
 use std::sync::LazyLock;
+
+use prometheus::{register_int_counter, register_int_gauge, IntCounter, IntGauge};
 
 /// Total number of logs successfully sent to Kafka
 #[allow(clippy::expect_used)]

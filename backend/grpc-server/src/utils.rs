@@ -342,6 +342,7 @@ macro_rules! implement_connector_operation {
             let result = Box::pin(async{
             let (connector, _merchant_id, _tenant_id, request_id) = $crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
+            let metadata = request.metadata().clone();
             let payload = request.into_inner();
 
             // Get connector data
@@ -361,7 +362,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &metadata))
                 .into_grpc_status()?;
 
             // Create router data
