@@ -5,7 +5,7 @@ use common_enums;
 use common_utils::{
     crypto::{self, GenerateDigest},
     ext_traits::Encode,
-    types::{AmountConvertor, MinorUnit},
+    types::MinorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, PSync},
