@@ -707,7 +707,6 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
-                
                 // Emit incoming request audit event
                 {
                     let incoming_event = events::Event {
@@ -728,7 +727,6 @@ impl PaymentService for Payments {
                         error_details: None,
                         additional_fields: std::collections::HashMap::new(),
                     };
-                    
                     match emit_event_with_config(incoming_event, &self.config.events) {
                         Ok(true) => tracing::info!("Successfully published incoming request event for authorize"),
                         Ok(false) => tracing::info!("Event publishing is disabled for authorize"),
@@ -810,7 +808,6 @@ impl PaymentService for Payments {
                 // Emit outgoing response audit event
                 {
                     let is_success = authorize_response.error_code.is_none() && authorize_response.error_message.is_none();
-                    
                     let outgoing_event = events::Event {
                         request_id: request_id.clone(),
                         timestamp: chrono::Utc::now().timestamp().into(),
@@ -830,14 +827,12 @@ impl PaymentService for Payments {
                         error_details: authorize_response.error_message.clone(),
                         additional_fields: std::collections::HashMap::new(),
                     };
-                    
                     match emit_event_with_config(outgoing_event, &self.config.events) {
                         Ok(true) => tracing::info!("Successfully published outgoing response event for authorize"),
                         Ok(false) => tracing::info!("Event publishing is disabled for authorize"),
                         Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
                     }
                 }
-                
                 Ok(tonic::Response::new(authorize_response))
             })
         })
@@ -1161,7 +1156,7 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
-                
+
                 // Emit incoming request audit event
                 {
                     let incoming_event = events::Event {
@@ -1183,11 +1178,17 @@ impl PaymentService for Payments {
                         error_details: None,
                         additional_fields: std::collections::HashMap::new(),
                     };
-                    
+
                     match emit_event_with_config(incoming_event, &self.config.events) {
-                        Ok(true) => tracing::info!("Successfully published incoming request event for setup_mandate"),
-                        Ok(false) => tracing::info!("Event publishing is disabled for setup_mandate"),
-                        Err(e) => tracing::error!("Failed to publish incoming request event: {:?}", e),
+                        Ok(true) => tracing::info!(
+                            "Successfully published incoming request event for setup_mandate"
+                        ),
+                        Ok(false) => {
+                            tracing::info!("Event publishing is disabled for setup_mandate")
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to publish incoming request event: {:?}", e)
+                        }
                     }
                 }
 
@@ -1282,8 +1283,9 @@ impl PaymentService for Payments {
 
                 // Emit outgoing response audit event
                 {
-                    let is_success = setup_mandate_response.error_code.is_none() && setup_mandate_response.error_message.is_none();
-                    
+                    let is_success = setup_mandate_response.error_code.is_none()
+                        && setup_mandate_response.error_message.is_none();
+
                     let outgoing_event = events::Event {
                         request_id: request_id.clone(),
                         timestamp: chrono::Utc::now().timestamp().into(),
@@ -1292,22 +1294,33 @@ impl PaymentService for Payments {
                         url: None,
                         stage: events::EventStage::GrpcResponse,
                         latency: None,
-                        status_code: Some(setup_mandate_response.status_code.try_into().unwrap_or(0)),
+                        status_code: Some(
+                            setup_mandate_response.status_code.try_into().unwrap_or(0),
+                        ),
                         request_data: None,
                         connector_request_data: None,
-                        connector_response_data: match serde_json::to_value(&setup_mandate_response) {
+                        connector_response_data: match serde_json::to_value(&setup_mandate_response)
+                        {
                             Ok(value) => Some(SecretSerdeValue::new(value)),
                             Err(_) => None,
                         },
-                        processing_status: Some(if is_success { "success" } else { "failed" }.to_string()),
+                        processing_status: Some(
+                            if is_success { "success" } else { "failed" }.to_string(),
+                        ),
                         error_details: setup_mandate_response.error_message.clone(),
                         additional_fields: std::collections::HashMap::new(),
                     };
-                    
+
                     match emit_event_with_config(outgoing_event, &self.config.events) {
-                        Ok(true) => tracing::info!("Successfully published outgoing response event for setup_mandate"),
-                        Ok(false) => tracing::info!("Event publishing is disabled for setup_mandate"),
-                        Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
+                        Ok(true) => tracing::info!(
+                            "Successfully published outgoing response event for setup_mandate"
+                        ),
+                        Ok(false) => {
+                            tracing::info!("Event publishing is disabled for setup_mandate")
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to publish outgoing response event: {:?}", e)
+                        }
                     }
                 }
 
@@ -1357,7 +1370,7 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
-                
+
                 // Emit incoming request audit event
                 {
                     let incoming_event = events::Event {
@@ -1379,11 +1392,17 @@ impl PaymentService for Payments {
                         error_details: None,
                         additional_fields: std::collections::HashMap::new(),
                     };
-                    
+
                     match emit_event_with_config(incoming_event, &self.config.events) {
-                        Ok(true) => tracing::info!("Successfully published incoming request event for repeat_payment"),
-                        Ok(false) => tracing::info!("Event publishing is disabled for repeat_payment"),
-                        Err(e) => tracing::error!("Failed to publish incoming request event: {:?}", e),
+                        Ok(true) => tracing::info!(
+                            "Successfully published incoming request event for repeat_payment"
+                        ),
+                        Ok(false) => {
+                            tracing::info!("Event publishing is disabled for repeat_payment")
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to publish incoming request event: {:?}", e)
+                        }
                     }
                 }
 
@@ -1454,8 +1473,9 @@ impl PaymentService for Payments {
 
                 // Emit outgoing response audit event
                 {
-                    let is_success = repeat_payment_response.error_code.is_none() && repeat_payment_response.error_message.is_none();
-                    
+                    let is_success = repeat_payment_response.error_code.is_none()
+                        && repeat_payment_response.error_message.is_none();
+
                     let outgoing_event = events::Event {
                         request_id: request_id.clone(),
                         timestamp: chrono::Utc::now().timestamp().into(),
@@ -1464,22 +1484,34 @@ impl PaymentService for Payments {
                         url: None,
                         stage: events::EventStage::GrpcResponse,
                         latency: None,
-                        status_code: Some(repeat_payment_response.status_code.try_into().unwrap_or(0)),
+                        status_code: Some(
+                            repeat_payment_response.status_code.try_into().unwrap_or(0),
+                        ),
                         request_data: None,
                         connector_request_data: None,
-                        connector_response_data: match serde_json::to_value(&repeat_payment_response) {
+                        connector_response_data: match serde_json::to_value(
+                            &repeat_payment_response,
+                        ) {
                             Ok(value) => Some(SecretSerdeValue::new(value)),
                             Err(_) => None,
                         },
-                        processing_status: Some(if is_success { "success" } else { "failed" }.to_string()),
+                        processing_status: Some(
+                            if is_success { "success" } else { "failed" }.to_string(),
+                        ),
                         error_details: repeat_payment_response.error_message.clone(),
                         additional_fields: std::collections::HashMap::new(),
                     };
-                    
+
                     match emit_event_with_config(outgoing_event, &self.config.events) {
-                        Ok(true) => tracing::info!("Successfully published outgoing response event for repeat_payment"),
-                        Ok(false) => tracing::info!("Event publishing is disabled for repeat_payment"),
-                        Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
+                        Ok(true) => tracing::info!(
+                            "Successfully published outgoing response event for repeat_payment"
+                        ),
+                        Ok(false) => {
+                            tracing::info!("Event publishing is disabled for repeat_payment")
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to publish outgoing response event: {:?}", e)
+                        }
                     }
                 }
 
