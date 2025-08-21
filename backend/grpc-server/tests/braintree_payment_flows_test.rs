@@ -218,6 +218,11 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
 
 // Helper function to create a refund sync request
 fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundServiceGetRequest {
+    let mut refund_metadata = HashMap::new();
+    refund_metadata.insert("merchant_account_id".to_string(), "Anand".to_string());
+    refund_metadata.insert("merchant_config_currency".to_string(), "USD".to_string());
+    refund_metadata.insert("currency".to_string(), "USD".to_string());
+
     RefundServiceGetRequest {
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
@@ -228,6 +233,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        refund_metadata,
     }
 }
 

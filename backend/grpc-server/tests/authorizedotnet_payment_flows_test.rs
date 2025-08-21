@@ -487,6 +487,7 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         refund_id: refund_id.to_string(),
         browser_info: None,
         refund_reason: None,
+        refund_metadata: HashMap::new(),
     }
 }
 

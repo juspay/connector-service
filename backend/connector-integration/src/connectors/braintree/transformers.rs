@@ -5,7 +5,7 @@ use common_enums::enums;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
-    types::{AmountConvertor, MinorUnit, StringMajorUnit, StringMajorUnitForConnector},
+    types::{MinorUnit, StringMajorUnit},
 };
 use domain_types::{
     connector_flow::{
@@ -27,19 +27,22 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use time::PrimitiveDateTime;
-pub const CHANNEL_CODE: &str = "HyperSwitchBT_Ecom";
-pub const CLIENT_TOKEN_MUTATION: &str = "mutation createClientToken($input: CreateClientTokenInput!) { createClientToken(input: $input) { clientToken}}";
-pub const TOKENIZE_CREDIT_CARD: &str = "mutation  tokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { clientMutationId paymentMethod { id } } }";
-pub const CHARGE_CREDIT_CARD_MUTATION: &str = "mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id legacyId createdAt amount { value currencyCode } status } } }";
-pub const AUTHORIZE_CREDIT_CARD_MUTATION: &str = "mutation authorizeCreditCard($input: AuthorizeCreditCardInput!) { authorizeCreditCard(input: $input) {  transaction { id legacyId amount { value currencyCode } status } } }";
-pub const CAPTURE_TRANSACTION_MUTATION: &str = "mutation captureTransaction($input: CaptureTransactionInput!) { captureTransaction(input: $input) { clientMutationId transaction { id legacyId amount { value currencyCode } status } } }";
-pub const VOID_TRANSACTION_MUTATION: &str = "mutation voidTransaction($input:  ReverseTransactionInput!) { reverseTransaction(input: $input) { clientMutationId reversal { ...  on Transaction { id legacyId amount { value currencyCode } status } } } }";
-pub const REFUND_TRANSACTION_MUTATION: &str = "mutation refundTransaction($input:  RefundTransactionInput!) { refundTransaction(input: $input) {clientMutationId refund { id legacyId amount { value currencyCode } status } } }";
-pub const AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION: &str="mutation authorizeCreditCard($input: AuthorizeCreditCardInput!) { authorizeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
-pub const CHARGE_AND_VAULT_TRANSACTION_MUTATION: &str ="mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
-pub const DELETE_PAYMENT_METHOD_FROM_VAULT_MUTATION: &str = "mutation deletePaymentMethodFromVault($input: DeletePaymentMethodFromVaultInput!) { deletePaymentMethodFromVault(input: $input) { clientMutationId } }";
-pub const TRANSACTION_QUERY: &str = "query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }";
-pub const REFUND_QUERY: &str = "query($input: RefundSearchInput!) { search { refunds(input: $input, first: 1) { edges { node { id status createdAt amount { value currencyCode } orderId } } } } }";
+
+pub mod constants {
+    pub const CHANNEL_CODE: &str = "HyperSwitchBT_Ecom";
+    pub const CLIENT_TOKEN_MUTATION: &str = "mutation createClientToken($input: CreateClientTokenInput!) { createClientToken(input: $input) { clientToken}}";
+    pub const TOKENIZE_CREDIT_CARD: &str = "mutation  tokenizeCreditCard($input: TokenizeCreditCardInput!) { tokenizeCreditCard(input: $input) { clientMutationId paymentMethod { id } } }";
+    pub const CHARGE_CREDIT_CARD_MUTATION: &str = "mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id legacyId createdAt amount { value currencyCode } status } } }";
+    pub const AUTHORIZE_CREDIT_CARD_MUTATION: &str = "mutation authorizeCreditCard($input: AuthorizeCreditCardInput!) { authorizeCreditCard(input: $input) {  transaction { id legacyId amount { value currencyCode } status } } }";
+    pub const CAPTURE_TRANSACTION_MUTATION: &str = "mutation captureTransaction($input: CaptureTransactionInput!) { captureTransaction(input: $input) { clientMutationId transaction { id legacyId amount { value currencyCode } status } } }";
+    pub const VOID_TRANSACTION_MUTATION: &str = "mutation voidTransaction($input:  ReverseTransactionInput!) { reverseTransaction(input: $input) { clientMutationId reversal { ...  on Transaction { id legacyId amount { value currencyCode } status } } } }";
+    pub const REFUND_TRANSACTION_MUTATION: &str = "mutation refundTransaction($input:  RefundTransactionInput!) { refundTransaction(input: $input) {clientMutationId refund { id legacyId amount { value currencyCode } status } } }";
+    pub const AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION: &str="mutation authorizeCreditCard($input: AuthorizeCreditCardInput!) { authorizeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
+    pub const CHARGE_AND_VAULT_TRANSACTION_MUTATION: &str ="mutation ChargeCreditCard($input: ChargeCreditCardInput!) { chargeCreditCard(input: $input) { transaction { id status createdAt paymentMethod { id } } } }";
+    pub const DELETE_PAYMENT_METHOD_FROM_VAULT_MUTATION: &str = "mutation deletePaymentMethodFromVault($input: DeletePaymentMethodFromVaultInput!) { deletePaymentMethodFromVault(input: $input) { clientMutationId } }";
+    pub const TRANSACTION_QUERY: &str = "query($input: TransactionSearchInput!) { search { transactions(input: $input) { edges { node { id status } } } } }";
+    pub const REFUND_QUERY: &str = "query($input: RefundSearchInput!) { search { refunds(input: $input, first: 1) { edges { node { id status createdAt amount { value currencyCode } orderId } } } } }";
+}
 
 pub type CardPaymentRequest = GenericBraintreeRequest<VariablePaymentInput>;
 pub type MandatePaymentRequest = GenericBraintreeRequest<VariablePaymentInput>;
@@ -276,22 +279,23 @@ impl<
                 id: "order_id".to_string(),
             },
         )?;
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         let (query, transaction_body) = (
             match item.router_data.request.is_auto_capture()? {
-                true => CHARGE_CREDIT_CARD_MUTATION.to_string(),
-                false => AUTHORIZE_CREDIT_CARD_MUTATION.to_string(),
+                true => constants::CHARGE_CREDIT_CARD_MUTATION.to_string(),
+                false => constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string(),
             },
             TransactionBody::Regular(RegularTransactionBody {
                 amount,
                 merchant_account_id: metadata.merchant_account_id,
-                channel: CHANNEL_CODE.to_string(),
+                channel: constants::CHANNEL_CODE.to_string(),
                 customer_details: None,
                 order_id,
             }),
@@ -481,18 +485,11 @@ impl<
                 let transaction_data = auth_response.data.authorize_credit_card.transaction;
                 let status = enums::AttemptStatus::from(transaction_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(domain_types::router_data::ErrorResponse {
-                        code: transaction_data.status.to_string().clone(),
-                        message: transaction_data.status.to_string().clone(),
-                        reason: Some(transaction_data.status.to_string().clone()),
-                        attempt_status: None,
-                        connector_transaction_id: Some(transaction_data.id),
-                        status_code: item.http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
+                    Err(create_failure_error_response(
+                        transaction_data.status,
+                        Some(transaction_data.id),
+                        item.http_code,
+                    ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
@@ -596,6 +593,26 @@ fn get_error_response<T>(
     }))
 }
 
+fn create_failure_error_response<T: ToString>(
+    status: T,
+    connector_id: Option<String>,
+    http_code: u16,
+) -> domain_types::router_data::ErrorResponse {
+    let status_string = status.to_string();
+    domain_types::router_data::ErrorResponse {
+        code: status_string.clone(),
+        message: status_string.clone(),
+        reason: Some(status_string),
+        attempt_status: None,
+        connector_transaction_id: connector_id,
+        status_code: http_code,
+        network_advice_code: None,
+        network_decline_code: None,
+        network_error_message: None,
+        raw_connector_response: None,
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, strum::Display)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum BraintreePaymentStatus {
@@ -688,18 +705,11 @@ impl<
                 let transaction_data = payment_response.data.charge_credit_card.transaction;
                 let status = enums::AttemptStatus::from(transaction_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(domain_types::router_data::ErrorResponse {
-                        code: transaction_data.status.to_string().clone(),
-                        message: transaction_data.status.to_string().clone(),
-                        reason: Some(transaction_data.status.to_string().clone()),
-                        attempt_status: None,
-                        connector_transaction_id: Some(transaction_data.id),
-                        status_code: item.http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
+                    Err(create_failure_error_response(
+                        transaction_data.status,
+                        Some(transaction_data.id),
+                        item.http_code,
+                    ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
@@ -731,18 +741,11 @@ impl<
                 let transaction_data = auth_response.data.authorize_credit_card.transaction;
                 let status = enums::AttemptStatus::from(transaction_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(domain_types::router_data::ErrorResponse {
-                        code: transaction_data.status.to_string().clone(),
-                        message: transaction_data.status.to_string().clone(),
-                        reason: Some(transaction_data.status.to_string().clone()),
-                        attempt_status: None,
-                        connector_transaction_id: Some(transaction_data.id),
-                        status_code: item.http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
+                    Err(create_failure_error_response(
+                        transaction_data.status,
+                        Some(transaction_data.id),
+                        item.http_code,
+                    ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
@@ -894,14 +897,15 @@ impl<
             item.router_data.request.currency,
             Some(metadata.merchant_config_currency),
         )?;
-        let query = REFUND_TRANSACTION_MUTATION.to_string();
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let query = constants::REFUND_TRANSACTION_MUTATION.to_string();
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         let variables = BraintreeRefundVariables {
             input: BraintreeRefundInput {
                 transaction_id: item.router_data.request.connector_transaction_id.clone(),
@@ -976,18 +980,11 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRefundResponse, Self>>
                     let refund_data = refund_data.data.refund_transaction.refund;
                     let refund_status = enums::RefundStatus::from(refund_data.status.clone());
                     if utils::is_refund_failure(refund_status) {
-                        Err(domain_types::router_data::ErrorResponse {
-                            code: refund_data.status.to_string().clone(),
-                            message: refund_data.status.to_string().clone(),
-                            reason: Some(refund_data.status.to_string().clone()),
-                            attempt_status: None,
-                            connector_transaction_id: Some(refund_data.id),
-                            status_code: item.http_code,
-                            network_advice_code: None,
-                            network_decline_code: None,
-                            network_error_message: None,
-                            raw_connector_response: None,
-                        })
+                        Err(create_failure_error_response(
+                            refund_data.status,
+                            Some(refund_data.id),
+                            item.http_code,
+                        ))
                     } else {
                         Ok(RefundsResponseData {
                             connector_refund_id: refund_data.id.clone(),
@@ -1001,6 +998,42 @@ impl<F> TryFrom<ResponseRouterData<BraintreeRefundResponse, Self>>
             ..item.router_data
         })
     }
+}
+
+fn extract_metadata_field<T>(
+    metadata: &Option<pii::SecretSerdeValue>,
+    field_name: &'static str,
+) -> Result<T, error_stack::Report<errors::ConnectorError>>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Debug,
+{
+    metadata
+        .as_ref()
+        .and_then(|metadata| {
+            let exposed = metadata.clone().expose();
+            exposed
+                .get(field_name)
+                .and_then(|v| v.as_str())
+                .and_then(|s| s.parse().ok())
+        })
+        .ok_or_else(|| errors::ConnectorError::MissingRequiredField { field_name }.into())
+}
+
+fn extract_metadata_string_field(
+    metadata: &Option<pii::SecretSerdeValue>,
+    field_name: &'static str,
+) -> Result<Secret<String>, error_stack::Report<errors::ConnectorError>> {
+    metadata
+        .as_ref()
+        .and_then(|metadata| {
+            let exposed = metadata.clone().expose();
+            exposed
+                .get(field_name)
+                .and_then(|v| v.as_str())
+                .map(|s| Secret::new(s.to_string()))
+        })
+        .ok_or_else(|| errors::ConnectorError::MissingRequiredField { field_name }.into())
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1030,31 +1063,39 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        /*
         let metadata: BraintreeMeta = if let (
             Some(merchant_account_id),
             Some(merchant_config_currency),
         ) = (
-            item.router_data.request.merchant_account_id.clone(),
-            item.router_data.request.merchant_config_currency,
+            extract_metadata_string_field(
+                &item.router_data.request.refund_connector_metadata,
+                "merchant_account_id",
+            )
+            .ok(),
+            extract_metadata_field(
+                &item.router_data.request.refund_connector_metadata,
+                "merchant_config_currency",
+            )
+            .ok(),
         ) {
             BraintreeMeta {
                 merchant_account_id,
                 merchant_config_currency,
             }
         } else {
-            utils::to_connector_meta_from_secret(item.router_data.request.refund_connector_metadata.clone()).change_context(
-                errors::ConnectorError::InvalidConnectorConfig { config: "metadata" },
-            )?
+            utils::to_connector_meta_from_secret(
+                item.router_data.request.refund_connector_metadata.clone(),
+            )
+            .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
-        utils::validate_currency(
-            item.router_data.request.currency,
-            Some(metadata.merchant_config_currency),
+        let currency = extract_metadata_field(
+            &item.router_data.request.refund_connector_metadata,
+            "currency",
         )?;
-        */
+        utils::validate_currency(currency, Some(metadata.merchant_config_currency))?;
         let refund_id = item.router_data.request.connector_refund_id;
         Ok(Self {
-            query: REFUND_QUERY.to_string(),
+            query: constants::REFUND_QUERY.to_string(),
             variables: RSyncInput {
                 input: RefundSearchInput {
                     id: IdFilter { is: refund_id },
@@ -1216,7 +1257,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(card_data) => Ok(Self {
-                query: TOKENIZE_CREDIT_CARD.to_string(),
+                query: constants::TOKENIZE_CREDIT_CARD.to_string(),
                 variables: VariableInput {
                     input: InputData {
                         credit_card: CreditCardData {
@@ -1390,14 +1431,15 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let query = CAPTURE_TRANSACTION_MUTATION.to_string();
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let query = constants::CAPTURE_TRANSACTION_MUTATION.to_string();
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         let variables = VariableCaptureInput {
             input: CaptureInputData {
                 transaction_id: item
@@ -1447,18 +1489,11 @@ impl<F, T> TryFrom<ResponseRouterData<BraintreeCaptureResponse, Self>>
                 let transaction_data = capture_data.data.capture_transaction.transaction;
                 let status = enums::AttemptStatus::from(transaction_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(domain_types::router_data::ErrorResponse {
-                        code: transaction_data.status.to_string().clone(),
-                        message: transaction_data.status.to_string().clone(),
-                        reason: Some(transaction_data.status.to_string().clone()),
-                        attempt_status: None,
-                        connector_transaction_id: Some(transaction_data.id),
-                        status_code: item.http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
+                    Err(create_failure_error_response(
+                        transaction_data.status,
+                        Some(transaction_data.id),
+                        item.http_code,
+                    ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(transaction_data.id),
@@ -1564,7 +1599,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let query = VOID_TRANSACTION_MUTATION.to_string();
+        let query = constants::VOID_TRANSACTION_MUTATION.to_string();
         let variables = VariableCancelInput {
             input: CancelInputData {
                 transaction_id: item.router_data.request.connector_transaction_id.clone(),
@@ -1621,18 +1656,11 @@ impl<F> TryFrom<ResponseRouterData<BraintreeCancelResponse, Self>>
                 let void_data = void_response.data.reverse_transaction.reversal;
                 let status = enums::AttemptStatus::from(void_data.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(domain_types::router_data::ErrorResponse {
-                        code: void_data.status.to_string().clone(),
-                        message: void_data.status.to_string().clone(),
-                        reason: Some(void_data.status.to_string().clone()),
-                        attempt_status: None,
-                        connector_transaction_id: None,
-                        status_code: item.http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
+                    Err(create_failure_error_response(
+                        void_data.status,
+                        None,
+                        item.http_code,
+                    ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::NoResponseId,
@@ -1688,7 +1716,7 @@ impl<
             .get_connector_transaction_id()
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(Self {
-            query: TRANSACTION_QUERY.to_string(),
+            query: constants::TRANSACTION_QUERY.to_string(),
             variables: PSyncInput {
                 input: TransactionSearchInput {
                     id: IdFilter { is: transaction_id },
@@ -1752,18 +1780,11 @@ impl<F> TryFrom<ResponseRouterData<BraintreePSyncResponse, Self>>
                     .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
                 let status = enums::AttemptStatus::from(edge_data.node.status.clone());
                 let response = if domain_types::utils::is_payment_failure(status) {
-                    Err(domain_types::router_data::ErrorResponse {
-                        code: edge_data.node.status.to_string().clone(),
-                        message: edge_data.node.status.to_string().clone(),
-                        reason: Some(edge_data.node.status.to_string().clone()),
-                        attempt_status: None,
-                        connector_transaction_id: None,
-                        status_code: item.http_code,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                        raw_connector_response: None,
-                    })
+                    Err(create_failure_error_response(
+                        edge_data.node.status.clone(),
+                        None,
+                        item.http_code,
+                    ))
                 } else {
                     Ok(PaymentsResponseData::TransactionResponse {
                         resource_id: ResponseId::ConnectorTransactionId(edge_data.node.id.clone()),
@@ -1814,7 +1835,7 @@ impl TryFrom<BraintreeMeta> for BraintreeClientTokenRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(metadata: BraintreeMeta) -> Result<Self, Self::Error> {
         Ok(Self {
-            query: CLIENT_TOKEN_MUTATION.to_owned(),
+            query: constants::CLIENT_TOKEN_MUTATION.to_owned(),
             variables: VariableClientTokenInput {
                 input: InputClientTokenData {
                     client_token: ClientTokenInput {
@@ -1873,18 +1894,19 @@ impl<
                 id: "order_id".to_string(),
             },
         )?;
-        let converter = StringMajorUnitForConnector;
-        let amount = converter
+        let amount = item
+            .connector
+            .amount_converter
             .convert(
                 item.router_data.request.minor_amount,
                 item.router_data.request.currency,
             )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+            .change_context(ConnectorError::AmountConversionFailed)?;
         let (query, transaction_body) = if item.router_data.request.is_mandate_payment() {
             (
                 match item.router_data.request.is_auto_capture()? {
-                    true => CHARGE_AND_VAULT_TRANSACTION_MUTATION.to_string(),
-                    false => AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION.to_string(),
+                    true => constants::CHARGE_AND_VAULT_TRANSACTION_MUTATION.to_string(),
+                    false => constants::AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION.to_string(),
                 },
                 TransactionBody::Vault(VaultTransactionBody {
                     amount,
@@ -1904,13 +1926,13 @@ impl<
         } else {
             (
                 match item.router_data.request.is_auto_capture()? {
-                    true => CHARGE_CREDIT_CARD_MUTATION.to_string(),
-                    false => AUTHORIZE_CREDIT_CARD_MUTATION.to_string(),
+                    true => constants::CHARGE_CREDIT_CARD_MUTATION.to_string(),
+                    false => constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string(),
                 },
                 TransactionBody::Regular(RegularTransactionBody {
                     amount,
                     merchant_account_id: metadata.merchant_account_id,
-                    channel: CHANNEL_CODE.to_string(),
+                    channel: constants::CHANNEL_CODE.to_string(),
                     customer_details: item
                         .router_data
                         .resource_common_data

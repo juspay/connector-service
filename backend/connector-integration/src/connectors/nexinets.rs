@@ -23,7 +23,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
+use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
@@ -452,24 +452,7 @@ macros::macro_connector_implementation!(
                 .connector_refund_id
                 .clone();
 
-            let order_id = req
-                .request
-                .refund_connector_metadata
-                .clone()
-                .and_then(|secret| {
-                    secret
-                        .expose()
-                        .get("request_ref_id")?
-                        .get("id_type")?
-                        .get("Id")?
-                        .as_str()
-                        .map(|s| s.to_string())
-                })
-                .ok_or(
-                    errors::ConnectorError::MissingConnectorRelatedTransactionID {
-                        id: "order_id".to_string(),
-                    },
-                )?;
+            let order_id = req.resource_common_data.connector_request_reference_id.clone();
 
             Ok(format!(
                 "{}/orders/{order_id}/transactions/{transaction_id}",

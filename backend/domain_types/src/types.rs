@@ -13,7 +13,6 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::Secret;
 use serde::Serialize;
-use serde_json::json;
 use utoipa::ToSchema;
 
 // Helper function for extracting connector request reference ID
@@ -1842,10 +1841,17 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
             refund_status: common_enums::RefundStatus::Pending,
-            refund_connector_metadata: value
-                .request_ref_id
-                .as_ref()
-                .map(|id| Secret::new(json!({ "request_ref_id": id.clone() }))),
+            refund_connector_metadata: if value.refund_metadata.is_empty() {
+                None
+            } else {
+                Some(Secret::new(serde_json::Value::Object(
+                    value
+                        .refund_metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                )))
+            },
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
         })

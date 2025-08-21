@@ -5,6 +5,7 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
     ext_traits::ByteSliceExt,
+    types::StringMajorUnit,
     ParsingError,
 };
 use domain_types::{
@@ -271,7 +272,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: StringMajorUnit
+        ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,

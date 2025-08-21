@@ -370,6 +370,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         browser_info: None,
         request_ref_id: None, // all_keys_required: None,
+        refund_metadata: HashMap::new(),
     }
 }
 
