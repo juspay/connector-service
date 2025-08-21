@@ -244,18 +244,7 @@ impl<
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
                                 payment_method_data::MifinityData {
-                                    date_of_birth: hyperswitch_masking::Secret::new(
-                                        time::Date::parse(&mifinity_data.date_of_birth, &time::format_description::well_known::Iso8601::DATE)
-                                            .map_err(|err| {
-                                                tracing::error!("Failed to parse date_of_birth for mifinity wallet: {}", err);
-                                                ApplicationErrorResponse::BadRequest(ApiError {
-                                                    sub_code: "INVALID_DATE_FORMAT".to_owned(),
-                                                    error_identifier: 400,
-                                                    error_message: "Invalid date format for date_of_birth".to_owned(),
-                                                    error_object: None,
-                                                })
-                                            })?
-                                    ),
+                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth)?,
                                     language_preference: mifinity_data.language_preference,
                                 }
                             )))
@@ -3888,6 +3877,27 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+}
+
+impl ForeignTryFrom<String> for hyperswitch_masking::Secret<time::Date> {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(date_string: String) -> Result<Self, error_stack::Report<Self::Error>> {
+        let date = time::Date::parse(
+            &date_string,
+            &time::format_description::well_known::Iso8601::DATE,
+        )
+        .map_err(|err| {
+            tracing::error!("Failed to parse date string: {}", err);
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_DATE_FORMAT".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid date format".to_owned(),
+                error_object: None,
+            })
+        })?;
+        Ok(hyperswitch_masking::Secret::new(date))
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInformation {
