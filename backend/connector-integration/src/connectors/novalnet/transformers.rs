@@ -1855,6 +1855,7 @@ impl<
                     })
                 }
                 WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::BluecodeRedirect { .. }
                 | WalletDataPaymentMethod::AliPayRedirect(_)
                 | WalletDataPaymentMethod::AliPayHkRedirect(_)
                 | WalletDataPaymentMethod::AmazonPayRedirect(_)
