@@ -13,7 +13,7 @@ use serde_json::Value;
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{self, ParsingError},
+    errors::{self, ApiError, ApplicationErrorResponse, ParsingError},
     payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
@@ -358,3 +358,39 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map.insert(CardIssuer::CarteBlanche, Regex::new(r"^389[0-9]{11}$"));
         map
     });
+
+/// Helper function for extracting merchant ID from metadata
+pub fn extract_merchant_id_from_metadata(
+    metadata: &tonic::metadata::MetadataMap,
+) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
+    let merchant_id_str = metadata
+        .get(common_utils::consts::X_MERCHANT_ID)
+        .ok_or_else(|| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: "Missing merchant ID in request metadata".to_owned(),
+                error_object: None,
+            })
+        })?
+        .to_str()
+        .map_err(|e| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                error_object: None,
+            })
+        })?;
+
+    Ok(merchant_id_str
+        .parse::<common_utils::id_type::MerchantId>()
+        .map_err(|e| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: format!("Failed to parse merchant ID from header: {e}"),
+                error_object: None,
+            })
+        })?)
+}

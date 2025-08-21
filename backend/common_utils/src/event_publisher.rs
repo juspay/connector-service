@@ -5,8 +5,10 @@ use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
 use tracing_kafka::{builder::KafkaWriterBuilder, KafkaWriter};
 
-use crate::events::{Event, EventConfig};
-use crate::{CustomResult, EventPublisherError};
+use crate::{
+    events::{Event, EventConfig},
+    CustomResult, EventPublisherError,
+};
 
 const PARTITION_KEY_METADATA: &str = "partitionKey";
 

@@ -16,8 +16,8 @@ buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"
-port = 8000
-type = "grpc"
+port = 8001
+type = "http"
 
 [metrics]
 host = "127.0.0.1"
@@ -48,6 +48,7 @@ cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
 novalnet.base_url = "https://payport.novalnet.de/v2"
 nexinets.base_url = "https://apitest.payengine.de/v1"
 noon.base_url = "https://api-test.noonpayments.com/"
+mifinity.base_url = "https://demo.mifinity.com/"
 
 # Generic Events Configuration
 [events]
