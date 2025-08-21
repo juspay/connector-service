@@ -13,6 +13,7 @@ use time::Date;
 use utoipa::ToSchema;
 
 use crate::{
+    errors,
     router_data::NetworkTokenNumber,
     utils::{get_card_issuer, missing_field_err, CardIssuer, Error},
 };
@@ -636,7 +637,7 @@ impl GooglePayWalletData {
         let encrypted_data = self
             .tokenization_data
             .get_encrypted_google_pay_payment_data_mandatory()
-            .change_context(crate::errors::ConnectorError::InvalidWalletToken {
+            .change_context(errors::ConnectorError::InvalidWalletToken {
                 wallet_name: "Google Pay".to_string(),
             })?;
 

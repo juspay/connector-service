@@ -250,10 +250,10 @@ impl<
 
                             let applepay_payment_data = match payment_data.payment_data {
                                 Some(grpc_api_types::payments::apple_wallet::payment_data::PaymentData::EncryptedData(encrypted_data)) => {
-                                    payment_method_data::ApplePayPaymentData::Encrypted(encrypted_data)
+                                    Ok(payment_method_data::ApplePayPaymentData::Encrypted(encrypted_data))
                                 },
                                 Some(grpc_api_types::payments::apple_wallet::payment_data::PaymentData::DecryptedData(decrypted_data)) => {
-                                    payment_method_data::ApplePayPaymentData::Decrypted(
+                                    Ok(payment_method_data::ApplePayPaymentData::Decrypted(
                                         payment_method_data::ApplePayPredecryptData {
                                             application_primary_account_number: cards::CardNumber::from_str(&decrypted_data.application_primary_account_number).change_context(
                                                 ApplicationErrorResponse::BadRequest(ApiError {
@@ -270,17 +270,15 @@ impl<
                                                 eci_indicator: decrypted_data.payment_data.map(|pd| pd.eci_indicator),
                                             },
                                         }
-                                    )
+                                    ))
                                 },
-                                None => {
-                                    return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "MISSING_APPLE_PAY_DATA".to_owned(),
                                         error_identifier: 400,
                                         error_message: "Apple Pay payment data is required".to_owned(),
                                         error_object: None,
-                                    })));
-                                }
-                            };
+                                    })))
+                            }?;
 
                             let payment_method = apple_wallet.payment_method.ok_or_else(|| {
                                 ApplicationErrorResponse::BadRequest(ApiError {
@@ -324,7 +322,7 @@ impl<
                             // Handle the new oneof tokenization_data structure
                             let gpay_tokenization_data = match tokenization_data.tokenization_data {
                                 Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::DecryptedData(predecrypt_data)) => {
-                                    payment_method_data::GpayTokenizationData::Decrypted(
+                                    Ok(payment_method_data::GpayTokenizationData::Decrypted(
                                         payment_method_data::GPayPredecryptData {
                                             card_exp_month: Secret::new(predecrypt_data.card_exp_month),
                                             card_exp_year: Secret::new(predecrypt_data.card_exp_year),
@@ -339,25 +337,23 @@ impl<
                                             cryptogram: Some(Secret::new(predecrypt_data.cryptogram)),
                                             eci_indicator: predecrypt_data.eci_indicator,
                                         }
-                                    )
+                                    ))
                                 },
                                 Some(grpc_api_types::payments::google_wallet::tokenization_data::TokenizationData::EncryptedData(encrypted_data)) => {
-                                    payment_method_data::GpayTokenizationData::Encrypted(
+                                    Ok(payment_method_data::GpayTokenizationData::Encrypted(
                                         payment_method_data::GpayEcryptedTokenizationData {
                                             token_type: encrypted_data.token_type,
                                             token: encrypted_data.token,
                                         }
-                                    )
+                                    ))
                                 },
-                                None => {
-                                    return Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "MISSING_GOOGLE_PAY_TOKENIZATION_DATA".to_owned(),
                                         error_identifier: 400,
                                         error_message: "Google Pay tokenization data variant is required".to_owned(),
                                         error_object: None,
-                                    })));
-                                }
-                            };
+                                    })))
+                            }?;
 
                             let wallet_data = payment_method_data::GooglePayWalletData {
                                 pm_type: google_wallet.r#type,
@@ -394,14 +390,14 @@ impl<
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::PaypalRedirect(paypal_redirect)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::PaypalRedirect(payment_method_data::PaypalRedirection {
                                 email: match paypal_redirect.email {
-                                    Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                                        error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                    Some(ref email_str) => Some(Email::try_from(email_str.clone()).change_context(
+                                        ApplicationErrorResponse::BadRequest(ApiError {
                                             sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                                             error_identifier: 400,
                                             error_message: "Invalid email".to_owned(),
                                             error_object: None,
-                                        }))
-                                    })?),
+                                        })
+                                    )?),
                                     None => None,
                                 },
                             })))
@@ -892,7 +888,13 @@ impl<
                         error_object: None,
                     })
                 })?,
-            )?,
+            )
+            .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                error_identifier: 400,
+                error_message: "Payment method data construction failed".to_owned(),
+                error_object: None,
+            }))?,
             amount: value.amount,
             currency: common_enums::Currency::foreign_try_from(value.currency())?,
             confirm: true,
