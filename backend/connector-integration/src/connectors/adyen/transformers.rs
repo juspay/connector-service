@@ -1509,20 +1509,23 @@ pub(crate) fn get_adyen_refund_webhook_event(
 
 pub(crate) fn get_adyen_webhook_event_type(code: WebhookEventCode) -> EventType {
     match code {
-        WebhookEventCode::Authorisation
-        | WebhookEventCode::Cancellation
-        | WebhookEventCode::Capture
-        | WebhookEventCode::CaptureFailed => EventType::Payment,
-        WebhookEventCode::Refund
-        | WebhookEventCode::RefundFailed
-        | WebhookEventCode::RefundReversed
-        | WebhookEventCode::CancelOrRefund => EventType::Refund,
-        WebhookEventCode::NotificationOfChargeback
-        | WebhookEventCode::Chargeback
-        | WebhookEventCode::ChargebackReversed
-        | WebhookEventCode::SecondChargeback
-        | WebhookEventCode::PrearbitrationWon
-        | WebhookEventCode::PrearbitrationLost => EventType::Dispute,
+        WebhookEventCode::Authorisation => EventType::PaymentIntentAuthorizationSuccess,
+        WebhookEventCode::Cancellation => EventType::PaymentIntentCancelled,
+        WebhookEventCode::Capture => EventType::PaymentIntentCaptureSuccess,
+        WebhookEventCode::CaptureFailed => EventType::PaymentIntentCaptureFailure,
+        WebhookEventCode::Refund | WebhookEventCode::CancelOrRefund => EventType::RefundSuccess,
+        WebhookEventCode::RefundFailed | WebhookEventCode::RefundReversed => {
+            EventType::RefundFailure
+        }
+        WebhookEventCode::NotificationOfChargeback | WebhookEventCode::Chargeback => {
+            EventType::DisputeOpened
+        }
+        WebhookEventCode::ChargebackReversed | WebhookEventCode::PrearbitrationWon => {
+            EventType::DisputeWon
+        }
+        WebhookEventCode::SecondChargeback | WebhookEventCode::PrearbitrationLost => {
+            EventType::DisputeLost
+        }
     }
 }
 

@@ -67,7 +67,9 @@ impl IncomingWebhook for Authorizedotnet {
         // If no webhook secret is provided, cannot verify
         let webhook_secret = match connector_webhook_secret {
             Some(secrets) => secrets.secret,
-            None => return Ok(false),
+            None => {
+                return Ok(false);
+            }
         };
 
         // Extract X-ANET-Signature header (case-insensitive)
@@ -148,17 +150,25 @@ impl IncomingWebhook for Authorizedotnet {
             })?;
 
         Ok(match webhook_body.event_type {
-            transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated
+            transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated => {
+                EventType::PaymentIntentAuthorizationSuccess
+            }
             | transformers::AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
-            | transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CaptureCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
-                EventType::Payment
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CaptureCreated => {
+                EventType::PaymentIntentCaptureSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated => {
+                EventType::PaymentIntentSuccess // Combined auth+capture
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => {
+                EventType::PaymentIntentCancelled
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => {
-                EventType::Refund
+                EventType::RefundSuccess
+            }
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
+                EventType::MandateActive
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::Unknown => {
                 tracing::warn!(
@@ -166,9 +176,9 @@ impl IncomingWebhook for Authorizedotnet {
                     "Received unknown webhook event type from Authorize.Net - rejecting webhook"
                 );
                 return Err(
-                    error_stack::report!(ConnectorError::WebhookEventTypeNotFound)
-                        .attach_printable("Unknown webhook event type"),
-                )
+                    error_stack::Report::new(ConnectorError::WebhookEventTypeNotFound)
+                        .attach_printable("Unknown webhook event type")
+                );
             }
         })
     }
@@ -194,6 +204,7 @@ impl IncomingWebhook for Authorizedotnet {
                 webhook_body.event_type
             )
         })?;
+
         let status = transformers::SyncStatus::from(webhook_body.event_type.clone());
 
         Ok(WebhookDetailsResponse {

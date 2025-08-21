@@ -135,11 +135,64 @@ enum PaymentExperience {
 
 // Type of event that a webhook can represent.
 enum WebhookEventType {
-  WEBHOOK_EVENT_TYPE_UNSPECIFIED = 0;  // Default, unspecified webhook event type.
-  WEBHOOK_PAYMENT = 1;                 // Webhook event related to a payment.
-  WEBHOOK_REFUND = 2;                  // Webhook event related to a refund.
-  WEBHOOK_DISPUTE = 3;                 // Webhook event related to a dispute.
+  INCOMING_WEBHOOK_EVENT_UNSPECIFIED = 0; // Default unspecified event
+
+  // Payment intent events
+  PAYMENT_INTENT_FAILURE = 1;              // Authorization + Capture failure
+  PAYMENT_INTENT_SUCCESS = 2;              // Authorization + Capture success
+  PAYMENT_INTENT_PROCESSING = 3;           // Payment intent is processing
+  PAYMENT_INTENT_PARTIALLY_FUNDED = 4;     // Payment intent is partially funded
+  PAYMENT_INTENT_CANCELLED = 5;            // Payment intent cancelled
+  PAYMENT_INTENT_CANCEL_FAILURE = 6;       // Payment intent cancel failure
+  PAYMENT_INTENT_AUTHORIZATION_SUCCESS = 7; // Authorization success
+  PAYMENT_INTENT_AUTHORIZATION_FAILURE = 8; // Authorization failure
+  PAYMENT_INTENT_CAPTURE_SUCCESS = 9;      // Capture success
+  PAYMENT_INTENT_CAPTURE_FAILURE = 10;     // Capture failure
+  PAYMENT_INTENT_EXPIRED = 11;             // Payment intent expired
+  PAYMENT_ACTION_REQUIRED = 12;            // Payment requires additional action
+
+  SOURCE_CHARGEABLE = 13;                  // Source is chargeable
+  SOURCE_TRANSACTION_CREATED = 14;         // Source transaction created
+
+  // Refund events
+  WEBHOOK_REFUND_FAILURE = 15;                     // Refund failure
+  WEBHOOK_REFUND_SUCCESS = 16;                     // Refund success
+
+  // Dispute events
+  WEBHOOK_DISPUTE_OPENED = 17;                     // Dispute opened
+  WEBHOOK_DISPUTE_EXPIRED = 18;                    // Dispute expired
+  WEBHOOK_DISPUTE_ACCEPTED = 19;                   // Dispute accepted
+  WEBHOOK_DISPUTE_CANCELLED = 20;                  // Dispute cancelled
+  WEBHOOK_DISPUTE_CHALLENGED = 21;                 // Dispute challenged
+  WEBHOOK_DISPUTE_WON = 22;                        // Dispute successfully challenged by merchant
+  WEBHOOK_DISPUTE_LOST = 23;                       // Dispute unsuccessfully challenged
+
+  // Mandate events
+  MANDATE_ACTIVE = 24;                     // Mandate is active
+  MANDATE_REVOKED = 25;                    // Mandate revoked
+
+  // Misc events
+  ENDPOINT_VERIFICATION = 26;              // Endpoint verification
+  EXTERNAL_AUTHENTICATION_ARES = 27;       // External authentication ARes
+  FRM_APPROVED = 28;                       // Fraud risk management approved
+  FRM_REJECTED = 29;                       // Fraud risk management rejected
+
+  // Payout events
+  PAYOUT_SUCCESS = 30;                     // Payout success
+  PAYOUT_FAILURE = 31;                     // Payout failure
+  PAYOUT_PROCESSING = 32;                  // Payout processing
+  PAYOUT_CANCELLED = 33;                   // Payout cancelled
+  PAYOUT_CREATED = 34;                     // Payout created
+  PAYOUT_EXPIRED = 35;                     // Payout expired
+  PAYOUT_REVERSED = 36;                    // Payout reversed
+
+  // Recovery events
+  RECOVERY_PAYMENT_FAILURE = 37;           // Recovery payment failure
+  RECOVERY_PAYMENT_SUCCESS = 38;           // Recovery payment success
+  RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
+  RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
 }
+
 
 // Enum for currency codes (ISO 4217).
 enum Currency {
