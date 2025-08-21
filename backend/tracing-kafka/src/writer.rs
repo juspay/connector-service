@@ -8,7 +8,7 @@ use std::{
 
 use rdkafka::{
     config::ClientConfig,
-    error::KafkaError,
+    error::{KafkaError, RDKafkaErrorCode},
     message::OwnedHeaders,
     producer::{BaseRecord, DeliveryResult, Producer, ProducerContext, ThreadedProducer},
     ClientContext,
@@ -51,23 +51,19 @@ impl ProducerContext for MetricsProducerContext {
             match (message_type, &kafka_error) {
                 (
                     KafkaMessageType::Event,
-                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull),
+                    KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull),
                 ) => {
                     KAFKA_AUDIT_DROPS_QUEUE_FULL.inc();
                 }
                 (
                     KafkaMessageType::Event,
-                    KafkaError::MessageProduction(
-                        rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
-                    ),
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageSizeTooLarge),
                 ) => {
                     KAFKA_AUDIT_DROPS_MSG_TOO_LARGE.inc();
                 }
                 (
                     KafkaMessageType::Event,
-                    KafkaError::MessageProduction(
-                        rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
-                    ),
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageTimedOut),
                 ) => {
                     KAFKA_AUDIT_DROPS_TIMEOUT.inc();
                 }
@@ -76,23 +72,19 @@ impl ProducerContext for MetricsProducerContext {
                 }
                 (
                     KafkaMessageType::Log,
-                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull),
+                    KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull),
                 ) => {
                     KAFKA_DROPS_QUEUE_FULL.inc();
                 }
                 (
                     KafkaMessageType::Log,
-                    KafkaError::MessageProduction(
-                        rdkafka::error::RDKafkaErrorCode::MessageSizeTooLarge,
-                    ),
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageSizeTooLarge),
                 ) => {
                     KAFKA_DROPS_MSG_TOO_LARGE.inc();
                 }
                 (
                     KafkaMessageType::Log,
-                    KafkaError::MessageProduction(
-                        rdkafka::error::RDKafkaErrorCode::MessageTimedOut,
-                    ),
+                    KafkaError::MessageProduction(RDKafkaErrorCode::MessageTimedOut),
                 ) => {
                     KAFKA_DROPS_TIMEOUT.inc();
                 }
@@ -217,9 +209,7 @@ impl KafkaWriter {
 
                     // Only QUEUE_FULL can happen during send() - others happen during delivery
                     match &kafka_error {
-                        KafkaError::MessageProduction(
-                            rdkafka::error::RDKafkaErrorCode::QueueFull,
-                        ) => {
+                        KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull) => {
                             KAFKA_AUDIT_DROPS_QUEUE_FULL.inc();
                         }
                         _ => {
@@ -261,7 +251,7 @@ impl Write for KafkaWriter {
                 KAFKA_LOGS_DROPPED.inc();
 
                 match &kafka_error {
-                    KafkaError::MessageProduction(rdkafka::error::RDKafkaErrorCode::QueueFull) => {
+                    KafkaError::MessageProduction(RDKafkaErrorCode::QueueFull) => {
                         KAFKA_DROPS_QUEUE_FULL.inc();
                     }
                     _ => {

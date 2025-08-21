@@ -251,11 +251,11 @@ pub struct EventConfig {
     pub brokers: Vec<String>,
     pub partition_key_field: String,
     #[serde(default)]
-    pub transformations: std::collections::HashMap<String, String>, // target_path → source_field
+    pub transformations: HashMap<String, String>, // target_path → source_field
     #[serde(default)]
-    pub static_values: std::collections::HashMap<String, String>, // target_path → static_value
+    pub static_values: HashMap<String, String>, // target_path → static_value
     #[serde(default)]
-    pub extractions: std::collections::HashMap<String, String>, // target_path → extraction_path
+    pub extractions: HashMap<String, String>, // target_path → extraction_path
 }
 
 impl Default for EventConfig {
@@ -265,9 +265,9 @@ impl Default for EventConfig {
             topic: "events".to_string(),
             brokers: vec!["localhost:9092".to_string()],
             partition_key_field: "request_id".to_string(),
-            transformations: std::collections::HashMap::new(),
-            static_values: std::collections::HashMap::new(),
-            extractions: std::collections::HashMap::new(),
+            transformations: HashMap::new(),
+            static_values: HashMap::new(),
+            extractions: HashMap::new(),
         }
     }
 }
