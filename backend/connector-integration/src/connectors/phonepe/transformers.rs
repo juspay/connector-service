@@ -215,7 +215,7 @@ impl<
         )?;
 
         // Use amount converter to get proper amount in minor units
-        let amount_in_minor_units = item
+        let amount_in_minor_units = wrapper
             .connector
             .amount_converter
             .convert(
