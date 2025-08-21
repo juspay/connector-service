@@ -5,7 +5,6 @@ use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
 use tracing_kafka::{builder::KafkaWriterBuilder, KafkaWriter};
 
-// Use the centralized event definitions from the events module
 use crate::events::{Event, EventConfig};
 use crate::{CustomResult, EventPublisherError};
 

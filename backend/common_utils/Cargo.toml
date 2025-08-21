@@ -51,3 +51,6 @@ optional = true
 [dependencies.futures]
 version = "0.3.28"
 optional = true
+
+[lints]
+workspace=true

@@ -1,12 +1,12 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::errors::CustomResult;
+use common_utils::{consts, errors::CustomResult, events, pii};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
-        RepeatPayment, SetupMandate, Void,
+        self, Authorize, Capture, CreateOrder, CreateSessionToken, PSync, Refund, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -26,6 +26,7 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
+use external_services::service::{execute_connector_processing_step, EventProcessingParams};
 use grpc_api_types::payments::{
     payment_method, payment_service_server::PaymentService, DisputeResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
@@ -209,18 +210,18 @@ impl Payments {
         };
 
         // Execute connector processing
-        let event_params = external_services::service::EventProcessingParams {
+        let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
-            flow_name: common_utils::events::FlowName::Authorize,
+            flow_name: events::FlowName::Authorize,
             event_config: &self.config.events,
-            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+            raw_request_data: Some(pii::SecretSerdeValue::new(
                 serde_json::to_value(&payload).unwrap_or_default(),
             )),
             request_id,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
@@ -361,18 +362,18 @@ impl Payments {
         };
 
         // Execute connector processing
-        let external_event_params = external_services::service::EventProcessingParams {
+        let external_event_params = EventProcessingParams {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
-            flow_name: common_utils::events::FlowName::CreateOrder,
+            flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
-            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+            raw_request_data: Some(pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
@@ -458,18 +459,18 @@ impl Payments {
         };
 
         // Execute connector processing
-        let external_event_params = external_services::service::EventProcessingParams {
+        let external_event_params = EventProcessingParams {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
-            flow_name: common_utils::events::FlowName::CreateOrder,
+            flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
-            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+            raw_request_data: Some(pii::SecretSerdeValue::new(
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
 
-        let response = external_services::service::execute_connector_processing_step(
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
@@ -548,16 +549,16 @@ impl Payments {
         };
 
         // Execute connector processing
-        let event_params = external_services::service::EventProcessingParams {
+        let event_params = EventProcessingParams {
             connector_name,
             service_name,
-            flow_name: common_utils::events::FlowName::Authorize, // Use Authorize as fallback since CreateSessionToken doesn't exist
+            flow_name: events::FlowName::Authorize, // Use Authorize as fallback since CreateSessionToken doesn't exist
             event_config: &self.config.events,
             raw_request_data: None, // Don't serialize P since it doesn't implement Serialize
             request_id: "session_token_request", // TODO: Pass actual request_id
         };
 
-        let response = external_services::service::execute_connector_processing_step(
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
@@ -664,9 +665,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_authorize",
         fields(
-            name = common_utils::consts::NAME,
+            name = consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = FlowName::Authorize.to_string(),
+            service_method = connector_flow::FlowName::Authorize.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -677,7 +678,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Authorize.to_string(),
+            flow = connector_flow::FlowName::Authorize.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -688,7 +689,7 @@ impl PaymentService for Payments {
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
 
-        let service_name = request
+        let service_name: String = request
             .extensions()
             .get::<String>()
             .cloned()
@@ -785,9 +786,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_sync",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Psync.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Psync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -798,7 +799,7 @@ impl PaymentService for Payments {
             message = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Psync.to_string(),
+            flow = connector_flow::FlowName::Psync.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -813,9 +814,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_void",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Void.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Void.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -826,7 +827,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Void.to_string(),
+            flow = connector_flow::FlowName::Void.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -841,9 +842,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "incoming_webhook",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::IncomingWebhook.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::IncomingWebhook.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -854,7 +855,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.to_string(),
+            flow = connector_flow::FlowName::IncomingWebhook.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -965,9 +966,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "refund",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Refund.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Refund.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -978,7 +979,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Refund.to_string(),
+            flow = connector_flow::FlowName::Refund.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -993,9 +994,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "defend_dispute",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::DefendDispute.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::DefendDispute.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1006,7 +1007,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::DefendDispute.to_string(),
+            flow = connector_flow::FlowName::DefendDispute.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1032,9 +1033,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_capture",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Capture.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Capture.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1045,7 +1046,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Capture.to_string(),
+            flow = connector_flow::FlowName::Capture.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1060,9 +1061,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "setup_mandate",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::SetupMandate.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::SetupMandate.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1073,7 +1074,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::SetupMandate.to_string(),
+            flow = connector_flow::FlowName::SetupMandate.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1163,18 +1164,18 @@ impl PaymentService for Payments {
                     response: Err(ErrorResponse::default()),
                 };
 
-                let event_params = external_services::service::EventProcessingParams {
+                let event_params = EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: common_utils::events::FlowName::SetupMandate,
+                    flow_name: events::FlowName::SetupMandate,
                     event_config: &self.config.events,
-                    raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    raw_request_data: Some(pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };
 
-                let response = external_services::service::execute_connector_processing_step(
+                let response = execute_connector_processing_step(
                     &self.config.proxy,
                     connector_integration,
                     router_data,
@@ -1198,9 +1199,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "repeat_payment",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::RepeatPayment.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::RepeatPayment.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1275,18 +1276,18 @@ impl PaymentService for Payments {
                     response: Err(ErrorResponse::default()),
                 };
 
-                let event_params = external_services::service::EventProcessingParams {
+                let event_params = EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: common_utils::events::FlowName::Authorize,
+                    flow_name: events::FlowName::Authorize,
                     event_config: &self.config.events,
-                    raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    raw_request_data: Some(pii::SecretSerdeValue::new(
                         serde_json::to_value(payload).unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };
 
-                let response = external_services::service::execute_connector_processing_step(
+                let response = execute_connector_processing_step(
                     &self.config.proxy,
                     connector_integration,
                     router_data,
