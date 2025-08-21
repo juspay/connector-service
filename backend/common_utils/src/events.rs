@@ -189,6 +189,8 @@ pub struct Event {
     pub request_data: Option<SecretSerdeValue>,
     pub connector_request_data: Option<SecretSerdeValue>,
     pub connector_response_data: Option<SecretSerdeValue>,
+    pub processing_status: Option<String>,
+    pub error_details: Option<String>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
 }
@@ -207,7 +209,9 @@ pub enum FlowName {
     Dsync,
     IncomingWebhook,
     SetupMandate,
+    RepeatPayment,
     CreateOrder,
+    CreateSessionToken,
 }
 
 impl FlowName {
@@ -225,7 +229,9 @@ impl FlowName {
             Self::Dsync => "Dsync",
             Self::IncomingWebhook => "IncomingWebhook",
             Self::SetupMandate => "SetupMandate",
+            Self::RepeatPayment => "RepeatPayment",
             Self::CreateOrder => "CreateOrder",
+            Self::CreateSessionToken => "CreateSessionToken",
         }
     }
 }
@@ -233,12 +239,18 @@ impl FlowName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventStage {
     ConnectorCall,
+    ResponseProcessing,
+    GrpcRequest,
+    GrpcResponse,
 }
 
 impl EventStage {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ConnectorCall => "CONNECTOR_CALL",
+            Self::ResponseProcessing => "RESPONSE_PROCESSING",
+            Self::GrpcRequest => "GRPC_REQUEST",
+            Self::GrpcResponse => "GRPC_RESPONSE",
         }
     }
 }
