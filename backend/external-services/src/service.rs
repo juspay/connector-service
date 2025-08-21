@@ -258,10 +258,9 @@ where
                                 "Event publishing is disabled for {}",
                                 event_params.connector_name
                             ),
-                            Err(e) => tracing::error!(
-                                "Failed to publish error response event: {:?}",
-                                e
-                            ),
+                            Err(e) => {
+                                tracing::error!("Failed to publish error response event: {:?}", e)
+                            }
                         }
                     }
                 }
@@ -300,10 +299,9 @@ where
                                 "Event publishing is disabled for {}",
                                 event_params.connector_name
                             ),
-                            Err(e) => tracing::error!(
-                                "Failed to publish network error event: {:?}",
-                                e
-                            ),
+                            Err(e) => {
+                                tracing::error!("Failed to publish network error event: {:?}", e)
+                            }
                         }
                     }
                 }
@@ -374,7 +372,7 @@ where
                             match handle_response_result {
                                 Ok(data) => {
                                     tracing::info!("Transformer completed successfully");
-                                    
+
                                     // Emit successful response processing audit event
                                     {
                                         let event = Event {
@@ -393,7 +391,7 @@ where
                                             error_details: None,
                                             additional_fields: std::collections::HashMap::new(),
                                         };
-                                        
+
                                         match emit_event_with_config(event, event_params.event_config) {
                                             Ok(true) => tracing::info!(
                                                 "Successfully published response processing success event for {}",
@@ -409,7 +407,7 @@ where
                                             ),
                                         }
                                     }
-                                    
+
                                     Ok(data)
                                 }
                                 Err(err) => {
@@ -431,7 +429,7 @@ where
                                             error_details: Some(err.to_string()),
                                             additional_fields: std::collections::HashMap::new(),
                                         };
-                                        
+
                                         match emit_event_with_config(event, event_params.event_config) {
                                             Ok(true) => tracing::info!(
                                                 "Successfully published response processing failure event for {}",
@@ -447,7 +445,7 @@ where
                                             ),
                                         }
                                     }
-                                    
+
                                     Err(err)
                                 }
                             }?
