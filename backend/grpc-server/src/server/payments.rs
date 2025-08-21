@@ -221,8 +221,11 @@ impl Payments {
             request_id,
         };
 
+        // Create effective proxy configuration (request-level takes precedence over config)
+        let effective_proxy = self.config.proxy.with_request_override(payload.proxy_url.clone());
+
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &effective_proxy,
             connector_integration,
             router_data,
             None,
@@ -373,8 +376,11 @@ impl Payments {
             request_id: event_params.request_id,
         };
 
+        // Create effective proxy configuration (request-level takes precedence over config)
+        let effective_proxy = self.config.proxy.with_request_override(payload.proxy_url.clone());
+
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &effective_proxy,
             connector_integration,
             order_router_data,
             None,
@@ -470,8 +476,11 @@ impl Payments {
             request_id: event_params.request_id,
         };
 
+        // Create effective proxy configuration (request-level takes precedence over config)
+        let effective_proxy = self.config.proxy.with_request_override(payload.proxy_url.clone());
+
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &effective_proxy,
             connector_integration,
             order_router_data,
             None,

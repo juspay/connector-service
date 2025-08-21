@@ -1080,6 +1080,9 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 31; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a payment authorization.
@@ -1116,6 +1119,9 @@ message PaymentServiceGetRequest {
   
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 3; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a payment status synchronization.
@@ -1174,6 +1180,9 @@ message PaymentServiceVoidRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 6; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a payment void operation.
@@ -1210,6 +1219,9 @@ message PaymentServiceCaptureRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 7; // Browser information, if relevant
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 8; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a payment capture operation.
@@ -1254,6 +1266,9 @@ message PaymentServiceRefundRequest {
   
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 16; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -1389,6 +1404,9 @@ message PaymentServiceRegisterRequest {
   optional CustomerAcceptance customer_acceptance = 26; // Details of customer acceptance
   optional BrowserInformation browser_info = 27; // Information about the customer's browser
   optional PaymentExperience payment_experience = 28; // Preferred payment experience
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 29; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a mandate setup operation.
@@ -1441,6 +1459,9 @@ message PaymentServiceRepeatEverythingRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 14; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for repeat payment operation.
@@ -1506,6 +1527,9 @@ message RefundServiceGetRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 6; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -1622,6 +1646,9 @@ message DisputeServiceSubmitEvidenceRequest {
   
   // Evidence
   repeated EvidenceDocument evidence_documents = 6; // Collection of evidence documents
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 7; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for a submit evidence operation.
@@ -1648,6 +1675,9 @@ message DisputeServiceGetRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   optional string dispute_id = 2; // Merchant's unique identifier for the dispute
   string connector_dispute_id = 3; // Connector's unique identifier
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 4; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Legacy alias for backward compatibility - use DisputeResponse instead
@@ -1754,6 +1784,9 @@ message DisputeDefendRequest {
   
   // Defend Details
   optional string reason_code = 4; // Reason code for defending the dispute
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 5; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for defending a dispute.
@@ -1779,6 +1812,9 @@ message AcceptDisputeRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to accept dispute for
   string dispute_id = 3; // Connector's unique identifier
+  
+  // Request-level proxy configuration (takes precedence over config)
+  optional string proxy_url = 4; // Proxy URL for this request (handles both HTTP and HTTPS)
 }
 
 // Response message for accepting a dispute.

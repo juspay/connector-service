@@ -592,6 +592,25 @@ fn get_base_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
 ) -> CustomResult<Client, ApiClientError> {
+    // Check if this is a request-level proxy (both http_url and https_url are the same)
+    let is_request_level_proxy = proxy_config.http_url.is_some() 
+        && proxy_config.https_url.is_some()
+        && proxy_config.http_url == proxy_config.https_url;
+
+    // For request-level proxy, create a new client to avoid conflicts with static pooling
+    if is_request_level_proxy {
+        return get_client_builder(proxy_config, should_bypass_proxy)?
+            .build()
+            .change_context(ApiClientError::ClientConstructionFailed)
+            .inspect_err(|err| {
+                info_log(
+                    "ERROR",
+                    &json!(format!("Failed to construct request-level proxy client. Error: {:?}", err)),
+                );
+            });
+    }
+
+    // Use static client pooling for config-level proxy
     Ok(if should_bypass_proxy
         || (proxy_config.http_url.is_none() && proxy_config.https_url.is_none())
     {
