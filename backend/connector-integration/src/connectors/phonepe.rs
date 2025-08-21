@@ -1,7 +1,6 @@
 pub mod constants;
 pub mod headers;
 pub mod transformers;
-
 use common_enums as enums;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::MinorUnit};
 use domain_types::{
@@ -25,7 +24,7 @@ use domain_types::{
     types::{ConnectorInfo, Connectors},
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Maskable;
+use hyperswitch_masking::{Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -36,9 +35,11 @@ use interfaces::{
 use serde::Serialize;
 use transformers as phonepe;
 
-use self::transformers::{PhonepePaymentsRequest, PhonepePaymentsResponse};
+use self::transformers::{
+    PhonepePaymentsRequest, PhonepePaymentsResponse, PhonepeSyncRequest, PhonepeSyncResponse,
+};
 use super::macros;
-use crate::{types::ResponseRouterData, with_response_body};
+use crate::types::ResponseRouterData;
 
 // Trait implementations with generic type parameters
 impl<
@@ -212,6 +213,12 @@ macros::create_all_prerequisites!(
             request_body: PhonepePaymentsRequest,
             response_body: PhonepePaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: PhonepeSyncRequest,
+            response_body: PhonepeSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -281,8 +288,10 @@ macros::macro_connector_implementation!(
             ];
 
             // Build the request to get the checksum for X-VERIFY header
-            let amount = req.request.minor_amount;
-            let connector_router_data = phonepe::PhonepeRouterData::try_from((amount, req))?;
+            let connector_router_data = PhonepeRouterData {
+                connector: self.clone(),
+                router_data: req,
+            };
             let connector_req = phonepe::PhonepePaymentsRequest::try_from(&connector_router_data)?;
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
 
@@ -295,6 +304,80 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url(req);
             Ok(format!("{}{}", base_url, constants::API_PAY_ENDPOINT))
+        }
+    }
+);
+
+// PSync flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Phonepe,
+    curl_request: Json(PhonepeSyncRequest),
+    curl_response: PhonepeSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            // Get base headers first
+            let mut headers = vec![
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    "application/json".to_string().into(),
+                ),
+            ];
+
+            // Build the request to get the checksum for X-VERIFY header
+            let connector_router_data = PhonepeRouterData {
+                connector: self.clone(),
+                router_data: req,
+            };
+            let connector_req = phonepe::PhonepeSyncRequest::try_from(&connector_router_data)?;
+
+            // Get merchant ID for X-MERCHANT-ID header
+            let auth = phonepe::PhonepeAuthType::from_auth_type_and_merchant_id(&req.connector_auth_type, Secret::new(
+                req
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ))?;
+
+            headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
+            headers.push((headers::X_MERCHANT_ID.to_string(), auth.merchant_id.peek().to_string().into()));
+
+            Ok(headers)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            let merchant_transaction_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+            // Get merchant ID from auth
+            let auth = phonepe::PhonepeAuthType::from_auth_type_and_merchant_id(&req.connector_auth_type, Secret::new(
+                req
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ))?;
+            let api_endpoint = constants::API_STATUS_ENDPOINT;
+            let merchant_id = auth.merchant_id.peek();
+            Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
         }
     }
 );
@@ -342,29 +425,34 @@ impl<
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
+        _event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: phonepe::PhonepePaymentsResponse = res
-            .response
-            .parse_struct("PhonePe ErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_response_body!(event_builder, response);
-
-        let error_message = response.message.clone();
-        let error_code = response.code.clone();
+        // Parse PhonePe error response (unified for both sync and payments)
+        let (error_message, error_code, attempt_status) = if let Ok(error_response) =
+            res.response
+                .parse_struct::<phonepe::PhonepeErrorResponse>("PhonePe ErrorResponse")
+        {
+            let attempt_status = phonepe::get_phonepe_error_status(&error_response.code);
+            (error_response.message, error_response.code, attempt_status)
+        } else {
+            let raw_response = String::from_utf8_lossy(&res.response);
+            (
+                "Unknown PhonePe error".to_string(),
+                raw_response.to_string(),
+                None,
+            )
+        };
 
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: error_code,
             message: error_message.clone(),
             reason: Some(error_message),
-            attempt_status: None,
+            attempt_status,
             connector_transaction_id: None,
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -394,17 +482,6 @@ impl<
 }
 
 // Default empty implementations for unsupported flows - the traits will use default implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-    for Phonepe<T>
-{
-}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

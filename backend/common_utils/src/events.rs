@@ -1,4 +1,6 @@
-use serde::Serialize;
+use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 
 use crate::{
     global_id::{
@@ -10,6 +12,7 @@ use crate::{
     },
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
     types::TimeRange,
+    SecretSerdeValue,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -172,3 +175,99 @@ impl<T: ApiEventMetric> ApiEventMetric for &T {
 }
 
 impl ApiEventMetric for TimeRange {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Event {
+    pub request_id: String,
+    pub timestamp: i128,
+    pub flow_type: FlowName,
+    pub connector: String,
+    pub url: Option<String>,
+    pub stage: EventStage,
+    pub latency: Option<u64>,
+    pub status_code: Option<u16>,
+    pub request_data: Option<SecretSerdeValue>,
+    pub connector_request_data: Option<SecretSerdeValue>,
+    pub connector_response_data: Option<SecretSerdeValue>,
+    #[serde(flatten)]
+    pub additional_fields: HashMap<String, SecretSerdeValue>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FlowName {
+    Authorize,
+    Refund,
+    Capture,
+    Void,
+    Psync,
+    Rsync,
+    AcceptDispute,
+    SubmitEvidence,
+    DefendDispute,
+    Dsync,
+    IncomingWebhook,
+    SetupMandate,
+    CreateOrder,
+}
+
+impl FlowName {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Authorize => "Authorize",
+            Self::Refund => "Refund",
+            Self::Capture => "Capture",
+            Self::Void => "Void",
+            Self::Psync => "Psync",
+            Self::Rsync => "Rsync",
+            Self::AcceptDispute => "AcceptDispute",
+            Self::SubmitEvidence => "SubmitEvidence",
+            Self::DefendDispute => "DefendDispute",
+            Self::Dsync => "Dsync",
+            Self::IncomingWebhook => "IncomingWebhook",
+            Self::SetupMandate => "SetupMandate",
+            Self::CreateOrder => "CreateOrder",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum EventStage {
+    ConnectorCall,
+}
+
+impl EventStage {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::ConnectorCall => "CONNECTOR_CALL",
+        }
+    }
+}
+
+/// Configuration for events system
+#[derive(Debug, Clone, Deserialize)]
+pub struct EventConfig {
+    pub enabled: bool,
+    pub topic: String,
+    pub brokers: Vec<String>,
+    pub partition_key_field: String,
+    #[serde(default)]
+    pub transformations: HashMap<String, String>, // target_path → source_field
+    #[serde(default)]
+    pub static_values: HashMap<String, String>, // target_path → static_value
+    #[serde(default)]
+    pub extractions: HashMap<String, String>, // target_path → extraction_path
+}
+
+impl Default for EventConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            topic: "events".to_string(),
+            brokers: vec!["localhost:9092".to_string()],
+            partition_key_field: "request_id".to_string(),
+            transformations: HashMap::new(),
+            static_values: HashMap::new(),
+            extractions: HashMap::new(),
+        }
+    }
+}

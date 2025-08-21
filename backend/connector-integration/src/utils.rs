@@ -109,7 +109,6 @@ pub(crate) fn handle_json_response_deserialization_failure(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         }),
     }
 }
