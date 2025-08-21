@@ -79,7 +79,7 @@ impl EventPublisher {
     }
 
     /// Publishes a single event to Kafka with metadata as headers.
-    pub async fn publish_event(
+    pub fn publish_event(
         &self,
         event: serde_json::Value,
         topic: &str,
@@ -165,7 +165,7 @@ impl EventPublisher {
         Ok(())
     }
 
-    pub async fn emit_event_with_config(
+    pub fn emit_event_with_config(
         &self,
         base_event: Event,
         config: &EventConfig,
@@ -173,7 +173,6 @@ impl EventPublisher {
         let processed_event = self.process_event(&base_event)?;
 
         self.publish_event(processed_event, &config.topic, &config.partition_key_field)
-            .await
     }
 
     fn process_event(&self, event: &Event) -> CustomResult<serde_json::Value, EventPublisherError> {
@@ -350,7 +349,7 @@ fn get_event_publisher(
 }
 
 /// Standalone function to emit events using the global EventPublisher
-pub async fn emit_event_with_config(
+pub fn emit_event_with_config(
     event: Event,
     config: &EventConfig,
 ) -> CustomResult<bool, EventPublisherError> {
@@ -359,6 +358,6 @@ pub async fn emit_event_with_config(
     }
 
     let publisher: &'static EventPublisher = get_event_publisher(config)?;
-    publisher.emit_event_with_config(event, config).await?;
+    publisher.emit_event_with_config(event, config)?;
     Ok(true)
 }

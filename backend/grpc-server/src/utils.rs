@@ -365,6 +365,39 @@ macro_rules! implement_connector_operation {
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
+            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>()
+                .ok_or_else(|| {
+                    tonic::Status::internal("Unknown flow marker type")
+                })?;
+            
+            // Emit incoming request audit event
+            {
+                let incoming_event = common_utils::events::Event {
+                    request_id: request_id.clone(),
+                    timestamp: chrono::Utc::now().timestamp().into(),
+                    flow_type: flow_name,
+                    connector: connector.to_string(),
+                    url: None,
+                    stage: common_utils::events::EventStage::GrpcRequest,
+                    latency: None,
+                    status_code: None,
+                    request_data: match serde_json::to_value(&payload) {
+                        Ok(value) => Some(common_utils::pii::SecretSerdeValue::new(value)),
+                        Err(_) => None,
+                    },
+                    connector_request_data: None,
+                    connector_response_data: None,
+                    processing_status: None,
+                    error_details: None,
+                    additional_fields: std::collections::HashMap::new(),
+                };
+                
+                match common_utils::emit_event_with_config(incoming_event, &self.config.events) {
+                    Ok(true) => tracing::info!(concat!("Successfully published incoming request event for ", $log_prefix)),
+                    Ok(false) => tracing::info!(concat!("Event publishing is disabled for ", $log_prefix)),
+                    Err(e) => tracing::error!("Failed to publish incoming request event: {:?}", e),
+                }
+            }
 
             // Get connector data
             let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> = connector_integration::types::ConnectorData::get_connector_by_name(&connector);
@@ -424,6 +457,38 @@ macro_rules! implement_connector_operation {
             // Generate response
             let final_response = $generate_response_fn(response_result)
                 .into_grpc_status()?;
+            
+            // Emit outgoing response audit event
+            {
+                let is_success = final_response.error_code.is_none() && final_response.error_message.is_none();
+                
+                let outgoing_event = common_utils::events::Event {
+                    request_id: request_id.clone(),
+                    timestamp: chrono::Utc::now().timestamp().into(),
+                    flow_type: flow_name,
+                    connector: connector.to_string(),
+                    url: None,
+                    stage: common_utils::events::EventStage::GrpcResponse,
+                    latency: None,
+                    status_code: Some(final_response.status_code.try_into().unwrap_or(0)),
+                    request_data: None,
+                    connector_request_data: None,
+                    connector_response_data: match serde_json::to_value(&final_response) {
+                        Ok(value) => Some(common_utils::pii::SecretSerdeValue::new(value)),
+                        Err(_) => None,
+                    },
+                    processing_status: Some(if is_success { "success" } else { "failed" }.to_string()),
+                    error_details: final_response.error_message.clone(),
+                    additional_fields: std::collections::HashMap::new(),
+                };
+                
+                match common_utils::emit_event_with_config(outgoing_event, &self.config.events) {
+                    Ok(true) => tracing::info!(concat!("Successfully published outgoing response event for ", $log_prefix)),
+                    Ok(false) => tracing::info!(concat!("Event publishing is disabled for ", $log_prefix)),
+                    Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
+                }
+            }
+            
             Ok(tonic::Response::new(final_response))
         }).await;
         let duration = start_time.elapsed().as_millis();

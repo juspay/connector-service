@@ -1,7 +1,9 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::{consts, errors::CustomResult, events, pii};
+use common_utils::{
+    consts, emit_event_with_config, errors::CustomResult, events, SecretSerdeValue,
+};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -727,6 +729,34 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
+                
+                // Emit incoming request audit event
+                {
+                    let incoming_event = events::Event {
+                        request_id: request_id.clone(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: events::FlowName::Authorize,
+                        connector: connector.to_string(),
+                        url: None,
+                        stage: events::EventStage::GrpcRequest,
+                        latency: None,
+                        status_code: None,
+                        request_data: Some(SecretSerdeValue::new(
+                            serde_json::to_value(&payload).unwrap_or_default()
+                        )),
+                        connector_request_data: None,
+                        connector_response_data: None,
+                        processing_status: None,
+                        error_details: None,
+                        additional_fields: std::collections::HashMap::new(),
+                    };
+                    
+                    match emit_event_with_config(incoming_event, &self.config.events) {
+                        Ok(true) => tracing::info!("Successfully published incoming request event for authorize"),
+                        Ok(false) => tracing::info!("Event publishing is disabled for authorize"),
+                        Err(e) => tracing::error!("Failed to publish incoming request event: {:?}", e),
+                    }
+                }
 
                 let authorize_response = match payload.payment_method.as_ref() {
                     Some(pm) => {
@@ -735,9 +765,9 @@ impl PaymentService for Payments {
                                 match card_details.card_type {
                                     Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
                                         match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
-                                            payload,
-                                            connector,
-                                            connector_auth_details,
+                                            payload.clone(),
+                                            connector.clone(),
+                                            connector_auth_details.clone(),
                                             &metadata,
                     &service_name,
                                             &request_id,
@@ -750,9 +780,9 @@ impl PaymentService for Payments {
                                     }
                                     _ => {
                                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                            payload,
-                                            connector,
-                                            connector_auth_details,
+                                            payload.clone(),
+                                            connector.clone(),
+                                            connector_auth_details.clone(),
                                             &metadata,
                                             &service_name,
                                             &request_id,
@@ -767,9 +797,9 @@ impl PaymentService for Payments {
                             }
                             _ => {
                                 match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                    payload,
-                                    connector,
-                                    connector_auth_details,
+                                    payload.clone(),
+                                    connector.clone(),
+                                    connector_auth_details.clone(),
                                     &metadata,
                                     &service_name,
                                     &request_id,
@@ -784,9 +814,9 @@ impl PaymentService for Payments {
                     }
                     _ => {
                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                            payload,
-                            connector,
-                            connector_auth_details,
+                            payload.clone(),
+                            connector.clone(),
+                            connector_auth_details.clone(),
                             &metadata,
                             &service_name,
                             &request_id,
@@ -799,6 +829,37 @@ impl PaymentService for Payments {
                     }
                 };
 
+                // Emit outgoing response audit event
+                {
+                    let is_success = authorize_response.error_code.is_none() && authorize_response.error_message.is_none();
+                    
+                    let outgoing_event = events::Event {
+                        request_id: request_id.clone(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: events::FlowName::Authorize,
+                        connector: connector.to_string(),
+                        url: None,
+                        stage: events::EventStage::GrpcResponse,
+                        latency: None,
+                        status_code: Some(authorize_response.status_code.try_into().unwrap_or(0)),
+                        request_data: None,
+                        connector_request_data: None,
+                        connector_response_data: match serde_json::to_value(&authorize_response) {
+                            Ok(value) => Some(SecretSerdeValue::new(value)),
+                            Err(_) => None,
+                        },
+                        processing_status: Some(if is_success { "success" } else { "failed" }.to_string()),
+                        error_details: authorize_response.error_message.clone(),
+                        additional_fields: std::collections::HashMap::new(),
+                    };
+                    
+                    match emit_event_with_config(outgoing_event, &self.config.events) {
+                        Ok(true) => tracing::info!("Successfully published outgoing response event for authorize"),
+                        Ok(false) => tracing::info!("Event publishing is disabled for authorize"),
+                        Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
+                    }
+                }
+                
                 Ok(tonic::Response::new(authorize_response))
             })
         })
@@ -1135,6 +1196,35 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
+                
+                // Emit incoming request audit event
+                {
+                    let incoming_event = events::Event {
+                        request_id: request_id.clone(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: events::FlowName::SetupMandate,
+                        connector: connector.to_string(),
+                        url: None,
+                        stage: events::EventStage::GrpcRequest,
+                        latency: None,
+                        status_code: None,
+                        request_data: match serde_json::to_value(&payload) {
+                            Ok(value) => Some(SecretSerdeValue::new(value)),
+                            Err(_) => None,
+                        },
+                        connector_request_data: None,
+                        connector_response_data: None,
+                        processing_status: None,
+                        error_details: None,
+                        additional_fields: std::collections::HashMap::new(),
+                    };
+                    
+                    match emit_event_with_config(incoming_event, &self.config.events) {
+                        Ok(true) => tracing::info!("Successfully published incoming request event for setup_mandate"),
+                        Ok(false) => tracing::info!("Event publishing is disabled for setup_mandate"),
+                        Err(e) => tracing::error!("Failed to publish incoming request event: {:?}", e),
+                    }
+                }
 
                 //get connector data
                 let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -1225,6 +1315,37 @@ impl PaymentService for Payments {
                 let setup_mandate_response =
                     generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
 
+                // Emit outgoing response audit event
+                {
+                    let is_success = setup_mandate_response.error_code.is_none() && setup_mandate_response.error_message.is_none();
+                    
+                    let outgoing_event = events::Event {
+                        request_id: request_id.clone(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: events::FlowName::SetupMandate,
+                        connector: connector.to_string(),
+                        url: None,
+                        stage: events::EventStage::GrpcResponse,
+                        latency: None,
+                        status_code: Some(setup_mandate_response.status_code.try_into().unwrap_or(0)),
+                        request_data: None,
+                        connector_request_data: None,
+                        connector_response_data: match serde_json::to_value(&setup_mandate_response) {
+                            Ok(value) => Some(SecretSerdeValue::new(value)),
+                            Err(_) => None,
+                        },
+                        processing_status: Some(if is_success { "success" } else { "failed" }.to_string()),
+                        error_details: setup_mandate_response.error_message.clone(),
+                        additional_fields: std::collections::HashMap::new(),
+                    };
+                    
+                    match emit_event_with_config(outgoing_event, &self.config.events) {
+                        Ok(true) => tracing::info!("Successfully published outgoing response event for setup_mandate"),
+                        Ok(false) => tracing::info!("Event publishing is disabled for setup_mandate"),
+                        Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
+                    }
+                }
+
                 Ok(tonic::Response::new(setup_mandate_response))
             })
         })
@@ -1271,6 +1392,35 @@ impl PaymentService for Payments {
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
+                
+                // Emit incoming request audit event
+                {
+                    let incoming_event = events::Event {
+                        request_id: request_id.clone(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: events::FlowName::RepeatPayment,
+                        connector: connector.to_string(),
+                        url: None,
+                        stage: events::EventStage::GrpcRequest,
+                        latency: None,
+                        status_code: None,
+                        request_data: match serde_json::to_value(&payload) {
+                            Ok(value) => Some(SecretSerdeValue::new(value)),
+                            Err(_) => None,
+                        },
+                        connector_request_data: None,
+                        connector_response_data: None,
+                        processing_status: None,
+                        error_details: None,
+                        additional_fields: std::collections::HashMap::new(),
+                    };
+                    
+                    match emit_event_with_config(incoming_event, &self.config.events) {
+                        Ok(true) => tracing::info!("Successfully published incoming request event for repeat_payment"),
+                        Ok(false) => tracing::info!("Event publishing is disabled for repeat_payment"),
+                        Err(e) => tracing::error!("Failed to publish incoming request event: {:?}", e),
+                    }
+                }
 
                 //get connector data
                 let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -1336,6 +1486,37 @@ impl PaymentService for Payments {
                 // Generate response
                 let repeat_payment_response =
                     generate_repeat_payment_response(response).map_err(|e| e.into_grpc_status())?;
+
+                // Emit outgoing response audit event
+                {
+                    let is_success = repeat_payment_response.error_code.is_none() && repeat_payment_response.error_message.is_none();
+                    
+                    let outgoing_event = events::Event {
+                        request_id: request_id.clone(),
+                        timestamp: chrono::Utc::now().timestamp().into(),
+                        flow_type: events::FlowName::RepeatPayment,
+                        connector: connector.to_string(),
+                        url: None,
+                        stage: events::EventStage::GrpcResponse,
+                        latency: None,
+                        status_code: Some(repeat_payment_response.status_code.try_into().unwrap_or(0)),
+                        request_data: None,
+                        connector_request_data: None,
+                        connector_response_data: match serde_json::to_value(&repeat_payment_response) {
+                            Ok(value) => Some(SecretSerdeValue::new(value)),
+                            Err(_) => None,
+                        },
+                        processing_status: Some(if is_success { "success" } else { "failed" }.to_string()),
+                        error_details: repeat_payment_response.error_message.clone(),
+                        additional_fields: std::collections::HashMap::new(),
+                    };
+                    
+                    match emit_event_with_config(outgoing_event, &self.config.events) {
+                        Ok(true) => tracing::info!("Successfully published outgoing response event for repeat_payment"),
+                        Ok(false) => tracing::info!("Event publishing is disabled for repeat_payment"),
+                        Err(e) => tracing::error!("Failed to publish outgoing response event: {:?}", e),
+                    }
+                }
 
                 Ok(tonic::Response::new(repeat_payment_response))
             })

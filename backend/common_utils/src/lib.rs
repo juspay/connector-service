@@ -20,7 +20,7 @@ pub fn init_event_publisher(_config: &events::EventConfig) -> CustomResult<(), (
     Ok(())
 }
 #[cfg(not(feature = "kafka"))]
-pub async fn emit_event_with_config(
+pub fn emit_event_with_config(
     _event: events::Event,
     _config: &events::EventConfig,
 ) -> CustomResult<bool, ()> {
