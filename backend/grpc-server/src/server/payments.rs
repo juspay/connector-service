@@ -56,6 +56,7 @@ struct EventParams<'a> {
 
 // Error handling utilities for webhook processing
 trait WebhookErrorExt<T> {
+    #[allow(clippy::result_large_err)]
     fn to_grpc_status(self) -> Result<T, tonic::Status>;
 }
 
