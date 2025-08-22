@@ -364,7 +364,7 @@ impl<
             )
             .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
-        utils::validate_currency(
+        validate_currency(
             item.router_data.request.currency,
             Some(metadata.merchant_config_currency),
         )?;
@@ -886,7 +886,7 @@ impl<
             .change_context(errors::ConnectorError::InvalidConnectorConfig { config: "metadata" })?
         };
 
-        utils::validate_currency(
+        validate_currency(
             item.router_data.request.currency,
             Some(metadata.merchant_config_currency),
         )?;
@@ -1084,7 +1084,7 @@ impl<
             &item.router_data.request.refund_connector_metadata,
             "currency",
         )?;
-        utils::validate_currency(currency, Some(metadata.merchant_config_currency))?;
+        validate_currency(currency, Some(metadata.merchant_config_currency))?;
         let refund_id = item.router_data.request.connector_refund_id;
         Ok(Self {
             query: constants::REFUND_QUERY.to_string(),
@@ -2029,6 +2029,23 @@ fn get_braintree_redirect_form<
         },
         acs_url: complete_authorize_url,
     })
+}
+
+fn validate_currency(
+    request_currency: enums::Currency,
+    merchant_config_currency: Option<enums::Currency>,
+) -> Result<(), errors::ConnectorError> {
+    let merchant_config_currency =
+        merchant_config_currency.ok_or(errors::ConnectorError::NoConnectorMetaData)?;
+    if request_currency != merchant_config_currency {
+        Err(errors::ConnectorError::NotSupported {
+            message: format!(
+                "currency {request_currency} is not supported for this merchant account",
+            ),
+            connector: "Braintree",
+        })?
+    }
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]

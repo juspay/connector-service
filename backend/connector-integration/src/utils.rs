@@ -1,11 +1,17 @@
-use common_enums::enums;
+pub mod xml_utils;
+use common_utils::CustomResult;
+use error_stack::{Report, ResultExt};
+pub use xml_utils::preprocess_xml_response_bytes;
+
 use domain_types::{
     connector_types::PaymentsAuthorizeData, errors, payment_method_data::PaymentMethodDataTypes,
+    router_data::ErrorResponse, router_response_types::Response,
 };
-use error_stack::{Report, ResultExt};
-type Error = error_stack::Report<errors::ConnectorError>;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde_json::Value;
+
+type Error = error_stack::Report<errors::ConnectorError>;
+use common_enums::enums;
 
 #[macro_export]
 macro_rules! with_error_response_body {
@@ -51,20 +57,6 @@ pub fn missing_field_err(
     })
 }
 
-pub mod xml_utils;
-pub use xml_utils::preprocess_xml_response_bytes;
-
-pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
-    match status {
-        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
-            true
-        }
-        common_enums::RefundStatus::ManualReview
-        | common_enums::RefundStatus::Pending
-        | common_enums::RefundStatus::Success => false,
-    }
-}
-
 pub(crate) fn get_unimplemented_payment_method_error_message(connector: &str) -> String {
     format!("Selected payment method through {connector}")
 }
@@ -96,19 +88,39 @@ where
     Ok(parsed)
 }
 
-pub(crate) fn validate_currency(
-    request_currency: enums::Currency,
-    merchant_config_currency: Option<enums::Currency>,
-) -> Result<(), errors::ConnectorError> {
-    let merchant_config_currency =
-        merchant_config_currency.ok_or(errors::ConnectorError::NoConnectorMetaData)?;
-    if request_currency != merchant_config_currency {
-        Err(errors::ConnectorError::NotSupported {
-            message: format!(
-                "currency {request_currency} is not supported for this merchant account",
-            ),
-            connector: "Braintree",
-        })?
+pub(crate) fn handle_json_response_deserialization_failure(
+    res: Response,
+    _connector: &'static str,
+) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+    let response_data = String::from_utf8(res.response.to_vec())
+        .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+
+    // check for whether the response is in json format
+    match serde_json::from_str::<Value>(&response_data) {
+        // in case of unexpected response but in json format
+        Ok(_) => Err(errors::ConnectorError::ResponseDeserializationFailed)?,
+        // in case of unexpected response but in html or string format
+        Err(_error_msg) => Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: "No error code".to_string(),
+            message: "Unsupported response type".to_string(),
+            reason: Some(response_data),
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_advice_code: None,
+            network_decline_code: None,
+            network_error_message: None,
+        }),
     }
-    Ok(())
+}
+
+pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
+    match status {
+        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
+            true
+        }
+        common_enums::RefundStatus::ManualReview
+        | common_enums::RefundStatus::Pending
+        | common_enums::RefundStatus::Success => false,
+    }
 }

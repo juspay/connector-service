@@ -75,6 +75,7 @@ pub struct Connectors {
     pub xendit: ConnectorParams,
     pub checkout: ConnectorParams,
     pub authorizedotnet: ConnectorParams, // Add your connector params
+    pub mifinity: ConnectorParams,
     pub phonepe: ConnectorParams,
     pub cashfree: ConnectorParams,
     pub paytm: ConnectorParams,
@@ -238,6 +239,24 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(_reward) => {
                     Ok(PaymentMethodData::Reward)
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
+                                payment_method_data::MifinityData {
+                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth)?,
+                                    language_preference: mifinity_data.language_preference,
+                                }
+                            )))
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_WALLET_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Wallet type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -306,6 +325,20 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         })))
                     }
                 },
+                grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
+                    match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(_mifinity_data)) => {
+                            // For PaymentMethodType conversion, we just need to return the type, not the full data
+                            Ok(Some(PaymentMethodType::Mifinity))
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_WALLET_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Wallet type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1456,6 +1489,15 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                                         ))
                                     })
                                 },
+                                crate::router_response_types::RedirectForm::Mifinity { initialization_token } => {
+                                    Ok(grpc_api_types::payments::RedirectForm {
+                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
+                                            grpc_api_types::payments::UriData {
+                                                uri: initialization_token,
+                                            }
+                                        ))
+                                    })
+                                },
                                 _ => Err(
                                     ApplicationErrorResponse::BadRequest(ApiError {
                                         sub_code: "INVALID_RESPONSE".to_owned(),
@@ -1552,6 +1594,10 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
                 payment_method:
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Reward(_)),
             } => Ok(Self::Reward),
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::Wallet(_)),
+            } => Ok(Self::Wallet),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -3865,6 +3911,27 @@ pub enum PaymentMethodDataType {
     InstantBankTransferFinland,
     CardDetailsForNetworkTransactionId,
     RevolutPay,
+}
+
+impl ForeignTryFrom<String> for hyperswitch_masking::Secret<time::Date> {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(date_string: String) -> Result<Self, error_stack::Report<Self::Error>> {
+        let date = time::Date::parse(
+            &date_string,
+            &time::format_description::well_known::Iso8601::DATE,
+        )
+        .map_err(|err| {
+            tracing::error!("Failed to parse date string: {}", err);
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_DATE_FORMAT".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid date format".to_owned(),
+                error_object: None,
+            })
+        })?;
+        Ok(hyperswitch_masking::Secret::new(date))
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInformation {
