@@ -2006,7 +2006,7 @@ pub fn generate_payment_sync_response(
                 connector_customer_id: None,
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
-                raw_connector_response: None,
+                raw_connector_response,
                 status_code: e.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data

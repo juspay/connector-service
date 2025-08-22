@@ -15,7 +15,7 @@ use domain_types::{
     errors,
     payment_address::Address,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, UpiData},
-    router_data::ConnectorAuthType,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -227,7 +227,7 @@ pub struct RazorpayV2PaymentsResponse {
     pub entity: String,
     pub amount: i64,
     pub currency: String,
-    pub status: String,
+    pub status: RazorpayStatus,
     pub order_id: Option<String>,
     pub invoice_id: Option<String>,
     pub international: Option<bool>,
@@ -246,6 +246,28 @@ pub struct RazorpayV2PaymentsResponse {
     pub fee: Option<i64>,
     pub tax: Option<i64>,
     pub error_code: Option<String>,
+    pub error_description: Option<String>,
+    pub error_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RazorpayStatus {
+    Created,
+    Authorized,
+    Captured,
+    Refunded,
+    Failed,
+}
+
+fn get_psync_razorpay_payment_status(razorpay_status: RazorpayStatus) -> AttemptStatus {
+    match razorpay_status {
+        RazorpayStatus::Created => AttemptStatus::Pending,
+        RazorpayStatus::Authorized => AttemptStatus::Authorized,
+        RazorpayStatus::Captured => AttemptStatus::Charged,
+        RazorpayStatus::Refunded => AttemptStatus::AutoRefunded,
+        RazorpayStatus::Failed => AttemptStatus::Failure,
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -597,28 +619,37 @@ impl
             };
 
         // Map Razorpay payment status to internal status, preserving original status
-        let status = match payment_response.status.as_str() {
-            "created" => AttemptStatus::Pending,
-            "authorized" => AttemptStatus::Authorized,
-            "captured" => AttemptStatus::Charged, // This is the mapping, but we preserve original in metadata
-            "refunded" => AttemptStatus::AutoRefunded,
-            "failed" => AttemptStatus::Failure,
-            _ => AttemptStatus::Pending,
-        };
+        let status = get_psync_razorpay_payment_status(payment_response.status);
 
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
-            redirection_data: None,
-            connector_metadata: None,
-            mandate_reference: None,
-            network_txn_id: None,
-            connector_response_reference_id: payment_response.order_id,
-            incremental_authorization_allowed: None,
-            status_code: _status_code,
+        let payments_response_data = match payment_response.status {
+            RazorpayStatus::Created |
+            RazorpayStatus::Authorized |
+            RazorpayStatus::Captured |
+            RazorpayStatus::Refunded => Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
+                redirection_data: None,
+                connector_metadata: None,
+                mandate_reference: None,
+                network_txn_id: None,
+                connector_response_reference_id: payment_response.order_id,
+                incremental_authorization_allowed: None,
+                status_code: _status_code,
+            }),
+            RazorpayStatus::Failed => Err(ErrorResponse {
+                code: payment_response.error_code.unwrap_or_else(|| "unknown_error".to_string()),
+                message: payment_response.error_description.unwrap_or_else(|| "Payment failed".to_string()),
+                reason: payment_response.error_reason,
+                status_code: _status_code,
+                attempt_status: Some(status),
+                connector_transaction_id: Some(payment_response.id),
+                network_decline_code: None,
+                network_advice_code: None,
+                network_error_message: None,
+            }),
         };
 
         Ok(RouterDataV2 {
-            response: Ok(payments_response_data),
+            response: payments_response_data,
             resource_common_data: PaymentFlowData {
                 status,
                 ..data.resource_common_data.clone()
