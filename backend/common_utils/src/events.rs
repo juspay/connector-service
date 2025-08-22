@@ -241,7 +241,7 @@ impl FlowName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventStage {
     ConnectorCall,
-    ResponseProcessing,
+    ConnectorResponseProcessing,
     GrpcRequest,
     GrpcResponse,
 }
@@ -250,7 +250,7 @@ impl EventStage {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ConnectorCall => "CONNECTOR_CALL",
-            Self::ResponseProcessing => "RESPONSE_PROCESSING",
+            Self::ConnectorResponseProcessing => "CONNECTOR_RESPONSE_PROCESSING",
             Self::GrpcRequest => "GRPC_REQUEST",
             Self::GrpcResponse => "GRPC_RESPONSE",
         }
