@@ -685,9 +685,11 @@ dependencies = [
 name = "cards"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "common_utils",
  "error-stack 0.4.1",
  "masking",
+ "prost",
  "regex",
  "serde",
  "serde_json",
@@ -2466,6 +2468,7 @@ name = "grpc-api-types"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "cards",
  "error-stack 0.5.0",
  "g2h",
  "heck",
