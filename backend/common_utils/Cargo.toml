@@ -1,10 +1,10 @@
 [package]
-name = "common_utils"
+name = "ucs_common_utils"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-common_enums = { path = "../common_enums" }
+common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 anyhow = "1.0"
 rdkafka = { version = "0.36", optional = true }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
