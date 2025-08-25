@@ -820,8 +820,22 @@ impl<
                 .map(|details| details.card_holder_authenticated),
             card_details: data.info.card_details.clone(),
             card_network: data.info.card_network.clone(),
-            token: data.tokenization_data.token.clone().into(),
-            tokenization_data_type: data.tokenization_data.token_type.clone().into(),
+            token: data
+                .tokenization_data
+                .get_encrypted_google_pay_token()
+                .change_context(errors::ConnectorError::MissingRequiredField {
+                    field_name: "gpay wallet_token",
+                })?
+                .clone()
+                .into(),
+            tokenization_data_type: data
+                .tokenization_data
+                .get_encrypted_token_type()
+                .change_context(errors::ConnectorError::MissingRequiredField {
+                    field_name: "gpay wallet token type",
+                })?
+                .clone()
+                .into(),
             pm_type: data.pm_type.clone(),
             token_type: FiuuTokenType::GooglePay,
             // non_3ds field Applicable to card processing via specific processor using specific currency for pre-approved partner only.
