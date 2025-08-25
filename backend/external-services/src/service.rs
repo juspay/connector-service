@@ -593,7 +593,7 @@ fn get_base_client(
     should_bypass_proxy: bool,
 ) -> CustomResult<Client, ApiClientError> {
     // Check if this is a request-level proxy (both http_url and https_url are the same)
-    let is_request_level_proxy = proxy_config.http_url.is_some() 
+    let is_request_level_proxy = proxy_config.http_url.is_some()
         && proxy_config.https_url.is_some()
         && proxy_config.http_url == proxy_config.https_url;
 
@@ -605,7 +605,10 @@ fn get_base_client(
             .inspect_err(|err| {
                 info_log(
                     "ERROR",
-                    &json!(format!("Failed to construct request-level proxy client. Error: {:?}", err)),
+                    &json!(format!(
+                        "Failed to construct request-level proxy client. Error: {:?}",
+                        err
+                    )),
                 );
             });
     }

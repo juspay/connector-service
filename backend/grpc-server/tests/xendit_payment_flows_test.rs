@@ -131,6 +131,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("xendit_sync_{}", get_timestamp()))),
         }),
+        proxy_url: None,
     }
 }
 
@@ -180,6 +181,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 

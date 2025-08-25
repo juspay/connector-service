@@ -174,6 +174,8 @@ fn create_payment_sync_request(
     request_ref_id: &str,
 ) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
+        proxy_url: None,
+
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -212,6 +214,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 
@@ -249,6 +252,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
         browser_info: None,
+        proxy_url: None,
     }
 }
 

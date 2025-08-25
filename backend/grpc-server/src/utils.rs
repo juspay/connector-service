@@ -392,10 +392,10 @@ macro_rules! implement_connector_operation {
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
                 request_id: &request_id,
             };
-            
+
             // Create effective proxy configuration (request-level takes precedence over config)
             let effective_proxy = self.config.proxy.with_request_override(payload.proxy_url.clone());
-            
+
             let response_result = external_services::service::execute_connector_processing_step(
                 &effective_proxy,
                 connector_integration,
