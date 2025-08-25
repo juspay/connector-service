@@ -2,7 +2,6 @@ use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
 use common_utils::{consts, errors::CustomResult, events, pii};
-use hyperswitch_masking::ErasedMaskSerialize;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -38,6 +37,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
