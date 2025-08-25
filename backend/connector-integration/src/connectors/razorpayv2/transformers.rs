@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, RefundStatus};
-use common_utils::{pii::Email, types::MinorUnit};
+use common_utils::{consts, pii::Email, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
@@ -638,10 +638,10 @@ impl
             RazorpayStatus::Failed => Err(ErrorResponse {
                 code: payment_response
                     .error_code
-                    .unwrap_or_else(|| "unknown_error".to_string()),
+                    .unwrap_or_else(|| consts::NO_ERROR_CODE.to_string()),
                 message: payment_response
                     .error_description
-                    .unwrap_or_else(|| "Payment failed".to_string()),
+                    .unwrap_or_else(|| consts::NO_ERROR_MESSAGE.to_string()),
                 reason: payment_response.error_reason,
                 status_code: _status_code,
                 attempt_status: Some(status),
