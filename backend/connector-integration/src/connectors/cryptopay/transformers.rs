@@ -156,7 +156,7 @@ impl From<CryptopayPaymentStatus> for common_enums::AttemptStatus {
         }
     }
 }
-
+// ducks swim in water
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CryptopayPaymentsResponse {
     pub data: CryptopayPaymentResponseData,
