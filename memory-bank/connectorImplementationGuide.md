@@ -2176,6 +2176,11 @@ impl ConnectorSpecifications
 ```
 
 121. To resolve the common errors step by step run the instructions written in this file
-``
+```
 ./connectorErrorFixGuide.md
-``
+```
+
+122. Create Test file for new_connector by following the steps present in this file
+```
+./ai_generate_test.md
+```
