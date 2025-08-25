@@ -9,7 +9,7 @@ common_enums = { path = "../common_enums" }
 cards = { path = "../cards" }
 common_utils = { path = "../common_utils" }
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.116.0", package = "masking" }
 router_derive = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4" } # verify this can be from framework-libs-rs
 
 #third party dependencies

@@ -10,6 +10,7 @@ connector-integration = { path = "../connector-integration" }
 external-services = { path = "../external-services" }
 domain_types = { path = "../domain_types" }
 interfaces = { path = "../interfaces" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.116.0", package = "masking" }
 cards = { path = "../cards" }
 common_enums = { path = "../common_enums" }
 common_utils = { path = "../common_utils" }

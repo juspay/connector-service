@@ -267,12 +267,12 @@ message TokenPaymentMethodType {
 message CardDetails {
   // Card Identification
   CardNumberType card_number = 1;
-  string card_exp_month = 2;
-  string card_exp_year = 3;
-  string card_cvc = 4;
+  SecretString card_exp_month = 2;
+  SecretString card_exp_year = 3;
+  SecretString card_cvc = 4;
   
   // Cardholder Information
-  optional string card_holder_name = 5;
+  optional SecretString card_holder_name = 5;
   
   // Card Metadata
   optional string card_issuer = 6;
@@ -963,4 +963,8 @@ enum RewardType {
   REWARD_TYPE_UNSPECIFIED = 0;
   CLASSICREWARD = 1;
   E_VOUCHER = 2;
+}
+
+message SecretString {
+  string value = 1;
 }

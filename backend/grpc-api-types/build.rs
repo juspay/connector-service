@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config = bridge_generator.build_prost_config();
 
     config.extern_path(".ucs.v2.CardNumberType", "::cards::CardNumber");
+    config.extern_path(".ucs.v2.SecretString", "::hyperswitch_masking::Secret<String>");
 
     config
         .file_descriptor_set_path(out_dir.join("connector_service_descriptor.bin"))
