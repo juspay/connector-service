@@ -196,10 +196,13 @@ impl EventPublisher {
 
         // Process static values - log warnings but continue processing
         for (target_path, static_value) in &self.config.static_values {
+            // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+            let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
             let value = serde_json::json!(static_value);
-            if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+            if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                 tracing::warn!(
                     target_path = %target_path,
+                    normalized_path = %normalized_path,
                     static_value = %static_value,
                     error = %e,
                     "Failed to set static value, continuing with event processing"
