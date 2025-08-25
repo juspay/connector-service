@@ -15,7 +15,6 @@ common_enums = { path = "../common_enums", package = "ucs_common_enums" }
 common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.116.0", package = "masking" }
 tracing-kafka = { path = "../tracing-kafka", optional = true }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
 
 # Third-party dependencies
 config = "0.14.0"
