@@ -3,6 +3,7 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::Secret;
 mod common;
 
 use std::{
@@ -95,7 +96,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     let wallet_details = wallet_payment_method_type::WalletType::Mifinity(MifinityWallet {
-        date_of_birth: TEST_DATE_OF_BIRTH.to_string(),
+        date_of_birth: Some(Secret::new(TEST_DATE_OF_BIRTH.to_string())),
         language_preference: Some("en-US".to_string()),
     });
 
