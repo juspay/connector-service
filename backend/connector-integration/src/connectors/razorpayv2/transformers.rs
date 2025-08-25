@@ -622,10 +622,10 @@ impl
         let status = get_psync_razorpay_payment_status(payment_response.status);
 
         let payments_response_data = match payment_response.status {
-            RazorpayStatus::Created |
-            RazorpayStatus::Authorized |
-            RazorpayStatus::Captured |
-            RazorpayStatus::Refunded => Ok(PaymentsResponseData::TransactionResponse {
+            RazorpayStatus::Created
+            | RazorpayStatus::Authorized
+            | RazorpayStatus::Captured
+            | RazorpayStatus::Refunded => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
                 redirection_data: None,
                 connector_metadata: None,
@@ -636,8 +636,12 @@ impl
                 status_code: _status_code,
             }),
             RazorpayStatus::Failed => Err(ErrorResponse {
-                code: payment_response.error_code.unwrap_or_else(|| "unknown_error".to_string()),
-                message: payment_response.error_description.unwrap_or_else(|| "Payment failed".to_string()),
+                code: payment_response
+                    .error_code
+                    .unwrap_or_else(|| "unknown_error".to_string()),
+                message: payment_response
+                    .error_description
+                    .unwrap_or_else(|| "Payment failed".to_string()),
                 reason: payment_response.error_reason,
                 status_code: _status_code,
                 attempt_status: Some(status),
