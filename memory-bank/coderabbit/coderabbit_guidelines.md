@@ -294,3 +294,292 @@ impl<F> TryFrom<ResponseRouterData<MyConnectorAuthResponse, RouterDataV2<F, Paym
     2.  In the `macro_connector_implementation!` for the relevant flow, add the `preprocess_response: true` flag. This tells the macro to call the function you defined. If this flag is `false` or omitted, the function will not be called.
 *   **Error Handling**: Use `error_stack` for error propagation. Your `build_error_response` function is the primary place to map connector errors to the standard `ErrorResponse` struct.
 *   **Testing**: Write thorough end-to-end tests in `backend/grpc-server/tests/` to cover all supported payment flows, including success and failure scenarios.
+
+---
+
+## 6. Connector Code Best Practices
+
+### 6.1. Amount Framework Compliance
+
+The field types of amount in connector request/response types should correctly correspond to the amount framework. For example the amount field type could be `MinorUnit`, not primitive types like `i64`.
+
+**Wrong:**
+```rust
+pub struct PaymentRequest {
+    pub amount: i64,  // ❌ Incorrect
+}
+```
+
+**Right:**
+```rust
+pub struct PaymentRequest {
+    pub amount: MinorUnit,  // ✅ Correct
+}
+```
+
+### 6.2. Status Mapping
+
+**Source of Truth**: Hyperswitch (HS) is the source of truth for status mapping.
+
+**New Connector Status Mapping**: All new connectors must implement proper status mapping according to HS standards.
+
+**Default Status**: The default status should always be `pending`.
+
+### 6.3. Utility Functions
+
+Create utility functions wherever possible while constructing connector requests. This includes:
+
+- Email handling
+- Address processing
+- Return URL construction
+- Getting connector transaction IDs
+
+**Example:**
+```rust
+// Create utility functions for common operations
+fn build_email_field(router_data: &RouterData) -> Result<String, ConnectorError> {
+    // Implementation
+}
+
+fn extract_connector_transaction_id(metadata: &ConnectorMetadata) -> Result<String, ConnectorError> {
+    // Implementation
+}
+```
+
+### 6.4. Response Data Storage
+
+Ensure proper storage of critical identifiers in the `handle_response` method for all flows:
+
+- `connector_transaction_id`
+- `reference_id`
+- `mandate_id`
+
+**Example:**
+```rust
+impl TryFrom<ResponseRouterData<ConnectorResponse, RouterData>> for RouterData {
+    fn try_from(value: ResponseRouterData<ConnectorResponse, RouterData>) -> Result<Self, Self::Error> {
+        let mut router_data = value.router_data;
+        
+        // Store connector transaction ID
+        router_data.connector_transaction_id = Some(value.response.transaction_id);
+        
+        // Store reference ID if present
+        if let Some(ref_id) = value.response.reference_id {
+            router_data.reference_id = Some(ref_id);
+        }
+        
+        Ok(router_data)
+    }
+}
+```
+
+### 6.5. Comprehensive Error Handling
+
+Handle all types of errors properly using Enums. Connectors can have different error structures:
+
+- Different structure for different error types
+- String error types
+- Empty body responses in case of failure
+
+**Example:**
+```rust
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum ConnectorErrorResponse {
+    StandardError {
+        error_code: String,
+        error_message: String,
+        error_reason: Option<String>,
+    },
+    StringError(String),
+    DetailedError {
+        errors: Vec<ErrorDetail>,
+        message: String,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ErrorDetail {
+    pub field: String,
+    pub message: String,
+}
+```
+
+### 6.6. Avoid Hardcoding
+
+Never hardcode values in the code. Always try to get values from the request or available resources, and implement proper error handling when values are not found.
+
+**Wrong:**
+```rust
+let order_id = req.request
+    .refund_connector_metadata
+    .clone()
+    .and_then(|secret| {
+        secret
+            .expose()
+            .get("request_ref_id")?
+            .get("id_type")?
+            .get("Id")?
+            .as_str()
+            .map(|s| s.to_string())
+    })
+    .unwrap_or_else(|| "missing-order-id".to_string());  // ❌ Hardcoded fallback
+```
+
+**Right:**
+```rust
+let order_id = req.request
+    .refund_connector_metadata
+    .clone()
+    .and_then(|secret| {
+        secret
+            .expose()
+            .get("request_ref_id")?
+            .get("id_type")?
+            .get("Id")?
+            .as_str()
+            .map(|s| s.to_string())
+    })
+    .ok_or(
+        errors::ConnectorError::MissingConnectorRelatedTransactionID {
+            id: "order_id".to_string(),
+        },
+    )?;  // ✅ Proper error handling
+```
+
+### 6.7. Proper Option Chaining and Error Handling
+
+Maintain proper option chaining and error handling instead of using random default values.
+
+**Wrong:**
+```rust
+contact: item
+    .router_data
+    .resource_common_data
+    .get_billing_phone_number()
+    .map(|phone| phone.expose())
+    .unwrap_or_else(|_| "9999999999".to_string()),  // ❌ Random default value
+```
+
+**Right:**
+```rust
+contact: router_data.resource_common_data.get_billing_phone_number()?,  // ✅ Proper error propagation
+```
+
+### 6.8. Response Transaction ID and Redirect URLs Mapping
+
+Ensure correct mapping of `response_transaction_id` and `redirect_urls` with the respective fields in router data.
+
+**Example:**
+```rust
+impl TryFrom<ResponseRouterData<ConnectorResponse, RouterData>> for RouterData {
+    fn try_from(value: ResponseRouterData<ConnectorResponse, RouterData>) -> Result<Self, Self::Error> {
+        let mut router_data = value.router_data;
+        
+        // Map response transaction ID
+        router_data.response.connector_transaction_id = value.response.transaction_id;
+        
+        // Map redirect URLs if present
+        if let Some(redirect_url) = value.response.redirect_url {
+            router_data.response.redirect_url = Some(redirect_url);
+        }
+        
+        Ok(router_data)
+    }
+}
+```
+
+### 6.9. Required Field Validation
+
+When a field is required by a connector (e.g., email, name, address, state, country), validate its presence at the UCS layer and return an error if missing, rather than relying on the connector to handle it.
+
+**Wrong:**
+```rust
+let email = item.router_data.request.get_optional_email();  // ❌ Optional when required
+```
+
+**Right:**
+```rust
+let email = item.router_data.request.get_email()?;  // ✅ Required validation
+```
+
+**Example for Barclaycard where email is required:**
+```rust
+// In the TryFrom implementation for BarclayCardRequest
+impl TryFrom<RouterData> for BarclayCardRequest {
+    fn try_from(item: RouterData) -> Result<Self, Self::Error> {
+        let email = item.router_data.request.get_email()
+            .change_context(errors::ConnectorError::MissingRequiredField {
+                field_name: "email",
+            })?;
+        
+        // Continue with request construction
+        Ok(BarclayCardRequest {
+            email: email.expose(),
+            // ... other fields
+        })
+    }
+}
+```
+
+### 6.10. Enum Types for Limited Value Sets
+
+Fields that have a limited set of possible values should be defined as enum types rather than as `String` or other generic types.
+
+**Wrong:**
+```rust
+pub struct AdyenRefundRequest {
+    merchant_refund_reason: Option<String>,  // ❌ Generic String type
+}
+```
+
+**Right:**
+```rust
+pub struct AdyenRefundRequest {
+    merchant_refund_reason: Option<AdyenRefundRequestReason>,  // ✅ Specific enum type
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum AdyenRefundRequestReason {
+    FRAUD,
+    #[serde(rename = "CUSTOMER REQUEST")]
+    CUSTOMERREQUEST,
+    RETURN,
+    DUPLICATE,
+    OTHER,
+}
+```
+
+### 6.11. Not Implemented Error Handling
+
+As we add more `payment_methods` and `payment_method_types`, ensure all matching arms have proper "not implemented" error handling for connectors that don't support specific payment methods or payment method types.
+
+**Example:**
+```rust
+impl PaymentMethodSupport for MyConnector {
+    fn get_supported_payment_methods(&self) -> Vec<PaymentMethod> {
+        match payment_method {
+            PaymentMethod::Card => {
+                // Implementation for card payments
+                Ok(request)
+            },
+            PaymentMethod::Wallet => {
+                // Implementation for wallet payments if supported
+                Ok(request)
+            },
+            PaymentMethod::BankTransfer | 
+            PaymentMethod::Crypto | 
+            PaymentMethod::BuyNowPayLater => {
+                Err(errors::ConnectorError::NotImplemented {
+                    message: format!(
+                        "Payment method {:?} is not supported by {}",
+                        payment_method,
+                        self.id()
+                    ),
+                })
+            },
+        }
+    }
+}
+```
+
