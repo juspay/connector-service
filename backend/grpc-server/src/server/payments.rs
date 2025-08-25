@@ -37,6 +37,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -216,7 +217,7 @@ impl Payments {
             flow_name: events::FlowName::Authorize,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(&payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id,
         };
@@ -368,7 +369,7 @@ impl Payments {
             flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
@@ -465,7 +466,7 @@ impl Payments {
             flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
@@ -1170,7 +1171,7 @@ impl PaymentService for Payments {
                     flow_name: events::FlowName::SetupMandate,
                     event_config: &self.config.events,
                     raw_request_data: Some(pii::SecretSerdeValue::new(
-                        serde_json::to_value(payload).unwrap_or_default(),
+                        payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };
@@ -1282,7 +1283,7 @@ impl PaymentService for Payments {
                     flow_name: events::FlowName::Authorize,
                     event_config: &self.config.events,
                     raw_request_data: Some(pii::SecretSerdeValue::new(
-                        serde_json::to_value(payload).unwrap_or_default(),
+                        payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };

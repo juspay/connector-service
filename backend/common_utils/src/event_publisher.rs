@@ -120,10 +120,13 @@ impl EventPublisher {
             error_stack::Report::new(EventPublisherError::EventSerializationFailed)
                 .attach_printable(format!("Serialization error: {e}"))
                 .attach_printable(format!(
-                    "Event context: request_id={}, connector={}, flow_type={}",
+                    "Event context: request_id={}, connector={}, flow_type={}, txn_uuid={}",
                     event.get("request_id").unwrap_or(&serde_json::Value::Null),
                     event.get("connector").unwrap_or(&serde_json::Value::Null),
-                    event.get("flow_type").unwrap_or(&serde_json::Value::Null)
+                    event.get("flow_type").unwrap_or(&serde_json::Value::Null),
+                    event
+                        .get("udf_txn_uuid")
+                        .unwrap_or(&serde_json::Value::Null)
                 ))
         })?;
 
@@ -143,16 +146,19 @@ impl EventPublisher {
                     .attach_printable(format!("Kafka publish error: {e}"))
                     .attach_printable(format!("Topic: {topic}"))
                     .attach_printable(format!(
-                        "Event context: request_id={}, connector={}, flow_type={}",
+                        "Event context: request_id={}, connector={}, flow_type={}, txn_uuid={}",
                         event.get("request_id").unwrap_or(&serde_json::Value::Null),
                         event.get("connector").unwrap_or(&serde_json::Value::Null),
-                        event.get("flow_type").unwrap_or(&serde_json::Value::Null)
+                        event.get("flow_type").unwrap_or(&serde_json::Value::Null),
+                        event
+                            .get("udf_txn_uuid")
+                            .unwrap_or(&serde_json::Value::Null)
                     ))
             })?;
 
+        let event_json = serde_json::to_string(&event).unwrap_or_default();
         tracing::info!(
-            topic = %topic,
-            has_partition_key = key.is_some(),
+            full_event = %event_json,
             "Event successfully published to Kafka"
         );
 
