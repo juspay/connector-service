@@ -260,7 +260,7 @@ message OtherPaymentMethodType {
 // Payment method token details.
 message TokenPaymentMethodType {
   // The token string representing a payment method.
-  string token = 1;
+  SecretString token = 1;
 }
 
 // Details of a payment card.
@@ -443,7 +443,7 @@ message PazeWallet {
 // Mifinity - Online payment service by Mifinity
 message MifinityWallet {
   // Date of birth from Mifinity
-  string date_of_birth = 1;
+  SecretString date_of_birth = 1;
   // Language preference
   optional string language_preference = 2;
 }
@@ -455,7 +455,7 @@ message MifinityWallet {
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
 message UpiCollect {
   // Virtual Payment Address
-  optional string vpa_id = 1;
+  optional SecretString vpa_id = 1;
 }
 
 message UpiIntent {
@@ -471,13 +471,13 @@ message UpiQr {
 // PIX - Brazilian instant payment ecosystem
 message PixPayment {
   // Unique key for PIX transfer
-  optional string pix_key = 1;
+  optional SecretString pix_key = 1;
   
   // CPF (Brazilian tax identification number)
-  optional string cpf = 2;
+  optional SecretString cpf = 2;
   
   // CNPJ (Brazilian company tax identification number)
-  optional string cnpj = 3;
+  optional SecretString cnpj = 3;
   
   // Source bank account ID
   optional string source_bank_account_id = 4;
@@ -805,10 +805,10 @@ message EVoucher {
 // Givex - Gift card and loyalty program provider
 message Givex {
   // The gift card number
-  string number = 1 [(validate.rules).string = {min_len: 1}];
+  SecretString number = 1 [(validate.rules).string = {min_len: 1}];
   
   // The card verification code
-  string cvc = 2;
+  SecretString cvc = 2;
 }
 
 // Indomaret - Indonesian convenience store payment
@@ -928,7 +928,7 @@ message ClassicReward {
 // Direct Carrier Billing - Mobile carrier billing
 message DirectCarrierBilling {
   // The phone number of the user
-  string msisdn = 1 [(validate.rules).string = {min_len: 5}];
+  SecretString msisdn = 1 [(validate.rules).string = {min_len: 5}];
   
   // Unique user identifier
   optional string client_uid = 2;

@@ -11,7 +11,7 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 use serde_json::json;
 use tonic;
@@ -218,7 +218,7 @@ impl<
                     upi_collect,
                 ) => Ok(PaymentMethodData::Upi(
                     payment_method_data::UpiData::UpiCollect(payment_method_data::UpiCollectData {
-                        vpa_id: upi_collect.vpa_id.map(|vpa| vpa.into()),
+                        vpa_id: upi_collect.vpa_id.map(|vpa| vpa.expose().into()),
                     }),
                 )),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => {
@@ -244,7 +244,14 @@ impl<
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
                                 payment_method_data::MifinityData {
-                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth)?,
+                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth.ok_or(
+                                        ApplicationErrorResponse::BadRequest(ApiError {
+                                            sub_code: "MISSING_DATE_OF_BIRTH".to_owned(),
+                                            error_identifier: 400,
+                                            error_message: "Missing Date of Birth".to_owned(),
+                                            error_object: None,
+                                        })
+                                    )?.expose())?,
                                     language_preference: mifinity_data.language_preference,
                                 }
                             )))
