@@ -6,10 +6,18 @@ enabled = true
 level = "TRACE"
 log_format = "default"
 
+[log.kafka]
+enabled = true
+level = "info"
+filtering_directive = "info"
+brokers = ["localhost:9092"]
+topic = "connector-service-logs"
+buffer_limit = 100000
+
 [server]
 host = "127.0.0.1"
-port = 8000
-type = "grpc"
+port = 8001
+type = "http"
 
 [metrics]
 host = "127.0.0.1"
@@ -35,6 +43,41 @@ phonepe.base_url = "https://api.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
 fiuu.base_url = "https://sandbox.merchant.razer.com/"
 payu.base_url = "https://test.payu.in/"
+paytm.base_url = "https://securegw-stage.paytm.in/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
 novalnet.base_url = "https://payport.novalnet.de/v2"
+nexinets.base_url = "https://apitest.payengine.de/v1"
+noon.base_url = "https://api-test.noonpayments.com/"
+mifinity.base_url = "https://demo.mifinity.com/"
+
+# Generic Events Configuration
+[events]
+enabled = true
+brokers = ["localhost:9092"]
+topic = "audit-trail-events"
+partition_key_field = "request_id"
+
+# Euler-compatible configuration
+[events.transformations]
+"gateway" = "connector"
+"action" = "flow_type"
+"entity" = "flow_type"
+"message.latency" = "latency"
+"message.request_time" = "timestamp"
+"message.res_code" = "status_code"
+"message.url" = "url"
+"message.stage" = "stage"
+"message.req_body" = "connector_request_data"
+"message.res_body" = "connector_response_data"
+
+[events.static_values]
+"hostname" = "connector-service"
+"schema_version" = "V2"
+"category" = "OUTGOING_API"
+"message.req_type" = "EXTERNAL"
+"message.log_type" = "API_CALL"
+
+[events.extractions]
+"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
+"x-request-id" = "req.metadata.x-request-id"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"

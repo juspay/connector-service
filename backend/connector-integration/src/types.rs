@@ -1,18 +1,22 @@
-use domain_types::connector_types::ConnectorEnum;
+use std::fmt::Debug;
+
+use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentMethodDataTypes};
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Cryptopay, Elavon, Fiserv, Fiuu,
-    Novalnet, Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
+    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Cryptopay, Elavon, Fiserv, Fiuu, Mifinity,
+    Nexinets, Noon, Novalnet, Paytm, Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
 };
 
 #[derive(Clone)]
-pub struct ConnectorData {
-    pub connector: BoxedConnector,
+pub struct ConnectorData<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static> {
+    pub connector: BoxedConnector<T>,
     pub connector_name: ConnectorEnum,
 }
 
-impl ConnectorData {
+impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde::Serialize>
+    ConnectorData<T>
+{
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
         let connector = Self::convert_connector(connector_name.clone());
         Self {
@@ -21,7 +25,7 @@ impl ConnectorData {
         }
     }
 
-    fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector {
+    fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
             ConnectorEnum::Adyen => Box::new(Adyen::new()),
             ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
@@ -31,13 +35,17 @@ impl ConnectorData {
             ConnectorEnum::Xendit => Box::new(Xendit::new()),
             ConnectorEnum::Checkout => Box::new(Checkout::new()),
             ConnectorEnum::Authorizedotnet => Box::new(Authorizedotnet::new()),
+            ConnectorEnum::Mifinity => Box::new(Mifinity::new()),
             ConnectorEnum::Phonepe => Box::new(Phonepe::new()),
             ConnectorEnum::Cashfree => Box::new(Cashfree::new()),
             ConnectorEnum::Fiuu => Box::new(Fiuu::new()),
             ConnectorEnum::Payu => Box::new(Payu::new()),
+            ConnectorEnum::Paytm => Box::new(Paytm::new()),
             ConnectorEnum::Cashtocode => Box::new(Cashtocode::new()),
             ConnectorEnum::Novalnet => Box::new(Novalnet::new()),
             ConnectorEnum::Cryptopay => Box::new(Cryptopay::new()),
+            ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
+            ConnectorEnum::Noon => Box::new(Noon::new()),
         }
     }
 }

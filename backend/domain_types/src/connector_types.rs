@@ -20,8 +20,7 @@ use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
-    payment_method_data,
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::PaymentMethodToken,
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
@@ -50,12 +49,16 @@ pub enum ConnectorEnum {
     Xendit,
     Checkout,
     Authorizedotnet,
+    Mifinity,
     Phonepe,
     Cashfree,
+    Paytm,
     Fiuu,
     Payu,
     Cashtocode,
     Novalnet,
+    Nexinets,
+    Noon,
     Cryptopay,
 }
 
@@ -75,10 +78,14 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Authorizedotnet => Ok(Self::Authorizedotnet),
             grpc_api_types::payments::Connector::Phonepe => Ok(Self::Phonepe),
             grpc_api_types::payments::Connector::Cashfree => Ok(Self::Cashfree),
+            grpc_api_types::payments::Connector::Paytm => Ok(Self::Paytm),
             grpc_api_types::payments::Connector::Fiuu => Ok(Self::Fiuu),
             grpc_api_types::payments::Connector::Payu => Ok(Self::Payu),
             grpc_api_types::payments::Connector::Cashtocode => Ok(Self::Cashtocode),
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
+            grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
+            grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
+            grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
             grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -145,6 +152,7 @@ impl ConnectorMandateReferenceId {
 
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
+    fn get_raw_connector_response(&self) -> Option<String>;
 }
 
 pub trait ConnectorResponseHeaders {
@@ -276,6 +284,10 @@ pub struct PaymentFlowData {
 }
 
 impl PaymentFlowData {
+    pub fn set_status(&mut self, status: AttemptStatus) {
+        self.status = status;
+    }
+
     pub fn get_billing(&self) -> Result<&Address, Error> {
         self.address
             .get_payment_method_billing()
@@ -660,11 +672,25 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_session_token_id(mut self, session_token_id: Option<String>) -> Self {
+        if session_token_id.is_some() && self.session_token.is_none() {
+            self.session_token = session_token_id;
+        }
+        self
+    }
+
+    pub fn get_return_url(&self) -> Option<String> {
+        self.return_url.clone()
+    }
 }
 
 impl RawConnectorResponse for PaymentFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<String> {
+        self.raw_connector_response.clone()
     }
 }
 
@@ -712,8 +738,8 @@ impl PaymentVoidData {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct PaymentsAuthorizeData {
-    pub payment_method_data: payment_method_data::PaymentMethodData,
+pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     /// total amount (original_amount + surcharge_amount + tax_on_surcharge_amount)
     /// If connector supports separate field for surcharge amount, consider using below functions defined on `PaymentsAuthorizeData` to fetch original amount and surcharge amount separately
     /// ```text
@@ -761,7 +787,7 @@ pub struct PaymentsAuthorizeData {
     pub all_keys_required: Option<bool>,
 }
 
-impl PaymentsAuthorizeData {
+impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
     pub fn is_auto_capture(&self) -> Result<bool, Error> {
         match self.capture_method {
             Some(common_enums::CaptureMethod::Automatic)
@@ -793,9 +819,9 @@ impl PaymentsAuthorizeData {
     //         .ok_or_else(missing_field_err("order_details"))
     // }
 
-    pub fn get_card(&self) -> Result<Card, Error> {
-        match self.payment_method_data.clone() {
-            PaymentMethodData::Card(card) => Ok(card),
+    pub fn get_card(&self) -> Result<Card<T>, Error> {
+        match &self.payment_method_data {
+            PaymentMethodData::Card(card) => Ok(card.clone()),
             _ => Err(missing_field_err("card")()),
         }
     }
@@ -939,6 +965,11 @@ impl PaymentsAuthorizeData {
     //         })
     //         .ok_or_else(missing_field_err("connector_mandate_request_reference_id"))
     // }
+
+    pub fn set_session_token(mut self, session_token: Option<String>) -> Self {
+        self.session_token = session_token;
+        self
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -972,7 +1003,6 @@ pub enum PaymentsResponseData {
         network_txn_id: Option<String>,
         connector_response_reference_id: Option<String>,
         incremental_authorization_allowed: Option<bool>,
-        raw_connector_response: Option<String>,
         status_code: u16,
     },
     SessionResponse {
@@ -1001,6 +1031,17 @@ pub struct PaymentCreateOrderResponse {
     pub order_id: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct SessionTokenRequestData {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone)]
+pub struct SessionTokenResponseData {
+    pub session_token: String,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,
@@ -1025,7 +1066,6 @@ impl RefundSyncData {
 pub struct RefundsResponseData {
     pub connector_refund_id: String,
     pub refund_status: common_enums::RefundStatus,
-    pub raw_connector_response: Option<String>,
     pub status_code: u16,
 }
 
@@ -1034,6 +1074,7 @@ pub struct RefundFlowData {
     pub status: common_enums::RefundStatus,
     pub refund_id: Option<String>,
     pub connectors: Connectors,
+    pub connector_request_reference_id: String,
     pub raw_connector_response: Option<String>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
@@ -1041,6 +1082,10 @@ pub struct RefundFlowData {
 impl RawConnectorResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<String> {
+        self.raw_connector_response.clone()
     }
 }
 
@@ -1285,9 +1330,9 @@ impl PaymentsCaptureData {
 }
 
 #[derive(Debug, Clone)]
-pub struct SetupMandateRequestData {
+pub struct SetupMandateRequestData<T: PaymentMethodDataTypes> {
     pub currency: Currency,
-    pub payment_method_data: payment_method_data::PaymentMethodData,
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     pub amount: Option<i64>,
     pub confirm: bool,
     pub statement_descriptor_suffix: Option<String>,
@@ -1315,7 +1360,7 @@ pub struct SetupMandateRequestData {
     pub integrity_object: Option<SetupMandateIntegrityObject>,
 }
 
-impl SetupMandateRequestData {
+impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
     pub fn get_browser_info(&self) -> Result<BrowserInformation, Error> {
         self.browser_info
             .clone()
@@ -1399,6 +1444,7 @@ pub struct DisputeFlowData {
     pub connector_dispute_id: String,
     pub connectors: Connectors,
     pub defense_reason_code: Option<String>,
+    pub connector_request_reference_id: String,
     pub raw_connector_response: Option<String>,
     pub connector_response_headers: Option<http::HeaderMap>,
 }
@@ -1406,6 +1452,10 @@ pub struct DisputeFlowData {
 impl RawConnectorResponse for DisputeFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
+    }
+
+    fn get_raw_connector_response(&self) -> Option<String> {
+        self.raw_connector_response.clone()
     }
 }
 
@@ -1424,7 +1474,6 @@ pub struct DisputeResponseData {
     pub connector_dispute_id: String,
     pub dispute_status: DisputeStatus,
     pub connector_dispute_status: Option<String>,
-    pub raw_connector_response: Option<String>,
     pub status_code: u16,
 }
 
@@ -1542,8 +1591,8 @@ macro_rules! payment_method_not_supported {
     };
 }
 
-impl From<PaymentMethodData> for PaymentMethodDataType {
-    fn from(pm_data: PaymentMethodData) -> Self {
+impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for PaymentMethodDataType {
+    fn from(pm_data: PaymentMethodData<T>) -> Self {
         match pm_data {
             PaymentMethodData::Card(_) => Self::Card,
             PaymentMethodData::CardRedirect(card_redirect_data) => match card_redirect_data {

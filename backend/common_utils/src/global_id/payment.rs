@@ -55,7 +55,7 @@ crate::global_id_type!(
 impl GlobalAttemptId {
     /// Generate a new GlobalAttemptId from a cell id
     #[allow(dead_code)]
-    pub fn generate(cell_id: &super::CellId) -> Self {
+    pub fn generate(cell_id: &CellId) -> Self {
         let global_id = super::GlobalId::generate(cell_id, super::GlobalEntity::Attempt);
         Self(global_id)
     }

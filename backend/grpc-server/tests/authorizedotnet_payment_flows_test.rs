@@ -11,9 +11,11 @@ use std::{
     any::Any,
     collections::HashMap,
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -282,7 +284,7 @@ fn create_payment_authorize_request(
 
     // Set up card payment method using the correct structure
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
         card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
         card_cvc: TEST_CARD_CVC.to_string(),
@@ -501,7 +503,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
 
     // Set up card payment method with Visa network as in your JSON
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
         card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
         card_cvc: TEST_CARD_CVC.to_string(),

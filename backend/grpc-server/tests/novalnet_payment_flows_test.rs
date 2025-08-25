@@ -5,6 +5,13 @@
 use grpc_server::{app, configs};
 mod common;
 
+use cards::CardNumber;
+use std::{
+    env,
+    str::FromStr,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -14,8 +21,6 @@ use grpc_api_types::{
         PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
-use std::env;
-use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -93,7 +98,7 @@ fn add_novalnet_metadata<T>(request: &mut Request<T>) {
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
         card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
         card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
         card_cvc: TEST_CARD_CVC.to_string(),
