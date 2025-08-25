@@ -11,7 +11,7 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
 use serde_json::json;
 use tonic;
@@ -218,7 +218,7 @@ impl<
                     upi_collect,
                 ) => Ok(PaymentMethodData::Upi(
                     payment_method_data::UpiData::UpiCollect(payment_method_data::UpiCollectData {
-                        vpa_id: upi_collect.vpa_id.map(|vpa| vpa.into()),
+                        vpa_id: upi_collect.vpa_id.map(|vpa| vpa.expose().into()),
                     }),
                 )),
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiIntent(_upi_intent) => {
@@ -244,7 +244,14 @@ impl<
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
                                 payment_method_data::MifinityData {
-                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth)?,
+                                    date_of_birth: hyperswitch_masking::Secret::<time::Date>::foreign_try_from(mifinity_data.date_of_birth.ok_or(
+                                        ApplicationErrorResponse::BadRequest(ApiError {
+                                            sub_code: "MISSING_DATE_OF_BIRTH".to_owned(),
+                                            error_identifier: 400,
+                                            error_message: "Missing Date of Birth".to_owned(),
+                                            error_object: None,
+                                        })
+                                    )?.expose())?,
                                     language_preference: mifinity_data.language_preference,
                                 }
                             )))
@@ -378,16 +385,37 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
                     error_object: None,
                 }),
             )?),
-            card_exp_month: card.card_exp_month.into(),
-            card_exp_year: card.card_exp_year.into(),
-            card_cvc: card.card_cvc.into(),
+            card_exp_month: card
+                .card_exp_month
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_MONTH".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Month".to_owned(),
+                    error_object: None,
+                }))?,
+            card_exp_year: card
+                .card_exp_year
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_YEAR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Year".to_owned(),
+                    error_object: None,
+                }))?,
+            card_cvc: card
+                .card_cvc
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_CVC".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing CVC".to_owned(),
+                    error_object: None,
+                }))?,
             card_issuer: card.card_issuer,
             card_network,
             card_type: card.card_type,
             card_issuing_country: card.card_issuing_country_alpha2,
             bank_code: card.bank_code,
             nick_name: card.nick_name.map(|name| name.into()),
-            card_holder_name: card.card_holder_name.map(Secret::new),
+            card_holder_name: card.card_holder_name,
             co_badged_card_data: None,
         })
     }
@@ -412,16 +440,37 @@ impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
                     }))
                     .map(|cn| cn.get_card_no())?,
             ),
-            card_exp_month: card.card_exp_month.into(),
-            card_exp_year: card.card_exp_year.into(),
-            card_cvc: card.card_cvc.into(),
+            card_exp_month: card
+                .card_exp_month
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_MONTH".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Month".to_owned(),
+                    error_object: None,
+                }))?,
+            card_exp_year: card
+                .card_exp_year
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_YEAR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Year".to_owned(),
+                    error_object: None,
+                }))?,
+            card_cvc: card
+                .card_cvc
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_CVC".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing CVC".to_owned(),
+                    error_object: None,
+                }))?,
             card_issuer: card.card_issuer,
             card_network: None,
             card_type: card.card_type,
             card_issuing_country: card.card_issuing_country_alpha2,
             bank_code: card.bank_code,
             nick_name: card.nick_name.map(|name| name.into()),
-            card_holder_name: card.card_holder_name.map(Secret::new),
+            card_holder_name: card.card_holder_name,
             co_badged_card_data: None,
         })
     }
@@ -2013,7 +2062,7 @@ pub fn generate_payment_sync_response(
                 connector_customer_id: None,
                 merchant_order_reference_id: None,
                 metadata: std::collections::HashMap::new(),
-                raw_connector_response: None,
+                raw_connector_response,
                 status_code: e.status_code as u32,
                 response_headers: router_data_v2
                     .resource_common_data

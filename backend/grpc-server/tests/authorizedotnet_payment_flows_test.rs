@@ -5,6 +5,7 @@
 #![allow(dead_code)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::Secret;
 mod common;
 
 use std::{
@@ -285,10 +286,10 @@ fn create_payment_authorize_request(
     // Set up card payment method using the correct structure
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: Some(2_i32), // Mastercard network for 5123456789012346
         card_type: None,
@@ -504,10 +505,10 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
     // Set up card payment method with Visa network as in your JSON
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
         card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: Some(1_i32),
         card_type: None,
