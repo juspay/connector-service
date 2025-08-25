@@ -267,7 +267,7 @@ message TokenPaymentMethodType {
 // Details of a payment card.
 message CardDetails {
   // Card Identification
-  string card_number = 1;
+  CardNumberType card_number = 1;
   string card_exp_month = 2;
   string card_exp_year = 3;
   string card_cvc = 4;
@@ -282,6 +282,10 @@ message CardDetails {
   optional string card_issuing_country_alpha2 = 9;
   optional string bank_code = 10;
   optional string nick_name = 11;
+}
+
+message CardNumberType {
+  string value = 1;
 }
 
 // Card redirect payment method

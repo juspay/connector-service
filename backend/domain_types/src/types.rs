@@ -626,16 +626,14 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
             card.card_network(),
         )?);
         Ok(payment_method_data::Card {
-            card_number: RawCardNumber::<DefaultPCIHolder>(
-                cards::CardNumber::from_str(&card.card_number).change_context(
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Invalid card number".to_owned(),
-                        error_object: None,
-                    }),
-                )?,
-            ),
+            card_number: RawCardNumber::<DefaultPCIHolder>(card.card_number.ok_or(
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_CARD_NUMBER".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing card number".to_owned(),
+                    error_object: None,
+                }),
+            )?),
             card_exp_month: card.card_exp_month.into(),
             card_exp_year: card.card_exp_year.into(),
             card_cvc: card.card_cvc.into(),
@@ -660,7 +658,16 @@ impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
         error_stack::Report<ApplicationErrorResponse>,
     > {
         Ok(payment_method_data::Card {
-            card_number: RawCardNumber(card.card_number),
+            card_number: RawCardNumber(
+                card.card_number
+                    .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "MISSING_CARD_NUMBER".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Missing card number".to_owned(),
+                        error_object: None,
+                    }))
+                    .map(|cn| cn.get_card_no())?,
+            ),
             card_exp_month: card.card_exp_month.into(),
             card_exp_year: card.card_exp_year.into(),
             card_cvc: card.card_cvc.into(),
