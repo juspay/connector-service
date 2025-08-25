@@ -163,6 +163,8 @@ fn create_payment_sync_request(
     request_ref_id: &str,
 ) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
+        proxy_url: None,
+
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -242,6 +244,7 @@ fn create_refund_sync_request(
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
         browser_info: None,
+        proxy_url: None,
     }
 }
 

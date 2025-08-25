@@ -211,6 +211,8 @@ async fn test_health() {
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
+        proxy_url: None,
+
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -273,6 +275,8 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         amount_to_capture: TEST_AMOUNT,
         currency: i32::from(Currency::Usd),
         multiple_capture_data: None,
+        proxy_url: None,
+
         metadata: HashMap::new(),
         request_ref_id: None,
         browser_info: None,
@@ -349,6 +353,8 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         payment_amount: TEST_AMOUNT,
         refund_amount: TEST_AMOUNT,
         minor_payment_amount: TEST_AMOUNT,
+        proxy_url: None,
+
         minor_refund_amount: TEST_AMOUNT,
         // connector_refund_id: None,
         reason: None,
@@ -372,6 +378,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         browser_info: None,
         request_ref_id: None, // all_keys_required: None,
+        proxy_url: None,
     }
 }
 

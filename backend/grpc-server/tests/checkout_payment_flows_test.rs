@@ -145,6 +145,8 @@ fn create_payment_authorize_request(
 // Helper function to create a payment sync request
 fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest {
     PaymentServiceGetRequest {
+        proxy_url: None,
+
         transaction_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
@@ -166,6 +168,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata: std::collections::HashMap::new(),
         request_ref_id: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 
@@ -189,6 +192,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
+        proxy_url: None,
     }
 }
 
@@ -202,6 +206,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 
@@ -222,6 +227,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 

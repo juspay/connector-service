@@ -103,6 +103,24 @@ pub struct Proxy {
     pub bypass_proxy_urls: Vec<String>,
 }
 
+impl Proxy {
+    /// Creates a new proxy configuration with request-level proxy taking precedence over config
+    pub fn with_request_override(&self, request_proxy_url: Option<String>) -> Proxy {
+        if let Some(proxy_url) = request_proxy_url {
+            // Request-level proxy takes precedence - use it for both HTTP and HTTPS
+            Proxy {
+                http_url: Some(proxy_url.clone()),
+                https_url: Some(proxy_url),
+                idle_pool_connection_timeout: self.idle_pool_connection_timeout,
+                bypass_proxy_urls: self.bypass_proxy_urls.clone(),
+            }
+        } else {
+            // No request-level proxy, use config-level proxy as-is
+            self.clone()
+        }
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
     type Error = ApplicationErrorResponse;
 

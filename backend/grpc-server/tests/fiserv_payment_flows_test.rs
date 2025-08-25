@@ -190,6 +190,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("fiserv_sync_{}", get_timestamp()))),
         }),
+        proxy_url: None,
         // all_keys_required: None,
     }
 }
@@ -218,6 +219,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata,
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 
@@ -254,6 +256,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None, // all_keys_required: None,
+        proxy_url: None,
     }
 }
 
@@ -267,6 +270,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
+        proxy_url: None,
     }
 }
 
