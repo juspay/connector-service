@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
-use hyperswitch_masking::ErasedMaskSerialize;
 use domain_types::{
     connector_flow::{Accept, DefendDispute, FlowName, SubmitEvidence},
     connector_types::{
@@ -28,6 +27,7 @@ use grpc_api_types::payments::{
     DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 

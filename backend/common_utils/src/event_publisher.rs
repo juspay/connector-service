@@ -124,7 +124,9 @@ impl EventPublisher {
                     event.get("request_id").unwrap_or(&serde_json::Value::Null),
                     event.get("connector").unwrap_or(&serde_json::Value::Null),
                     event.get("flow_type").unwrap_or(&serde_json::Value::Null),
-                    event.get("udf_txn_uuid").unwrap_or(&serde_json::Value::Null)
+                    event
+                        .get("udf_txn_uuid")
+                        .unwrap_or(&serde_json::Value::Null)
                 ))
         })?;
 
@@ -148,7 +150,9 @@ impl EventPublisher {
                         event.get("request_id").unwrap_or(&serde_json::Value::Null),
                         event.get("connector").unwrap_or(&serde_json::Value::Null),
                         event.get("flow_type").unwrap_or(&serde_json::Value::Null),
-                        event.get("udf_txn_uuid").unwrap_or(&serde_json::Value::Null)
+                        event
+                            .get("udf_txn_uuid")
+                            .unwrap_or(&serde_json::Value::Null)
                     ))
             })?;
 

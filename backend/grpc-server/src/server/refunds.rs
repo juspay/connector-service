@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
-use hyperswitch_masking::ErasedMaskSerialize;
 use domain_types::{
     connector_flow::{FlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
@@ -19,6 +18,7 @@ use grpc_api_types::payments::{
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 
 use crate::{
     configs::Config,
