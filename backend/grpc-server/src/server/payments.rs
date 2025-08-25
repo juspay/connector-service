@@ -2,6 +2,7 @@ use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
 use common_utils::{consts, errors::CustomResult, events, pii};
+use hyperswitch_masking::ErasedMaskSerialize;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -232,7 +233,7 @@ impl Payments {
             flow_name: events::FlowName::Authorize,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(&payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id,
         };
@@ -384,7 +385,7 @@ impl Payments {
             flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
@@ -481,7 +482,7 @@ impl Payments {
             flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
@@ -1199,7 +1200,7 @@ impl PaymentService for Payments {
                     flow_name: events::FlowName::SetupMandate,
                     event_config: &self.config.events,
                     raw_request_data: Some(pii::SecretSerdeValue::new(
-                        serde_json::to_value(payload).unwrap_or_default(),
+                        payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };
@@ -1311,7 +1312,7 @@ impl PaymentService for Payments {
                     flow_name: events::FlowName::Authorize,
                     event_config: &self.config.events,
                     raw_request_data: Some(pii::SecretSerdeValue::new(
-                        serde_json::to_value(payload).unwrap_or_default(),
+                        payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };
