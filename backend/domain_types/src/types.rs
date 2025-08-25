@@ -378,30 +378,30 @@ impl CardConversionHelper<DefaultPCIHolder> for DefaultPCIHolder {
                     error_object: None,
                 }),
             )?),
-            card_exp_month: card.card_exp_month.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError { 
-                    sub_code: "MISSING_EXP_MONTH".to_owned(), 
-                    error_identifier: 400, 
-                    error_message: "Missing Card Expiry Month".to_owned(), 
-                    error_object: None, 
-                }),
-            )?,
-            card_exp_year: card.card_exp_year.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError { 
-                    sub_code: "MISSING_EXP_YEAR".to_owned(), 
-                    error_identifier: 400, 
-                    error_message: "Missing Card Expiry Year".to_owned(), 
-                    error_object: None, 
-                }),
-            )?,
-            card_cvc: card.card_cvc.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError { 
-                    sub_code: "MISSING_CVC".to_owned(), 
-                    error_identifier: 400, 
-                    error_message: "Missing CVC".to_owned(), 
-                    error_object: None, 
-                }),
-            )?,
+            card_exp_month: card
+                .card_exp_month
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_MONTH".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Month".to_owned(),
+                    error_object: None,
+                }))?,
+            card_exp_year: card
+                .card_exp_year
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_YEAR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Year".to_owned(),
+                    error_object: None,
+                }))?,
+            card_cvc: card
+                .card_cvc
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_CVC".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing CVC".to_owned(),
+                    error_object: None,
+                }))?,
             card_issuer: card.card_issuer,
             card_network,
             card_type: card.card_type,
@@ -433,30 +433,30 @@ impl CardConversionHelper<VaultTokenHolder> for VaultTokenHolder {
                     }))
                     .map(|cn| cn.get_card_no())?,
             ),
-            card_exp_month: card.card_exp_month.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError { 
-                    sub_code: "MISSING_EXP_MONTH".to_owned(), 
-                    error_identifier: 400, 
-                    error_message: "Missing Card Expiry Month".to_owned(), 
-                    error_object: None, 
-                }),
-            )?,
-            card_exp_year: card.card_exp_year.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError { 
-                    sub_code: "MISSING_EXP_YEAR".to_owned(), 
-                    error_identifier: 400, 
-                    error_message: "Missing Card Expiry Year".to_owned(), 
-                    error_object: None, 
-                }),
-            )?,
-            card_cvc: card.card_cvc.ok_or(
-                ApplicationErrorResponse::BadRequest(ApiError { 
-                    sub_code: "MISSING_CVC".to_owned(), 
-                    error_identifier: 400, 
-                    error_message: "Missing CVC".to_owned(), 
-                    error_object: None, 
-                }),
-            )?,
+            card_exp_month: card
+                .card_exp_month
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_MONTH".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Month".to_owned(),
+                    error_object: None,
+                }))?,
+            card_exp_year: card
+                .card_exp_year
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_EXP_YEAR".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing Card Expiry Year".to_owned(),
+                    error_object: None,
+                }))?,
+            card_cvc: card
+                .card_cvc
+                .ok_or(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "MISSING_CVC".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Missing CVC".to_owned(),
+                    error_object: None,
+                }))?,
             card_issuer: card.card_issuer,
             card_network: None,
             card_type: card.card_type,
