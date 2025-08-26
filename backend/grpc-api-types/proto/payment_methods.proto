@@ -33,7 +33,7 @@ enum CardNetwork {
 message PaymentMethod {
   oneof payment_method {
     CardPaymentMethodType card = 1;                      // Card-based payment methods - SUPPORTED
-    WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - TODO: SUPPORTED
+    WalletPaymentMethodType wallet = 2;                  // Digital wallet payment methods - SUPPORTED
     UpiCollect upi_collect = 3;                          // UPI Collect payment method - SUPPORTED
     UpiIntent upi_intent = 4;                            // UPI Intent payment method - SUPPORTED
     UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
@@ -69,24 +69,25 @@ message CardPaymentMethodType {
 // UPI payment methods are now directly included in PaymentMethod oneof
 // No wrapper message needed - UpiCollect and UpiIntent are direct variants
 
-// Digital wallet payment methods category - TODO: Not yet supported
+// Digital wallet payment methods category
 // Includes mobile wallets and digital payment platforms
-
 message WalletPaymentMethodType {
   oneof wallet_type {
-    /*
-    AppleWallet apple_pay = 1;             // Apple Pay
-    GoogleWallet google_pay = 2;           // Google Pay
-    SamsungWallet samsung_pay = 3;         // Samsung Pay
-    AliPayWallet ali_pay = 4;              // Alipay
-    AliPayHKWallet ali_pay_hk = 5;         // Alipay Hong Kong
-    WeChatPayWallet we_chat_pay = 6;       // WeChat Pay
-    VenmoWallet venmo = 7;                 // Venmo
-    CashAppWallet cash_app = 8;            // Cash App
-    AmazonPayWallet amazon_pay = 9;        // Amazon Pay
-    PazeWallet paze = 10;                  // Paze
-    */
-    MifinityWallet mifinity = 11;          // Mifinity
+    AppleWallet apple_pay = 1;                          // Apple Pay
+    GoogleWallet google_pay = 2;                        // Google Pay
+    // SamsungWallet samsung_pay = 3;                      // Samsung Pay
+    // AliPayWallet ali_pay = 4;                           // Alipay
+    // AliPayHKWallet ali_pay_hk = 5;                      // Alipay Hong Kong
+    // WeChatPayWallet we_chat_pay = 6;                    // WeChat Pay
+    // VenmoWallet venmo = 7;                              // Venmo
+    CashappQrWallet cashapp_qr = 8;                     // Cash App
+    AmazonPayRedirectWallet amazon_pay_redirect = 9;    // Amazon Pay  
+    // PazeWallet paze = 10;                               // Paze
+    PaypalRedirectWallet paypal_redirect = 11;          // Paypal Redirect
+    WeChatPayQrWallet we_chat_pay_qr = 12;              // WeChat Pay Qr
+    AliPayRedirectWallet ali_pay_redirect = 13;         // AliPay Redirect
+    RevolutPayWallet revolut_pay = 14;                  // Revolut Pay
+    MifinityWallet mifinity = 15;                       // Mifinity
   }
 }
 
@@ -260,19 +261,19 @@ message OtherPaymentMethodType {
 // Payment method token details.
 message TokenPaymentMethodType {
   // The token string representing a payment method.
-  string token = 1;
+  SecretString token = 1;
 }
 
 // Details of a payment card.
 message CardDetails {
   // Card Identification
-  string card_number = 1;
-  string card_exp_month = 2;
-  string card_exp_year = 3;
-  string card_cvc = 4;
+  CardNumberType card_number = 1;
+  SecretString card_exp_month = 2;
+  SecretString card_exp_year = 3;
+  SecretString card_cvc = 4;
   
   // Cardholder Information
-  optional string card_holder_name = 5;
+  optional SecretString card_holder_name = 5;
   
   // Card Metadata
   optional string card_issuer = 6;
@@ -281,6 +282,10 @@ message CardDetails {
   optional string card_issuing_country_alpha2 = 9;
   optional string bank_code = 10;
   optional string nick_name = 11;
+}
+
+message CardNumberType {
+  string value = 1;
 }
 
 // Card redirect payment method
@@ -297,14 +302,19 @@ message CardRedirect {
 }
 
 // ============================================================================
-// WALLET PAYMENT METHODS - TODO: SUPPORTED
+// WALLET PAYMENT METHODS
 // ============================================================================
 
-/*
 // Apple Pay - Apple's mobile payment and digital wallet service
 message AppleWallet {
-  // Payment data from Apple Pay
-  string payment_data = 1 [(validate.rules).string = {min_len: 1}];
+  // Apple Pay payment data - can be encrypted string or decrypted data
+  message PaymentData{
+    oneof payment_data {
+      string encrypted_data = 1;     // Encrypted Apple Pay payment data as string
+      ApplePayPredecryptData decrypted_data = 2;  // Decrypted Apple Pay payment data
+    }
+  }
+  PaymentData payment_data = 1;
   
   // Payment method details
   message PaymentMethod {
@@ -316,6 +326,30 @@ message AppleWallet {
   
   // Transaction identifier
   string transaction_identifier = 3;
+}
+
+// Apple Pay predecrypted data structure
+message ApplePayPredecryptData {
+  // The primary account number
+  string application_primary_account_number = 1;
+  
+  // The application expiration date (PAN expiry month)
+  string application_expiration_month = 2;
+  
+  // The application expiration date (PAN expiry year)
+  string application_expiration_year = 3;
+  
+  // Cryptogram data for Apple Pay transactions
+  ApplePayCryptogramData payment_data = 4;
+}
+
+// Apple Pay cryptogram data structure
+message ApplePayCryptogramData {
+  // The online payment cryptogram
+  string online_payment_cryptogram = 1;
+  
+  // The ECI (Electronic Commerce Indicator) value
+  string eci_indicator = 2;
 }
 
 // Google Pay - Google's mobile payment platform
@@ -346,15 +380,41 @@ message GoogleWallet {
   }
   PaymentMethodInfo info = 3;
   
-  // Tokenization data
+  // Tokenization data - can be either encrypted or predecrypted
   message TokenizationData {
-    // Type of token
-    string token_type = 1;
-    
-    // Token generated for the wallet
-    string token = 2 [(validate.rules).string = {min_len: 1}];
+    oneof tokenization_data {
+      GPayPredecryptData decrypted_data = 1;     // Predecrypted Google Pay payment data
+      GpayEncryptedTokenizationData encrypted_data = 2;  // Encrypted Google Pay payment data
+    }
   }
   TokenizationData tokenization_data = 4;
+}
+
+// Google Pay predecrypted data structure
+message GPayPredecryptData {
+  // The card's expiry month
+  string card_exp_month = 1;
+  
+  // The card's expiry year
+  string card_exp_year = 2;
+  
+  // The Primary Account Number (PAN) of the card
+  string application_primary_account_number = 3;
+  
+  // Cryptogram generated by the Network
+  string cryptogram = 4;
+  
+  // Electronic Commerce Indicator
+  optional string eci_indicator = 5;
+}
+
+// Google Pay encrypted tokenization data structure
+message GpayEncryptedTokenizationData {
+  // The type of the token
+  string token_type = 1;
+  
+  // Token generated for the wallet
+  string token = 2;
 }
 
 // Samsung Pay - Samsung's mobile payment service
@@ -381,7 +441,7 @@ message SamsungWallet {
     optional string dpan_last_four_digits = 4;
     
     // Last four digits of card
-    string card_last_four_digits = 5 [(validate.rules).string = {min_len: 4, max_len: 4, pattern: "^[0-9]{4}$"}];
+    string card_last_four_digits = 5;
     
     // 3DS token data
     message TokenData {
@@ -392,7 +452,7 @@ message SamsungWallet {
       string version = 2;
       
       // Token data
-      string data = 3 [(validate.rules).string = {min_len: 1}];
+      string data = 3;
     }
     TokenData token_data = 6;
   }
@@ -419,13 +479,8 @@ message VenmoWallet {
   // Fields will be added as needed for Venmo integration
 }
 
-// Cash App - Mobile payment service by Block, Inc.
-message CashAppWallet {
-  // Fields will be added as needed for Cash App integration
-}
-
 // Amazon Pay - Online payment service by Amazon
-message AmazonPayWallet {
+message AmazonPayRedirectWallet {
   // Fields will be added as needed for Amazon Pay integration
 }
 
@@ -434,14 +489,37 @@ message PazeWallet {
   // Complete response from Paze
   string complete_response = 1;
 }
-*/
-
 // Mifinity - Online payment service by Mifinity
 message MifinityWallet {
   // Date of birth from Mifinity
-  string date_of_birth = 1;
+  SecretString date_of_birth = 1;
   // Language preference
   optional string language_preference = 2;
+}
+
+// PayPal Redirect - PayPal redirect payment service
+message PaypalRedirectWallet {
+  // PayPal's email address
+  optional string email = 1;
+}
+
+// WeChat Pay QR - WeChat Pay QR code payment
+message WeChatPayQrWallet {
+  // Fields will be added as needed for WeChat Pay QR integration
+}
+
+// Alipay Redirect - Alipay redirect payment service
+message AliPayRedirectWallet {
+  // Fields will be added as needed for Alipay redirect integration
+}
+
+// Cash App - Mobile payment service by Block, Inc.
+message CashappQrWallet {
+  // Fields will be added as needed for Cash App QR integration
+}
+
+// Revolut Pay - Revolut digital wallet payment service
+message RevolutPayWallet {
 }
 
 // ============================================================================
@@ -451,7 +529,7 @@ message MifinityWallet {
 // UPI (Unified Payments Interface) - Indian instant real-time payment system
 message UpiCollect {
   // Virtual Payment Address
-  optional string vpa_id = 1;
+  optional SecretString vpa_id = 1;
 }
 
 message UpiIntent {
@@ -467,13 +545,13 @@ message UpiQr {
 // PIX - Brazilian instant payment ecosystem
 message PixPayment {
   // Unique key for PIX transfer
-  optional string pix_key = 1;
+  optional SecretString pix_key = 1;
   
   // CPF (Brazilian tax identification number)
-  optional string cpf = 2;
+  optional SecretString cpf = 2;
   
   // CNPJ (Brazilian company tax identification number)
-  optional string cnpj = 3;
+  optional SecretString cnpj = 3;
   
   // Source bank account ID
   optional string source_bank_account_id = 4;
@@ -801,10 +879,10 @@ message EVoucher {
 // Givex - Gift card and loyalty program provider
 message Givex {
   // The gift card number
-  string number = 1 [(validate.rules).string = {min_len: 1}];
+  SecretString number = 1 [(validate.rules).string = {min_len: 1}];
   
   // The card verification code
-  string cvc = 2;
+  SecretString cvc = 2;
 }
 
 // Indomaret - Indonesian convenience store payment
@@ -924,7 +1002,7 @@ message ClassicReward {
 // Direct Carrier Billing - Mobile carrier billing
 message DirectCarrierBilling {
   // The phone number of the user
-  string msisdn = 1 [(validate.rules).string = {min_len: 5}];
+  SecretString msisdn = 1 [(validate.rules).string = {min_len: 5}];
   
   // Unique user identifier
   optional string client_uid = 2;
@@ -959,4 +1037,8 @@ enum RewardType {
   REWARD_TYPE_UNSPECIFIED = 0;
   CLASSICREWARD = 1;
   E_VOUCHER = 2;
+}
+
+message SecretString {
+  string value = 1;
 }

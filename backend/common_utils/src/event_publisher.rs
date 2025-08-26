@@ -183,9 +183,12 @@ impl EventPublisher {
         // Process transformations
         for (target_path, source_field) in &self.config.transformations {
             if let Some(value) = result.get(source_field).cloned() {
-                if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+                let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
+                if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                     tracing::warn!(
                         target_path = %target_path,
+                        normalized_path = %normalized_path,
                         source_field = %source_field,
                         error = %e,
                         "Failed to set transformation, continuing with event processing"
@@ -196,10 +199,13 @@ impl EventPublisher {
 
         // Process static values - log warnings but continue processing
         for (target_path, static_value) in &self.config.static_values {
+            // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+            let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
             let value = serde_json::json!(static_value);
-            if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+            if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                 tracing::warn!(
                     target_path = %target_path,
+                    normalized_path = %normalized_path,
                     static_value = %static_value,
                     error = %e,
                     "Failed to set static value, continuing with event processing"
@@ -210,9 +216,12 @@ impl EventPublisher {
         // Process extraction
         for (target_path, extraction_path) in &self.config.extractions {
             if let Some(value) = self.extract_from_request(&result, extraction_path) {
-                if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+                let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
+                if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                     tracing::warn!(
                         target_path = %target_path,
+                        normalized_path = %normalized_path,
                         extraction_path = %extraction_path,
                         error = %e,
                         "Failed to set extraction, continuing with event processing"
