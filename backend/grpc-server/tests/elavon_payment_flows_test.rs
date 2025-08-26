@@ -8,9 +8,11 @@ mod common;
 use std::{
     collections::HashMap,
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -22,6 +24,7 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for Elavon connector
@@ -98,11 +101,11 @@ fn create_payment_authorize_request(
 ) -> PaymentServiceAuthorizeRequest {
     // Initialize with all required fields to avoid field_reassign_with_default warning
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: None,
         card_type: None,

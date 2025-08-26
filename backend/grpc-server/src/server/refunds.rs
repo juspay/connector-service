@@ -18,6 +18,7 @@ use grpc_api_types::payments::{
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 
 use crate::{
     configs::Config,
@@ -161,7 +162,7 @@ impl RefundService for Refunds {
             .map_err(|e| e.into_grpc_status())?;
 
             let response = RefundServiceTransformResponse {
-                event_type: WebhookEventType::WebhookRefund.into(),
+                event_type: WebhookEventType::WebhookRefundSuccess.into(),
                 content: Some(content),
                 source_verified,
                 response_ref_id: None,
