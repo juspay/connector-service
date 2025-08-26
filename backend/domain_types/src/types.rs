@@ -934,7 +934,7 @@ impl<
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
+            Some(ref email_str) => Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                 error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                     error_identifier: 400,
@@ -1069,7 +1069,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email = match value.email.clone() {
-            Some(email) => Some(common_utils::pii::Email::from_str(&email).change_context(
+            Some(email) => Some(common_utils::pii::Email::from_str(&email.expose()).change_context(
                 ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_EMAIL".to_owned(),
                     error_identifier: 400,
@@ -1357,7 +1357,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            city: value.city.clone(),
+            city: value.city.clone().map(|city| city.expose()),
             country: Some(common_enums::CountryAlpha2::foreign_try_from(
                 value.country_alpha2_code(),
             )?),
@@ -3608,7 +3608,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
         value: PaymentServiceRegisterRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
+            Some(ref email_str) => Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                 error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                     error_identifier: 400,
@@ -4299,7 +4299,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         })?;
 
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
+            Some(ref email_str) => Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
                 error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
                     error_identifier: 400,
