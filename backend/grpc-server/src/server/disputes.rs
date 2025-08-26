@@ -423,7 +423,7 @@ impl DisputeService for Disputes {
             .map_err(|e| e.into_grpc_status())?;
 
             let response = DisputeServiceTransformResponse {
-                event_type: WebhookEventType::WebhookDispute.into(),
+                event_type: WebhookEventType::WebhookDisputeOpened.into(),
                 content: Some(content),
                 source_verified,
                 response_ref_id: None,
