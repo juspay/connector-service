@@ -5,14 +5,13 @@
 use grpc_server::{app, configs};
 mod common;
 
-use cards::CardNumber;
-use hyperswitch_masking::Secret;
 use std::{
     env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -25,6 +24,7 @@ use grpc_api_types::{
         RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
