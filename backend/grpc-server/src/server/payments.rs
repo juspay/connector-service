@@ -53,6 +53,22 @@ struct EventParams<'a> {
     service_name: &'a str,
     request_id: &'a str,
 }
+
+// Error handling utilities for webhook processing
+trait WebhookErrorExt<T> {
+    #[allow(clippy::result_large_err)]
+    fn to_grpc_status(self) -> Result<T, tonic::Status>;
+}
+
+impl<T, E> WebhookErrorExt<T> for Result<T, E>
+where
+    E: IntoGrpcStatus,
+{
+    fn to_grpc_status(self) -> Result<T, tonic::Status> {
+        self.map_err(|e| e.into_grpc_status())
+    }
+}
+
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -907,7 +923,7 @@ impl PaymentService for Payments {
                     Some(connector_auth_details.clone()),
                 )
                 .switch()
-                .map_err(|e| e.into_grpc_status())?;
+                .to_grpc_status()?;
 
             let event_type = connector_data
                 .connector
@@ -917,34 +933,47 @@ impl PaymentService for Payments {
                     Some(connector_auth_details.clone()),
                 )
                 .switch()
-                .map_err(|e| e.into_grpc_status())?;
+                .to_grpc_status()?;
 
-            // Get content for the webhook based on the event type
-            let content = match event_type {
-                domain_types::connector_types::EventType::Payment => get_payments_webhook_content(
+            // Get content for the webhook based on the event type using categorization
+            let content = if event_type.is_payment_event() {
+                get_payments_webhook_content(
                     connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?,
-                domain_types::connector_types::EventType::Refund => get_refunds_webhook_content(
+                .to_grpc_status()?
+            } else if event_type.is_refund_event() {
+                get_refunds_webhook_content(
                     connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?,
-                domain_types::connector_types::EventType::Dispute => get_disputes_webhook_content(
+                .to_grpc_status()?
+            } else if event_type.is_dispute_event() {
+                get_disputes_webhook_content(
                     connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?,
+                .to_grpc_status()?
+            } else {
+                // For all other event types, default to payment webhook content for now
+                // This includes mandate, payout, recovery, and misc events
+                get_payments_webhook_content(
+                    connector_data,
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
+                )
+                .await
+                .to_grpc_status()?
             };
 
             let api_event_type =
@@ -1311,13 +1340,17 @@ impl PaymentService for Payments {
 
 async fn get_payments_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    request_details: &domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<&ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_payment_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_payment_webhook(
+            request_details.clone(),
+            webhook_secrets.cloned(),
+            connector_auth_details.cloned(),
+        )
         .switch()?;
 
     // Generate response
@@ -1351,13 +1384,17 @@ async fn get_refunds_webhook_content<
         + 'static,
 >(
     connector_data: ConnectorData<T>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    request_details: &domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<&ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_refund_webhook(
+            request_details.clone(),
+            webhook_secrets.cloned(),
+            connector_auth_details.cloned(),
+        )
         .switch()?;
 
     // Generate response - RefundService should handle this, for now return basic response
@@ -1391,13 +1428,17 @@ async fn get_disputes_webhook_content<
         + 'static,
 >(
     connector_data: ConnectorData<T>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    request_details: &domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<&ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_dispute_webhook(
+            request_details.clone(),
+            webhook_secrets.cloned(),
+            connector_auth_details.cloned(),
+        )
         .switch()?;
 
     // Generate response - DisputeService should handle this, for now return basic response
