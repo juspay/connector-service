@@ -15,12 +15,11 @@ use domain_types::{
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
-
-use super::MifinityRouterData;
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use time::Date;
 
+use super::MifinityRouterData;
 use crate::{types::ResponseRouterData, utils};
 pub mod auth_headers {
     pub const API_VERSION: &str = "api-version";

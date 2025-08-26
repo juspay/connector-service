@@ -5,8 +5,6 @@
 use grpc_server::{app, configs};
 mod common;
 
-use cards::CardNumber;
-use hyperswitch_masking::Secret;
 use std::{
     collections::HashMap,
     env,
@@ -14,6 +12,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -25,6 +24,7 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for Elavon connector

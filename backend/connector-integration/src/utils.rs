@@ -1,14 +1,13 @@
 pub mod xml_utils;
 use common_utils::CustomResult;
-use error_stack::{Report, ResultExt};
-pub use xml_utils::preprocess_xml_response_bytes;
-
 use domain_types::{
     connector_types::PaymentsAuthorizeData, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse, router_response_types::Response,
 };
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde_json::Value;
+pub use xml_utils::preprocess_xml_response_bytes;
 
 type Error = error_stack::Report<errors::ConnectorError>;
 
