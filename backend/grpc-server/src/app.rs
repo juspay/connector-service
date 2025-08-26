@@ -103,9 +103,13 @@ impl Service {
     #[allow(clippy::expect_used)]
     pub async fn new(config: Arc<configs::Config>) -> Self {
         // Initialize the global EventPublisher - fail fast on startup
-        common_utils::init_event_publisher(&config.events)
-            .expect("Failed to initialize global EventPublisher during startup");
-        logger::info!("Global EventPublisher initialized successfully");
+        if config.events.enabled {
+            common_utils::init_event_publisher(&config.events)
+                .expect("Failed to initialize global EventPublisher during startup");
+            logger::info!("Global EventPublisher initialized successfully");
+        } else {
+            logger::info!("EventPublisher disabled in configuration");
+        }
 
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
