@@ -221,7 +221,7 @@ impl<
         domain_types::connector_types::EventType,
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
-        Ok(domain_types::connector_types::EventType::Payment)
+        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
     }
 
     fn process_payment_webhook(
@@ -246,7 +246,7 @@ impl<
             ),
             status: common_enums::AttemptStatus::Charged,
             status_code: 200,
-            connector_response_reference_id: Some(webhook.transaction_id),
+            connector_response_reference_id: None,
             error_code: None,
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
@@ -454,6 +454,7 @@ impl<
     for Cashtocode<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
