@@ -10,8 +10,6 @@ use std::{
     env,
     time::{SystemTime, UNIX_EPOCH},
 };
-
-use common_enums;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -278,8 +276,6 @@ async fn test_payment_authorization_auto_capture() {
         // Create the payment authorization request
         let request = create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
 
-        println!("Request: {:?}", request);
-
         // Add metadata headers
         let mut grpc_request = Request::new(request);
         add_bluecode_metadata(&mut grpc_request);
@@ -298,8 +294,6 @@ async fn test_payment_authorization_auto_capture() {
             response.transaction_id.is_some(),
             "Resource ID should be present"
         );
-
-        println!("Response: {:?}", response);
 
         // Extract the transaction ID
         let _transaction_id = extract_transaction_id(&response);

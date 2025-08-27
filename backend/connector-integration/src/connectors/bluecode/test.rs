@@ -49,14 +49,18 @@ mod tests {
                     return_url: Some("https://www.google.com".to_string()),
                     address: domain_types::payment_address::PaymentAddress::new(
                         None,
-                        Some(domain_types::payment_address::AddressDetails {
-                            first_name: Some(Secret::new("John".to_string())),
-                            last_name: Some(Secret::new("Doe".to_string())),
-                            line1: Some(Secret::new("123 Main St".to_string())),
-                            city: Some("Anytown".to_string()),
-                            zip: Some(Secret::new("12345".to_string())),
-                            country: Some(common_enums::CountryAlpha2::US),
-                            ..Default::default()
+                        Some(domain_types::payment_address::Address {
+                            address: Some(domain_types::payment_address::AddressDetails {
+                                first_name: Some(Secret::new("John".to_string())),
+                                last_name: Some(Secret::new("Doe".to_string())),
+                                line1: Some(Secret::new("123 Main St".to_string())),
+                                city: Some("Anytown".to_string()),
+                                zip: Some(Secret::new("12345".to_string())),
+                                country: Some(common_enums::CountryAlpha2::US),
+                                ..Default::default()
+                            }),
+                            phone: None,
+                            email: None,
                         }),
                         None,
                         None,
