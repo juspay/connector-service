@@ -3,6 +3,7 @@
 #![allow(clippy::panic)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::Secret;
 mod common;
 
 use std::{
@@ -95,7 +96,7 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     let wallet_details = wallet_payment_method_type::WalletType::Mifinity(MifinityWallet {
-        date_of_birth: TEST_DATE_OF_BIRTH.to_string(),
+        date_of_birth: Some(Secret::new(TEST_DATE_OF_BIRTH.to_string())),
         language_preference: Some("en-US".to_string()),
     });
 
@@ -118,21 +119,21 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress {
             shipping_address: Some(grpc_api_types::payments::Address::default()),
             billing_address: Some(grpc_api_types::payments::Address {
                 first_name: Some("joseph".to_string()),
                 last_name: Some("Doe".to_string()),
-                phone_number: Some("8056594427".to_string()),
+                phone_number: Some("8056594427".to_string().into()),
                 phone_country_code: Some("+91".to_string()),
-                email: Some("swangi@gmail.com".to_string()),
-                line1: Some("1467".to_string()),
-                line2: Some("Harrison Street".to_string()),
-                line3: Some("Harrison Street".to_string()),
-                city: Some("San Fransico".to_string()),
-                state: Some("California".to_string()),
-                zip_code: Some("94122".to_string()),
+                email: Some("swangi@gmail.com".to_string().into()),
+                line1: Some("1467".to_string().into()),
+                line2: Some("Harrison Street".to_string().into()),
+                line3: Some("Harrison Street".to_string().into()),
+                city: Some("San Fransico".to_string().into()),
+                state: Some("California".to_string().into()),
+                zip_code: Some("94122".to_string().into()),
                 country_alpha2_code: Some(grpc_api_types::payments::CountryAlpha2::De.into()),
             }),
         }),

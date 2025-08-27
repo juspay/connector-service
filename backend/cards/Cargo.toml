@@ -1,5 +1,5 @@
 [package]
-name = "cards"
+name = "ucs_cards"
 description = "Types to handle card masking and validation"
 version = "0.1.0"
 edition = "2021"
@@ -14,8 +14,8 @@ bytes = "1"
 prost = "0.13"
 
 # First party crates
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.111.4", package = "masking" }
-common_utils = { path = "../common_utils" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.116.0", package = "masking" }
+common_utils = { path = "../common_utils", package = "ucs_common_utils" }
 
 
 [dev-dependencies]

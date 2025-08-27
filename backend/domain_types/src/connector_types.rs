@@ -1163,9 +1163,156 @@ pub struct ConnectorWebhookSecrets {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EventType {
+    // Payment intent events
+    PaymentIntentFailure,
+    PaymentIntentSuccess,
+    PaymentIntentProcessing,
+    PaymentIntentPartiallyFunded,
+    PaymentIntentCancelled,
+    PaymentIntentCancelFailure,
+    PaymentIntentAuthorizationSuccess,
+    PaymentIntentAuthorizationFailure,
+    PaymentIntentCaptureSuccess,
+    PaymentIntentCaptureFailure,
+    PaymentIntentExpired,
+    PaymentActionRequired,
+
+    // Source events
+    SourceChargeable,
+    SourceTransactionCreated,
+
+    // Refund events
+    RefundFailure,
+    RefundSuccess,
+
+    // Dispute events
+    DisputeOpened,
+    DisputeExpired,
+    DisputeAccepted,
+    DisputeCancelled,
+    DisputeChallenged,
+    DisputeWon,
+    DisputeLost,
+
+    // Mandate events
+    MandateActive,
+    MandateRevoked,
+
+    // Misc events
+    EndpointVerification,
+    ExternalAuthenticationAres,
+    FrmApproved,
+    FrmRejected,
+
+    // Payout events
+    PayoutSuccess,
+    PayoutFailure,
+    PayoutProcessing,
+    PayoutCancelled,
+    PayoutCreated,
+    PayoutExpired,
+    PayoutReversed,
+
+    // Recovery events
+    RecoveryPaymentFailure,
+    RecoveryPaymentSuccess,
+    RecoveryPaymentPending,
+    RecoveryInvoiceCancel,
+    IncomingWebhookEventUnspecified,
+
+    // Legacy broad categories (for backward compatibility)
     Payment,
     Refund,
     Dispute,
+}
+
+impl EventType {
+    /// Returns true if this event type is payment-related
+    pub fn is_payment_event(&self) -> bool {
+        matches!(
+            self,
+            Self::PaymentIntentFailure
+                | Self::PaymentIntentSuccess
+                | Self::PaymentIntentProcessing
+                | Self::PaymentIntentPartiallyFunded
+                | Self::PaymentIntentCancelled
+                | Self::PaymentIntentCancelFailure
+                | Self::PaymentIntentAuthorizationSuccess
+                | Self::PaymentIntentAuthorizationFailure
+                | Self::PaymentIntentCaptureSuccess
+                | Self::PaymentIntentCaptureFailure
+                | Self::PaymentIntentExpired
+                | Self::PaymentActionRequired
+                | Self::SourceChargeable
+                | Self::SourceTransactionCreated
+                | Self::Payment
+        )
+    }
+
+    /// Returns true if this event type is refund-related
+    pub fn is_refund_event(&self) -> bool {
+        matches!(
+            self,
+            Self::RefundFailure | Self::RefundSuccess | Self::Refund
+        )
+    }
+
+    /// Returns true if this event type is dispute-related
+    pub fn is_dispute_event(&self) -> bool {
+        matches!(
+            self,
+            Self::DisputeOpened
+                | Self::DisputeExpired
+                | Self::DisputeAccepted
+                | Self::DisputeCancelled
+                | Self::DisputeChallenged
+                | Self::DisputeWon
+                | Self::DisputeLost
+                | Self::Dispute
+        )
+    }
+
+    /// Returns true if this event type is mandate-related
+    pub fn is_mandate_event(&self) -> bool {
+        matches!(self, Self::MandateActive | Self::MandateRevoked)
+    }
+
+    /// Returns true if this event type is payout-related
+    pub fn is_payout_event(&self) -> bool {
+        matches!(
+            self,
+            Self::PayoutSuccess
+                | Self::PayoutFailure
+                | Self::PayoutProcessing
+                | Self::PayoutCancelled
+                | Self::PayoutCreated
+                | Self::PayoutExpired
+                | Self::PayoutReversed
+        )
+    }
+
+    /// Returns true if this event type is recovery-related
+    pub fn is_recovery_event(&self) -> bool {
+        matches!(
+            self,
+            Self::RecoveryPaymentFailure
+                | Self::RecoveryPaymentSuccess
+                | Self::RecoveryPaymentPending
+                | Self::RecoveryInvoiceCancel
+        )
+    }
+
+    /// Returns true if this event type is miscellaneous
+    pub fn is_misc_event(&self) -> bool {
+        matches!(
+            self,
+            Self::EndpointVerification
+                | Self::ExternalAuthenticationAres
+                | Self::FrmApproved
+                | Self::FrmRejected
+                | Self::IncomingWebhookEventUnspecified
+        )
+    }
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
@@ -1175,10 +1322,107 @@ impl ForeignTryFrom<grpc_api_types::payments::WebhookEventType> for EventType {
         value: grpc_api_types::payments::WebhookEventType,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            grpc_api_types::payments::WebhookEventType::WebhookPayment => Ok(Self::Payment),
-            grpc_api_types::payments::WebhookEventType::WebhookRefund => Ok(Self::Refund),
-            grpc_api_types::payments::WebhookEventType::WebhookDispute => Ok(Self::Dispute),
-            grpc_api_types::payments::WebhookEventType::Unspecified => Ok(Self::Payment), // Default to Payment
+            grpc_api_types::payments::WebhookEventType::PaymentIntentFailure => {
+                Ok(Self::PaymentIntentFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentSuccess => {
+                Ok(Self::PaymentIntentSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentProcessing => {
+                Ok(Self::PaymentIntentProcessing)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentPartiallyFunded => {
+                Ok(Self::PaymentIntentPartiallyFunded)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentCancelled => {
+                Ok(Self::PaymentIntentCancelled)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentCancelFailure => {
+                Ok(Self::PaymentIntentCancelFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentAuthorizationSuccess => {
+                Ok(Self::PaymentIntentAuthorizationSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentAuthorizationFailure => {
+                Ok(Self::PaymentIntentAuthorizationFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentCaptureSuccess => {
+                Ok(Self::PaymentIntentCaptureSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentCaptureFailure => {
+                Ok(Self::PaymentIntentCaptureFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentIntentExpired => {
+                Ok(Self::PaymentIntentExpired)
+            }
+            grpc_api_types::payments::WebhookEventType::PaymentActionRequired => {
+                Ok(Self::PaymentActionRequired)
+            }
+            grpc_api_types::payments::WebhookEventType::SourceChargeable => {
+                Ok(Self::SourceChargeable)
+            }
+            grpc_api_types::payments::WebhookEventType::SourceTransactionCreated => {
+                Ok(Self::SourceTransactionCreated)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookRefundFailure => {
+                Ok(Self::RefundFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookRefundSuccess => {
+                Ok(Self::RefundSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeOpened => {
+                Ok(Self::DisputeOpened)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeExpired => {
+                Ok(Self::DisputeExpired)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeAccepted => {
+                Ok(Self::DisputeAccepted)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeCancelled => {
+                Ok(Self::DisputeCancelled)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeChallenged => {
+                Ok(Self::DisputeChallenged)
+            }
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeWon => Ok(Self::DisputeWon),
+            grpc_api_types::payments::WebhookEventType::WebhookDisputeLost => Ok(Self::DisputeLost),
+            grpc_api_types::payments::WebhookEventType::MandateActive => Ok(Self::MandateActive),
+            grpc_api_types::payments::WebhookEventType::MandateRevoked => Ok(Self::MandateRevoked),
+            grpc_api_types::payments::WebhookEventType::EndpointVerification => {
+                Ok(Self::EndpointVerification)
+            }
+            grpc_api_types::payments::WebhookEventType::ExternalAuthenticationAres => {
+                Ok(Self::ExternalAuthenticationAres)
+            }
+            grpc_api_types::payments::WebhookEventType::FrmApproved => Ok(Self::FrmApproved),
+            grpc_api_types::payments::WebhookEventType::FrmRejected => Ok(Self::FrmRejected),
+            grpc_api_types::payments::WebhookEventType::PayoutSuccess => Ok(Self::PayoutSuccess),
+            grpc_api_types::payments::WebhookEventType::PayoutFailure => Ok(Self::PayoutFailure),
+            grpc_api_types::payments::WebhookEventType::PayoutProcessing => {
+                Ok(Self::PayoutProcessing)
+            }
+            grpc_api_types::payments::WebhookEventType::PayoutCancelled => {
+                Ok(Self::PayoutCancelled)
+            }
+            grpc_api_types::payments::WebhookEventType::PayoutCreated => Ok(Self::PayoutCreated),
+            grpc_api_types::payments::WebhookEventType::PayoutExpired => Ok(Self::PayoutExpired),
+            grpc_api_types::payments::WebhookEventType::PayoutReversed => Ok(Self::PayoutReversed),
+            grpc_api_types::payments::WebhookEventType::RecoveryPaymentFailure => {
+                Ok(Self::RecoveryPaymentFailure)
+            }
+            grpc_api_types::payments::WebhookEventType::RecoveryPaymentSuccess => {
+                Ok(Self::RecoveryPaymentSuccess)
+            }
+            grpc_api_types::payments::WebhookEventType::RecoveryPaymentPending => {
+                Ok(Self::RecoveryPaymentPending)
+            }
+            grpc_api_types::payments::WebhookEventType::RecoveryInvoiceCancel => {
+                Ok(Self::RecoveryInvoiceCancel)
+            }
+            grpc_api_types::payments::WebhookEventType::IncomingWebhookEventUnspecified => {
+                Ok(Self::IncomingWebhookEventUnspecified)
+            }
         }
     }
 }
@@ -1188,9 +1432,56 @@ impl ForeignTryFrom<EventType> for grpc_api_types::payments::WebhookEventType {
 
     fn foreign_try_from(value: EventType) -> Result<Self, error_stack::Report<Self::Error>> {
         match value {
-            EventType::Payment => Ok(Self::WebhookPayment),
-            EventType::Refund => Ok(Self::WebhookRefund),
-            EventType::Dispute => Ok(Self::WebhookDispute),
+            EventType::PaymentIntentFailure => Ok(Self::PaymentIntentFailure),
+            EventType::PaymentIntentSuccess => Ok(Self::PaymentIntentSuccess),
+            EventType::PaymentIntentProcessing => Ok(Self::PaymentIntentProcessing),
+            EventType::PaymentIntentPartiallyFunded => Ok(Self::PaymentIntentPartiallyFunded),
+            EventType::PaymentIntentCancelled => Ok(Self::PaymentIntentCancelled),
+            EventType::PaymentIntentCancelFailure => Ok(Self::PaymentIntentCancelFailure),
+            EventType::PaymentIntentAuthorizationSuccess => {
+                Ok(Self::PaymentIntentAuthorizationSuccess)
+            }
+            EventType::PaymentIntentAuthorizationFailure => {
+                Ok(Self::PaymentIntentAuthorizationFailure)
+            }
+            EventType::PaymentIntentCaptureSuccess => Ok(Self::PaymentIntentCaptureSuccess),
+            EventType::PaymentIntentCaptureFailure => Ok(Self::PaymentIntentCaptureFailure),
+            EventType::PaymentIntentExpired => Ok(Self::PaymentIntentExpired),
+            EventType::PaymentActionRequired => Ok(Self::PaymentActionRequired),
+            EventType::SourceChargeable => Ok(Self::SourceChargeable),
+            EventType::SourceTransactionCreated => Ok(Self::SourceTransactionCreated),
+            EventType::RefundFailure => Ok(Self::WebhookRefundFailure),
+            EventType::RefundSuccess => Ok(Self::WebhookRefundSuccess),
+            EventType::DisputeOpened => Ok(Self::WebhookDisputeOpened),
+            EventType::DisputeExpired => Ok(Self::WebhookDisputeExpired),
+            EventType::DisputeAccepted => Ok(Self::WebhookDisputeAccepted),
+            EventType::DisputeCancelled => Ok(Self::WebhookDisputeCancelled),
+            EventType::DisputeChallenged => Ok(Self::WebhookDisputeChallenged),
+            EventType::DisputeWon => Ok(Self::WebhookDisputeWon),
+            EventType::DisputeLost => Ok(Self::WebhookDisputeLost),
+            EventType::MandateActive => Ok(Self::MandateActive),
+            EventType::MandateRevoked => Ok(Self::MandateRevoked),
+            EventType::EndpointVerification => Ok(Self::EndpointVerification),
+            EventType::ExternalAuthenticationAres => Ok(Self::ExternalAuthenticationAres),
+            EventType::FrmApproved => Ok(Self::FrmApproved),
+            EventType::FrmRejected => Ok(Self::FrmRejected),
+            EventType::PayoutSuccess => Ok(Self::PayoutSuccess),
+            EventType::PayoutFailure => Ok(Self::PayoutFailure),
+            EventType::PayoutProcessing => Ok(Self::PayoutProcessing),
+            EventType::PayoutCancelled => Ok(Self::PayoutCancelled),
+            EventType::PayoutCreated => Ok(Self::PayoutCreated),
+            EventType::PayoutExpired => Ok(Self::PayoutExpired),
+            EventType::PayoutReversed => Ok(Self::PayoutReversed),
+            EventType::RecoveryPaymentFailure => Ok(Self::RecoveryPaymentFailure),
+            EventType::RecoveryPaymentSuccess => Ok(Self::RecoveryPaymentSuccess),
+            EventType::RecoveryPaymentPending => Ok(Self::RecoveryPaymentPending),
+            EventType::RecoveryInvoiceCancel => Ok(Self::RecoveryInvoiceCancel),
+            EventType::IncomingWebhookEventUnspecified => Ok(Self::IncomingWebhookEventUnspecified),
+
+            // Legacy broad categories (for backward compatibility)
+            EventType::Payment => Ok(Self::PaymentIntentSuccess), // Map broad Payment to PaymentIntentSuccess
+            EventType::Refund => Ok(Self::WebhookRefundSuccess), // Map broad Refund to WebhookRefundSuccess
+            EventType::Dispute => Ok(Self::WebhookDisputeOpened), // Map broad Dispute to WebhookDisputeOpened
         }
     }
 }
@@ -1400,6 +1691,7 @@ pub struct RepeatPaymentData {
     pub capture_method: Option<common_enums::CaptureMethod>,
     pub browser_info: Option<BrowserInformation>,
     pub email: Option<common_utils::pii::Email>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 impl RepeatPaymentData {
