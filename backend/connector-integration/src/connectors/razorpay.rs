@@ -829,9 +829,9 @@ impl<
         })?;
 
         if payload.refund.is_some() {
-            Ok(EventType::Refund)
+            Ok(EventType::RefundSuccess)
         } else {
-            Ok(EventType::Payment)
+            Ok(EventType::PaymentIntentSuccess)
         }
     }
 

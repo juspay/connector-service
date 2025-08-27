@@ -200,17 +200,25 @@ impl<
             })?;
 
         Ok(match webhook_body.event_type {
-            transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
-            | transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CaptureCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
-                EventType::Payment
+            transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated => {
+                EventType::PaymentIntentAuthorizationSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CaptureCreated => {
+                EventType::PaymentIntentCaptureSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated => {
+                EventType::PaymentIntentSuccess // Combined auth+capture
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => {
+                EventType::PaymentIntentCancelled
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => {
-                EventType::Refund
+                EventType::RefundSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
+                EventType::MandateActive
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::Unknown => {
                 tracing::warn!(

@@ -1,6 +1,7 @@
 pub mod transformers;
 
-use crate::connectors::mifinity::transformers::auth_headers;
+use std::fmt::Debug;
+
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, StringMajorUnit};
 use domain_types::{
@@ -31,13 +32,12 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::fmt::Debug;
 
 use super::macros;
 use crate::{
     connectors::mifinity::transformers::{
-        MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest, MifinityPaymentsResponse,
-        MifinityPsyncResponse,
+        auth_headers, MifinityAuthType, MifinityErrorResponse, MifinityPaymentsRequest,
+        MifinityPaymentsResponse, MifinityPsyncResponse,
     },
     types::ResponseRouterData,
 };

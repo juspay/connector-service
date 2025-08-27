@@ -27,6 +27,7 @@ use grpc_api_types::payments::{
     DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -147,7 +148,7 @@ impl DisputeService for Disputes {
                 flow_name: common_utils::events::FlowName::SubmitEvidence,
                 event_config: &self.config.events,
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                    serde_json::to_value(&payload).unwrap_or_default(),
+                    payload.masked_serialize().unwrap_or_default(),
                 )),
                 request_id: &request_id,
             };
@@ -321,7 +322,7 @@ impl DisputeService for Disputes {
                 flow_name: common_utils::events::FlowName::AcceptDispute,
                 event_config: &self.config.events,
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                    serde_json::to_value(&payload).unwrap_or_default(),
+                    payload.masked_serialize().unwrap_or_default(),
                 )),
                 request_id: &request_id,
             };
@@ -423,7 +424,7 @@ impl DisputeService for Disputes {
             .map_err(|e| e.into_grpc_status())?;
 
             let response = DisputeServiceTransformResponse {
-                event_type: WebhookEventType::WebhookDispute.into(),
+                event_type: WebhookEventType::WebhookDisputeOpened.into(),
                 content: Some(content),
                 source_verified,
                 response_ref_id: None,

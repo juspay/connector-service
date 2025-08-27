@@ -2,11 +2,14 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
+use cards::CardNumber;
 use grpc_server::{app, configs};
+use hyperswitch_masking::Secret;
 mod common;
 
 use std::{
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -97,17 +100,17 @@ fn create_payment_authorize_request(
 ) -> PaymentServiceAuthorizeRequest {
     // Select the correct card number based on capture method
     let card_number = match capture_method {
-        CaptureMethod::Automatic => AUTO_CAPTURE_CARD_NUMBER,
-        CaptureMethod::Manual => MANUAL_CAPTURE_CARD_NUMBER,
-        _ => MANUAL_CAPTURE_CARD_NUMBER, // Default to manual capture card
+        CaptureMethod::Automatic => Some(CardNumber::from_str(AUTO_CAPTURE_CARD_NUMBER).unwrap()),
+        CaptureMethod::Manual => Some(CardNumber::from_str(MANUAL_CAPTURE_CARD_NUMBER).unwrap()),
+        _ => Some(CardNumber::from_str(MANUAL_CAPTURE_CARD_NUMBER).unwrap()), // Default to manual capture card
     };
 
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: card_number.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number,
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: None,
         card_type: None,
@@ -126,7 +129,7 @@ fn create_payment_authorize_request(
                 card_type: Some(card_details),
             })),
         }),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
