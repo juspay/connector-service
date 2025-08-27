@@ -1,0 +1,28 @@
+[package]
+name = "tracing-kafka"
+version = "0.1.0"
+edition = "2021"
+description = "A generic Kafka tracing subscriber that reuses log_utils formatting"
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rdkafka = "0.36"
+serde_json = "1.0"
+tokio = "1.0"
+thiserror = "1.0"
+log_utils = { git = "https://github.com/juspay/framework-libs-rs", rev = "243562041252fe5897ce888d20b715ffdc3767ce", package = "log_utils", features = ["tracing"] }
+
+# Optional dependencies for metrics
+prometheus = { version = "0.13", optional = true }
+
+[lib]
+name = "tracing_kafka"
+path = "src/lib.rs"
+
+[features]
+default = ["kafka-metrics"]
+kafka-metrics = ["dep:prometheus"]
+
+[lints]
+workspace = true

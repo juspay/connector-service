@@ -9,7 +9,8 @@ members = [
   "backend/common_enums",
   "backend/common_utils",
   "backend/interfaces",
-  "backend/domain_types"
+  "backend/domain_types",
+  "backend/tracing-kafka"
 ]
 exclude = [
   "examples/example-rs",

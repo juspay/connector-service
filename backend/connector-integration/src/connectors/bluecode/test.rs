@@ -25,10 +25,7 @@ mod tests {
         };
         use serde_json::json;
 
-        use crate::{
-            connectors::Bluecode,
-            types::ConnectorData,
-        };
+        use crate::{connectors::Bluecode, types::ConnectorData};
 
         #[test]
         fn test_build_request_valid() {

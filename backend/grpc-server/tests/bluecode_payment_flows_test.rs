@@ -15,24 +15,11 @@ use common_enums;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
-        identifier::IdType,
-        payment_method,
-        payment_service_client::PaymentServiceClient,
-        wallet_payment_method_type,
-        Address,
-        AuthenticationType,
-        Bluecode,
-        BrowserInformation,
-        CaptureMethod,
-        CountryAlpha2,
-        Identifier,
-        PaymentAddress,
-        PaymentMethod,
-        PaymentServiceAuthorizeRequest,
-        PaymentServiceAuthorizeResponse,
-        PaymentServiceGetRequest,
-        PaymentStatus,
-        WalletPaymentMethodType,
+        identifier::IdType, payment_method, payment_service_client::PaymentServiceClient,
+        wallet_payment_method_type, Address, AuthenticationType, Bluecode, BrowserInformation,
+        CaptureMethod, CountryAlpha2, Identifier, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceGetRequest,
+        PaymentStatus, WalletPaymentMethodType,
     },
 };
 use rand::{distributions::Alphanumeric, Rng};
@@ -59,8 +46,8 @@ fn get_timestamp() -> u64 {
 // Helper function to add Fiserv metadata headers to a request
 fn add_bluecode_metadata<T>(request: &mut Request<T>) {
     // Get API credentials from environment variables - throw error if not set
-    let api_key =
-        env::var(BLUECODE_API_KEY_ENV).expect("TEST_BLUECODE_API_KEY_ENV environment variable is required");
+    let api_key = env::var(BLUECODE_API_KEY_ENV)
+        .expect("TEST_BLUECODE_API_KEY_ENV environment variable is required");
     let shop_name = env::var(BLUECODE_SHOP_NAME_ENV)
         .expect("TEST_BLUECODE_SHOP_NAME_ENV environment variable is required");
 
@@ -119,7 +106,11 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
 
 // Helper function to generate unique request reference ID
 fn generate_unique_request_ref_id(prefix: &str) -> String {
-    format!("{}_{}", prefix, &uuid::Uuid::new_v4().simple().to_string()[..8])
+    format!(
+        "{}_{}",
+        prefix,
+        &uuid::Uuid::new_v4().simple().to_string()[..8]
+    )
 }
 
 // Helper function to generate unique email
@@ -229,7 +220,7 @@ fn create_payment_authorize_request(
     // Set capture method
     // request.capture_method = Some(i32::from(CaptureMethod::from(capture_method)));
 
-        // Get terminal_id for metadata
+    // Get terminal_id for metadata
     let shop_name = env::var(BLUECODE_SHOP_NAME_ENV)
         .expect("BLUECODE_SHOP_NAME environment variable is required");
 
@@ -244,8 +235,6 @@ fn create_payment_authorize_request(
     metadata.insert("connector_meta_data".to_string(), connector_metadata_json);
 
     request.metadata = metadata;
-
-
 
     request
 }

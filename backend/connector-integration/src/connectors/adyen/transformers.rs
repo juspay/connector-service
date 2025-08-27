@@ -657,15 +657,27 @@ impl<
         match wallet_data {
             WalletData::GooglePay(data) => {
                 let gpay_data = AdyenGPay {
-                    google_pay_token: Secret::new(data.tokenization_data.token.to_owned()),
+                    google_pay_token: Secret::new(
+                        data.tokenization_data
+                            .get_encrypted_google_pay_token()
+                            .change_context(errors::ConnectorError::MissingRequiredField {
+                                field_name: "gpay wallet_token",
+                            })?
+                            .to_owned(),
+                    ),
                 };
                 Ok(AdyenPaymentMethod::Gpay(Box::new(gpay_data)))
             }
             WalletData::ApplePay(data) => {
+                let apple_pay_encrypted_data = data
+                    .payment_data
+                    .get_encrypted_apple_pay_payment_data_mandatory()
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "Apple pay encrypted data",
+                    })?;
                 let apple_pay_data = AdyenApplePay {
-                    apple_pay_token: Secret::new(data.payment_data.to_string()),
+                    apple_pay_token: Secret::new(apple_pay_encrypted_data.to_string()),
                 };
-
                 Ok(AdyenPaymentMethod::ApplePay(Box::new(apple_pay_data)))
             }
 
@@ -1300,7 +1312,6 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             connector_response_reference_id: Some(response.reference),
             incremental_authorization_allowed: None,
             mandate_reference: None,
-            raw_connector_response: None,
             status_code: http_code,
         };
 
@@ -1348,7 +1359,6 @@ pub fn get_adyen_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1375,7 +1385,6 @@ pub fn get_adyen_response(
         connector_response_reference_id: Some(response.merchant_reference),
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payments_response_data))
@@ -1415,7 +1424,6 @@ pub fn get_redirection_response(
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1451,7 +1459,6 @@ pub fn get_redirection_response(
             .or(response.psp_reference),
         incremental_authorization_allowed: None,
         mandate_reference: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payments_response_data))
@@ -1658,20 +1665,23 @@ pub(crate) fn get_adyen_refund_webhook_event(
 
 pub(crate) fn get_adyen_webhook_event_type(code: WebhookEventCode) -> EventType {
     match code {
-        WebhookEventCode::Authorisation
-        | WebhookEventCode::Cancellation
-        | WebhookEventCode::Capture
-        | WebhookEventCode::CaptureFailed => EventType::Payment,
-        WebhookEventCode::Refund
-        | WebhookEventCode::RefundFailed
-        | WebhookEventCode::RefundReversed
-        | WebhookEventCode::CancelOrRefund => EventType::Refund,
-        WebhookEventCode::NotificationOfChargeback
-        | WebhookEventCode::Chargeback
-        | WebhookEventCode::ChargebackReversed
-        | WebhookEventCode::SecondChargeback
-        | WebhookEventCode::PrearbitrationWon
-        | WebhookEventCode::PrearbitrationLost => EventType::Dispute,
+        WebhookEventCode::Authorisation => EventType::PaymentIntentAuthorizationSuccess,
+        WebhookEventCode::Cancellation => EventType::PaymentIntentCancelled,
+        WebhookEventCode::Capture => EventType::PaymentIntentCaptureSuccess,
+        WebhookEventCode::CaptureFailed => EventType::PaymentIntentCaptureFailure,
+        WebhookEventCode::Refund | WebhookEventCode::CancelOrRefund => EventType::RefundSuccess,
+        WebhookEventCode::RefundFailed | WebhookEventCode::RefundReversed => {
+            EventType::RefundFailure
+        }
+        WebhookEventCode::NotificationOfChargeback | WebhookEventCode::Chargeback => {
+            EventType::DisputeOpened
+        }
+        WebhookEventCode::ChargebackReversed | WebhookEventCode::PrearbitrationWon => {
+            EventType::DisputeWon
+        }
+        WebhookEventCode::SecondChargeback | WebhookEventCode::PrearbitrationLost => {
+            EventType::DisputeLost
+        }
     }
 }
 
@@ -2058,7 +2068,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.psp_reference,
             refund_status: status,
-            raw_connector_response: None,
             status_code: http_code,
         };
 
@@ -2167,7 +2176,6 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 connector_response_reference_id: Some(response.reference),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
-                raw_connector_response: None,
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -2665,7 +2673,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                     .connector_dispute_id
                     .clone(),
                 connector_dispute_status: None,
-                raw_connector_response: None,
                 status_code: http_code,
             };
 
@@ -2693,7 +2700,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDisputeAcceptResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -2878,7 +2884,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                     .connector_dispute_id
                     .clone(),
                 connector_dispute_status: None,
-                raw_connector_response: None,
                 status_code: http_code,
             };
 
@@ -2906,7 +2911,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenSubmitEvidenceResponse, Self>>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             };
 
             Ok(Self {
@@ -3019,7 +3023,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                             .resource_common_data
                             .connector_dispute_id
                             .clone(),
-                        raw_connector_response: None,
                         status_code: http_code,
                     }),
                     ..router_data
@@ -3037,7 +3040,6 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenDefendDisputeResponse, Self>>
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 ..router_data
             }),

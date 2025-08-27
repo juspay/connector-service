@@ -1,7 +1,5 @@
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
-
-use super::NoonRouterData;
 use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
     connector_types::{
@@ -23,6 +21,7 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
+use super::NoonRouterData;
 use crate::types::ResponseRouterData;
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
@@ -634,7 +633,6 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 _ => {
                     let connector_response_reference_id =
@@ -647,7 +645,6 @@ impl<F, T> TryFrom<ResponseRouterData<NoonPaymentsResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 }
@@ -894,13 +891,11 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             Ok(RefundsResponseData {
                 connector_refund_id: item.response.result.transaction.id,
                 refund_status,
-                raw_connector_response: None,
                 status_code: item.http_code,
             })
         };
@@ -961,13 +956,11 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             Ok(RefundsResponseData {
                 connector_refund_id: noon_transaction.id.to_owned(),
                 refund_status,
-                raw_connector_response: None,
                 status_code: item.http_code,
             })
         };
@@ -1386,7 +1379,6 @@ impl<
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
                 _ => {
                     let connector_response_reference_id =
@@ -1399,7 +1391,6 @@ impl<
                         network_txn_id: None,
                         connector_response_reference_id,
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     })
                 }

@@ -1,12 +1,12 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::errors::CustomResult;
+use common_utils::{consts, errors::CustomResult, events, pii};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
-        RepeatPayment, SetupMandate, Void,
+        self, Authorize, Capture, CreateOrder, CreateSessionToken, PSync, Refund, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -26,6 +26,7 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
+use external_services::service::{execute_connector_processing_step, EventProcessingParams};
 use grpc_api_types::payments::{
     payment_method, payment_service_server::PaymentService, DisputeResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
@@ -36,6 +37,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -45,6 +47,29 @@ use crate::{
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
+
+#[derive(Debug, Clone)]
+struct EventParams<'a> {
+    connector_name: &'a str,
+    service_name: &'a str,
+    request_id: &'a str,
+}
+
+// Error handling utilities for webhook processing
+trait WebhookErrorExt<T> {
+    #[allow(clippy::result_large_err)]
+    fn to_grpc_status(self) -> Result<T, tonic::Status>;
+}
+
+impl<T, E> WebhookErrorExt<T> for Result<T, E>
+where
+    E: IntoGrpcStatus,
+{
+    fn to_grpc_status(self) -> Result<T, tonic::Status> {
+        self.map_err(|e| e.into_grpc_status())
+    }
+}
+
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -91,7 +116,9 @@ impl Payments {
         payload: PaymentServiceAuthorizeRequest,
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
+        metadata: &tonic::metadata::MetadataMap,
         service_name: &str,
+        request_id: &str,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -106,30 +133,37 @@ impl Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         // Create common request data
-        let payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone()))
-                .map_err(|err| {
-                    tracing::error!("Failed to process payment flow data: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to process payment flow data".to_string()),
-                        Some("PAYMENT_FLOW_ERROR".to_string()),
-                        None,
-                        None,
-                    )
-                })?;
+        let payment_flow_data = PaymentFlowData::foreign_try_from((
+            payload.clone(),
+            self.config.connectors.clone(),
+            metadata,
+        ))
+        .map_err(|err| {
+            tracing::error!("Failed to process payment flow data: {:?}", err);
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("Failed to process payment flow data".to_string()),
+                Some("PAYMENT_FLOW_ERROR".to_string()),
+                None,
+            )
+        })?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
         let payment_flow_data = if should_do_order_create {
+            let event_params = EventParams {
+                connector_name: &connector.to_string(),
+                service_name,
+                request_id,
+            };
+
             let order_id = self
                 .handle_order_creation(
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
+                    event_params,
                     &payload,
-                    &connector.to_string(),
-                    service_name,
                 )
                 .await?;
 
@@ -173,7 +207,6 @@ impl Payments {
                     Some("Failed to process payment authorize data".to_string()),
                     Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                     None,
-                    None,
                 )
             })?
             // Set session token from payment flow data if available
@@ -194,13 +227,23 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
+        let event_params = EventProcessingParams {
+            connector_name: &connector.to_string(),
+            service_name,
+            flow_name: events::FlowName::Authorize,
+            event_config: &self.config.events,
+            raw_request_data: Some(pii::SecretSerdeValue::new(
+                payload.masked_serialize().unwrap_or_default(),
+            )),
+            request_id,
+        };
+
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             router_data,
             None,
-            &connector.to_string(),
-            service_name,
+            event_params,
         )
         .await;
 
@@ -215,7 +258,6 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some("Failed to generate authorize response".to_string()),
                     Some("RESPONSE_GENERATION_ERROR".to_string()),
-                    None,
                     None,
                 )
             })?,
@@ -239,7 +281,6 @@ impl Payments {
                                 ),
                                 Some("PAYMENT_AUTHORIZE_DATA_ERROR".to_string()),
                                 None,
-                                None,
                             )
                         },
                     )?,
@@ -253,7 +294,6 @@ impl Payments {
                         network_decline_code: None,
                         network_advice_code: None,
                         network_error_message: None,
-                        raw_connector_response: None,
                     }),
                 };
                 domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
@@ -266,7 +306,6 @@ impl Payments {
                             grpc_api_types::payments::PaymentStatus::Pending,
                             Some(format!("Connector error: {error_report}")),
                             Some("CONNECTOR_ERROR".to_string()),
-                            None,
                             None,
                         )
                     })?
@@ -292,9 +331,8 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
+        event_params: EventParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
-        connector_name: &str,
-        service_name: &str,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -311,7 +349,6 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Currency conversion failed: {e}")),
                     Some("CURRENCY_ERROR".to_string()),
-                    None,
                     None,
                 )
             })?;
@@ -342,13 +379,23 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
+        let external_event_params = EventProcessingParams {
+            connector_name: event_params.connector_name,
+            service_name: event_params.service_name,
+            flow_name: events::FlowName::CreateOrder,
+            event_config: &self.config.events,
+            raw_request_data: Some(pii::SecretSerdeValue::new(
+                payload.masked_serialize().unwrap_or_default(),
+            )),
+            request_id: event_params.request_id,
+        };
+
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
             None,
-            connector_name,
-            service_name,
+            external_event_params,
         )
         .await
         .map_err(
@@ -357,7 +404,6 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Order creation failed: {e}")),
                     Some("ORDER_CREATION_ERROR".to_string()),
-                    None,
                     None,
                 )
             },
@@ -369,7 +415,6 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(e.message.clone()),
                 Some(e.code.clone()),
-                e.raw_connector_response.clone(),
                 Some(e.status_code.into()),
             )),
         }
@@ -390,9 +435,8 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
+        event_params: EventParams<'_>,
         payload: &PaymentServiceRegisterRequest,
-        connector_name: &str,
-        service_name: &str,
     ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -432,13 +476,23 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
+        let external_event_params = EventProcessingParams {
+            connector_name: event_params.connector_name,
+            service_name: event_params.service_name,
+            flow_name: events::FlowName::CreateOrder,
+            event_config: &self.config.events,
+            raw_request_data: Some(pii::SecretSerdeValue::new(
+                payload.masked_serialize().unwrap_or_default(),
+            )),
+            request_id: event_params.request_id,
+        };
+
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             order_router_data,
             None,
-            connector_name,
-            service_name,
+            external_event_params,
         )
         .await
         .switch()
@@ -494,7 +548,6 @@ impl Payments {
                     grpc_api_types::payments::PaymentStatus::Pending,
                     Some(format!("Session Token creation failed: {e}")),
                     Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                    None,
                     Some(400), // Bad Request - client data issue
                 )
             })?;
@@ -513,13 +566,21 @@ impl Payments {
         };
 
         // Execute connector processing
-        let response = external_services::service::execute_connector_processing_step(
+        let event_params = EventProcessingParams {
+            connector_name,
+            service_name,
+            flow_name: events::FlowName::Authorize, // Use Authorize as fallback since CreateSessionToken doesn't exist
+            event_config: &self.config.events,
+            raw_request_data: None, // Don't serialize P since it doesn't implement Serialize
+            request_id: "session_token_request", // TODO: Pass actual request_id
+        };
+
+        let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
             None,
-            connector_name,
-            service_name,
+            event_params,
         )
         .await
         .switch()
@@ -528,7 +589,6 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {e}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                None,
                 Some(500), // Internal Server Error - connector processing failed
             )
         })?;
@@ -549,7 +609,6 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {message}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
-                None,
                 Some(status_code.into()), // Use actual status code from ErrorResponse
             )),
         }
@@ -623,9 +682,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_authorize",
         fields(
-            name = common_utils::consts::NAME,
+            name = consts::NAME,
             service_name = tracing::field::Empty,
-            service_method = FlowName::Authorize.to_string(),
+            service_method = connector_flow::FlowName::Authorize.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -636,7 +695,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Authorize.to_string(),
+            flow = connector_flow::FlowName::Authorize.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -646,17 +705,22 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-        let service_name = request
+
+        let service_name: String = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
                 let authorize_response = match payload.payment_method.as_ref() {
@@ -669,7 +733,9 @@ impl PaymentService for Payments {
                                             payload,
                                             connector,
                                             connector_auth_details,
-                                            &service_name,
+                                            &metadata,
+                    &service_name,
+                                            &request_id,
                                         ))
                                         .await
                                         {
@@ -682,7 +748,9 @@ impl PaymentService for Payments {
                                             payload,
                                             connector,
                                             connector_auth_details,
+                                            &metadata,
                                             &service_name,
+                                            &request_id,
                                         ))
                                         .await
                                         {
@@ -697,7 +765,9 @@ impl PaymentService for Payments {
                                     payload,
                                     connector,
                                     connector_auth_details,
+                                    &metadata,
                                     &service_name,
+                                    &request_id,
                                 ))
                                 .await
                                 {
@@ -712,7 +782,9 @@ impl PaymentService for Payments {
                             payload,
                             connector,
                             connector_auth_details,
+                            &metadata,
                             &service_name,
+                            &request_id,
                         ))
                         .await
                         {
@@ -731,9 +803,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_sync",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Psync.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Psync.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -744,7 +816,7 @@ impl PaymentService for Payments {
             message = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Psync.to_string(),
+            flow = connector_flow::FlowName::Psync.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -759,9 +831,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_void",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Void.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Void.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -772,7 +844,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Void.to_string(),
+            flow = connector_flow::FlowName::Void.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -787,9 +859,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "incoming_webhook",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::IncomingWebhook.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::IncomingWebhook.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -800,7 +872,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::IncomingWebhook.to_string(),
+            flow = connector_flow::FlowName::IncomingWebhook.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -852,7 +924,7 @@ impl PaymentService for Payments {
                     Some(connector_auth_details.clone()),
                 )
                 .switch()
-                .map_err(|e| e.into_grpc_status())?;
+                .to_grpc_status()?;
 
             let event_type = connector_data
                 .connector
@@ -862,34 +934,47 @@ impl PaymentService for Payments {
                     Some(connector_auth_details.clone()),
                 )
                 .switch()
-                .map_err(|e| e.into_grpc_status())?;
+                .to_grpc_status()?;
 
-            // Get content for the webhook based on the event type
-            let content = match event_type {
-                domain_types::connector_types::EventType::Payment => get_payments_webhook_content(
+            // Get content for the webhook based on the event type using categorization
+            let content = if event_type.is_payment_event() {
+                get_payments_webhook_content(
                     connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?,
-                domain_types::connector_types::EventType::Refund => get_refunds_webhook_content(
+                .to_grpc_status()?
+            } else if event_type.is_refund_event() {
+                get_refunds_webhook_content(
                     connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?,
-                domain_types::connector_types::EventType::Dispute => get_disputes_webhook_content(
+                .to_grpc_status()?
+            } else if event_type.is_dispute_event() {
+                get_disputes_webhook_content(
                     connector_data,
-                    request_details,
-                    webhook_secrets,
-                    Some(connector_auth_details),
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
                 )
                 .await
-                .map_err(|e| e.into_grpc_status())?,
+                .to_grpc_status()?
+            } else {
+                // For all other event types, default to payment webhook content for now
+                // This includes mandate, payout, recovery, and misc events
+                get_payments_webhook_content(
+                    connector_data,
+                    &request_details,
+                    webhook_secrets.as_ref(),
+                    Some(&connector_auth_details),
+                )
+                .await
+                .to_grpc_status()?
             };
 
             let api_event_type =
@@ -911,9 +996,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "refund",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Refund.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Refund.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -924,7 +1009,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Refund.to_string(),
+            flow = connector_flow::FlowName::Refund.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -939,9 +1024,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "defend_dispute",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::DefendDispute.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::DefendDispute.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -952,7 +1037,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::DefendDispute.to_string(),
+            flow = connector_flow::FlowName::DefendDispute.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -978,9 +1063,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "payment_capture",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::Capture.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::Capture.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -991,7 +1076,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::Capture.to_string(),
+            flow = connector_flow::FlowName::Capture.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1006,9 +1091,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "setup_mandate",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::SetupMandate.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::SetupMandate.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1019,7 +1104,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = FlowName::SetupMandate.to_string(),
+            flow = connector_flow::FlowName::SetupMandate.to_string(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -1036,10 +1121,14 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
                 //get connector data
@@ -1059,20 +1148,26 @@ impl PaymentService for Payments {
                     payload.clone(),
                     self.config.connectors.clone(),
                     self.config.common.environment.clone(),
+                    &metadata,
                 ))
                 .map_err(|e| e.into_grpc_status())?;
 
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
+                    let event_params = EventParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        request_id: &request_id,
+                    };
+
                     Some(
                         self.handle_order_creation_for_setup_mandate(
                             connector_data.clone(),
                             &payment_flow_data,
                             connector_auth_details.clone(),
+                            event_params,
                             &payload,
-                            &connector.to_string(),
-                            &service_name,
                         )
                         .await?,
                     )
@@ -1099,13 +1194,23 @@ impl PaymentService for Payments {
                     response: Err(ErrorResponse::default()),
                 };
 
-                let response = external_services::service::execute_connector_processing_step(
+                let event_params = EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: events::FlowName::SetupMandate,
+                    event_config: &self.config.events,
+                    raw_request_data: Some(pii::SecretSerdeValue::new(
+                        payload.masked_serialize().unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                };
+
+                let response = execute_connector_processing_step(
                     &self.config.proxy,
                     connector_integration,
                     router_data,
                     None,
-                    &connector.to_string(),
-                    &service_name,
+                    event_params,
                 )
                 .await
                 .switch()
@@ -1124,9 +1229,9 @@ impl PaymentService for Payments {
     #[tracing::instrument(
         name = "repeat_payment",
         fields(
-            name = common_utils::consts::NAME,
-            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = FlowName::RepeatPayment.to_string(),
+            name = consts::NAME,
+            service_name = consts::PAYMENT_SERVICE_NAME,
+            service_method = connector_flow::FlowName::RepeatPayment.to_string(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -1152,10 +1257,14 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let connector = connector_from_metadata(request.metadata())
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
                 //get connector data
@@ -1175,6 +1284,7 @@ impl PaymentService for Payments {
                 let payment_flow_data = PaymentFlowData::foreign_try_from((
                     payload.clone(),
                     self.config.connectors.clone(),
+                    &metadata,
                 ))
                 .map_err(|e| e.into_grpc_status())?;
 
@@ -1196,13 +1306,23 @@ impl PaymentService for Payments {
                     response: Err(ErrorResponse::default()),
                 };
 
-                let response = external_services::service::execute_connector_processing_step(
+                let event_params = EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: events::FlowName::Authorize,
+                    event_config: &self.config.events,
+                    raw_request_data: Some(pii::SecretSerdeValue::new(
+                        payload.masked_serialize().unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                };
+
+                let response = execute_connector_processing_step(
                     &self.config.proxy,
                     connector_integration,
                     router_data,
                     None,
-                    &connector.to_string(),
-                    &service_name,
+                    event_params,
                 )
                 .await
                 .switch()
@@ -1221,13 +1341,17 @@ impl PaymentService for Payments {
 
 async fn get_payments_webhook_content(
     connector_data: ConnectorData<DefaultPCIHolder>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    request_details: &domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<&ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_payment_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_payment_webhook(
+            request_details.clone(),
+            webhook_secrets.cloned(),
+            connector_auth_details.cloned(),
+        )
         .switch()?;
 
     // Generate response
@@ -1261,13 +1385,17 @@ async fn get_refunds_webhook_content<
         + 'static,
 >(
     connector_data: ConnectorData<T>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    request_details: &domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<&ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_refund_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_refund_webhook(
+            request_details.clone(),
+            webhook_secrets.cloned(),
+            connector_auth_details.cloned(),
+        )
         .switch()?;
 
     // Generate response - RefundService should handle this, for now return basic response
@@ -1301,13 +1429,17 @@ async fn get_disputes_webhook_content<
         + 'static,
 >(
     connector_data: ConnectorData<T>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
+    request_details: &domain_types::connector_types::RequestDetails,
+    webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
+    connector_auth_details: Option<&ConnectorAuthType>,
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_dispute_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_dispute_webhook(
+            request_details.clone(),
+            webhook_secrets.cloned(),
+            connector_auth_details.cloned(),
+        )
         .switch()?;
 
     // Generate response - DisputeService should handle this, for now return basic response
