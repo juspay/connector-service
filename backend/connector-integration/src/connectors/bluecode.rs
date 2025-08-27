@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod test;
 pub mod transformers;
 
 use common_enums::{enums, PaymentMethodType};
