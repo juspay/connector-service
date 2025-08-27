@@ -186,9 +186,12 @@ impl<
             None => return Ok(false),
         };
 
-        let signature = self
-            .get_webhook_source_verification_signature(request, &connector_webhook_secrets)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let base64_signature = request
+            .headers
+            .get("authorization")
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+        let signature = base64_signature.as_bytes();
 
         let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
@@ -197,19 +200,6 @@ impl<
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
             .attach_printable("Could not convert secret to UTF-8")?;
         Ok(signature_auth == secret_auth)
-    }
-
-    fn get_webhook_source_verification_signature(
-        &self,
-        _request: RequestDetails,
-        _connector_webhook_secrets: &Option<ConnectorWebhookSecrets>,
-    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
-        let base64_signature = _request
-            .headers
-            .get("authorization")
-            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-        let signature = base64_signature.as_bytes().to_owned();
-        Ok(signature)
     }
 
     fn get_event_type(
