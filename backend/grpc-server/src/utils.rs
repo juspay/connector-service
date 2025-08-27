@@ -13,6 +13,7 @@ use domain_types::{
 };
 use error_stack::{Report, ResultExt};
 use http::request::Request;
+use hyperswitch_masking;
 use tonic::metadata;
 
 use crate::error::ResultExtGrpc;
@@ -230,11 +231,11 @@ where
         )?;
     let current_span = tracing::Span::current();
     let req_body = request.get_ref();
-    let req_body_json = match serde_json::to_string(req_body) {
-        Ok(json) => json,
+    let req_body_json = match hyperswitch_masking::masked_serialize(req_body) {
+        Ok(masked_value) => masked_value.to_string(),
         Err(e) => {
-            tracing::error!("Serialization error: {:?}", e);
-            "<serialization error>".to_string()
+            tracing::error!("Masked serialization error: {:?}", e);
+            "<masked serialization error>".to_string()
         }
     };
     current_span.record("service_name", service_name);

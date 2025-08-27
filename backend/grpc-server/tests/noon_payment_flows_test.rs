@@ -155,7 +155,7 @@ fn create_payment_authorize_request(
             })),
         }),
         return_url: Some("https://duck.com".to_string()),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
