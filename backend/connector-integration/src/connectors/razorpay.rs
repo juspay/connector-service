@@ -1,7 +1,7 @@
 pub mod test;
 pub mod transformers;
 use std::sync::LazyLock;
-
+//adding comment to retrig build
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
@@ -302,7 +302,12 @@ impl ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, P
 
     fn get_api_tag(
         &self,
-        _req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+        _req: &RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData,
+            PaymentsResponseData,
+        >,
     ) -> Option<String> {
         Some("GW_INIT_INTENT".to_string())
     }
