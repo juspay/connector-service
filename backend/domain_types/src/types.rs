@@ -1307,15 +1307,17 @@ impl<
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                    error_identifier: 400,
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
 
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }))
-            })?),
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
             None => None,
         };
 
@@ -1442,20 +1444,22 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email = match value.email.clone() {
-            Some(email) => Some(common_utils::pii::Email::from_str(&email).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }),
-            )?),
+            Some(email) => Some(
+                common_utils::pii::Email::from_str(&email.expose()).change_context(
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }),
+                )?,
+            ),
             None => None,
         };
         Ok(Self {
             address: Some(AddressDetails::foreign_try_from(value.clone())?),
             phone: value.phone_number.map(|phone_number| PhoneDetails {
-                number: Some(phone_number.into()),
+                number: Some(phone_number),
                 country_code: value.phone_country_code,
             }),
             email,
@@ -1989,15 +1993,15 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            city: value.city.clone(),
+            city: value.city.clone().map(|city| city.expose()),
             country: Some(common_enums::CountryAlpha2::foreign_try_from(
                 value.country_alpha2_code(),
             )?),
-            line1: value.line1.map(|val| val.into()),
-            line2: value.line2.map(|val| val.into()),
-            line3: value.line3.map(|val| val.into()),
-            zip: value.zip_code.map(|val| val.into()),
-            state: value.state.map(|val| val.into()),
+            line1: value.line1,
+            line2: value.line2,
+            line3: value.line3,
+            zip: value.zip_code,
+            state: value.state,
             first_name: value.first_name.map(|val| val.into()),
             last_name: value.last_name.map(|val| val.into()),
         })
@@ -4235,15 +4239,17 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
         value: PaymentServiceRegisterRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                    error_identifier: 400,
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
 
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }))
-            })?),
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
             None => None,
         };
         let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
@@ -4926,15 +4932,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         })?;
 
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                    error_identifier: 400,
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
 
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }))
-            })?),
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
             None => None,
         };
 
