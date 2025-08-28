@@ -7,6 +7,7 @@ use common_utils::{
     consts,
     errors::CustomResult,
     ext_traits::{ByteSliceExt, BytesExt},
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -424,7 +425,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: FloatMajorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,

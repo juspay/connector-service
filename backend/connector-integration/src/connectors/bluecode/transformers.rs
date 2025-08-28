@@ -4,7 +4,7 @@ use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     request::Method,
-    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::Authorize,
@@ -15,7 +15,6 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, WalletData},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
 };
 use error_stack::report;
 use error_stack::ResultExt;
@@ -185,7 +184,9 @@ impl<
     ) -> Result<Self, Self::Error> {
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}) => {
-                let amount = FloatMajorUnitForConnector
+                let amount = item
+                    .connector
+                    .amount_converter
                     .convert(
                         item.router_data.request.minor_amount,
                         item.router_data.request.currency,
