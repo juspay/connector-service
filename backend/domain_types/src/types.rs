@@ -243,7 +243,7 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
                     match wallet_type.wallet_type {
                                                 Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Bluecode(_)) => {
-                            Ok(PaymentMethodData::Wallet(crate::payment_method_data::WalletData::BluecodeRedirect{}
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::BluecodeRedirect{}
                         ))},
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
