@@ -9,12 +9,12 @@ use domain_types::{
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -175,7 +175,76 @@ impl<
             + Serialize,
     > connector_types::IncomingWebhook for Cashtocode<T>
 {
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let webhook_secret = match connector_webhook_secrets.clone() {
+            Some(secrets) => secrets,
+            None => return Ok(false),
+        };
+
+        let base64_signature = request
+            .headers
+            .get("authorization")
+            .ok_or(errors::ConnectorError::WebhookSignatureNotFound)?;
+
+        let signature = base64_signature.as_bytes();
+
+        let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Could not convert secret to UTF-8")?;
+        let signature_auth = String::from_utf8(signature.to_vec())
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Could not convert secret to UTF-8")?;
+        Ok(signature_auth == secret_auth)
+    }
+
+    fn get_event_type(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::EventType,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        Ok(domain_types::connector_types::EventType::PaymentIntentSuccess)
+    }
+
+    fn process_payment_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        domain_types::connector_types::WebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        let webhook: transformers::CashtocodePaymentsSyncResponse = request
+            .body
+            .parse_struct("CashtocodePaymentsSyncResponse")
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+
+        Ok(domain_types::connector_types::WebhookDetailsResponse {
+            resource_id: Some(
+                domain_types::connector_types::ResponseId::ConnectorTransactionId(
+                    webhook.transaction_id.clone(),
+                ),
+            ),
+            status: common_enums::AttemptStatus::Charged,
+            status_code: 200,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+            raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
+            response_headers: None,
+        })
+    }
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -375,6 +444,7 @@ impl<
     for Cashtocode<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
