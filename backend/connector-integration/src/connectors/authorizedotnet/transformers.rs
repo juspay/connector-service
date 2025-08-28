@@ -556,11 +556,8 @@ fn create_regular_transaction_request<
         .map(|cid| cid.get_string_repr().to_owned())
         .unwrap_or_else(|| "anonymous_customer".to_string());
 
-    let truncated_customer_id = get_the_truncate_id(Some(customer_id_string), MAX_ID_LENGTH)
-        .unwrap_or_else(|| "anonymous_customer".to_string());
-
     let customer_details = CustomerDetails {
-        id: truncated_customer_id,
+        id: customer_id_string,
         email: item.router_data.request.email.clone(),
     };
 
@@ -726,11 +723,8 @@ impl<
                 "repeat_payment_customer".to_string()
             };
 
-        let truncated_customer_id = get_the_truncate_id(Some(customer_id_string), MAX_ID_LENGTH)
-            .unwrap_or_else(|| "repeat_payment_customer".to_string());
-
         let customer_details = CustomerDetails {
-            id: truncated_customer_id,
+            id: customer_id_string,
             email: None, // Email not available in RepeatPaymentData
         };
 
