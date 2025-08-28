@@ -4,7 +4,7 @@ use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentM
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Mifinity,
+    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Forte, Mifinity,
     Nexinets, Noon, Novalnet, Paytm, Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
 };
 
@@ -28,23 +28,24 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
     fn convert_connector(connector_name: ConnectorEnum) -> BoxedConnector<T> {
         match connector_name {
             ConnectorEnum::Adyen => Box::new(Adyen::new()),
-            ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
-            ConnectorEnum::RazorpayV2 => Box::new(RazorpayV2::new()),
-            ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
-            ConnectorEnum::Elavon => Box::new(Elavon::new()),
-            ConnectorEnum::Xendit => Box::new(Xendit::new()),
-            ConnectorEnum::Checkout => Box::new(Checkout::new()),
             ConnectorEnum::Authorizedotnet => Box::new(Authorizedotnet::new()),
-            ConnectorEnum::Mifinity => Box::new(Mifinity::new()),
-            ConnectorEnum::Phonepe => Box::new(Phonepe::new()),
             ConnectorEnum::Cashfree => Box::new(Cashfree::new()),
-            ConnectorEnum::Fiuu => Box::new(Fiuu::new()),
-            ConnectorEnum::Payu => Box::new(Payu::new()),
-            ConnectorEnum::Paytm => Box::new(Paytm::new()),
             ConnectorEnum::Cashtocode => Box::new(Cashtocode::new()),
-            ConnectorEnum::Novalnet => Box::new(Novalnet::new()),
+            ConnectorEnum::Checkout => Box::new(Checkout::new()),
+            ConnectorEnum::Elavon => Box::new(Elavon::new()),
+            ConnectorEnum::Fiserv => Box::new(Fiserv::new()),
+            ConnectorEnum::Fiuu => Box::new(Fiuu::new()),
+            ConnectorEnum::Forte => Box::new(Forte::new()),
+            ConnectorEnum::Mifinity => Box::new(Mifinity::new()),
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
             ConnectorEnum::Noon => Box::new(Noon::new()),
+            ConnectorEnum::Novalnet => Box::new(Novalnet::new()),
+            ConnectorEnum::Paytm => Box::new(Paytm::new()),
+            ConnectorEnum::Payu => Box::new(Payu::new()),
+            ConnectorEnum::Phonepe => Box::new(Phonepe::new()),
+            ConnectorEnum::Razorpay => Box::new(Razorpay::new()),
+            ConnectorEnum::RazorpayV2 => Box::new(RazorpayV2::new()),
+            ConnectorEnum::Xendit => Box::new(Xendit::new()),
         }
     }
 }
