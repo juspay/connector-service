@@ -556,8 +556,11 @@ fn create_regular_transaction_request<
         .map(|cid| cid.get_string_repr().to_owned())
         .unwrap_or_else(|| "anonymous_customer".to_string());
 
+    let truncated_customer_id = get_the_truncate_id(Some(customer_id_string), MAX_ID_LENGTH)
+        .unwrap_or_else(|| "anonymous_customer".to_string());
+
     let customer_details = CustomerDetails {
-        id: customer_id_string,
+        id: truncated_customer_id,
         email: item.router_data.request.email.clone(),
     };
 
@@ -723,8 +726,11 @@ impl<
                 "repeat_payment_customer".to_string()
             };
 
+        let truncated_customer_id = get_the_truncate_id(Some(customer_id_string), MAX_ID_LENGTH)
+            .unwrap_or_else(|| "repeat_payment_customer".to_string());
+
         let customer_details = CustomerDetails {
-            id: customer_id_string,
+            id: truncated_customer_id,
             email: None, // Email not available in RepeatPaymentData
         };
 
@@ -2371,7 +2377,8 @@ impl<
                 .request
                 .customer_id
                 .as_ref()
-                .map(|id| id.get_string_repr().to_string()),
+                .map(|id| id.get_string_repr().to_string())
+                .and_then(|id| get_the_truncate_id(Some(id), MAX_ID_LENGTH)),
             description: item
                 .router_data
                 .resource_common_data
@@ -2406,7 +2413,7 @@ impl<
 #[serde(rename_all = "camelCase")]
 pub struct CreateCustomerProfileResponse {
     pub customer_profile_id: Option<String>,
-    pub customer_payment_profile_id_list: Vec<String>,
+    pub customer_payment_profile_id_list: Option<Vec<String>>,
     pub validation_direct_response_list: Option<Vec<Secret<String>>>,
     pub messages: ResponseMessages,
 }
@@ -2451,7 +2458,8 @@ impl<
             // Create composite mandate ID using customer profile ID and first payment profile ID
             let connector_mandate_id = response
                 .customer_payment_profile_id_list
-                .first()
+                .as_ref()
+                .and_then(|list| list.first())
                 .map(|payment_profile_id| format!("{profile_id}-{payment_profile_id}"))
                 .or(Some(profile_id.clone()));
 

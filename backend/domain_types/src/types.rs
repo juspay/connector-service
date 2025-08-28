@@ -3615,22 +3615,16 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             }
             None => None,
         };
-        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
-            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
-                error_identifier: 400,
-                error_message: "Customer acceptance is missing".to_owned(),
-                error_object: None,
-            }))
-        })?;
+        let customer_acceptance = value.customer_acceptance.clone();
 
         let setup_future_usage = value.setup_future_usage();
 
         let setup_mandate_details = MandateData {
             update_mandate_id: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
+            customer_acceptance: customer_acceptance
+                .as_ref()
+                .map(|ca| mandates::CustomerAcceptance::foreign_try_from(ca.clone()))
+                .transpose()?,
             mandate_type: None,
         };
 
@@ -3649,9 +3643,9 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
             amount: Some(0),
             confirm: true,
             statement_descriptor_suffix: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
             mandate_id: None,
             setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
                 setup_future_usage,
