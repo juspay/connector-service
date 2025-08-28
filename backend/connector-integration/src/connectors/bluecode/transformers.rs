@@ -54,9 +54,9 @@ pub struct BluecodePaymentsRequest {
     pub billing_address_city: String,
     pub billing_address_line1: Secret<String>,
     pub billing_address_postal_code: Option<Secret<String>>,
-    pub webhook_url: String,
-    pub success_url: String,
-    pub failure_url: String,
+    pub webhook_url: url::Url,
+    pub success_url: url::Url,
+    pub failure_url: url::Url,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -95,8 +95,8 @@ pub struct BluecodeWebhookResponse {
     pub billing_address_country: Option<String>,
     pub billing_address_country_code_iso: Option<enums::CountryAlpha2>,
     pub shipping_address_country_code_iso: Option<enums::CountryAlpha2>,
-    pub success_url: Option<String>,
-    pub failure_url: Option<String>,
+    pub success_url: Option<url::Url>,
+    pub failure_url: Option<url::Url>,
     pub source: Option<String>,
     pub bonus_code: Option<String>,
     pub dob: Option<String>,
@@ -221,9 +221,16 @@ impl<
                         .router_data
                         .resource_common_data
                         .get_optional_billing_zip(),
-                    webhook_url: item.router_data.request.get_webhook_url()?,
-                    success_url: item.router_data.request.get_router_return_url()?,
-                    failure_url: item.router_data.request.get_router_return_url()?,
+                    webhook_url: url::Url::parse(&item.router_data.request.get_webhook_url()?)
+                        .change_context(errors::ConnectorError::ParsingFailed)?,
+                    success_url: url::Url::parse(
+                        &item.router_data.request.get_router_return_url()?,
+                    )
+                    .change_context(errors::ConnectorError::ParsingFailed)?,
+                    failure_url: url::Url::parse(
+                        &item.router_data.request.get_router_return_url()?,
+                    )
+                    .change_context(errors::ConnectorError::ParsingFailed)?,
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
