@@ -2371,8 +2371,7 @@ impl<
                 .request
                 .customer_id
                 .as_ref()
-                .map(|id| id.get_string_repr().to_string())
-                .and_then(|id| get_the_truncate_id(Some(id), MAX_ID_LENGTH)),
+                .map(|id| id.get_string_repr().to_string()),
             description: item
                 .router_data
                 .resource_common_data
@@ -2407,7 +2406,7 @@ impl<
 #[serde(rename_all = "camelCase")]
 pub struct CreateCustomerProfileResponse {
     pub customer_profile_id: Option<String>,
-    pub customer_payment_profile_id_list: Option<Vec<String>>,
+    pub customer_payment_profile_id_list: Vec<String>,
     pub validation_direct_response_list: Option<Vec<Secret<String>>>,
     pub messages: ResponseMessages,
 }
@@ -2452,8 +2451,7 @@ impl<
             // Create composite mandate ID using customer profile ID and first payment profile ID
             let connector_mandate_id = response
                 .customer_payment_profile_id_list
-                .as_ref()
-                .and_then(|list| list.first())
+                .first()
                 .map(|payment_profile_id| format!("{profile_id}-{payment_profile_id}"))
                 .or(Some(profile_id.clone()));
 
