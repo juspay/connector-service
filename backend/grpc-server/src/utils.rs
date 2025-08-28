@@ -416,6 +416,7 @@ macro_rules! implement_connector_operation {
                 router_data,
                 $all_keys_required,
                 event_params,
+                None,
             )
             .await
             .switch()

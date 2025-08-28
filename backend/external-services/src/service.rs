@@ -6,9 +6,10 @@ use common_utils::{
     // consts::BASE64_ENGINE,
     request::{Method, Request, RequestContent},
 };
+use common_enums::ApiClientError;
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
-    errors::{ApiClientError, ApiErrorResponse, ConnectorError},
+    errors::{ApiErrorResponse, ConnectorError},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Proxy,
@@ -46,14 +47,108 @@ use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
-use masking::{ErasedMaskSerialize, Maskable, Secret};
+use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable, Secret};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
 use tracing::field::Empty;
 
 use crate::shared_metrics as metrics;
+
+// TokenData is now imported from hyperswitch_injector
+use injector::{injector_core, InjectorRequest, TokenData, ConnectorPayload, ConnectionConfig, HttpMethod};
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
+
+trait ToHttpMethod {
+    fn to_http_method(&self) -> HttpMethod;
+}
+
+impl ToHttpMethod for Method {
+    fn to_http_method(&self) -> HttpMethod {
+        match self {
+            Method::Get => HttpMethod::GET,
+            Method::Post => HttpMethod::POST,
+            Method::Put => HttpMethod::PUT,
+            Method::Patch => HttpMethod::PATCH,
+            Method::Delete => HttpMethod::DELETE,
+        }
+    }
+}
+
+fn convert_to_injector_request(
+    request: &Request,
+    token_data: &TokenData,
+    proxy: &Proxy,
+) -> Result<InjectorRequest, domain_types::errors::ConnectorError> {
+    use std::collections::HashMap;
+    
+    let http_method = request.method.to_http_method();
+
+    let injector_token_data = TokenData {
+        vault_connector: token_data.vault_connector,
+        specific_token_data: token_data.specific_token_data.clone(),
+    };
+
+    let connector_payload = ConnectorPayload {
+        template: "{{$card_number}} {{$cvv}} {{$exp_month}} {{$exp_year}}".to_string(),
+    };
+
+    // Use the request URL directly as base_url
+    let base_url = reqwest::Url::parse(&request.url)
+        .map_err(|_| domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+    let endpoint_path = "".to_string(); // Empty since full URL is in base_url
+
+    // Convert headers to HashMap<String, Secret<String>>
+    let mut headers = HashMap::new();
+    let mut vault_proxy_url = None;
+    
+    // Use existing proxy configuration as fallback
+    let fallback_proxy_url = proxy.https_url.as_ref().or(proxy.http_url.as_ref())
+        .and_then(|url| reqwest::Url::parse(url).ok());
+    
+    for (key, value) in &request.headers {
+        // Handle vault headers
+        match key.to_lowercase().as_str() {
+            "x-vault-proxy-url" => {
+                // Extract vault proxy URL and don't include in regular headers
+                let proxy_url_str = match value {
+                    Maskable::Normal(val) => val.clone(),
+                    Maskable::Masked(val) => val.clone().expose().to_string(),
+                };
+                vault_proxy_url = reqwest::Url::parse(&proxy_url_str).ok();
+            }
+            _ => {
+                // Add all other headers (including x-vault-id and x-vault-credentials)
+                let header_value = match value {
+                    Maskable::Normal(val) => Secret::new(val.clone()),
+                    Maskable::Masked(val) => val.clone(),
+                };
+                headers.insert(key.clone(), header_value);
+            }
+        }
+    }
+
+    let connection_config = ConnectionConfig {
+        base_url,
+        endpoint_path,
+        http_method,
+        headers,
+        proxy_url: vault_proxy_url.or(fallback_proxy_url),
+        client_cert: request.certificate.clone(),
+        client_key: request.certificate_key.clone(),
+        ca_cert: request.ca_certificate.clone(),
+        insecure: None,
+        cert_password: None,
+        cert_format: None,
+        max_response_size: None,
+    };
+
+    Ok(InjectorRequest {
+        token_data: injector_token_data,
+        connector_payload,
+        connection_config,
+    })
+}
 
 #[derive(Debug)]
 pub struct EventProcessingParams<'a> {
@@ -87,6 +182,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
     event_params: EventProcessingParams<'_>,
+    token_data: Option<TokenData>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -158,18 +254,40 @@ where
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
             let request_id = event_params.request_id.to_string();
-            let response = call_connector_api(proxy, request, "execute_connector_processing_step")
-                .await
-                .change_context(ConnectorError::RequestEncodingFailed)
-                .inspect_err(|err| {
-                    info_log(
-                        "NETWORK_ERROR",
-                        &json!(format!(
-                            "Failed getting response from connector. Error: {:?}",
-                            err
-                        )),
-                    );
-                });
+            
+            
+            let response = if let Some(token_data) = token_data {
+                let injector_request = convert_to_injector_request(&request, &token_data, proxy)
+                    .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+                
+                // New injector handles HTTP request internally and returns JSON response
+                let injector_response = injector_core(injector_request)
+                    .await
+                    .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)?;
+                
+                // Convert JSON response to our Response format
+                let response_bytes = serde_json::to_vec(&injector_response)
+                    .map_err(|_| domain_types::errors::ConnectorError::ResponseHandlingFailed)?;
+                
+                Ok(Ok(Response {
+                    headers: None, // Injector handles headers internally
+                    response: response_bytes.into(),
+                    status_code: 200, // Injector success implies 200
+                }))
+            } else {
+                call_connector_api(proxy, request, "execute_connector_processing_step")
+                    .await
+                    .change_context(ConnectorError::RequestEncodingFailed)
+                    .inspect_err(|err| {
+                        info_log(
+                            "NETWORK_ERROR",
+                            &json!(format!(
+                                "Failed getting response from connector. Error: {:?}",
+                                err
+                            )),
+                        );
+                    })
+            };
             let external_service_elapsed = external_service_start_latency.elapsed();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[
@@ -548,8 +666,8 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<Secret<String>>,
-    _client_certificate_key: Option<Secret<String>>,
+    _client_certificate: Option<hyperswitch_masking::Secret<String>>,
+    _client_certificate_key: Option<hyperswitch_masking::Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
     get_base_client(proxy_config, should_bypass_proxy)
     // match (client_certificate, client_certificate_key) {
