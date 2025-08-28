@@ -21,7 +21,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::marker::PhantomData;
 
 // Auth
 pub struct BluecodeAuthType {
@@ -42,14 +41,7 @@ impl TryFrom<&ConnectorAuthType> for BluecodeAuthType {
 
 // Requests
 #[derive(Debug, Serialize)]
-pub struct BluecodePaymentsRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
+pub struct BluecodePaymentsRequest {
     pub amount: FloatMajorUnit,
     pub currency: enums::Currency,
     pub payment_provider: String,
@@ -65,8 +57,6 @@ pub struct BluecodePaymentsRequest<
     pub webhook_url: String,
     pub success_url: String,
     pub failure_url: String,
-    #[serde(skip)]
-    _phantom: PhantomData<T>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -168,7 +158,7 @@ impl<
             >,
             T,
         >,
-    > for BluecodePaymentsRequest<T>
+    > for BluecodePaymentsRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
@@ -234,7 +224,6 @@ impl<
                     webhook_url: item.router_data.request.get_webhook_url()?,
                     success_url: item.router_data.request.get_router_return_url()?,
                     failure_url: item.router_data.request.get_router_return_url()?,
-                    _phantom: PhantomData,
                 })
             }
             _ => Err(errors::ConnectorError::NotImplemented("Payment method".to_string()).into()),
