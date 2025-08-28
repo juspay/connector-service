@@ -93,6 +93,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -259,6 +260,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -377,6 +379,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -517,6 +520,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -824,6 +828,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -997,6 +1002,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1172,6 +1178,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -1269,6 +1276,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -1371,6 +1379,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -1510,6 +1519,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1630,6 +1640,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1739,6 +1750,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },

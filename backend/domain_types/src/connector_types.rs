@@ -27,7 +27,7 @@ use crate::{
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
         RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
+        SubmitEvidenceIntegrityObject, SyncRequestType, PreAuthenticateIntegrityObject,
     },
     router_response_types::RedirectForm,
     types::{
@@ -58,6 +58,7 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
+    Trustpay
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -83,6 +84,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
+            grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1024,6 +1026,40 @@ pub struct PaymentCreateOrderResponse {
 }
 
 #[derive(Debug, Clone)]
+pub struct PreAuthenticateRequestData<T: PaymentMethodDataTypes>{
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
+    pub amount: MinorUnit,
+    pub currency: Currency,
+    pub return_url: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+    pub billing_address: Option<Address>,
+    pub shipping_address: Option<Address>,
+    pub integrity_object: Option<PreAuthenticateIntegrityObject>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PreAuthenticateResponseData {
+    pub authentication_id: String,
+    pub connector_metadata: Option<serde_json::Value>,
+    pub session_token: String,
+    pub connector_response_reference_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthenticateRequestData {
+    pub authentication_id: String,
+    pub challenge_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PostAuthenticateRequestData {
+    pub authentication_id: String,
+    pub authentication_value: Option<String>,
+}
+
+
+#[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
@@ -1810,3 +1846,4 @@ impl SupportedPaymentMethodsExt for SupportedPaymentMethods {
         }
     }
 }
+

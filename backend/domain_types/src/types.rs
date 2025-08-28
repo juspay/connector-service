@@ -35,7 +35,7 @@ use crate::mandates::{self, MandateData};
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, PreAuthenticate,
     },
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
@@ -46,6 +46,7 @@ use crate::{
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        PreAuthenticateResponseData, PreAuthenticateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_address,
@@ -82,6 +83,7 @@ pub struct Connectors {
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
+    pub trustpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -89,6 +91,7 @@ pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
+    pub base_url_bank_redirects: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -1231,6 +1234,35 @@ pub fn generate_create_order_response(
     };
     Ok(response)
 }
+
+pub fn generate_pre_authenticate_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PreAuthenticateRequestData<T>,
+        PreAuthenticateResponseData,
+    >,
+) -> Result<PreAuthenticateResponseData, error_stack::Report<ApplicationErrorResponse>> {
+   let pre_authenticate_response = router_data_v2.response;
+
+    match pre_authenticate_response {
+        Ok(response) => Ok(PreAuthenticateResponseData {
+                authentication_id: response.authentication_id,
+                connector_metadata: None,
+                session_token: response.session_token,
+                connector_response_reference_id: None,
+            }),
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "PRE_AUTHENTICATE_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Pre Authentication failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
 
 pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
     router_data_v2: RouterDataV2<

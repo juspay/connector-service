@@ -359,3 +359,14 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map.insert(CardIssuer::CarteBlanche, Regex::new(r"^389[0-9]{11}$"));
         map
     });
+
+    pub fn is_refund_failure(status: common_enums::RefundStatus) -> bool {
+    match status {
+        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
+            true
+        }
+        common_enums::RefundStatus::ManualReview
+        | common_enums::RefundStatus::Pending
+        | common_enums::RefundStatus::Success => false,
+    }
+}

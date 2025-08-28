@@ -208,6 +208,7 @@ pub enum FlowName {
     IncomingWebhook,
     SetupMandate,
     CreateOrder,
+    PreAuthenticate,
 }
 
 impl FlowName {
@@ -226,6 +227,7 @@ impl FlowName {
             Self::IncomingWebhook => "IncomingWebhook",
             Self::SetupMandate => "SetupMandate",
             Self::CreateOrder => "CreateOrder",
+            Self::PreAuthenticate => "PreAuthenticate",
         }
     }
 }

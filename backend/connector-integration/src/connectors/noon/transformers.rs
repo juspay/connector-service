@@ -118,17 +118,6 @@ impl NoonOrderNvp {
     }
 }
 
-fn is_refund_failure(status: enums::RefundStatus) -> bool {
-    match status {
-        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
-            true
-        }
-        common_enums::RefundStatus::ManualReview
-        | common_enums::RefundStatus::Pending
-        | common_enums::RefundStatus::Success => false,
-    }
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum NoonPaymentActions {
@@ -882,7 +871,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let response = &item.response;
         let refund_status =
             enums::RefundStatus::from(response.result.transaction.status.to_owned());
-        let response = if is_refund_failure(refund_status) {
+        let response = if utils::is_refund_failure(refund_status) {
             Err(ErrorResponse {
                 status_code: item.http_code,
                 code: response.result_code.to_string(),
@@ -948,7 +937,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
-        let response = if is_refund_failure(refund_status) {
+        let response = if utils::is_refund_failure(refund_status) {
             let response = &item.response;
             Err(ErrorResponse {
                 status_code: item.http_code,

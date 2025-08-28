@@ -6,13 +6,14 @@ use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
         Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
-        RepeatPayment, SetupMandate, Void,
+        RepeatPayment, SetupMandate, Void, PreAuthenticate,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        PreAuthenticateRequestData, PreAuthenticateResponseData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -81,6 +82,121 @@ pub struct Payments {
 }
 
 impl Payments {
+    async fn process_pre_authentication_internal<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>
+            + 'static,
+    >(
+        &self,
+        payload: PreAuthenticateRequestData<T>,
+        connector: domain_types::connector_types::ConnectorEnum,
+        connector_auth_details: ConnectorAuthType,
+        service_name: &str,
+        request_id: &str,
+    ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+
+        let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            PreAuthenticate,
+            PaymentFlowData,
+            PreAuthenticateRequestData<T>,
+            PreAuthenticateResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        let mut payment_flow_data = PaymentFlowData::foreign_try_from((
+            payload.clone(), 
+            self.config.connectors.clone()
+        )).map_err(|err| {
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("Failed to process payment flow data".to_string()),
+                Some("PAYMENT_FLOW_ERROR".to_string()),
+                None,
+                None,
+            )
+        })?;
+
+        let pre_auth_request_data = PreAuthenticateRequestData::foreign_try_from(payload.clone())
+            .map_err(|err| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some("Failed to process pre-authentication request data".to_string()),
+                    Some("PRE_AUTH_REQUEST_ERROR".to_string()),
+                    None,
+                    None,
+                )
+            })?;
+
+        // Create router data for pre-authentication
+        let router_data = RouterDataV2::<
+            PreAuthenticate,
+            PaymentFlowData,
+            PreAuthenticateRequestData<T>,
+            PreAuthenticateResponseData,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details.clone(),
+            request: pre_auth_request_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        let event_params = external_services::service::EventProcessingParams {
+            connector_name: &connector.to_string(),
+            service_name,
+            flow_name: common_utils::events::FlowName::PreAuthenticate,
+            event_config: &self.config.events,
+            raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                serde_json::to_value(&payload).unwrap_or_default(),
+            )),
+            request_id,
+        };
+
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            router_data,
+            None,
+            event_params,
+        ).await;
+
+        // Generate response for pre-authentication using the correct response type
+        match response {
+            Ok(success_response) => {
+                let pre_auth_response = domain_types::types::generate_pre_authenticate_response(success_response)
+                    .map_err(|err| {
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::AuthenticationFailed,
+                            Some("Failed to generate pre-authentication response".to_string()),
+                            Some("PRE_AUTH_RESPONSE_ERROR".to_string()),
+                            None,
+                            None,
+                        )
+                    })?;
+            }
+            Err(error_report) => {
+                tracing::error!("Pre-authentication failed: {:?}", error_report);
+                Err(PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::AuthenticationFailed,
+                    Some(format!("Pre-authentication failed: {error_report}")),
+                    Some("PRE_AUTHENTICATION_FAILED".to_string()),
+                    None,
+                    Some(400),
+                ))
+            }
+        }
+    }
+
     async fn process_authorization_internal<
         T: PaymentMethodDataTypes
             + Default
@@ -716,64 +832,64 @@ impl PaymentService for Payments {
                     Some(pm) => {
                         match pm.payment_method.as_ref() {
                             Some(payment_method::PaymentMethod::Card(card_details)) => {
-                                match card_details.card_type {
-                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
-                                        match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
-                                            payload,
-                                            connector,
-                                            connector_auth_details,
-                                            &service_name,
-                                            &request_id,
-                                        ))
-                                        .await
-                                        {
-                                            Ok(response) => response,
-                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                    match card_details.card_type {
+                                        Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
+                                            match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
+                                                payload,
+                                                connector,
+                                                connector_auth_details,
+                                                &service_name,
+                                                &request_id,
+                                            ))
+                                            .await
+                                            {
+                                                Ok(response) => response,
+                                                Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                            }
                                         }
-                                    }
-                                    _ => {
-                                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                            payload,
-                                            connector,
-                                            connector_auth_details,
-                                            &service_name,
-                                            &request_id,
-                                        ))
-                                        .await
-                                        {
-                                            Ok(response) => response,
-                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                        _ => {
+                                            match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                                                payload,
+                                                connector,
+                                                connector_auth_details,
+                                                &service_name,
+                                                &request_id,
+                                            ))
+                                            .await
+                                            {
+                                                Ok(response) => response,
+                                                Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            _ => {
-                                match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                    payload,
-                                    connector,
-                                    connector_auth_details,
-                                    &service_name,
-                                    &request_id,
-                                ))
-                                .await
-                                {
-                                    Ok(response) => response,
-                                    Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                _ => {
+                                    match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                                        payload,
+                                        connector,
+                                        connector_auth_details,
+                                        &service_name,
+                                        &request_id,
+                                    ))
+                                    .await
+                                    {
+                                        Ok(response) => response,
+                                        Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                    }
                                 }
                             }
                         }
-                    }
-                    _ => {
-                        match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                            payload,
-                            connector,
-                            connector_auth_details,
-                            &service_name,
-                            &request_id,
-                        ))
-                        .await
-                        {
-                            Ok(response) => response,
+                        _ => {
+                            match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
+                                payload,
+                                connector,
+                                connector_auth_details,
+                                &service_name,
+                                &request_id,
+                            ))
+                            .await
+                            {
+                                Ok(response) => response,
                             Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
                         }
                     }

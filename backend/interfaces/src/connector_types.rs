@@ -12,7 +12,7 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        WebhookDetailsResponse, PreAuthenticateRequestData, PreAuthenticateResponseData,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -39,6 +39,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + RefundSyncV2
     + DisputeDefend
     + SubmitEvidenceV2
+    +PreAuthenticateV2<T>
 {
 }
 
@@ -85,6 +86,16 @@ pub trait PaymentAuthorizeV2<T: PaymentMethodDataTypes>:
     PaymentFlowData,
     PaymentsAuthorizeData<T>,
     PaymentsResponseData,
+>
+{
+}
+
+pub trait PreAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PreAuthenticate,
+    PaymentFlowData,
+    PreAuthenticateRequestData<T>,
+    PreAuthenticateResponseData,
 >
 {
 }
