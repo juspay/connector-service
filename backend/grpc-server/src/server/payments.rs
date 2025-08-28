@@ -37,6 +37,8 @@ use grpc_api_types::payments::{
     RefundResponse,
 };
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use injector::{VaultConnectors, TokenData};
+use common_utils::pii::SecretSerdeValue;
 use tracing::info;
 
 use crate::{
@@ -45,6 +47,43 @@ use crate::{
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
+
+/// Helper function for converting CardDetails to TokenData with structured types
+#[derive(Debug, serde::Serialize)]
+struct CardTokenData {
+    card_number: String,
+    cvv: String,
+    exp_month: String,
+    exp_year: String,
+}
+
+trait ToTokenData {
+    fn to_token_data(&self) -> TokenData;
+    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData;
+}
+
+impl ToTokenData for grpc_api_types::payments::CardDetails {
+    fn to_token_data(&self) -> TokenData {
+        self.to_token_data_with_vault(VaultConnectors::VGS)
+    }
+
+    fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
+        let card_data = CardTokenData {
+            card_number: self.card_number.clone(),
+            cvv: self.card_cvc.clone(),
+            exp_month: self.card_exp_month.clone(),
+            exp_year: self.card_exp_year.clone(),
+        };
+
+        let card_json = serde_json::to_value(card_data)
+            .expect("Failed to serialize card data");
+        
+        TokenData {
+            specific_token_data: SecretSerdeValue::new(card_json),
+            vault_connector,
+        }
+    }
+}
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -92,6 +131,7 @@ impl Payments {
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
         service_name: &str,
+        token_data: Option<TokenData>,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -201,6 +241,7 @@ impl Payments {
             None,
             &connector.to_string(),
             service_name,
+            token_data,
         )
         .await;
 
@@ -349,6 +390,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None,
         )
         .await
         .map_err(
@@ -439,6 +481,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None,
         )
         .await
         .switch()
@@ -520,6 +563,7 @@ impl Payments {
             None,
             connector_name,
             service_name,
+            None,
         )
         .await
         .switch()
@@ -663,31 +707,49 @@ impl PaymentService for Payments {
                     Some(pm) => {
                         match pm.payment_method.as_ref() {
                             Some(payment_method::PaymentMethod::Card(card_details)) => {
-                                match card_details.card_type {
-                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(_)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(_)) => {
+                                match &card_details.card_type {
+                                    Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
+                                        
+                                        let token_data = proxy_card_details.to_token_data();
+                                        
                                         match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                                             payload,
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            Some(token_data), // pass the extracted token data
                                         ))
                                         .await
                                         {
-                                            Ok(response) => response,
-                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                            Ok(response) => {
+                                                tracing::info!("INJECTOR: Authorization completed successfully with injector");
+                                                response
+                                            },
+                                            Err(error_response) => {
+                                                tracing::error!("INJECTOR: Authorization failed with injector - error: {:?}", error_response);
+                                                PaymentServiceAuthorizeResponse::from(error_response)
+                                            },
                                         }
                                     }
                                     _ => {
+                                        tracing::info!("REGULAR: Processing regular payment (no injector)");
                                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
                                             payload,
                                             connector,
                                             connector_auth_details,
                                             &service_name,
+                                            None, // no token data for non-proxy payments
                                         ))
                                         .await
                                         {
-                                            Ok(response) => response,
-                                            Err(error_response) => PaymentServiceAuthorizeResponse::from(error_response),
+                                            Ok(response) => {
+                                                tracing::info!("REGULAR: Authorization completed successfully without injector");
+                                                response
+                                            },
+                                            Err(error_response) => {
+                                                tracing::error!("REGULAR: Authorization failed without injector - error: {:?}", error_response);
+                                                PaymentServiceAuthorizeResponse::from(error_response)
+                                            },
                                         }
                                     }
                                 }
@@ -698,6 +760,7 @@ impl PaymentService for Payments {
                                     connector,
                                     connector_auth_details,
                                     &service_name,
+                                    None, // no token data for non-card payments
                                 ))
                                 .await
                                 {
@@ -713,6 +776,7 @@ impl PaymentService for Payments {
                             connector,
                             connector_auth_details,
                             &service_name,
+                            None, // no token data for payments without payment method
                         ))
                         .await
                         {
@@ -1106,6 +1170,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    None, // token_data - None for non-proxy payments
                 )
                 .await
                 .switch()
@@ -1203,6 +1268,7 @@ impl PaymentService for Payments {
                     None,
                     &connector.to_string(),
                     &service_name,
+                    None, // token_data - None for non-proxy payments
                 )
                 .await
                 .switch()
