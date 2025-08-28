@@ -8,9 +8,7 @@ use common_utils::{
     types::{MinorUnit, StringMajorUnit},
 };
 use domain_types::{
-    connector_flow::{
-        Authorize, Capture, PSync, PaymentMethodToken as PaymentMethodTokenFlow, RSync, Void,
-    },
+    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Void},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
@@ -19,7 +17,7 @@ use domain_types::{
     },
     errors::{self, ConnectorError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
-    router_data::{ConnectorAuthType, PaymentMethodToken},
+    router_data::{ConnectorAuthType, PaymentMethodToken as PaymentMethodTokenFlow},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
 };
@@ -1225,7 +1223,7 @@ impl<
     TryFrom<
         BraintreeRouterData<
             RouterDataV2<
-                PaymentMethodTokenFlow,
+                PaymentMethodToken,
                 PaymentFlowData,
                 PaymentMethodTokenizationData<T>,
                 PaymentMethodTokenResponse,
@@ -1238,7 +1236,7 @@ impl<
     fn try_from(
         item: BraintreeRouterData<
             RouterDataV2<
-                PaymentMethodTokenFlow,
+                PaymentMethodToken,
                 PaymentFlowData,
                 PaymentMethodTokenizationData<T>,
                 PaymentMethodTokenResponse,
@@ -1940,14 +1938,14 @@ impl<
                         .resource_common_data
                         .get_payment_method_token()?
                     {
-                        PaymentMethodToken::Token(token) => token,
-                        PaymentMethodToken::ApplePayDecrypt(_) => Err(
+                        PaymentMethodTokenFlow::Token(token) => token,
+                        PaymentMethodTokenFlow::ApplePayDecrypt(_) => Err(
                             unimplemented_payment_method!("Apple Pay", "Simplified", "Braintree"),
                         )?,
-                        PaymentMethodToken::PazeDecrypt(_) => {
+                        PaymentMethodTokenFlow::PazeDecrypt(_) => {
                             Err(unimplemented_payment_method!("Paze", "Braintree"))?
                         }
-                        PaymentMethodToken::GooglePayDecrypt(_) => {
+                        PaymentMethodTokenFlow::GooglePayDecrypt(_) => {
                             Err(unimplemented_payment_method!("Google Pay", "Braintree"))?
                         }
                     },
@@ -1967,7 +1965,7 @@ fn get_braintree_redirect_form<
         + Serialize,
 >(
     client_token_data: ClientTokenResponse,
-    payment_method_token: PaymentMethodToken,
+    payment_method_token: PaymentMethodTokenFlow,
     card_details: PaymentMethodData<T>,
     complete_authorize_url: String,
 ) -> Result<RedirectForm, error_stack::Report<errors::ConnectorError>> {
@@ -1978,16 +1976,16 @@ fn get_braintree_redirect_form<
             .client_token
             .expose(),
         card_token: match payment_method_token {
-            PaymentMethodToken::Token(token) => token.expose(),
-            PaymentMethodToken::ApplePayDecrypt(_) => Err(unimplemented_payment_method!(
+            PaymentMethodTokenFlow::Token(token) => token.expose(),
+            PaymentMethodTokenFlow::ApplePayDecrypt(_) => Err(unimplemented_payment_method!(
                 "Apple Pay",
                 "Simplified",
                 "Braintree"
             ))?,
-            PaymentMethodToken::PazeDecrypt(_) => {
+            PaymentMethodTokenFlow::PazeDecrypt(_) => {
                 Err(unimplemented_payment_method!("Paze", "Braintree"))?
             }
-            PaymentMethodToken::GooglePayDecrypt(_) => {
+            PaymentMethodTokenFlow::GooglePayDecrypt(_) => {
                 Err(unimplemented_payment_method!("Google Pay", "Braintree"))?
             }
         },

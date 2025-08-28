@@ -2,12 +2,15 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::panic)]
 
+use cards::CardNumber;
 use grpc_server::{app, configs};
 mod common;
+use hyperswitch_masking::Secret;
 
 use std::{
     collections::HashMap,
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -115,11 +118,11 @@ fn create_payment_authorize_request(
     capture_method: CaptureMethod,
 ) -> PaymentServiceAuthorizeRequest {
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_network: Some(1),
         card_issuer: None,
         card_type: None,
@@ -139,7 +142,7 @@ fn create_payment_authorize_request(
             })),
         }),
         return_url: Some("https://duck.com".to_string()),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {

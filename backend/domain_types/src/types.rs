@@ -4315,14 +4315,7 @@ impl<
         value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
-            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
-                error_identifier: 400,
-                error_message: "Customer acceptance is missing".to_owned(),
-                error_object: None,
-            }))
-        })?;
+        let customer_acceptance = value.customer_acceptance.clone();
 
         Ok(Self {
             amount: Some(value.amount),
@@ -4341,9 +4334,9 @@ impl<
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
             setup_future_usage: None,
             mandate_id: None,
             setup_mandate_details: None,
