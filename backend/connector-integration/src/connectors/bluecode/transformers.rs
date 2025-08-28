@@ -230,8 +230,7 @@ impl<
                         .router_data
                         .resource_common_data
                         .get_optional_billing_zip(),
-                    // webhook_url: item.router_data.request.get_webhook_url()?,
-                    webhook_url: "https://5796b28ab40e.ngrok-free.app/webhooks/merchant_1754996273/mca_vt4EIXP4DrRH5vqmKPQR".to_string(),
+                    webhook_url: item.router_data.request.get_webhook_url()?,
                     success_url: item.router_data.request.get_router_return_url()?,
                     failure_url: item.router_data.request.get_router_return_url()?,
                     _phantom: PhantomData,
@@ -307,10 +306,11 @@ where
             RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let redirection_data = Some(RedirectForm::from((
-            item.response.payment_link.clone(),
-            Method::Get,
-        )));
+        let redirection_data = Some(domain_types::router_response_types::RedirectForm::Form {
+            endpoint: item.response.payment_link.to_string(),
+            method: Method::Get,
+            form_fields: Default::default(),
+        });
         let response = Ok(PaymentsResponseData::TransactionResponse {
             resource_id: ResponseId::ConnectorTransactionId(item.response.order_id),
             redirection_data: redirection_data.map(Box::new),
