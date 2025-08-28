@@ -58,18 +58,14 @@ pub enum RedirectForm {
 
 impl From<(url::Url, Method)> for RedirectForm {
     fn from((mut redirect_url, method): (url::Url, Method)) -> Self {
-        let form_fields: HashMap<String, String> = match method {
-            Method::Get => HashMap::new(),
-            _ => {
-                let fields = HashMap::from_iter(
-                    redirect_url
-                        .query_pairs()
-                        .map(|(key, value)| (key.to_string(), value.to_string())),
-                );
-                redirect_url.set_query(None);
-                fields
-            }
-        };
+        let form_fields = HashMap::from_iter(
+            redirect_url
+                .query_pairs()
+                .map(|(key, value)| (key.to_string(), value.to_string())),
+        );
+
+        // Do not include query params in the endpoint
+        redirect_url.set_query(None);
 
         Self::Form {
             endpoint: redirect_url.to_string(),
