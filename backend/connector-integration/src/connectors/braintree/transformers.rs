@@ -1817,6 +1817,52 @@ pub struct BraintreeRedirectionResponse {
     pub authentication_response: String,
 }
 
+trait CardIsinExtractor {
+    fn extract_card_isin(&self) -> Result<String, error_stack::Report<errors::ConnectorError>>;
+}
+
+impl CardIsinExtractor for PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder> {
+    fn extract_card_isin(&self) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+        match self {
+            PaymentMethodData::Card(card_details) => Ok(card_details.card_number.get_card_isin()),
+            _ => Err(errors::ConnectorError::NotImplemented("given payment method".to_owned()).into()),
+        }
+    }
+}
+
+impl CardIsinExtractor for PaymentMethodData<domain_types::payment_method_data::VaultTokenHolder> {
+    fn extract_card_isin(&self) -> Result<String, error_stack::Report<errors::ConnectorError>> {
+        match self {
+            PaymentMethodData::Card(card_details) => Ok(card_details.card_number.get_card_isin()),
+            _ => Err(errors::ConnectorError::NotImplemented("given payment method".to_owned()).into()),
+        }
+    }
+}
+
+fn get_card_isin_from_payment_method_data<T>(
+    card_details: &PaymentMethodData<T>,
+) -> Result<String, error_stack::Report<errors::ConnectorError>>
+where
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+{
+    let type_name = std::any::type_name::<T>();
+    
+    if type_name.contains("DefaultPCIHolder") {
+        let default_pci_data: &PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder> = 
+            unsafe { std::mem::transmute(card_details) };
+        default_pci_data.extract_card_isin()
+    } else {
+        let vault_token_data: &PaymentMethodData<domain_types::payment_method_data::VaultTokenHolder> = 
+            unsafe { std::mem::transmute(card_details) };
+        vault_token_data.extract_card_isin()
+    }
+}
+
 impl TryFrom<BraintreeMeta> for BraintreeClientTokenRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(metadata: BraintreeMeta) -> Result<Self, Self::Error> {
@@ -1990,20 +2036,7 @@ fn get_braintree_redirect_form<
             }
         },
         bin: match card_details {
-            PaymentMethodData::Card(card_details) => {
-                let card_number_str = std::any::type_name::<T::Inner>();
-                if card_number_str.contains("CardNumber") {
-                    let card_data: &domain_types::payment_method_data::Card<
-                        domain_types::payment_method_data::DefaultPCIHolder,
-                    > = unsafe { std::mem::transmute(&card_details) };
-                    card_data.card_number.0.get_card_isin()
-                } else {
-                    return Err(errors::ConnectorError::NotImplemented(
-                        "3DS redirect not supported for vault tokens".to_owned(),
-                    )
-                    .into());
-                }
-            }
+            PaymentMethodData::Card(_) => get_card_isin_from_payment_method_data(&card_details)?,
             PaymentMethodData::CardRedirect(_)
             | PaymentMethodData::Wallet(_)
             | PaymentMethodData::PayLater(_)
