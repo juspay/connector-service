@@ -114,12 +114,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
-            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "unsupported_capture_method".to_string(),
-                error_identifier: 4001,
-                error_message: format!("Capture method {value:?} is not supported"),
-                error_object: None,
-            }))),
+            _ => Ok(Self::Automatic),
         }
     }
 }
@@ -4275,22 +4270,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         let currency = value.currency();
         let payment_method_type =
             <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
-        let capture_method = match value.capture_method {
-            Some(method) => {
-                let grpc_capture_method = grpc_api_types::payments::CaptureMethod::try_from(method)
-                    .unwrap_or(grpc_api_types::payments::CaptureMethod::Unspecified);
-                Some(common_enums::CaptureMethod::foreign_try_from(
-                    grpc_capture_method,
-                )?)
-            }
-            None => None,
-        };
+        let capture_method = value.capture_method();
         let merchant_order_reference_id = value.merchant_order_reference_id;
         let metadata = value.metadata;
         let webhook_url = value.webhook_url;
 
         // Extract mandate reference
-        let mandate_reference = value.mandate_reference.ok_or_else(|| {
+        let mandate_reference = value.mandate_reference.clone().ok_or_else(|| {
             ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_MANDATE_REFERENCE".to_owned(),
                 error_identifier: 400,
@@ -4344,7 +4330,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             },
             webhook_url,
             integrity_object: None,
-            capture_method,
+            capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
+                capture_method,
+            )?),
             email,
             browser_info: value
                 .browser_info
