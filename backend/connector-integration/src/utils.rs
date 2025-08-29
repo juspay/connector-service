@@ -10,6 +10,7 @@ use serde_json::Value;
 pub use xml_utils::preprocess_xml_response_bytes;
 
 type Error = error_stack::Report<errors::ConnectorError>;
+use common_enums::enums;
 
 #[macro_export]
 macro_rules! with_error_response_body {
@@ -109,5 +110,16 @@ pub(crate) fn handle_json_response_deserialization_failure(
             network_decline_code: None,
             network_error_message: None,
         }),
+    }
+}
+
+pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
+    match status {
+        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
+            true
+        }
+        common_enums::RefundStatus::ManualReview
+        | common_enums::RefundStatus::Pending
+        | common_enums::RefundStatus::Success => false,
     }
 }
