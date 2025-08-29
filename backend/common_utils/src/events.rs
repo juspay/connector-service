@@ -207,8 +207,11 @@ pub enum FlowName {
     Dsync,
     IncomingWebhook,
     SetupMandate,
+    RepeatPayment,
     CreateOrder,
+    CreateSessionToken,
     PaymentMethodToken,
+    Unknown,
 }
 
 impl FlowName {
@@ -226,8 +229,11 @@ impl FlowName {
             Self::Dsync => "Dsync",
             Self::IncomingWebhook => "IncomingWebhook",
             Self::SetupMandate => "SetupMandate",
+            Self::RepeatPayment => "RepeatPayment",
             Self::CreateOrder => "CreateOrder",
             Self::PaymentMethodToken => "PaymentMethodToken",
+            Self::CreateSessionToken => "CreateSessionToken",
+            Self::Unknown => "Unknown",
         }
     }
 }
