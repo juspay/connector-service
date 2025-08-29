@@ -1825,7 +1825,9 @@ impl CardIsinExtractor for PaymentMethodData<domain_types::payment_method_data::
     fn extract_card_isin(&self) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         match self {
             PaymentMethodData::Card(card_details) => Ok(card_details.card_number.get_card_isin()),
-            _ => Err(errors::ConnectorError::NotImplemented("given payment method".to_owned()).into()),
+            _ => Err(
+                errors::ConnectorError::NotImplemented("given payment method".to_owned()).into(),
+            ),
         }
     }
 }
@@ -1834,7 +1836,9 @@ impl CardIsinExtractor for PaymentMethodData<domain_types::payment_method_data::
     fn extract_card_isin(&self) -> Result<String, error_stack::Report<errors::ConnectorError>> {
         match self {
             PaymentMethodData::Card(card_details) => Ok(card_details.card_number.get_card_isin()),
-            _ => Err(errors::ConnectorError::NotImplemented("given payment method".to_owned()).into()),
+            _ => Err(
+                errors::ConnectorError::NotImplemented("given payment method".to_owned()).into(),
+            ),
         }
     }
 }
@@ -1851,14 +1855,16 @@ where
         + Serialize,
 {
     let type_name = std::any::type_name::<T>();
-    
+
     if type_name.contains("DefaultPCIHolder") {
-        let default_pci_data: &PaymentMethodData<domain_types::payment_method_data::DefaultPCIHolder> = 
-            unsafe { std::mem::transmute(card_details) };
+        let default_pci_data: &PaymentMethodData<
+            domain_types::payment_method_data::DefaultPCIHolder,
+        > = unsafe { std::mem::transmute(card_details) };
         default_pci_data.extract_card_isin()
     } else {
-        let vault_token_data: &PaymentMethodData<domain_types::payment_method_data::VaultTokenHolder> = 
-            unsafe { std::mem::transmute(card_details) };
+        let vault_token_data: &PaymentMethodData<
+            domain_types::payment_method_data::VaultTokenHolder,
+        > = unsafe { std::mem::transmute(card_details) };
         vault_token_data.extract_card_isin()
     }
 }
