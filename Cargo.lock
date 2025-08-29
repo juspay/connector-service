@@ -919,7 +919,7 @@ version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#87e69678f65ae90d892244897b77a6ab0495d238"
 dependencies = [
  "diesel",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate)",
  "router_derive",
  "serde",
  "serde_json",
@@ -943,7 +943,7 @@ dependencies = [
  "globset",
  "hex",
  "http 0.2.12",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate)",
  "md5",
  "nanoid",
  "nutype",
@@ -1020,7 +1020,7 @@ dependencies = [
  "hex",
  "image",
  "interfaces",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "paste",
  "qrcode",
  "quick-xml 0.31.0",
@@ -1342,7 +1342,7 @@ dependencies = [
  "error-stack 0.4.1",
  "grpc-api-types",
  "http 0.2.12",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "rand 0.8.5",
  "regex",
  "router_derive",
@@ -1466,7 +1466,7 @@ dependencies = [
  "injector",
  "interfaces",
  "lazy_static",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "mime",
  "once_cell",
  "prometheus",
@@ -2613,7 +2613,7 @@ dependencies = [
  "g2h",
  "heck",
  "http 1.3.1",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "prost",
  "prost-build",
  "prost-types",
@@ -2644,7 +2644,7 @@ dependencies = [
  "interfaces",
  "lazy_static",
  "log_utils",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "once_cell",
  "prometheus",
  "rand 0.8.5",
@@ -3195,7 +3195,7 @@ dependencies = [
  "async-trait",
  "common_utils",
  "error-stack 0.4.1",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate)",
  "nom",
  "reqwest 0.12.23",
  "router_env",
@@ -3227,7 +3227,7 @@ dependencies = [
  "domain_types",
  "error-stack 0.4.1",
  "http 0.2.12",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "mime",
  "reqwest 0.11.27",
  "serde",
@@ -3518,6 +3518,21 @@ dependencies = [
 name = "masking"
 version = "0.1.0"
 source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#87e69678f65ae90d892244897b77a6ab0495d238"
+dependencies = [
+ "diesel",
+ "erased-serde",
+ "serde",
+ "serde_json",
+ "subtle",
+ "time",
+ "url",
+ "zeroize",
+]
+
+[[package]]
+name = "masking"
+version = "0.1.0"
+source = "git+https://github.com/juspay/hyperswitch?branch=main#23cf4376f5691e9c56cb0346bfd06c1e88ff38a8"
 dependencies = [
  "bytes",
  "diesel",
@@ -5930,7 +5945,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "error-stack 0.4.1",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "prost",
  "regex",
  "serde",
@@ -5963,7 +5978,7 @@ dependencies = [
  "futures",
  "hex",
  "http 1.3.1",
- "masking",
+ "masking 0.1.0 (git+https://github.com/juspay/hyperswitch?branch=main)",
  "md5",
  "nanoid",
  "once_cell",
