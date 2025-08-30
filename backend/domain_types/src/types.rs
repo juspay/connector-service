@@ -32,6 +32,47 @@ fn extract_connector_request_reference_id(
         .unwrap_or_default()
 }
 
+/// Extract vault-related headers from gRPC metadata
+fn extract_vault_headers_from_metadata(
+    metadata: &tonic::metadata::MetadataMap,
+) -> Option<HashMap<String, String>> {
+    let mut additional_headers = HashMap::new();
+    
+    // Extract x-vault-proxy-url header
+    if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
+        if let Ok(value_str) = vault_proxy_url.to_str() {
+            additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
+        }
+    }
+    
+    // Extract x-ca-certificate header  
+    if let Some(ca_cert) = metadata.get("x-ca-certificate") {
+        if let Ok(value_str) = ca_cert.to_str() {
+            additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
+        }
+    }
+    
+    // Extract x-vault-id header
+    if let Some(vault_id) = metadata.get("x-vault-id") {
+        if let Ok(value_str) = vault_id.to_str() {
+            additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
+        }
+    }
+    
+    // Extract x-vault-credentials header
+    if let Some(vault_creds) = metadata.get("x-vault-credentials") {
+        if let Ok(value_str) = vault_creds.to_str() {
+            additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
+        }
+    }
+    
+    if additional_headers.is_empty() {
+        None
+    } else {
+        Some(additional_headers)
+    }
+}
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
@@ -1410,41 +1451,7 @@ impl
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         // Extract specific headers for vault and other integrations
-        let mut additional_headers = std::collections::HashMap::new();
-        
-        // Extract x-vault-proxy-url header
-        if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
-            if let Ok(value_str) = vault_proxy_url.to_str() {
-                additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-ca-certificate header  
-        if let Some(ca_cert) = metadata.get("x-ca-certificate") {
-            if let Ok(value_str) = ca_cert.to_str() {
-                additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-id header
-        if let Some(vault_id) = metadata.get("x-vault-id") {
-            if let Ok(value_str) = vault_id.to_str() {
-                additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-credentials header
-        if let Some(vault_creds) = metadata.get("x-vault-credentials") {
-            if let Ok(value_str) = vault_creds.to_str() {
-                additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
-            }
-        }
-        
-        let additional_headers = if additional_headers.is_empty() {
-            None
-        } else {
-            Some(additional_headers)
-        };
+        let additional_headers = extract_vault_headers_from_metadata(metadata);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1526,43 +1533,7 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        // Extract specific headers for vault and other integrations
-        let mut additional_headers = std::collections::HashMap::new();
-        
-        // Extract x-vault-proxy-url header
-        if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
-            if let Ok(value_str) = vault_proxy_url.to_str() {
-                additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-ca-certificate header  
-        if let Some(ca_cert) = metadata.get("x-ca-certificate") {
-            if let Ok(value_str) = ca_cert.to_str() {
-                additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-id header
-        if let Some(vault_id) = metadata.get("x-vault-id") {
-            if let Ok(value_str) = vault_id.to_str() {
-                additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-credentials header
-        if let Some(vault_creds) = metadata.get("x-vault-credentials") {
-            if let Ok(value_str) = vault_creds.to_str() {
-                additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
-            }
-        }
-        
-        let additional_headers = if additional_headers.is_empty() {
-            None
-        } else {
-            Some(additional_headers)
-        };
-
+       
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -1593,7 +1564,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers,
+            additional_headers: None,
         })
     }
 }
@@ -1623,43 +1594,6 @@ impl
         );
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
-
-        // Extract specific headers for vault and other integrations
-        let mut additional_headers = std::collections::HashMap::new();
-        
-        // Extract x-vault-proxy-url header
-        if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
-            if let Ok(value_str) = vault_proxy_url.to_str() {
-                additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-ca-certificate header  
-        if let Some(ca_cert) = metadata.get("x-ca-certificate") {
-            if let Ok(value_str) = ca_cert.to_str() {
-                additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-id header
-        if let Some(vault_id) = metadata.get("x-vault-id") {
-            if let Ok(value_str) = vault_id.to_str() {
-                additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-credentials header
-        if let Some(vault_creds) = metadata.get("x-vault-credentials") {
-            if let Ok(value_str) = vault_creds.to_str() {
-                additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
-            }
-        }
-        
-        let additional_headers = if additional_headers.is_empty() {
-            None
-        } else {
-            Some(additional_headers)
-        };
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1691,7 +1625,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers,
+            additional_headers: None,
         })
     }
 }
@@ -1723,42 +1657,6 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        // Extract specific headers for vault and other integrations
-        let mut additional_headers = std::collections::HashMap::new();
-        
-        // Extract x-vault-proxy-url header
-        if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
-            if let Ok(value_str) = vault_proxy_url.to_str() {
-                additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-ca-certificate header  
-        if let Some(ca_cert) = metadata.get("x-ca-certificate") {
-            if let Ok(value_str) = ca_cert.to_str() {
-                additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-id header
-        if let Some(vault_id) = metadata.get("x-vault-id") {
-            if let Ok(value_str) = vault_id.to_str() {
-                additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-credentials header
-        if let Some(vault_creds) = metadata.get("x-vault-credentials") {
-            if let Ok(value_str) = vault_creds.to_str() {
-                additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
-            }
-        }
-        
-        let additional_headers = if additional_headers.is_empty() {
-            None
-        } else {
-            Some(additional_headers)
-        };
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1790,7 +1688,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers,
+            additional_headers: None,
         })
     }
 }
@@ -3564,43 +3462,6 @@ impl
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        // Extract specific headers for vault and other integrations
-        let mut additional_headers = std::collections::HashMap::new();
-        
-        // Extract x-vault-proxy-url header
-        if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
-            if let Ok(value_str) = vault_proxy_url.to_str() {
-                additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-ca-certificate header  
-        if let Some(ca_cert) = metadata.get("x-ca-certificate") {
-            if let Ok(value_str) = ca_cert.to_str() {
-                additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-id header
-        if let Some(vault_id) = metadata.get("x-vault-id") {
-            if let Ok(value_str) = vault_id.to_str() {
-                additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-credentials header
-        if let Some(vault_creds) = metadata.get("x-vault-credentials") {
-            if let Ok(value_str) = vault_creds.to_str() {
-                additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
-            }
-        }
-        
-        let additional_headers = if additional_headers.is_empty() {
-            None
-        } else {
-            Some(additional_headers)
-        };
-
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "PAYMENT_ID".to_string(),
@@ -3631,7 +3492,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers,
+            additional_headers: None,
         })
     }
 }
@@ -3753,43 +3614,7 @@ impl
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
-        // Extract specific headers for vault and other integrations
-        let mut additional_headers = std::collections::HashMap::new();
-        
-        // Extract x-vault-proxy-url header
-        if let Some(vault_proxy_url) = metadata.get("x-vault-proxy-url") {
-            if let Ok(value_str) = vault_proxy_url.to_str() {
-                additional_headers.insert("x-vault-proxy-url".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-ca-certificate header  
-        if let Some(ca_cert) = metadata.get("x-ca-certificate") {
-            if let Ok(value_str) = ca_cert.to_str() {
-                additional_headers.insert("x-ca-certificate".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-id header
-        if let Some(vault_id) = metadata.get("x-vault-id") {
-            if let Ok(value_str) = vault_id.to_str() {
-                additional_headers.insert("x-vault-id".to_string(), value_str.to_string());
-            }
-        }
-        
-        // Extract x-vault-credentials header
-        if let Some(vault_creds) = metadata.get("x-vault-credentials") {
-            if let Ok(value_str) = vault_creds.to_str() {
-                additional_headers.insert("x-vault-credentials".to_string(), value_str.to_string());
-            }
-        }
-        
-        let additional_headers = if additional_headers.is_empty() {
-            None
-        } else {
-            Some(additional_headers)
-        };
-
+       
         Ok(Self {
             merchant_id: merchant_id_from_header,
             payment_id: "IRRELEVANT_PAYMENT_ID".to_string(),
@@ -3820,7 +3645,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers,
+            additional_headers: None,
         })
     }
 }
