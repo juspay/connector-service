@@ -686,11 +686,11 @@ impl PaymentFlowData {
     pub fn get_header(&self, key: &str) -> Option<&String> {
         self.additional_headers.as_ref().and_then(|h| h.get(key))
     }
-    
+
     pub fn get_vault_proxy_url(&self) -> Option<String> {
         self.get_header("x-vault-proxy-url").cloned()
     }
-    
+
     pub fn get_ca_certificate(&self) -> Option<String> {
         self.get_header("x-ca-certificate").cloned()
     }

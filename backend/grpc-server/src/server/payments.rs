@@ -2,11 +2,15 @@ use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
 use common_utils::errors::CustomResult;
+use common_utils::{
+    events::{EventConfig, FlowName},
+    pii::SecretSerdeValue,
+};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, PSync, Refund,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, CreateSessionToken, PSync, Refund, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -26,6 +30,7 @@ use domain_types::{
     utils::ForeignTryFrom,
 };
 use error_stack::ResultExt;
+use external_services::service::EventProcessingParams;
 use grpc_api_types::payments::{
     payment_method, payment_service_server::PaymentService, DisputeResponse,
     PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest,
@@ -36,11 +41,9 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
+use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};
+use injector::{TokenData, VaultConnectors};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
-use injector::{VaultConnectors, TokenData};
-use common_utils::{pii::SecretSerdeValue, events::{EventConfig, FlowName}};
-use external_services::service::EventProcessingParams;
-use hyperswitch_masking::{ExposeInterface, ErasedMaskSerialize};
 use tracing::info;
 
 use crate::{
@@ -49,9 +52,6 @@ use crate::{
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
-
-
-
 
 /// Helper function for converting CardDetails to TokenData with structured types
 #[derive(Debug, serde::Serialize)]
@@ -74,15 +74,30 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
 
     fn to_token_data_with_vault(&self, vault_connector: VaultConnectors) -> TokenData {
         let card_data = CardTokenData {
-            card_number: self.card_number.as_ref().map(|cn| cn.to_string()).unwrap_or_default(),
-            cvv: self.card_cvc.as_ref().map(|cvc| cvc.clone().expose().to_string()).unwrap_or_default(),
-            exp_month: self.card_exp_month.as_ref().map(|em| em.clone().expose().to_string()).unwrap_or_default(),
-            exp_year: self.card_exp_year.as_ref().map(|ey| ey.clone().expose().to_string()).unwrap_or_default(),
+            card_number: self
+                .card_number
+                .as_ref()
+                .map(|cn| cn.to_string())
+                .unwrap_or_default(),
+            cvv: self
+                .card_cvc
+                .as_ref()
+                .map(|cvc| cvc.clone().expose().to_string())
+                .unwrap_or_default(),
+            exp_month: self
+                .card_exp_month
+                .as_ref()
+                .map(|em| em.clone().expose().to_string())
+                .unwrap_or_default(),
+            exp_year: self
+                .card_exp_year
+                .as_ref()
+                .map(|ey| ey.clone().expose().to_string())
+                .unwrap_or_default(),
         };
 
-        let card_json = serde_json::to_value(card_data)
-            .unwrap_or(serde_json::Value::Null);
-        
+        let card_json = serde_json::to_value(card_data).unwrap_or(serde_json::Value::Null);
+
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
             vault_connector,
@@ -154,17 +169,20 @@ impl Payments {
         > = connector_data.connector.get_connector_integration_v2();
 
         // Create common request data
-        let payment_flow_data =
-            PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone(), metadata))
-                .map_err(|err| {
-                    tracing::error!("Failed to process payment flow data: {:?}", err);
-                    PaymentAuthorizationError::new(
-                        grpc_api_types::payments::PaymentStatus::Pending,
-                        Some("Failed to process payment flow data".to_string()),
-                        Some("PAYMENT_FLOW_ERROR".to_string()),
-                        None,
-                    )
-                })?;
+        let payment_flow_data = PaymentFlowData::foreign_try_from((
+            payload.clone(),
+            self.config.connectors.clone(),
+            metadata,
+        ))
+        .map_err(|err| {
+            tracing::error!("Failed to process payment flow data: {:?}", err);
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some("Failed to process payment flow data".to_string()),
+                Some("PAYMENT_FLOW_ERROR".to_string()),
+                None,
+            )
+        })?;
 
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
@@ -248,7 +266,9 @@ impl Payments {
             service_name,
             flow_name: FlowName::Authorize,
             event_config: &event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(
+                serde_json::to_value(&payload).unwrap_or_default(),
+            )),
             request_id,
         };
 
@@ -404,7 +424,9 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateOrder,
             event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
             request_id,
         };
 
@@ -503,7 +525,9 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateOrder,
             event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
             request_id: "setup_mandate_order_request",
         };
 
@@ -595,7 +619,9 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateSessionToken,
             event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
             request_id,
         };
 
@@ -738,7 +764,6 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                
                 let (connector, _merchant_id, _tenant_id, request_id) =
                     crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
                         request.metadata(),
@@ -755,9 +780,7 @@ impl PaymentService for Payments {
                             Some(payment_method::PaymentMethod::Card(card_details)) => {
                                 match &card_details.card_type {
                                     Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
-                                        
                                         let token_data = proxy_card_details.to_token_data();
-                                        
                                         match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
                                             payload,
                                             connector,
@@ -1010,7 +1033,7 @@ impl PaymentService for Payments {
                 .map_err(|e| e.into_grpc_status())?,
                 _ => {
                     return Err(tonic::Status::unimplemented(
-                        "Event type not supported for webhook transformation"
+                        "Event type not supported for webhook transformation",
                     ));
                 }
             };
@@ -1160,8 +1183,8 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
                 let metadata = request.metadata().clone();
-                let connector = connector_from_metadata(&metadata)
-                    .map_err(|e| e.into_grpc_status())?;
+                let connector =
+                    connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
                 let connector_auth_details =
                     auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
                 let payload = request.into_inner();
@@ -1231,7 +1254,9 @@ impl PaymentService for Payments {
                     service_name: &service_name,
                     flow_name: FlowName::SetupMandate,
                     event_config: &event_config,
-                    raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
+                    raw_request_data: Some(SecretSerdeValue::new(
+                        serde_json::to_value(payload).unwrap_or_default(),
+                    )),
                     request_id: "register_request",
                 };
 
@@ -1339,7 +1364,9 @@ impl PaymentService for Payments {
                     service_name: &service_name,
                     flow_name: FlowName::RepeatPayment,
                     event_config: &event_config,
-                    raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
+                    raw_request_data: Some(SecretSerdeValue::new(
+                        serde_json::to_value(payload).unwrap_or_default(),
+                    )),
                     request_id: "repeat_everything_request",
                 };
 

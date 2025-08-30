@@ -1,11 +1,9 @@
 use std::{str::FromStr, time::Duration};
 
 use base64::engine::Engine;
-use common_utils::ext_traits::AsyncExt;
-use common_utils::{
-    request::{Method, Request, RequestContent},
-};
 use common_enums::ApiClientError;
+use common_utils::ext_traits::AsyncExt;
+use common_utils::request::{Method, Request, RequestContent};
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiErrorResponse, ConnectorError},
@@ -42,11 +40,11 @@ use common_utils::{
     pii::SecretSerdeValue,
 };
 use error_stack::{report, ResultExt};
+use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable, Secret};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
-use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable, Secret};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
@@ -55,7 +53,9 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 
 // TokenData is now imported from hyperswitch_injector
-use injector::{injector_core, InjectorRequest, TokenData, ConnectorPayload, ConnectionConfig, HttpMethod};
+use injector::{
+    injector_core, ConnectionConfig, ConnectorPayload, HttpMethod, InjectorRequest, TokenData,
+};
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
 // Base64 engine for certificate processing
@@ -81,18 +81,13 @@ impl ToHttpMethod for Method {
 fn process_certificate_for_injector(
     encoded_certificate: &Secret<String>,
 ) -> Result<Secret<String>, ConnectorError> {
-    
     // Try to decode as base64 first
     let certificate_content = match BASE64_ENGINE.decode(encoded_certificate.clone().expose()) {
         Ok(decoded_bytes) => {
             // Successfully decoded base64, convert to string
             match String::from_utf8(decoded_bytes) {
-                Ok(decoded_string) => {
-                    decoded_string
-                }
-                Err(_) => {
-                    encoded_certificate.clone().expose().to_string()
-                }
+                Ok(decoded_string) => decoded_string,
+                Err(_) => encoded_certificate.clone().expose().to_string(),
             }
         }
         Err(_) => {
@@ -100,10 +95,10 @@ fn process_certificate_for_injector(
             encoded_certificate.clone().expose().to_string()
         }
     };
-    
+
     // Certificate should already have proper PEM headers from source
     let processed_cert = certificate_content.replace("\\n", "\n");
-    
+
     Ok(Secret::new(processed_cert))
 }
 
@@ -112,30 +107,21 @@ fn process_client_certificate_for_injector(
     encoded_certificate: &Secret<String>,
     encoded_certificate_key: &Secret<String>,
 ) -> Result<(Secret<String>, Secret<String>), ConnectorError> {
-    
     // Process certificate
     let processed_cert = process_certificate_for_injector(encoded_certificate)?;
-    
+
     // Process certificate key
     let key_content = match BASE64_ENGINE.decode(encoded_certificate_key.clone().expose()) {
-        Ok(decoded_bytes) => {
-            match String::from_utf8(decoded_bytes) {
-                Ok(decoded_string) => {
-                    decoded_string
-                }
-                Err(_) => {
-                    encoded_certificate_key.clone().expose().to_string()
-                }
-            }
-        }
-        Err(_) => {
-            encoded_certificate_key.clone().expose().to_string()
-        }
+        Ok(decoded_bytes) => match String::from_utf8(decoded_bytes) {
+            Ok(decoded_string) => decoded_string,
+            Err(_) => encoded_certificate_key.clone().expose().to_string(),
+        },
+        Err(_) => encoded_certificate_key.clone().expose().to_string(),
     };
-    
+
     // Private key should already have proper PEM headers from source
     let processed_key = key_content;
-    
+
     Ok((processed_cert, Secret::new(processed_key)))
 }
 
@@ -144,42 +130,46 @@ fn convert_to_injector_request<ResourceCommonData>(
     token_data: &TokenData,
     proxy: &Proxy,
     payment_flow_data: &ResourceCommonData,
-) -> Result<InjectorRequest, ConnectorError> 
+) -> Result<InjectorRequest, ConnectorError>
 where
     ResourceCommonData: Clone + 'static,
 {
     use std::collections::HashMap;
-    
+
     let http_method = connector_request.method.to_http_method();
 
     let injector_token_data = TokenData {
         vault_connector: token_data.vault_connector,
         specific_token_data: token_data.specific_token_data.clone(),
     };
-    
+
     // Use the connector request body as the template (after credit_proxy/debit_proxy conversion)
-    let template = connector_request.body
+    let template = connector_request
+        .body
         .as_ref()
         .ok_or(ConnectorError::RequestEncodingFailed)?
         .get_inner_value()
         .expose()
         .to_string();
-    
+
     let connector_payload = ConnectorPayload { template };
 
     // Parse the URL to separate base_url and endpoint_path
     let parsed_url = reqwest::Url::parse(&connector_request.url)
         .map_err(|_| ConnectorError::RequestEncodingFailed)?;
-    
+
     // Create base URL with scheme, host, and port only
     let mut base_url_parsed = parsed_url.clone();
     base_url_parsed.set_path("");
     base_url_parsed.set_query(None);
     base_url_parsed.set_fragment(None);
-    
+
     // Convert to string for injector compatibility and remove trailing slash
-    let base_url = base_url_parsed.to_string().trim_end_matches('/').to_string();
-    
+    let base_url = base_url_parsed
+        .to_string()
+        .trim_end_matches('/')
+        .to_string();
+
     // Extract the path as endpoint_path
     let endpoint_path = parsed_url.path().to_string();
 
@@ -187,17 +177,21 @@ where
     let mut headers = HashMap::new();
     let mut vault_proxy_url = None;
     let mut ca_cert_from_header = None;
-    
+
     // Use existing proxy configuration as fallback
-    let fallback_proxy_url = proxy.https_url.as_ref().or(proxy.http_url.as_ref())
+    let fallback_proxy_url = proxy
+        .https_url
+        .as_ref()
+        .or(proxy.http_url.as_ref())
         .and_then(|url| reqwest::Url::parse(url).ok());
-    
+
     // Try to extract headers from PaymentFlowData if available
     // Safe downcast wrapper to avoid clippy warning
     let payment_flow_any: &dyn std::any::Any = payment_flow_data;
-    if let Some(payment_flow) = payment_flow_any.downcast_ref::<domain_types::connector_types::PaymentFlowData>() {
+    if let Some(payment_flow) =
+        payment_flow_any.downcast_ref::<domain_types::connector_types::PaymentFlowData>()
+    {
         if let Some(additional_headers) = &payment_flow.additional_headers {
-            
             for (key, value) in additional_headers {
                 match key.as_str() {
                     "x-vault-proxy-url" => {
@@ -213,9 +207,9 @@ where
             }
         }
     }
-    
+
     // Always process connector request headers to get authentication and other necessary headers
-    
+
     for (key, value) in &connector_request.headers {
         // Handle vault headers (but only if not already found in PaymentFlowData)
         match key.to_lowercase().as_str() {
@@ -252,62 +246,62 @@ where
 
     let final_proxy_url = vault_proxy_url.or(fallback_proxy_url);
     let final_ca_cert = ca_cert_from_header.or_else(|| {
-        connector_request.ca_certificate.as_ref().map(|cert| Secret::new(cert.clone().expose().to_string()))
+        connector_request
+            .ca_certificate
+            .as_ref()
+            .map(|cert| Secret::new(cert.clone().expose().to_string()))
     });
-    
+
     // Convert proxy URL to string for injector
-    let injector_proxy_url = final_proxy_url.as_ref().map(|url| {
-        url.to_string()
-    });
-    
+    let injector_proxy_url = final_proxy_url.as_ref().map(|url| url.to_string());
+
     // Process certificates for injector compatibility
-    let (processed_client_cert, processed_client_key) = match (&connector_request.certificate, &connector_request.certificate_key) {
-        (Some(cert), Some(key)) => {
-            match process_client_certificate_for_injector(cert, key) {
-                Ok((processed_cert, processed_key)) => {
-                    (
-                        Some(processed_cert.expose().to_string()),
-                        Some(processed_key.expose().to_string())
-                    )
-                }
-                Err(_) => {
-                    (
-                        connector_request.certificate.as_ref().map(|c| c.clone().expose().to_string()),
-                        connector_request.certificate_key.as_ref().map(|k| k.clone().expose().to_string())
-                    )
-                }
-            }
-        }
-        _ => {
-            (
-                connector_request.certificate.as_ref().map(|c| c.clone().expose().to_string()),
-                connector_request.certificate_key.as_ref().map(|k| k.clone().expose().to_string())
-            )
-        }
+    let (processed_client_cert, processed_client_key) = match (
+        &connector_request.certificate,
+        &connector_request.certificate_key,
+    ) {
+        (Some(cert), Some(key)) => match process_client_certificate_for_injector(cert, key) {
+            Ok((processed_cert, processed_key)) => (
+                Some(processed_cert.expose().to_string()),
+                Some(processed_key.expose().to_string()),
+            ),
+            Err(_) => (
+                connector_request
+                    .certificate
+                    .as_ref()
+                    .map(|c| c.clone().expose().to_string()),
+                connector_request
+                    .certificate_key
+                    .as_ref()
+                    .map(|k| k.clone().expose().to_string()),
+            ),
+        },
+        _ => (
+            connector_request
+                .certificate
+                .as_ref()
+                .map(|c| c.clone().expose().to_string()),
+            connector_request
+                .certificate_key
+                .as_ref()
+                .map(|k| k.clone().expose().to_string()),
+        ),
     };
-    
+
     let processed_ca_cert = match &final_ca_cert {
-        Some(ca_cert) => {
-            match process_certificate_for_injector(ca_cert) {
-                Ok(processed_cert) => {
-                    Some(processed_cert.expose().to_string())
-                }
-                Err(_) => {
-                    Some(ca_cert.clone().expose().to_string())
-                }
-            }
-        }
-        None => None
+        Some(ca_cert) => match process_certificate_for_injector(ca_cert) {
+            Ok(processed_cert) => Some(processed_cert.expose().to_string()),
+            Err(_) => Some(ca_cert.clone().expose().to_string()),
+        },
+        None => None,
     };
-    
+
     // Create injector headers using hyperswitch_masking::Secret
     let injector_headers: HashMap<String, Secret<String>> = headers
         .into_iter()
-        .map(|(k, v)| {
-            (k, Secret::new(v))
-        })
+        .map(|(k, v)| (k, Secret::new(v)))
         .collect();
-    
+
     let connection_config = ConnectionConfig {
         base_url,
         endpoint_path,
@@ -328,7 +322,7 @@ where
         connector_payload,
         connection_config,
     };
-    
+
     Ok(injector_request)
 }
 
@@ -436,21 +430,25 @@ where
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
             let request_id = event_params.request_id.to_string();
-            
-            
+
             let response = if let Some(token_data) = token_data {
-                let injector_request = convert_to_injector_request(&request, &token_data, proxy, &router_data.resource_common_data)
-                    .change_context(ConnectorError::RequestEncodingFailed)?;
-                
+                let injector_request = convert_to_injector_request(
+                    &request,
+                    &token_data,
+                    proxy,
+                    &router_data.resource_common_data,
+                )
+                .change_context(ConnectorError::RequestEncodingFailed)?;
+
                 // New injector handles HTTP request internally and returns JSON response
                 let injector_response = injector_core(injector_request)
                     .await
                     .change_context(ConnectorError::RequestEncodingFailed)?;
-                
+
                 // Convert JSON response to our Response format
                 let response_bytes = serde_json::to_vec(&injector_response)
                     .map_err(|_| ConnectorError::ResponseHandlingFailed)?;
-                
+
                 Ok(Ok(Response {
                     headers: None, // Injector handles headers internally
                     response: response_bytes.into(),
