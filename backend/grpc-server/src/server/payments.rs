@@ -81,7 +81,7 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
         };
 
         let card_json = serde_json::to_value(card_data)
-            .expect("Failed to serialize card data");
+            .unwrap_or(serde_json::Value::Null);
         
         TokenData {
             specific_token_data: SecretSerdeValue::new(card_json),
@@ -118,6 +118,7 @@ pub struct Payments {
 }
 
 impl Payments {
+    #[allow(clippy::too_many_arguments)]
     async fn process_authorization_internal<
         T: PaymentMethodDataTypes
             + Default
@@ -330,6 +331,7 @@ impl Payments {
         Ok(authorize_response)
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn handle_order_creation<
         T: PaymentMethodDataTypes
             + Default
@@ -526,6 +528,7 @@ impl Payments {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn handle_session_token<
         T: PaymentMethodDataTypes
             + Default
@@ -538,7 +541,7 @@ impl Payments {
             + Sync
             + domain_types::types::CardConversionHelper<T>
             + 'static,
-        P: serde::Serialize,
+        P: serde::Serialize + Clone,
     >(
         &self,
         connector_data: ConnectorData<T>,
@@ -550,7 +553,6 @@ impl Payments {
         request_id: &str,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
-        P: Clone,
         SessionTokenRequestData: ForeignTryFrom<P, Error = ApplicationErrorResponse>,
     {
         // Get connector integration

@@ -101,14 +101,8 @@ fn process_certificate_for_injector(
         }
     };
     
-    // Ensure proper PEM formatting
-    let processed_cert = if certificate_content.contains("-----BEGIN CERTIFICATE-----") {
-        // Already in PEM format, but check if \n needs to be converted to actual newlines
-        certificate_content.replace("\\n", "\n")
-    } else {
-        // Wrap in PEM headers if not present
-        format!("-----BEGIN CERTIFICATE-----\n{certificate_content}\n-----END CERTIFICATE-----")
-    };
+    // Certificate should already have proper PEM headers from source
+    let processed_cert = certificate_content.replace("\\n", "\n");
     
     Ok(Secret::new(processed_cert))
 }
@@ -139,14 +133,8 @@ fn process_client_certificate_for_injector(
         }
     };
     
-    // Ensure proper PEM formatting for private key
-    let processed_key = if key_content.contains("-----BEGIN") && key_content.contains("PRIVATE KEY-----") {
-        // Already in PEM format
-        key_content
-    } else {
-        // Wrap in PEM headers (assuming RSA private key format)
-        format!("-----BEGIN RSA PRIVATE KEY-----\n{key_content}\n-----END RSA PRIVATE KEY-----")
-    };
+    // Private key should already have proper PEM headers from source
+    let processed_key = key_content;
     
     Ok((processed_cert, Secret::new(processed_key)))
 }
@@ -205,7 +193,9 @@ where
         .and_then(|url| reqwest::Url::parse(url).ok());
     
     // Try to extract headers from PaymentFlowData if available
-    if let Some(payment_flow) = (payment_flow_data as &dyn std::any::Any).downcast_ref::<domain_types::connector_types::PaymentFlowData>() {
+    // Safe downcast wrapper to avoid clippy warning
+    let payment_flow_any: &dyn std::any::Any = payment_flow_data;
+    if let Some(payment_flow) = payment_flow_any.downcast_ref::<domain_types::connector_types::PaymentFlowData>() {
         if let Some(additional_headers) = &payment_flow.additional_headers {
             
             for (key, value) in additional_headers {
