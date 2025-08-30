@@ -738,13 +738,16 @@ impl PaymentService for Payments {
             .unwrap_or_else(|| "unknown_service".to_string());
         grpc_logging_wrapper(request, &service_name, |request| {
             Box::pin(async {
-                let metadata = request.metadata().clone();
-                let connector = connector_from_metadata(&metadata)
+                
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
                     .map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
                 let connector_auth_details =
                     auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
                 let payload = request.into_inner();
-                let request_id = "authorize_request";
 
                 let authorize_response = match payload.payment_method.as_ref() {
                     Some(pm) => {
@@ -760,7 +763,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
-                                            request_id,
+                                            &request_id,
                                             Some(token_data),
                                             &metadata
                                         ))
@@ -783,7 +786,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
-                                            request_id,
+                                            &request_id,
                                             None, // no token data for non-proxy payments
                                             &metadata
                                         ))
@@ -807,7 +810,7 @@ impl PaymentService for Payments {
                                     connector,
                                     connector_auth_details,
                                     &service_name,
-                                    request_id,
+                                    &request_id,
                                     None, // no token data for non-card payments
                                     &metadata
                                 ))
@@ -825,7 +828,7 @@ impl PaymentService for Payments {
                             connector,
                             connector_auth_details,
                             &service_name,
-                            request_id,
+                            &request_id,
                             None, // no token data for payments without payment method
                             &metadata
                         ))
