@@ -54,6 +54,10 @@ pub const X_KEY2: &str = "x-key2";
 pub const X_API_SECRET: &str = "x-api-secret";
 /// Auth Key Map header
 pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
+/// PROXY header
+pub const X_VAULT_PROXY_URL: &str = "x-vault-proxy-url";
+/// Certificate path header
+pub const X_VAULT_CERT: &str = "x-ca-certificate";
 
 // =============================================================================
 // Error Messages and Codes
