@@ -40,7 +40,7 @@ use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use injector::{VaultConnectors, TokenData};
 use common_utils::{pii::SecretSerdeValue, events::{EventConfig, FlowName}};
 use external_services::service::EventProcessingParams;
-use hyperswitch_masking::{Secret, ExposeInterface, ErasedMaskSerialize};
+use hyperswitch_masking::{ExposeInterface, ErasedMaskSerialize};
 use tracing::info;
 
 use crate::{
@@ -50,27 +50,7 @@ use crate::{
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
 
-#[derive(Debug, Clone)]
-struct EventParams<'a> {
-    connector_name: &'a str,
-    service_name: &'a str,
-    request_id: &'a str,
-}
 
-// Error handling utilities for webhook processing
-trait WebhookErrorExt<T> {
-    #[allow(clippy::result_large_err)]
-    fn to_grpc_status(self) -> Result<T, tonic::Status>;
-}
-
-impl<T, E> WebhookErrorExt<T> for Result<T, E>
-where
-    E: IntoGrpcStatus,
-{
-    fn to_grpc_status(self) -> Result<T, tonic::Status> {
-        self.map_err(|e| e.into_grpc_status())
-    }
-}
 
 
 /// Helper function for converting CardDetails to TokenData with structured types
@@ -422,7 +402,7 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateOrder,
             event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
             request_id,
         };
 
@@ -521,7 +501,7 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateOrder,
             event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
             request_id: "setup_mandate_order_request",
         };
 
@@ -613,7 +593,7 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateSessionToken,
             event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+            raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
             request_id,
         };
 
@@ -778,7 +758,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
-                                            &request_id,
+                                            request_id,
                                             Some(token_data),
                                             &metadata
                                         ))
@@ -801,7 +781,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &service_name,
-                                            &request_id,
+                                            request_id,
                                             None, // no token data for non-proxy payments
                                             &metadata
                                         ))
@@ -825,7 +805,7 @@ impl PaymentService for Payments {
                                     connector,
                                     connector_auth_details,
                                     &service_name,
-                                    &request_id,
+                                    request_id,
                                     None, // no token data for non-card payments
                                     &metadata
                                 ))
@@ -843,7 +823,7 @@ impl PaymentService for Payments {
                             connector,
                             connector_auth_details,
                             &service_name,
-                            &request_id,
+                            request_id,
                             None, // no token data for payments without payment method
                             &metadata
                         ))
@@ -1246,7 +1226,7 @@ impl PaymentService for Payments {
                     service_name: &service_name,
                     flow_name: FlowName::SetupMandate,
                     event_config: &event_config,
-                    raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+                    raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
                     request_id: "register_request",
                 };
 
@@ -1354,7 +1334,7 @@ impl PaymentService for Payments {
                     service_name: &service_name,
                     flow_name: FlowName::RepeatPayment,
                     event_config: &event_config,
-                    raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(&payload).unwrap_or_default())),
+                    raw_request_data: Some(SecretSerdeValue::new(serde_json::to_value(payload).unwrap_or_default())),
                     request_id: "repeat_everything_request",
                 };
 
