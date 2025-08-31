@@ -688,11 +688,13 @@ impl PaymentFlowData {
     }
 
     pub fn get_vault_proxy_url(&self) -> Option<String> {
-        self.get_header("x-vault-proxy-url").map(|s| s.clone().expose().to_string())
+        self.get_header("x-vault-proxy-url")
+            .map(|s| s.clone().expose().to_string())
     }
 
     pub fn get_ca_certificate(&self) -> Option<String> {
-        self.get_header("x-ca-certificate").map(|s| s.clone().expose().to_string())
+        self.get_header("x-ca-certificate")
+            .map(|s| s.clone().expose().to_string())
     }
 }
 
