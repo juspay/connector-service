@@ -361,15 +361,13 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
 name = "async-compression"
-version = "0.4.29"
+version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bee399cc3a623ec5a2db2c5b90ee0190a2260241fbe0c023ac8f7bab426aaf8"
+checksum = "977eb15ea9efd848bb8a4a1a2500347ed7f0bf794edf0dc3ddcf439f43d36b23"
 dependencies = [
  "compression-codecs",
  "compression-core",
- "flate2",
  "futures-core",
- "memchr",
  "pin-project-lite",
  "tokio",
 ]
@@ -916,7 +914,7 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 [[package]]
 name = "common_enums"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#7677c8c8e721b8809395301730ccd4403cce505c"
+source = "git+https://github.com/juspay/hyperswitch?rev=58e42bd94#58e42bd94bef5255287a8cee575d8ac45af84aff"
 dependencies = [
  "diesel",
  "masking",
@@ -931,7 +929,7 @@ dependencies = [
 [[package]]
 name = "common_utils"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#7677c8c8e721b8809395301730ccd4403cce505c"
+source = "git+https://github.com/juspay/hyperswitch?rev=58e42bd94#58e42bd94bef5255287a8cee575d8ac45af84aff"
 dependencies = [
  "base64 0.22.1",
  "base64-serde",
@@ -948,6 +946,7 @@ dependencies = [
  "nanoid",
  "nutype",
  "once_cell",
+ "pem",
  "phonenumber",
  "quick-xml 0.31.0",
  "rand 0.8.5",
@@ -970,15 +969,13 @@ dependencies = [
 
 [[package]]
 name = "compression-codecs"
-version = "0.4.29"
+version = "0.4.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7eea68f0e02c2b0aa8856e9a9478444206d4b6828728e7b0697c0f8cca265cb"
+checksum = "485abf41ac0c8047c07c87c72c8fb3eb5197f6e9d7ded615dfd1a00ae00a0f64"
 dependencies = [
  "compression-core",
  "flate2",
- "futures-core",
  "memchr",
- "pin-project-lite",
 ]
 
 [[package]]
@@ -3193,7 +3190,7 @@ dependencies = [
 [[package]]
 name = "injector"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#7677c8c8e721b8809395301730ccd4403cce505c"
+source = "git+https://github.com/juspay/hyperswitch?rev=58e42bd94#58e42bd94bef5255287a8cee575d8ac45af84aff"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3527,7 +3524,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 [[package]]
 name = "masking"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#7677c8c8e721b8809395301730ccd4403cce505c"
+source = "git+https://github.com/juspay/hyperswitch?rev=58e42bd94#58e42bd94bef5255287a8cee575d8ac45af84aff"
 dependencies = [
  "bytes",
  "diesel",
@@ -3954,6 +3951,16 @@ name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
+
+[[package]]
+name = "pem"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b13fe415cdf3c8e44518e18a7c95a13431d9bdf6d15367d82b23c377fdd441a"
+dependencies = [
+ "base64 0.21.7",
+ "serde",
+]
 
 [[package]]
 name = "percent-encoding"
@@ -4726,7 +4733,7 @@ dependencies = [
 [[package]]
 name = "router_derive"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#7677c8c8e721b8809395301730ccd4403cce505c"
+source = "git+https://github.com/juspay/hyperswitch?rev=58e42bd94#58e42bd94bef5255287a8cee575d8ac45af84aff"
 dependencies = [
  "indexmap 2.11.0",
  "proc-macro2",
@@ -4739,7 +4746,7 @@ dependencies = [
 [[package]]
 name = "router_env"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?branch=addition_injector_crate#7677c8c8e721b8809395301730ccd4403cce505c"
+source = "git+https://github.com/juspay/hyperswitch?rev=58e42bd94#58e42bd94bef5255287a8cee575d8ac45af84aff"
 dependencies = [
  "cargo_metadata 0.18.1",
  "config",

@@ -195,13 +195,14 @@ where
             for (key, value) in additional_headers {
                 match key.as_str() {
                     "x-vault-proxy-url" => {
-                        vault_proxy_url = reqwest::Url::parse(value).ok();
+                        vault_proxy_url = reqwest::Url::parse(&value.clone().expose()).ok();
                     }
                     "x-ca-certificate" => {
-                        ca_cert_from_header = Some(Secret::new(value.clone()));
+                        ca_cert_from_header = Some(Secret::new(value.clone().expose()));
                     }
                     _ => {
-                        headers.insert(key.clone(), value.clone());
+                        // Expose the Secret value when adding to headers for injector
+                        headers.insert(key.clone(), value.clone().expose());
                     }
                 }
             }

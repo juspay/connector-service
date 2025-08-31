@@ -12,7 +12,7 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -279,7 +279,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
-    pub additional_headers: Option<std::collections::HashMap<String, String>>,
+    pub additional_headers: Option<std::collections::HashMap<String, Secret<String>>>,
 }
 
 impl PaymentFlowData {
@@ -683,16 +683,16 @@ impl PaymentFlowData {
     }
 
     // Helper methods for additional headers
-    pub fn get_header(&self, key: &str) -> Option<&String> {
+    pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
         self.additional_headers.as_ref().and_then(|h| h.get(key))
     }
 
     pub fn get_vault_proxy_url(&self) -> Option<String> {
-        self.get_header("x-vault-proxy-url").cloned()
+        self.get_header("x-vault-proxy-url").map(|s| s.clone().expose().to_string())
     }
 
     pub fn get_ca_certificate(&self) -> Option<String> {
-        self.get_header("x-ca-certificate").cloned()
+        self.get_header("x-ca-certificate").map(|s| s.clone().expose().to_string())
     }
 }
 
