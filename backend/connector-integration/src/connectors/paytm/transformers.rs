@@ -1405,11 +1405,6 @@ impl<
                 (None, resource_id, None)
             }
         };
-
-        // Include raw connector response (serialize the parsed response back to JSON)
-        let raw_connector_response =
-            Some(serde_json::to_string(&item.response).unwrap_or_default());
-
         // Get result code for status mapping
         let result_code = match &response.body {
             PaytmProcessRespBodyTypes::SuccessBody(success_body) => {
@@ -1432,7 +1427,6 @@ impl<
             network_txn_id: None,
             connector_response_reference_id: connector_txn_id,
             incremental_authorization_allowed: None,
-            raw_connector_response,
             status_code: item.http_code,
             state: None,
         });
@@ -1485,10 +1479,6 @@ impl
             }
         };
 
-        // Include raw connector response (serialize the parsed response back to JSON)
-        let raw_connector_response =
-            Some(serde_json::to_string(&item.response).unwrap_or_default());
-
         // Get result code for status mapping
         let result_code = match &response.body {
             PaytmTransactionStatusRespBodyTypes::SuccessBody(success_body) => {
@@ -1523,7 +1513,6 @@ impl
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: raw_connector_response.clone(),
             }),
             _ => Ok(PaymentsResponseData::TransactionResponse {
                 resource_id,
@@ -1533,7 +1522,6 @@ impl
                 network_txn_id: None,
                 connector_response_reference_id: connector_txn_id,
                 incremental_authorization_allowed: None,
-                raw_connector_response,
                 status_code: item.http_code,
                 state: None,
             }),

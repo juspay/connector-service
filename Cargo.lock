@@ -682,20 +682,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cards"
-version = "0.1.0"
-dependencies = [
- "common_utils",
- "error-stack 0.4.1",
- "masking",
- "regex",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "time",
-]
-
-[[package]]
 name = "cargo-platform"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -758,8 +744,10 @@ checksum = "c469d952047f47f91b68d1cba3f10d63c11d73e4636f24f08daf0278abf01c4d"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-link",
 ]
 
@@ -826,49 +814,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
-name = "common_enums"
-version = "0.1.0"
-dependencies = [
- "serde",
- "strum",
- "thiserror 1.0.69",
- "utoipa",
-]
-
-[[package]]
-name = "common_utils"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "blake3",
- "bytes",
- "common_enums",
- "error-stack 0.4.1",
- "futures",
- "hex",
- "http 1.3.1",
- "masking",
- "md5",
- "nanoid",
- "quick-xml",
- "rand 0.8.5",
- "regex",
- "reqwest",
- "ring",
- "rust_decimal",
- "semver",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "strum",
- "thiserror 1.0.69",
- "time",
- "url",
- "utoipa",
- "uuid",
-]
-
-[[package]]
 name = "config"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -894,10 +839,7 @@ dependencies = [
  "aes",
  "base64 0.21.7",
  "bytes",
- "cards",
  "cbc",
- "common_enums",
- "common_utils",
  "domain_types",
  "encoding_rs",
  "error-stack 0.4.1",
@@ -921,6 +863,9 @@ dependencies = [
  "thiserror 1.0.69",
  "time",
  "tracing",
+ "ucs_cards",
+ "ucs_common_enums",
+ "ucs_common_utils",
  "url",
  "uuid",
 ]
@@ -1221,9 +1166,6 @@ dependencies = [
  "actix-web",
  "base64 0.21.7",
  "bytes",
- "cards",
- "common_enums",
- "common_utils",
  "error-stack 0.4.1",
  "grpc-api-types",
  "http 0.2.12",
@@ -1236,7 +1178,11 @@ dependencies = [
  "strum",
  "thiserror 1.0.69",
  "time",
+ "tonic",
  "tracing",
+ "ucs_cards",
+ "ucs_common_enums",
+ "ucs_common_utils",
  "url",
  "utoipa",
 ]
@@ -1335,8 +1281,8 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bytes",
+ "chrono",
  "clap",
- "common_utils",
  "config",
  "domain_types",
  "error-stack 0.4.1",
@@ -1366,6 +1312,7 @@ dependencies = [
  "tracing-appender",
  "tracing-attributes",
  "tracing-subscriber",
+ "ucs_common_utils",
 ]
 
 [[package]]
@@ -1563,8 +1510,9 @@ dependencies = [
 
 [[package]]
 name = "g2h"
-version = "0.4.0"
-source = "git+https://github.com/NishantJoshi00/g2h?branch=fixing-response-serializing#fd2c856b2c6c88a85d6fe51d95b4d3342b788d31"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d843f7c70cdae8a2452e0b2f463b7e483a57cece7687da89371d952d44e0445d"
 dependencies = [
  "cargo_metadata",
  "heck",
@@ -2460,12 +2408,14 @@ dependencies = [
  "g2h",
  "heck",
  "http 1.3.1",
+ "masking",
  "prost",
  "prost-build",
  "prost-types",
  "serde",
  "tonic",
  "tonic-build",
+ "ucs_cards",
 ]
 
 [[package]]
@@ -2475,9 +2425,6 @@ dependencies = [
  "axum",
  "base64 0.21.7",
  "build_info",
- "cards",
- "common_enums",
- "common_utils",
  "config",
  "connector-integration",
  "domain_types",
@@ -2491,6 +2438,7 @@ dependencies = [
  "interfaces",
  "lazy_static",
  "log_utils",
+ "masking",
  "once_cell",
  "prometheus",
  "rand 0.8.5",
@@ -2511,7 +2459,11 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-attributes",
+ "tracing-kafka",
  "tracing-subscriber",
+ "ucs_cards",
+ "ucs_common_enums",
+ "ucs_common_utils",
  "uuid",
 ]
 
@@ -3007,8 +2959,6 @@ dependencies = [
  "actix-web",
  "async-trait",
  "bytes",
- "common_enums",
- "common_utils",
  "domain_types",
  "error-stack 0.4.1",
  "http 0.2.12",
@@ -3021,6 +2971,8 @@ dependencies = [
  "thiserror 1.0.69",
  "time",
  "tracing-actix-web",
+ "ucs_common_enums",
+ "ucs_common_utils",
  "utoipa",
 ]
 
@@ -3173,6 +3125,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "libz-sys"
+version = "1.1.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b70e7a7df205e92a1a4cd9aaae7898dac0aa555503cc0a649494d0d60e7651d"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+ "vcpkg",
+]
+
+[[package]]
 name = "linked-hash-map"
 version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3248,10 +3212,12 @@ dependencies = [
 [[package]]
 name = "masking"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?tag=v1.111.4#c26f9d6cfda3489627ab5761aa14863a440b4a9e"
+source = "git+https://github.com/juspay/hyperswitch?tag=v1.116.0#672d749e20bec7800613878e36a0ab3885177326"
 dependencies = [
+ "bytes",
  "diesel",
  "erased-serde",
+ "prost",
  "serde",
  "serde_json",
  "subtle",
@@ -3422,6 +3388,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_enum"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a973b4e44ce6cad84ce69d797acf9a044532e4184c4f267913d1b546a0727b7a"
+dependencies = [
+ "num_enum_derive",
+ "rustversion",
+]
+
+[[package]]
+name = "num_enum_derive"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77e878c846a8abae00dd069496dbe8751b16ac1c3d6bd2a7283a938e8228f90d"
+dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -3711,9 +3699,9 @@ dependencies = [
 
 [[package]]
 name = "prettyplease"
-version = "0.2.36"
+version = "0.2.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff24dfcda44452b9816fff4cd4227e1bb73ff5a2f1bc1105aa92fb8565ce44d2"
+checksum = "061c1221631e079b26479d25bbf2275bfe5917ae8419cd7e34f13bfc2aa7539a"
 dependencies = [
  "proc-macro2",
  "syn 2.0.104",
@@ -3961,6 +3949,36 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.3",
+]
+
+[[package]]
+name = "rdkafka"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1beea247b9a7600a81d4cc33f659ce1a77e1988323d7d2809c7ed1c21f4c316d"
+dependencies = [
+ "futures-channel",
+ "futures-util",
+ "libc",
+ "log",
+ "rdkafka-sys",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "slab",
+ "tokio",
+]
+
+[[package]]
+name = "rdkafka-sys"
+version = "4.9.0+2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5230dca48bc354d718269f3e4353280e188b610f7af7e2fcf54b7a79d5802872"
+dependencies = [
+ "libc",
+ "libz-sys",
+ "num_enum",
+ "pkg-config",
 ]
 
 [[package]]
@@ -5153,6 +5171,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-kafka"
+version = "0.1.0"
+dependencies = [
+ "log_utils",
+ "prometheus",
+ "rdkafka",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-log"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5217,6 +5249,71 @@ name = "ucd-trie"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2896d95c02a80c6d6a5d6e953d479f5ddf2dfdb6a244441010e373ac0fb88971"
+
+[[package]]
+name = "ucs_cards"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "error-stack 0.4.1",
+ "masking",
+ "prost",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "time",
+ "ucs_common_utils",
+]
+
+[[package]]
+name = "ucs_common_enums"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "strum",
+ "thiserror 1.0.69",
+ "utoipa",
+]
+
+[[package]]
+name = "ucs_common_utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "blake3",
+ "bytes",
+ "chrono",
+ "error-stack 0.4.1",
+ "futures",
+ "hex",
+ "http 1.3.1",
+ "masking",
+ "md5",
+ "nanoid",
+ "once_cell",
+ "quick-xml",
+ "rand 0.8.5",
+ "rdkafka",
+ "regex",
+ "reqwest",
+ "ring",
+ "rust_decimal",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "strum",
+ "thiserror 1.0.69",
+ "time",
+ "tracing",
+ "tracing-kafka",
+ "ucs_common_enums",
+ "url",
+ "utoipa",
+ "uuid",
+]
 
 [[package]]
 name = "unicase"

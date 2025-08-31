@@ -135,11 +135,64 @@ enum PaymentExperience {
 
 // Type of event that a webhook can represent.
 enum WebhookEventType {
-  WEBHOOK_EVENT_TYPE_UNSPECIFIED = 0;  // Default, unspecified webhook event type.
-  WEBHOOK_PAYMENT = 1;                 // Webhook event related to a payment.
-  WEBHOOK_REFUND = 2;                  // Webhook event related to a refund.
-  WEBHOOK_DISPUTE = 3;                 // Webhook event related to a dispute.
+  INCOMING_WEBHOOK_EVENT_UNSPECIFIED = 0; // Default unspecified event
+
+  // Payment intent events
+  PAYMENT_INTENT_FAILURE = 1;              // Authorization + Capture failure
+  PAYMENT_INTENT_SUCCESS = 2;              // Authorization + Capture success
+  PAYMENT_INTENT_PROCESSING = 3;           // Payment intent is processing
+  PAYMENT_INTENT_PARTIALLY_FUNDED = 4;     // Payment intent is partially funded
+  PAYMENT_INTENT_CANCELLED = 5;            // Payment intent cancelled
+  PAYMENT_INTENT_CANCEL_FAILURE = 6;       // Payment intent cancel failure
+  PAYMENT_INTENT_AUTHORIZATION_SUCCESS = 7; // Authorization success
+  PAYMENT_INTENT_AUTHORIZATION_FAILURE = 8; // Authorization failure
+  PAYMENT_INTENT_CAPTURE_SUCCESS = 9;      // Capture success
+  PAYMENT_INTENT_CAPTURE_FAILURE = 10;     // Capture failure
+  PAYMENT_INTENT_EXPIRED = 11;             // Payment intent expired
+  PAYMENT_ACTION_REQUIRED = 12;            // Payment requires additional action
+
+  SOURCE_CHARGEABLE = 13;                  // Source is chargeable
+  SOURCE_TRANSACTION_CREATED = 14;         // Source transaction created
+
+  // Refund events
+  WEBHOOK_REFUND_FAILURE = 15;                     // Refund failure
+  WEBHOOK_REFUND_SUCCESS = 16;                     // Refund success
+
+  // Dispute events
+  WEBHOOK_DISPUTE_OPENED = 17;                     // Dispute opened
+  WEBHOOK_DISPUTE_EXPIRED = 18;                    // Dispute expired
+  WEBHOOK_DISPUTE_ACCEPTED = 19;                   // Dispute accepted
+  WEBHOOK_DISPUTE_CANCELLED = 20;                  // Dispute cancelled
+  WEBHOOK_DISPUTE_CHALLENGED = 21;                 // Dispute challenged
+  WEBHOOK_DISPUTE_WON = 22;                        // Dispute successfully challenged by merchant
+  WEBHOOK_DISPUTE_LOST = 23;                       // Dispute unsuccessfully challenged
+
+  // Mandate events
+  MANDATE_ACTIVE = 24;                     // Mandate is active
+  MANDATE_REVOKED = 25;                    // Mandate revoked
+
+  // Misc events
+  ENDPOINT_VERIFICATION = 26;              // Endpoint verification
+  EXTERNAL_AUTHENTICATION_ARES = 27;       // External authentication ARes
+  FRM_APPROVED = 28;                       // Fraud risk management approved
+  FRM_REJECTED = 29;                       // Fraud risk management rejected
+
+  // Payout events
+  PAYOUT_SUCCESS = 30;                     // Payout success
+  PAYOUT_FAILURE = 31;                     // Payout failure
+  PAYOUT_PROCESSING = 32;                  // Payout processing
+  PAYOUT_CANCELLED = 33;                   // Payout cancelled
+  PAYOUT_CREATED = 34;                     // Payout created
+  PAYOUT_EXPIRED = 35;                     // Payout expired
+  PAYOUT_REVERSED = 36;                    // Payout reversed
+
+  // Recovery events
+  RECOVERY_PAYMENT_FAILURE = 37;           // Recovery payment failure
+  RECOVERY_PAYMENT_SUCCESS = 38;           // Recovery payment success
+  RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
+  RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
 }
+
 
 // Enum for currency codes (ISO 4217).
 enum Currency {
@@ -504,6 +557,8 @@ enum PaymentMethodType {
   OPEN_BANKING_PIS = 95;
   DIRECT_CARRIER_BILLING = 96;
   INSTANT_BANK_TRANSFER = 97;
+  PAY_PAL = 98;
+  REVOLUT_PAY = 99;
 }
 
 
@@ -777,17 +832,17 @@ message Address {
   optional string last_name = 2;
   
   // Address Details
-  optional string line1 = 3;
-  optional string line2 = 4;
-  optional string line3 = 5;
-  optional string city = 6;
-  optional string state = 7;
-  optional string zip_code = 8;
+  optional SecretString line1 = 3;
+  optional SecretString line2 = 4;
+  optional SecretString line3 = 5;
+  optional SecretString city = 6;
+  optional SecretString state = 7;
+  optional SecretString zip_code = 8;
   optional CountryAlpha2 country_alpha2_code = 9;
 
   // Contact Information
-  optional string email = 10;
-  optional string phone_number = 11;
+  optional SecretString email = 10;
+  optional SecretString phone_number = 11;
   optional string phone_country_code = 12;
 }
 
@@ -1051,7 +1106,7 @@ message PaymentServiceAuthorizeRequest {
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
   
   // Customer Information
-  optional string email = 9; // Email address of the customer
+  optional SecretString email = 9; // Email address of the customer
   optional string customer_name = 10; // Name of the customer
   optional string connector_customer_id = 11; // Customer ID as recognized by the connector
   
@@ -1089,6 +1144,8 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment authorization.
@@ -1167,7 +1224,7 @@ message PaymentServiceGetResponse {
   
   // Additional Context
   optional string customer_name = 20; // Name of the customer
-  optional string email = 21; // Email address of the customer
+  optional SecretString email = 21; // Email address of the customer
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
@@ -1322,7 +1379,7 @@ message RefundResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1387,7 +1444,7 @@ message PaymentServiceRegisterRequest {
   optional int64 minor_amount = 4; // Optional: Amount to authorize during mandate setup
   
   // Customer Information
-  optional string email = 5; // Email address of the customer
+  optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
   
@@ -1478,13 +1535,16 @@ message PaymentServiceRepeatEverythingRequest {
   optional CaptureMethod capture_method = 11; // Method for capturing the payment
 
   // Customer Information
-  optional string email = 12; // Email address of the customer
+  optional SecretString email = 12; // Email address of the customer
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
   
   // Token Information
   optional AccessToken access_token = 14; // Access token for secure communication
+
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
+  optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
 }
 
 // Response message for repeat payment operation.
@@ -1587,7 +1647,7 @@ message PaymentServiceRefundResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1622,7 +1682,7 @@ message RefundServiceGetResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector

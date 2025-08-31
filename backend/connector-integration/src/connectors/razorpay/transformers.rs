@@ -737,7 +737,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
             status_code: http_code,
             state: None,
         };
@@ -774,7 +773,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
             status_code: http_code,
             state: None,
         };
@@ -845,10 +843,6 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: data
-                        .resource_common_data
-                        .raw_connector_response
-                        .clone(),
                     status_code: _http_code,
                     state: None,
                 };
@@ -874,10 +868,6 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: data
-                        .resource_common_data
-                        .raw_connector_response
-                        .clone(),
                     status_code: _http_code,
                     state: None,
                 };
@@ -1364,7 +1354,6 @@ impl<F, Req>
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
-                raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
                 status_code: http_code,
                 state: None,
             }),
@@ -1650,7 +1639,7 @@ impl<F, Req>
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (upi_response, data, _status_code, raw_response): (
+        (upi_response, data, _status_code, _raw_response): (
             RazorpayUpiPaymentsResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
             u16,
@@ -1704,7 +1693,6 @@ impl<F, Req>
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
             state: None,
         };
