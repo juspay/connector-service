@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
 use common_utils::{
+    add_lineage_prefix,
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
     events::FlowName,
+    parse_lineage_header,
 };
 use domain_types::{
     connector_flow::{
@@ -58,6 +60,71 @@ where
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown
     }
+}
+
+/// Extract lineage fields from header
+pub fn extract_lineage_fields_from_metadata(
+    metadata: &metadata::MetadataMap,
+    config: &crate::configs::LineageConfig,
+) -> std::collections::HashMap<String, common_utils::pii::SecretSerdeValue> {
+    if !config.enabled {
+        tracing::debug!("Lineage feature is disabled");
+        return std::collections::HashMap::new();
+    }
+
+    tracing::debug!(
+        header_name = %config.header_name,
+        field_prefix = %config.field_prefix,
+        "Attempting to extract lineage fields from metadata"
+    );
+
+    let result = metadata
+        .get(&config.header_name)
+        .and_then(|value| value.to_str().ok())
+        .map(|header_value| {
+            tracing::info!(
+                header_value = %header_value,
+                "Found lineage header in metadata"
+            );
+            match parse_lineage_header(header_value) {
+                Ok(fields) => {
+                    tracing::info!(
+                        header_value = %header_value,
+                        parsed_fields = ?fields,
+                        "Successfully parsed lineage header"
+                    );
+                    let prefixed_fields = add_lineage_prefix(fields, &config.field_prefix);
+                    tracing::info!(
+                        prefixed_fields = ?prefixed_fields,
+                        "Added prefix to lineage fields"
+                    );
+                    prefixed_fields
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        header_value = %header_value,
+                        error = %e,
+                        "Failed to parse lineage header, continuing without lineage fields"
+                    );
+                    std::collections::HashMap::new()
+                }
+            }
+        })
+        .unwrap_or_else(|| {
+            tracing::debug!(
+                header_name = %config.header_name,
+                "Lineage header not found in metadata"
+            );
+            std::collections::HashMap::new()
+        });
+
+    tracing::info!(
+        lineage_fields_count = result.len(),
+        lineage_fields = ?result,
+        "Final lineage fields extracted"
+    );
+
+    result
 }
 
 /// Record the header's fields in request's trace
@@ -243,7 +310,7 @@ where
                     sub_code: "MISSING_FIELD".to_string(),
                     error_identifier: 400,
                     error_message: format!(
-                        "Missing/Incorrect Field x-merchant-id or x-connector{e}"
+                        "Missing/Incorrect Field x-merchant-id or x-connector {e}"
                     ),
                     error_object: None,
                 }))
@@ -402,6 +469,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+            let lineage_ids = $crate::utils::extract_lineage_fields_from_metadata(&metadata, &self.config.lineage);
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -409,6 +477,7 @@ macro_rules! implement_connector_operation {
                 event_config: &self.config.events,
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
                 request_id: &request_id,
+                lineage_ids,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,

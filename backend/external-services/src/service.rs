@@ -63,6 +63,7 @@ pub struct EventProcessingParams<'a> {
     pub event_config: &'a EventConfig,
     pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
+    pub lineage_ids: std::collections::HashMap<String, SecretSerdeValue>,
 }
 
 #[tracing::instrument(
@@ -198,6 +199,8 @@ where
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
 
+                        let lineage_fields = event_params.lineage_ids.clone();
+
                         async move {
                             let event = Event {
                                 request_id: request_id.to_string(),
@@ -211,7 +214,7 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields: lineage_fields,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -247,6 +250,7 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_fields = event_params.lineage_ids.clone();
 
                         async move {
                             let event = Event {
@@ -261,7 +265,7 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields: lineage_fields,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -296,6 +300,7 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_fields = event_params.lineage_ids.clone();
 
                         async move {
                             let event = Event {
@@ -310,7 +315,7 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: None,
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields: lineage_fields,
                             };
 
                             match emit_event_with_config(event, &event_config).await {

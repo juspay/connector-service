@@ -141,7 +141,8 @@ impl DisputeService for Disputes {
                 request: dispute_data,
                 response: Err(ErrorResponse::default()),
             };
-
+            let lineage_ids =
+                crate::utils::extract_lineage_fields_from_metadata(&metadata, &self.config.lineage);
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -151,6 +152,7 @@ impl DisputeService for Disputes {
                     payload.masked_serialize().unwrap_or_default(),
                 )),
                 request_id: &request_id,
+                lineage_ids,
             };
 
             let response = external_services::service::execute_connector_processing_step(
@@ -316,6 +318,8 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let lineage_ids =
+                crate::utils::extract_lineage_fields_from_metadata(&metadata, &self.config.lineage);
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -325,6 +329,7 @@ impl DisputeService for Disputes {
                     payload.masked_serialize().unwrap_or_default(),
                 )),
                 request_id: &request_id,
+                lineage_ids,
             };
 
             let response = external_services::service::execute_connector_processing_step(

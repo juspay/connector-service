@@ -53,6 +53,7 @@ struct EventParams<'a> {
     connector_name: &'a str,
     service_name: &'a str,
     request_id: &'a str,
+    lineage_ids: std::collections::HashMap<String, pii::SecretSerdeValue>,
 }
 
 // Error handling utilities for webhook processing
@@ -151,10 +152,13 @@ impl Payments {
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
         let payment_flow_data = if should_do_order_create {
+            let lineage_ids =
+                crate::utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
             let event_params = EventParams {
                 connector_name: &connector.to_string(),
                 service_name,
                 request_id,
+                lineage_ids,
             };
 
             let order_id = self
@@ -176,10 +180,13 @@ impl Payments {
         let should_do_session_token = connector_data.connector.should_do_session_token();
 
         let payment_flow_data = if should_do_session_token {
+            let lineage_ids =
+                crate::utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
             let event_params = EventParams {
                 connector_name: &connector.to_string(),
                 service_name,
                 request_id,
+                lineage_ids,
             };
 
             let payment_session_data = self
@@ -229,7 +236,8 @@ impl Payments {
             request: payment_authorize_data,
             response: Err(ErrorResponse::default()),
         };
-
+        let lineage_ids =
+            crate::utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -240,6 +248,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id,
+            lineage_ids: lineage_ids,
         };
 
         let response = execute_connector_processing_step(
@@ -392,6 +401,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids.clone(),
         };
 
         let response = execute_connector_processing_step(
@@ -478,7 +488,6 @@ impl Payments {
             request: order_create_data,
             response: Err(ErrorResponse::default()),
         };
-
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name: event_params.connector_name,
@@ -489,6 +498,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids.clone(),
         };
 
         let response = execute_connector_processing_step(
@@ -578,6 +588,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids.clone(),
         };
 
         let response = execute_connector_processing_step(
@@ -1160,10 +1171,15 @@ impl PaymentService for Payments {
                 let should_do_order_create = connector_data.connector.should_do_order_create();
 
                 let order_id = if should_do_order_create {
+                    let lineage_ids = crate::utils::extract_lineage_fields_from_metadata(
+                        &metadata,
+                        &self.config.lineage,
+                    );
                     let event_params = EventParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         request_id: &request_id,
+                        lineage_ids,
                     };
 
                     Some(
@@ -1198,7 +1214,10 @@ impl PaymentService for Payments {
                     request: setup_mandate_request_data,
                     response: Err(ErrorResponse::default()),
                 };
-
+                let lineage_ids = crate::utils::extract_lineage_fields_from_metadata(
+                    &metadata,
+                    &self.config.lineage,
+                );
                 let event_params = EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
@@ -1208,6 +1227,7 @@ impl PaymentService for Payments {
                         payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
+                    lineage_ids,
                 };
 
                 let response = execute_connector_processing_step(
@@ -1310,7 +1330,10 @@ impl PaymentService for Payments {
                     request: repeat_payment_data,
                     response: Err(ErrorResponse::default()),
                 };
-
+                let lineage_ids = crate::utils::extract_lineage_fields_from_metadata(
+                    &metadata,
+                    &self.config.lineage,
+                );
                 let event_params = EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
@@ -1320,6 +1343,7 @@ impl PaymentService for Payments {
                         payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
+                    lineage_ids,
                 };
 
                 let response = execute_connector_processing_step(
