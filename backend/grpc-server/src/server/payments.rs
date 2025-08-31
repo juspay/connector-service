@@ -5,11 +5,11 @@ use common_utils::errors::CustomResult;
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
+        AccessToken, Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
         RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        AccessTokenResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
@@ -45,7 +45,6 @@ use crate::{
     implement_connector_operation,
     utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
 };
-use connector_integration::access_token::AccessTokenManager;
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
     async fn internal_payment_sync(
@@ -96,7 +95,7 @@ impl Payments {
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data: ConnectorData<T> = ConnectorData::get_connector_by_name(&connector);
-        let connector_data_for_oauth = connector_data.clone();
+        let _connector_data_for_oauth = connector_data.clone();
 
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -142,9 +141,11 @@ impl Payments {
         };
 
         let should_do_session_token = connector_data.connector.should_do_session_token();
+        let should_do_access_token = connector_data.connector.should_do_access_token();
 
-        let payment_flow_data = if should_do_session_token {
-            // let mut flow_data = payment_flow_data;
+        let mut payment_flow_data = payment_flow_data;
+
+        if should_do_session_token {
             let payment_session_data = self
                 .handle_session_token(
                     connector_data.clone(),
@@ -159,48 +160,46 @@ impl Payments {
                 "Session Token created successfully with session_id: {}",
                 payment_session_data.session_token
             );
-            payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
+            payment_flow_data = payment_flow_data.set_session_token_id(Some(payment_session_data.session_token));
+        }
+
+        let grpc_access_token = if should_do_access_token {
+            // Check if access token is already provided in the request
+            match &payload.access_token {
+                Some(existing_access_token) => {
+                    // Use existing access token from request
+                    tracing::info!("Using existing access token from request");
+                    payment_flow_data.access_token = Some(existing_access_token.token.clone());
+                    Some(existing_access_token.clone())
+                }
+                None => {
+                    // Generate new access token only when none is provided
+                    let access_token_data = self
+                        .handle_access_token(
+                            connector_data.clone(),
+                            &payment_flow_data,
+                            connector_auth_details.clone(),
+                            &connector.to_string(),
+                            service_name,
+                        )
+                        .await?;
+                    tracing::info!("Access Token created successfully");
+                    payment_flow_data.access_token = Some(access_token_data.access_token.clone());
+                    Some(grpc_api_types::payments::AccessToken {
+                        token: access_token_data.access_token,
+                        expires_in_seconds: access_token_data.expires_in.unwrap_or(3600),
+                        token_type: access_token_data.token_type,
+                    })
+                }
+            }
         } else {
-            payment_flow_data
+            None
         };
 
         // This duplicate session token check has been removed - the session token handling is already done above
 
         // Handle access token generation for OAuth connectors
-        let mut payment_flow_data = payment_flow_data;
-        let generated_access_token =
-            match AccessTokenManager::ensure_access_token_for_connector_data(
-                &connector_data_for_oauth,
-                &mut payment_flow_data,
-                &connector_auth_details,
-                &connector.to_string(),
-            )
-            .await
-            {
-                Ok(access_token) => access_token,
-                Err(err) => {
-                    tracing::error!(
-                        "Failed to ensure access token for connector {}: {:?}",
-                        connector.to_string(),
-                        err
-                    );
-                    return Ok(PaymentServiceAuthorizeResponse {
-                        transaction_id: None,
-                        redirection_data: None,
-                        network_txn_id: None,
-                        response_ref_id: None,
-                        incremental_authorization_allowed: None,
-                        status: grpc_api_types::payments::PaymentStatus::Failure as i32,
-                        error_message: Some("Failed to generate access token".to_string()),
-                        error_code: Some("ACCESS_TOKEN_GENERATION_FAILED".to_string()),
-                        raw_connector_response: None,
-                        status_code: 500,
-                        state: None,
-                        connector_metadata: std::collections::HashMap::new(),
-                        response_headers: std::collections::HashMap::new(),
-                    });
-                }
-            };
+        // Note: Access token management is now handled through the PaymentAccessToken trait
 
         // Create connector request data
         let payment_authorize_data = PaymentsAuthorizeData::foreign_try_from(payload.clone())
@@ -242,8 +241,7 @@ impl Payments {
         )
         .await;
 
-        // The generated access token is already in gRPC format
-        let grpc_access_token = generated_access_token;
+        // Access token is handled above
 
         // Generate response - pass both success and error cases
         let authorize_response = match response {
@@ -429,7 +427,7 @@ impl Payments {
         //get connector data
         let connector_data: ConnectorData<DefaultPCIHolder> =
             ConnectorData::get_connector_by_name(&connector);
-        let connector_data_for_oauth = connector_data.clone();
+        let _connector_data_for_oauth = connector_data.clone();
 
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -449,24 +447,7 @@ impl Payments {
                 })?;
 
         // Handle access token generation for OAuth connectors
-        let mut payment_flow_data = payment_flow_data;
-        let _generated_access_token_psync =
-            AccessTokenManager::ensure_access_token_for_connector_data(
-                &connector_data_for_oauth,
-                &mut payment_flow_data,
-                &connector_auth_details,
-                &connector.to_string(),
-            )
-            .await
-            .switch()
-            .map_err(|e| {
-                tracing::error!(
-                    "Failed to ensure access token for connector {}: {:?}",
-                    connector.to_string(),
-                    e
-                );
-                e.into_grpc_status()
-            })?;
+        // Note: Access token management is now handled through the PaymentAccessToken trait
 
         // Create connector request data
         let payment_sync_data =
@@ -724,6 +705,88 @@ impl Payments {
                 grpc_api_types::payments::PaymentStatus::Pending,
                 Some(format!("Session Token creation failed: {message}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
+                None,
+                Some(status_code.into()), // Use actual status code from ErrorResponse
+            )),
+        }
+    }
+
+    async fn handle_access_token<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>
+            + 'static,
+    >(
+        &self,
+        connector_data: ConnectorData<T>,
+        payment_flow_data: &PaymentFlowData,
+        connector_auth_details: ConnectorAuthType,
+        connector_name: &str,
+        service_name: &str,
+    ) -> Result<AccessTokenResponseData, PaymentAuthorizationError> {
+        // Get connector integration
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            AccessToken,
+            PaymentFlowData,
+            (),
+            AccessTokenResponseData,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        let access_token_router_data = RouterDataV2::<
+            AccessToken,
+            PaymentFlowData,
+            (),
+            AccessTokenResponseData,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details,
+            request: (),
+            response: Err(ErrorResponse::default()),
+        };
+
+        // Execute connector processing
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            access_token_router_data,
+            None,
+            connector_name,
+            service_name,
+        )
+        .await
+        .switch()
+        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Access Token creation failed: {e}")),
+                Some("ACCESS_TOKEN_CREATION_ERROR".to_string()),
+                None,
+                Some(500), // Internal Server Error - connector processing failed
+            )
+        })?;
+
+        match response.response {
+            Ok(access_token_data) => {
+                tracing::info!("Access token created successfully");
+                Ok(access_token_data)
+            }
+            Err(ErrorResponse {
+                message,
+                status_code,
+                ..
+            }) => Err(PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Access Token creation failed: {message}")),
+                Some("ACCESS_TOKEN_CREATION_ERROR".to_string()),
                 None,
                 Some(status_code.into()), // Use actual status code from ErrorResponse
             )),

@@ -1040,6 +1040,13 @@ pub struct SessionTokenResponseData {
     pub session_token: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct AccessTokenResponseData {
+    pub access_token: String,
+    pub token_type: String,
+    pub expires_in: Option<i64>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RefundSyncData {
     pub connector_transaction_id: String,

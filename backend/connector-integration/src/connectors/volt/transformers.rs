@@ -88,6 +88,49 @@ impl
     }
 }
 
+impl<T>
+    TryFrom<
+        super::VoltRouterData<
+            domain_types::router_data_v2::RouterDataV2<
+                domain_types::connector_flow::AccessToken,
+                domain_types::connector_types::PaymentFlowData,
+                (),
+                domain_types::connector_types::AccessTokenResponseData,
+            >,
+            T,
+        >,
+    > for super::VoltAccessTokenRequest
+where
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+{
+    type Error = Error;
+    fn try_from(
+        item: super::VoltRouterData<
+            domain_types::router_data_v2::RouterDataV2<
+                domain_types::connector_flow::AccessToken,
+                domain_types::connector_types::PaymentFlowData,
+                (),
+                domain_types::connector_types::AccessTokenResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = VoltAuthType::try_from(&item.router_data.connector_auth_type)?;
+        Ok(Self {
+            grant_type: PASSWORD.to_string(),
+            username: auth.username,
+            password: auth.password,
+            client_id: auth.client_id,
+            client_secret: auth.client_secret,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VoltAuthUpdateResponse {
     pub access_token: Secret<String>,
@@ -138,6 +181,50 @@ impl<F>
                 expires_in_seconds: current_time + item.response.expires_in,
                 token_type: item.response.token_type,
             }),
+            ..item.router_data
+        })
+    }
+}
+
+impl<F>
+    TryFrom<
+        crate::types::ResponseRouterData<
+            super::VoltAccessTokenResponse,
+            domain_types::router_data_v2::RouterDataV2<
+                F,
+                domain_types::connector_types::PaymentFlowData,
+                (),
+                domain_types::connector_types::AccessTokenResponseData,
+            >,
+        >,
+    >
+    for domain_types::router_data_v2::RouterDataV2<
+        F,
+        domain_types::connector_types::PaymentFlowData,
+        (),
+        domain_types::connector_types::AccessTokenResponseData,
+    >
+{
+    type Error = Error;
+    fn try_from(
+        item: crate::types::ResponseRouterData<
+            super::VoltAccessTokenResponse,
+            domain_types::router_data_v2::RouterDataV2<
+                F,
+                domain_types::connector_types::PaymentFlowData,
+                (),
+                domain_types::connector_types::AccessTokenResponseData,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let access_token_response = domain_types::connector_types::AccessTokenResponseData {
+            access_token: item.response.access_token,
+            token_type: item.response.token_type,
+            expires_in: Some(item.response.expires_in),
+        };
+
+        Ok(Self {
+            response: Ok(access_token_response),
             ..item.router_data
         })
     }

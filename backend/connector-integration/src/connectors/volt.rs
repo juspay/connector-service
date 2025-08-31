@@ -6,13 +6,14 @@ use std::sync::LazyLock;
 use base64::Engine;
 use common_enums::{CaptureMethod, EventClass, PaymentMethod, PaymentMethodType};
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
+use error_stack::ResultExt;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        Accept, AccessToken, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
         RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        AcceptDisputeData, AccessTokenResponseData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
@@ -29,7 +30,6 @@ use domain_types::{
         SupportedPaymentMethods,
     },
 };
-use grpc_api_types::payments::AccessToken;
 use hyperswitch_masking::Secret;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
@@ -47,11 +47,11 @@ use transformers::{
 };
 
 use super::macros;
-use crate::{access_token::AccessTokenAuth, types::ResponseRouterData, with_error_response_body};
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 /// Volt-specific OAuth access token request (password grant)
 #[derive(Debug, serde::Serialize)]
-struct VoltAccessTokenRequest {
+pub struct VoltAccessTokenRequest {
     grant_type: String,
     username: Secret<String>,
     password: Secret<String>,
@@ -60,27 +60,13 @@ struct VoltAccessTokenRequest {
 }
 
 /// Volt-specific OAuth access token response
-#[derive(Debug, serde::Deserialize)]
-struct VoltAccessTokenResponse {
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+pub struct VoltAccessTokenResponse {
     access_token: String,
     expires_in: i64,
     token_type: String,
 }
 
-impl From<VoltAccessTokenResponse> for AccessToken {
-    fn from(response: VoltAccessTokenResponse) -> Self {
-        let current_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64;
-
-        Self {
-            token: response.access_token,
-            expires_in_seconds: current_time + response.expires_in,
-            token_type: response.token_type,
-        }
-    }
-}
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -115,6 +101,16 @@ impl<
             + 'static
             + serde::Serialize,
     > connector_types::PaymentSessionToken for Volt<T>
+{
+}
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    > connector_types::PaymentAccessToken for Volt<T>
 {
 }
 impl<
@@ -383,6 +379,12 @@ macros::create_all_prerequisites!(
             flow: PSync,
             response_body: VoltPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: AccessToken,
+            request_body: VoltAccessTokenRequest,
+            response_body: VoltAccessTokenResponse,
+            router_data: RouterDataV2<AccessToken, PaymentFlowData, (), AccessTokenResponseData>,
         )
         // (
         //     flow: Capture,
@@ -399,71 +401,6 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        /// Handle access token refresh if needed
-        pub async fn ensure_access_token<F, Req, Res>(
-            &self,
-            router_data: &mut RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> CustomResult<(), errors::ConnectorError> {
-            // Check if we need to refresh the access token
-            if router_data.resource_common_data.access_token.is_none() {
-                tracing::info!("Access token not available, requesting new token from Volt");
-
-                // Get new access token from Volt's OAuth endpoint
-                let auth = volt::VoltAuthType::try_from(&router_data.connector_auth_type)?;
-                let request = VoltAccessTokenRequest {
-                    grant_type: "password".to_string(),
-                    username: auth.username,
-                    password: auth.password,
-                    client_id: auth.client_id,
-                    client_secret: auth.client_secret,
-                };
-
-                let body = serde_urlencoded::to_string(&[
-                    ("grant_type", request.grant_type.as_str()),
-                    ("username", &request.username.expose()),
-                    ("password", &request.password.expose()),
-                    ("client_id", &request.client_id.expose()),
-                    ("client_secret", &request.client_secret.expose()),
-                ])
-                .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-
-                let url = format!("{}oauth", router_data.resource_common_data.connectors.volt.base_url);
-
-                // Make HTTP request to OAuth endpoint
-                let client = reqwest::Client::new();
-                let response = client
-                    .post(&url)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .body(body)
-                    .send()
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to send OAuth request to Volt: {}", e);
-                        errors::ConnectorError::RequestEncodingFailed
-                    })?;
-
-                if !response.status().is_success() {
-                    let status = response.status();
-                    let error_text = response.text().await.unwrap_or_default();
-                    tracing::error!("OAuth request failed with status {}: {}", status, error_text);
-                    return Err(errors::ConnectorError::RequestEncodingFailed.into());
-                }
-
-                let token_response: VoltAccessTokenResponse = response
-                    .json()
-                    .await
-                    .map_err(|e| {
-                        tracing::error!("Failed to parse OAuth response from Volt: {}", e);
-                        errors::ConnectorError::ResponseDeserializationFailed
-                    })?;
-
-                // Convert to access token string and store in router_data
-                router_data.resource_common_data.access_token = Some(token_response.access_token.clone());
-
-                tracing::info!("Successfully obtained access token from Volt");
-            }
-            Ok(())
-        }
 
         pub fn build_headers<F, Req, Res>(
             &self,
@@ -522,93 +459,6 @@ macros::create_all_prerequisites!(
 );
 
 // Implement access token support for Volt
-impl<T, F: Sync, Req: Sync, Res: Sync> AccessTokenAuth<F, Req, Res> for Volt<T>
-where
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + serde::Serialize,
-{
-    async fn get_access_token(
-        &self,
-        router_data: &RouterDataV2<F, domain_types::connector_types::PaymentFlowData, Req, Res>,
-    ) -> CustomResult<grpc_api_types::payments::AccessToken, errors::ConnectorError> {
-        let auth = volt::VoltAuthType::try_from(&router_data.connector_auth_type)?;
-
-        // Debug log credential mapping (without exposing secrets)
-        tracing::debug!(
-            "OAuth credential mapping - username_len: {}, password_len: {}, client_id_len: {}, client_secret_len: {}",
-            auth.username.clone().expose().len(),
-            auth.password.clone().expose().len(),
-            auth.client_id.clone().expose().len(),
-            auth.client_secret.clone().expose().len()
-        );
-
-        let request = VoltAccessTokenRequest {
-            grant_type: "password".to_string(),
-            username: auth.username,
-            password: auth.password,
-            client_id: auth.client_id,
-            client_secret: auth.client_secret,
-        };
-
-        let _headers: Vec<(String, hyperswitch_masking::Maskable<String>)> = vec![(
-            "Content-Type".to_string(),
-            "application/x-www-form-urlencoded".to_string().into(),
-        )];
-
-        let body = serde_urlencoded::to_string(&[
-            ("grant_type", request.grant_type.as_str()),
-            ("username", &request.username.expose()),
-            ("password", &request.password.expose()),
-            ("client_id", &request.client_id.expose()),
-            ("client_secret", &request.client_secret.expose()),
-        ])
-        .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
-
-        let url = format!(
-            "{}oauth",
-            router_data.resource_common_data.connectors.volt.base_url
-        );
-
-        // Make HTTP request to OAuth endpoint
-        let client = reqwest::Client::new();
-        let response = client
-            .post(&url)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(body)
-            .send()
-            .await
-            .map_err(|e| {
-                tracing::error!("Failed to send OAuth request to Volt: {}", e);
-                errors::ConnectorError::RequestEncodingFailed
-            })?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            tracing::error!(
-                "OAuth request failed with status {}: {}",
-                status,
-                error_text
-            );
-            return Err(errors::ConnectorError::RequestEncodingFailed.into());
-        }
-
-        let token_response: VoltAccessTokenResponse = response.json().await.map_err(|e| {
-            tracing::error!("Failed to parse OAuth response from Volt: {}", e);
-            errors::ConnectorError::ResponseDeserializationFailed
-        })?;
-
-        // Convert to domain AccessToken
-        let access_token = grpc_api_types::payments::AccessToken::from(token_response);
-
-        tracing::info!("Successfully obtained access token from Volt");
-        Ok(access_token)
-    }
-}
 
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
@@ -633,8 +483,7 @@ impl<
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         // For Volt, use basic auth with client credentials for simplicity
         // In production, OAuth token management should be handled at infrastructure level
-        let auth = volt::VoltAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        let auth = volt::VoltAuthType::try_from(auth_type)?;
 
         let basic_auth = format!(
             "Basic {}",
@@ -663,7 +512,7 @@ impl<
         let response: volt::VoltErrorResponse = res
             .response
             .parse_struct("VoltErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
@@ -755,6 +604,40 @@ macros::macro_connector_implementation!(
     }
 );
 
+// AccessToken flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Volt,
+    curl_request: FormUrlEncoded(VoltAccessTokenRequest),
+    curl_response: VoltAccessTokenResponse,
+    flow_name: AccessToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: (),
+    flow_response: AccessTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [domain_types::payment_method_data::PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            _req: &RouterDataV2<AccessToken, PaymentFlowData, (), AccessTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            Ok(vec![(
+                headers::CONTENT_TYPE.to_string(),
+                "application/x-www-form-urlencoded".to_string().into(),
+            )])
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<AccessToken, PaymentFlowData, (), AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}/oauth/token", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
+
 // Capture flow commented out for now
 // macros::macro_connector_implementation!(
 //     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -823,6 +706,9 @@ impl<
             + serde::Serialize,
     > connector_types::ValidationTrait for Volt<T>
 {
+    fn should_do_access_token(&self) -> bool {
+        true
+    }
 }
 
 // impl ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Volt {}
@@ -1118,5 +1004,23 @@ impl<T> connector_types::IncomingWebhook for Volt<T> where
         + std::marker::Send
         + 'static
         + serde::Serialize
+{
+}
+
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        AccessToken,
+        PaymentFlowData,
+        (),
+        AccessTokenResponseData,
+    > for Volt<T>
 {
 }
