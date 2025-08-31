@@ -81,4 +81,3 @@ partition_key_field = "request_id"
 [events.extractions]
 "udf_txn_uuid" = "req.metadata.udf_txn_uuid"
 "x-request-id" = "req.metadata.x-request-id"
->>>>>>> origin/main

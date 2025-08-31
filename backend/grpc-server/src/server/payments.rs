@@ -5,13 +5,8 @@ use common_utils::{consts, errors::CustomResult, events, pii};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-<<<<<<< HEAD
-        AccessToken, Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
+        self, AccessToken, Authorize, Capture, CreateOrder, CreateSessionToken, FlowName, PSync, Refund,
         RepeatPayment, SetupMandate, Void,
-=======
-        self, Authorize, Capture, CreateOrder, CreateSessionToken, PSync, Refund, RepeatPayment,
-        SetupMandate, Void,
->>>>>>> origin/main
     },
     connector_types::{
         AccessTokenResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
@@ -182,19 +177,14 @@ impl Payments {
         let should_do_session_token = connector_data.connector.should_do_session_token();
         let should_do_access_token = connector_data.connector.should_do_access_token();
 
-<<<<<<< HEAD
         let mut payment_flow_data = payment_flow_data;
 
         if should_do_session_token {
-=======
-        let payment_flow_data = if should_do_session_token {
             let event_params = EventParams {
                 connector_name: &connector.to_string(),
                 service_name,
                 request_id,
             };
-
->>>>>>> origin/main
             let payment_session_data = self
                 .handle_session_token(
                     connector_data.clone(),
@@ -350,7 +340,6 @@ impl Payments {
                         network_error_message: None,
                     }),
                 };
-<<<<<<< HEAD
                 domain_types::types::generate_payment_authorize_response::<T>(
                     error_router_data,
                     grpc_access_token,
@@ -365,24 +354,8 @@ impl Payments {
                         Some(format!("Connector error: {error_report}")),
                         Some("CONNECTOR_ERROR".to_string()),
                         None,
-                        None,
                     )
                 })?
-=======
-                domain_types::types::generate_payment_authorize_response::<T>(error_router_data)
-                    .map_err(|err| {
-                        tracing::error!(
-                            "Failed to generate authorize response for connector error: {:?}",
-                            err
-                        );
-                        PaymentAuthorizationError::new(
-                            grpc_api_types::payments::PaymentStatus::Pending,
-                            Some(format!("Connector error: {error_report}")),
-                            Some("CONNECTOR_ERROR".to_string()),
-                            None,
-                        )
-                    })?
->>>>>>> origin/main
             }
         };
 
@@ -1628,7 +1601,6 @@ impl PaymentService for Payments {
     }
 }
 
-<<<<<<< HEAD
 async fn get_payments_webhook_content<
     T: PaymentMethodDataTypes
         + Default
@@ -1643,16 +1615,9 @@ async fn get_payments_webhook_content<
         + 'static,
 >(
     connector_data: ConnectorData<T>,
-    request_details: domain_types::connector_types::RequestDetails,
-    webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
-    connector_auth_details: Option<ConnectorAuthType>,
-=======
-async fn get_payments_webhook_content(
-    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: &domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<&domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<&ConnectorAuthType>,
->>>>>>> origin/main
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector

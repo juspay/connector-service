@@ -574,21 +574,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         })))
                     }
                 },
-<<<<<<< HEAD
-                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
-                    match online_banking_type.online_banking_type {
-                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_)) => {
-                            Ok(Some(PaymentMethodType::OpenBankingUk))
-                        },
-                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                            sub_code: "INVALID_ONLINE_BANKING_TYPE".to_owned(),
-                            error_identifier: 400,
-                            error_message: "Online banking type is required".to_owned(),
-                            error_object: None,
-                        })))
-                    }
-                },
-=======
                 grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
                     match wallet_type.wallet_type {
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(_mifinity_data)) => {
@@ -629,7 +614,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         },
                     }
                 }
->>>>>>> origin/main
+                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
+                    match online_banking_type.online_banking_type {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_)) => {
+                            Ok(Some(PaymentMethodType::OpenBankingUk))
+                        },
+                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_ONLINE_BANKING_TYPE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Online banking type is required".to_owned(),
+                            error_object: None,
+                        })))
+                    }
+                },
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1762,11 +1759,8 @@ pub fn generate_create_order_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 connector_metadata: std::collections::HashMap::new(),
-<<<<<<< HEAD
-                state: None,
-=======
                 raw_connector_response,
->>>>>>> origin/main
+                state: None,
             }
         }
     };
@@ -1790,15 +1784,14 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-<<<<<<< HEAD
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
 
     // Create state with access token if UCS generated a new one
     let state = generated_access_token.map(|access_token| ConnectorState {
         access_token: Some(access_token),
     });
-=======
-    let raw_connector_response = router_data_v2.resource_common_data.raw_connector_response;
->>>>>>> origin/main
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -1809,10 +1802,6 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference: _,
-<<<<<<< HEAD
-                raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                 status_code,
                 state: _,
             } => {
@@ -1882,7 +1871,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     status: grpc_status as i32,
                     error_message: None,
                     error_code: None,
-                    raw_connector_response: _raw_connector_response,
+                    raw_connector_response,
                     status_code: status_code as u32,
                     response_headers,
                     state,
@@ -1959,13 +1948,12 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for common_enums::P
             } => Ok(Self::Reward),
             grpc_api_types::payments::PaymentMethod {
                 payment_method:
-<<<<<<< HEAD
-                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(_)),
-            } => Ok(Self::BankRedirect),
-=======
                     Some(grpc_api_types::payments::payment_method::PaymentMethod::Wallet(_)),
             } => Ok(Self::Wallet),
->>>>>>> origin/main
+            grpc_api_types::payments::PaymentMethod {
+                payment_method:
+                    Some(grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(_)),
+            } => Ok(Self::BankRedirect),
             _ => Ok(Self::Card), // Default fallback
         }
     }
@@ -2202,10 +2190,6 @@ pub fn generate_payment_void_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
-<<<<<<< HEAD
-                raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                 status_code,
                 state: _,
             } => {
@@ -2284,15 +2268,9 @@ pub fn generate_payment_sync_response(
     router_data_v2: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
 ) -> Result<PaymentServiceGetResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
-<<<<<<< HEAD
-    let _response_headers = router_data_v2
-        .resource_common_data
-        .get_connector_response_headers_as_map();
-=======
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
->>>>>>> origin/main
 
     match transaction_response {
         Ok(response) => match response {
@@ -2304,10 +2282,6 @@ pub fn generate_payment_sync_response(
                 connector_response_reference_id: _,
                 incremental_authorization_allowed: _,
                 mandate_reference,
-<<<<<<< HEAD
-                raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                 status_code,
                 state: _,
             } => {
@@ -2346,7 +2320,6 @@ pub fn generate_payment_sync_response(
                     email: None,
                     connector_customer_id: None,
                     merchant_order_reference_id: None,
-<<<<<<< HEAD
                     metadata: _connector_metadata
                         .and_then(|value| value.as_object().cloned())
                         .map(|map| {
@@ -2355,10 +2328,6 @@ pub fn generate_payment_sync_response(
                                 .collect::<HashMap<_, _>>()
                         })
                         .unwrap_or_default(),
-                    raw_connector_response: _raw_connector_response,
-=======
-                    metadata: std::collections::HashMap::new(),
->>>>>>> origin/main
                     status_code: status_code as u32,
                     raw_connector_response,
                     response_headers: router_data_v2
@@ -2979,11 +2948,8 @@ impl ForeignTryFrom<PaymentServiceVoidRequest> for PaymentVoidData {
                 .unwrap_or_default(),
             cancellation_reason: value.cancellation_reason,
             raw_connector_response: None,
-<<<<<<< HEAD
             access_token: value.access_token,
-=======
             integrity_object: None,
->>>>>>> origin/main
         })
     }
 }
@@ -3570,10 +3536,6 @@ pub fn generate_payment_capture_response(
                 connector_response_reference_id,
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
-<<<<<<< HEAD
-                raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                 status_code,
                 state: _,
             } => {
@@ -3886,10 +3848,6 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 connector_response_reference_id,
                 incremental_authorization_allowed,
                 mandate_reference,
-<<<<<<< HEAD
-                raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                 status_code,
                 state,
             } => {
@@ -4536,10 +4494,6 @@ pub fn generate_repeat_payment_response(
                 resource_id,
                 network_txn_id,
                 connector_response_reference_id,
-<<<<<<< HEAD
-                raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                 status_code,
                 ..
             } => Ok(
@@ -4556,10 +4510,6 @@ pub fn generate_repeat_payment_response(
                             id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                         }
                     }),
-<<<<<<< HEAD
-                    raw_connector_response: _raw_connector_response,
-=======
->>>>>>> origin/main
                     status_code: status_code as u32,
                     raw_connector_response,
                     response_headers: router_data_v2

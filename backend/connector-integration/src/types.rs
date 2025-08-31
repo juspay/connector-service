@@ -4,13 +4,8 @@ use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentM
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-<<<<<<< HEAD
-    Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Nexinets, Noon,
-    Novalnet, Paytm, Payu, Phonepe, Razorpay, RazorpayV2, Volt, Xendit,
-=======
     Adyen, Authorizedotnet, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu, Mifinity,
-    Nexinets, Noon, Novalnet, Paytm, Payu, Phonepe, Razorpay, RazorpayV2, Xendit,
->>>>>>> origin/main
+    Nexinets, Noon, Novalnet, Paytm, Payu, Phonepe, Razorpay, RazorpayV2, Volt, Xendit,
 };
 
 #[derive(Clone)]

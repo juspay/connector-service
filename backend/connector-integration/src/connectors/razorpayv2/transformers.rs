@@ -623,19 +623,6 @@ impl
         // Map Razorpay payment status to internal status, preserving original status
         let status = get_psync_razorpay_payment_status(payment_response.status);
 
-<<<<<<< HEAD
-        let payments_response_data = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(payment_response.id),
-            redirection_data: None,
-            connector_metadata: None,
-            mandate_reference: None,
-            network_txn_id: None,
-            connector_response_reference_id: payment_response.order_id,
-            incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
-            status_code: _status_code,
-            state: None,
-=======
         let payments_response_data = match payment_response.status {
             RazorpayStatus::Created
             | RazorpayStatus::Authorized
@@ -665,7 +652,6 @@ impl
                 network_advice_code: None,
                 network_error_message: None,
             }),
->>>>>>> origin/main
         };
 
         Ok(RouterDataV2 {
