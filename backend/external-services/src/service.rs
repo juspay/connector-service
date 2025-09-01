@@ -52,11 +52,12 @@ use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
 use tracing::field::Empty;
+use std::collections::HashMap;
 
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EventProcessingParams<'a> {
     pub connector_name: &'a str,
     pub service_name: &'a str,
@@ -66,6 +67,7 @@ pub struct EventProcessingParams<'a> {
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
+    pub headers: Option<HashMap<String, Secret<String>>>,
 }
 
 #[tracing::instrument(
@@ -224,6 +226,7 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
+                                headers: event_params.headers.clone().unwrap_or_default(),
                                 additional_fields,
                                 lineage_ids,
                             };
@@ -285,6 +288,7 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
+                                headers: event_params.headers.clone().unwrap_or_default(),
                                 additional_fields,
                                 lineage_ids,
                             };
@@ -345,6 +349,7 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: None,
+                                headers: event_params.headers.clone().unwrap_or_default(),
                                 additional_fields,
                                 lineage_ids,
                             };
