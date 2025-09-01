@@ -23,10 +23,10 @@ pub fn init_event_publisher(_config: &events::EventConfig) -> CustomResult<(), (
 }
 #[cfg(not(feature = "kafka"))]
 pub async fn emit_event_with_config(
-    _event: events::Event<'_>,
+    _event: events::Event,
     _config: &events::EventConfig,
 ) -> CustomResult<bool, ()> {
-    Ok(true)
+    Ok(false)
 }
 
 pub use global_id::{CellId, GlobalPaymentId};

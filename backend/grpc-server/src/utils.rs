@@ -69,32 +69,27 @@ pub fn extract_lineage_fields_from_metadata(
     if !config.enabled {
         return LineageIds::empty(&config.field_prefix).to_owned();
     }
-
-    let result = metadata
+    metadata
         .get(&config.header_name)
         .and_then(|value| value.to_str().ok())
-        .map(
-            |header_value| match LineageIds::new(&config.field_prefix, header_value) {
-                Ok(lineage_ids) => {
-                    tracing::info!(
-                        header_value = %header_value,
-                        parsed_fields = ?lineage_ids,
-                        "Successfully parsed lineage header"
-                    );
-                    lineage_ids.to_owned()
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        header_value = %header_value,
-                        error = %e,
-                        "Failed to parse lineage header, continuing without lineage fields"
-                    );
-                    LineageIds::empty(&config.field_prefix).to_owned()
-                }
-            },
-        )
-        .unwrap_or_else(|| LineageIds::empty(&config.field_prefix).to_owned());
-    result
+        .map(|header_value| LineageIds::new(&config.field_prefix, header_value))
+        .transpose()
+        .inspect(|value| {
+            tracing::info!(
+                parsed_fields = ?value,
+                "Successfully parsed lineage header"
+            )
+        })
+        .inspect_err(|err| {
+            tracing::warn!(
+                error = %err,
+                "Failed to parse lineage header, continuing without lineage fields"
+            )
+        })
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| LineageIds::empty(&config.field_prefix))
+        .to_owned()
 }
 
 /// Record the header's fields in request's trace
