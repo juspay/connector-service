@@ -309,7 +309,7 @@ where
         merchant_id,
         tenant_id,
         request_id,
-        lineage_ids,
+        lineage_ids: _,
         connector_auth_type: _,
     } = metadata_payload;
     let current_span = tracing::Span::current();
@@ -327,9 +327,6 @@ where
     current_span.record("merchant_id", merchant_id);
     current_span.record("tenant_id", tenant_id);
     current_span.record("request_id", request_id);
-    lineage_ids.inner().iter().for_each(|(k, v)| {
-        current_span.record(k.as_str(), v);
-    });
     tracing::info!("Golden Log Line (incoming)");
     Ok(())
 }
