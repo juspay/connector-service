@@ -128,22 +128,6 @@ pub struct MetadataPayload {
     pub connector_auth_type: ConnectorAuthType,
 }
 
-pub fn connector_merchant_id_tenant_id_request_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-    server_config: Arc<configs::Config>,
-) -> CustomResult<(connector_types::ConnectorEnum, String, String, String), ApplicationErrorResponse>
-{
-    let MetadataPayload {
-        tenant_id,
-        request_id,
-        merchant_id,
-        connector,
-        lineage_ids: _,
-        connector_auth_type: _,
-    } = get_metadata_payload(metadata, server_config)?;
-    Ok((connector, merchant_id, tenant_id, request_id))
-}
-
 pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
     server_config: Arc<configs::Config>,
