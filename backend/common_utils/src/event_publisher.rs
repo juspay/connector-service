@@ -167,7 +167,7 @@ impl EventPublisher {
 
     pub async fn emit_event_with_config(
         &self,
-        base_event: Event,
+        base_event: Event<'_>,
         config: &EventConfig,
     ) -> CustomResult<(), EventPublisherError> {
         let processed_event = self.process_event(&base_event)?;
@@ -176,7 +176,10 @@ impl EventPublisher {
             .await
     }
 
-    fn process_event(&self, event: &Event) -> CustomResult<serde_json::Value, EventPublisherError> {
+    fn process_event(
+        &self,
+        event: &Event<'_>,
+    ) -> CustomResult<serde_json::Value, EventPublisherError> {
         let mut result = serde_json::to_value(event).map_err(|e| {
             tracing::error!(
                 error = ?e,
@@ -351,7 +354,7 @@ fn get_event_publisher(
 
 /// Standalone function to emit events using the global EventPublisher
 pub async fn emit_event_with_config(
-    event: Event,
+    event: Event<'_>,
     config: &EventConfig,
 ) -> CustomResult<bool, EventPublisherError> {
     if !config.enabled {

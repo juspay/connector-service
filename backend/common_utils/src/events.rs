@@ -11,6 +11,7 @@ use crate::{
         token::GlobalTokenId,
     },
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
+    lineage,
     types::TimeRange,
     SecretSerdeValue,
 };
@@ -176,8 +177,8 @@ impl<T: ApiEventMetric> ApiEventMetric for &T {
 
 impl ApiEventMetric for TimeRange {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Event {
+#[derive(Debug, Clone, Serialize)]
+pub struct Event<'a> {
     pub request_id: String,
     pub timestamp: i128,
     pub flow_type: FlowName,
@@ -191,6 +192,8 @@ pub struct Event {
     pub connector_response_data: Option<SecretSerdeValue>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
+    #[serde(flatten)]
+    pub lineage_ids: lineage::LineageIds<'a>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

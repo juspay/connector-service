@@ -1,11 +1,10 @@
 use std::str::FromStr;
 
 use common_utils::{
-    add_lineage_prefix,
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
     events::FlowName,
-    parse_lineage_header,
+    lineage::LineageIds,
 };
 use domain_types::{
     connector_flow::{
@@ -63,42 +62,26 @@ where
 }
 
 /// Extract lineage fields from header
-pub fn extract_lineage_fields_from_metadata(
+pub fn extract_lineage_fields_from_metadata<'a>(
     metadata: &metadata::MetadataMap,
-    config: &crate::configs::LineageConfig,
-) -> std::collections::HashMap<String, common_utils::pii::SecretSerdeValue> {
+    config: &'a crate::configs::LineageConfig,
+) -> LineageIds<'a> {
     if !config.enabled {
-        tracing::debug!("Lineage feature is disabled");
-        return std::collections::HashMap::new();
+        return LineageIds::empty(&config.field_prefix);
     }
-
-    tracing::debug!(
-        header_name = %config.header_name,
-        field_prefix = %config.field_prefix,
-        "Attempting to extract lineage fields from metadata"
-    );
 
     let result = metadata
         .get(&config.header_name)
         .and_then(|value| value.to_str().ok())
-        .map(|header_value| {
-            tracing::info!(
-                header_value = %header_value,
-                "Found lineage header in metadata"
-            );
-            match parse_lineage_header(header_value) {
-                Ok(fields) => {
+        .map(
+            |header_value| match LineageIds::new(&config.field_prefix, header_value) {
+                Ok(lineage_ids) => {
                     tracing::info!(
                         header_value = %header_value,
-                        parsed_fields = ?fields,
+                        parsed_fields = ?lineage_ids,
                         "Successfully parsed lineage header"
                     );
-                    let prefixed_fields = add_lineage_prefix(fields, &config.field_prefix);
-                    tracing::info!(
-                        prefixed_fields = ?prefixed_fields,
-                        "Added prefix to lineage fields"
-                    );
-                    prefixed_fields
+                    lineage_ids
                 }
                 Err(e) => {
                     tracing::warn!(
@@ -106,24 +89,11 @@ pub fn extract_lineage_fields_from_metadata(
                         error = %e,
                         "Failed to parse lineage header, continuing without lineage fields"
                     );
-                    std::collections::HashMap::new()
+                    LineageIds::empty(&config.field_prefix)
                 }
-            }
-        })
-        .unwrap_or_else(|| {
-            tracing::debug!(
-                header_name = %config.header_name,
-                "Lineage header not found in metadata"
-            );
-            std::collections::HashMap::new()
-        });
-
-    tracing::info!(
-        lineage_fields_count = result.len(),
-        lineage_fields = ?result,
-        "Final lineage fields extracted"
-    );
-
+            },
+        )
+        .unwrap_or_else(|| LineageIds::empty(&config.field_prefix));
     result
 }
 
@@ -477,7 +447,7 @@ macro_rules! implement_connector_operation {
                 event_config: &self.config.events,
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
                 request_id: &request_id,
-                lineage_ids,
+                lineage_ids: &lineage_ids,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,

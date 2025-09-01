@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::{consts, errors::CustomResult, events, pii};
+use common_utils::{consts, errors::CustomResult, events, lineage, pii};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -53,7 +53,7 @@ struct EventParams<'a> {
     connector_name: &'a str,
     service_name: &'a str,
     request_id: &'a str,
-    lineage_ids: std::collections::HashMap<String, pii::SecretSerdeValue>,
+    lineage_ids: &'a lineage::LineageIds<'a>,
 }
 
 // Error handling utilities for webhook processing
@@ -158,7 +158,7 @@ impl Payments {
                 connector_name: &connector.to_string(),
                 service_name,
                 request_id,
-                lineage_ids,
+                lineage_ids: &lineage_ids,
             };
 
             let order_id = self
@@ -186,7 +186,7 @@ impl Payments {
                 connector_name: &connector.to_string(),
                 service_name,
                 request_id,
-                lineage_ids,
+                lineage_ids: &lineage_ids,
             };
 
             let payment_session_data = self
@@ -248,7 +248,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id,
-            lineage_ids: lineage_ids,
+            lineage_ids: &lineage_ids,
         };
 
         let response = execute_connector_processing_step(
@@ -401,7 +401,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids.clone(),
+            lineage_ids: event_params.lineage_ids,
         };
 
         let response = execute_connector_processing_step(
@@ -498,7 +498,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids.clone(),
+            lineage_ids: event_params.lineage_ids,
         };
 
         let response = execute_connector_processing_step(
@@ -588,7 +588,7 @@ impl Payments {
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids.clone(),
+            lineage_ids: event_params.lineage_ids,
         };
 
         let response = execute_connector_processing_step(
@@ -1179,7 +1179,7 @@ impl PaymentService for Payments {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         request_id: &request_id,
-                        lineage_ids,
+                        lineage_ids: &lineage_ids,
                     };
 
                     Some(
@@ -1227,7 +1227,7 @@ impl PaymentService for Payments {
                         payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
-                    lineage_ids,
+                    lineage_ids: &lineage_ids,
                 };
 
                 let response = execute_connector_processing_step(
@@ -1343,7 +1343,7 @@ impl PaymentService for Payments {
                         payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
-                    lineage_ids,
+                    lineage_ids: &lineage_ids,
                 };
 
                 let response = execute_connector_processing_step(

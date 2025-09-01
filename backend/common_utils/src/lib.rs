@@ -6,6 +6,7 @@ pub mod errors;
 pub mod ext_traits;
 pub mod fp_utils;
 pub mod id_type;
+pub mod lineage;
 pub mod macros;
 pub mod new_types;
 pub mod pii;
@@ -16,55 +17,13 @@ pub use errors::{CustomResult, EventPublisherError, ParsingError, ValidationErro
 #[cfg(feature = "kafka")]
 pub use event_publisher::{emit_event_with_config, init_event_publisher};
 
-// Lineage header parsing utilities
-use std::collections::HashMap;
-
-#[derive(Debug, thiserror::Error)]
-pub enum LineageParseError {
-    #[error("Invalid lineage header format: {0}")]
-    InvalidFormat(String),
-    #[error("URL decoding failed: {0}")]
-    UrlDecoding(String),
-}
-
-/// Parse lineage header in format "key1=value1,key2=value2"
-pub fn parse_lineage_header(
-    header_value: &str,
-) -> Result<HashMap<String, String>, LineageParseError> {
-    if header_value.trim().is_empty() {
-        return Ok(HashMap::new());
-    }
-
-    // Replace commas with ampersands for serde_urlencoded compatibility
-    let normalized = header_value.replace(',', "&");
-
-    serde_urlencoded::from_str(&normalized)
-        .map_err(|e| LineageParseError::InvalidFormat(e.to_string()))
-}
-
-/// Add lineage prefix to fields and convert to SecretSerdeValue
-pub fn add_lineage_prefix(
-    fields: HashMap<String, String>,
-    prefix: &str,
-) -> HashMap<String, SecretSerdeValue> {
-    fields
-        .into_iter()
-        .map(|(key, value)| {
-            let prefixed_key = format!("{}{}", prefix, key);
-            (
-                prefixed_key,
-                SecretSerdeValue::new(serde_json::Value::String(value)),
-            )
-        })
-        .collect()
-}
 #[cfg(not(feature = "kafka"))]
 pub fn init_event_publisher(_config: &events::EventConfig) -> CustomResult<(), ()> {
     Ok(())
 }
 #[cfg(not(feature = "kafka"))]
 pub async fn emit_event_with_config(
-    _event: events::Event,
+    _event: events::Event<'_>,
     _config: &events::EventConfig,
 ) -> CustomResult<bool, ()> {
     Ok(true)
