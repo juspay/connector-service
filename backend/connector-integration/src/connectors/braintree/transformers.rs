@@ -286,9 +286,10 @@ impl<
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
         let (query, transaction_body) = (
-            match item.router_data.request.is_auto_capture()? {
-                true => constants::CHARGE_CREDIT_CARD_MUTATION.to_string(),
-                false => constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string(),
+            if item.router_data.request.is_auto_capture()? {
+                constants::CHARGE_CREDIT_CARD_MUTATION.to_string()
+            } else {
+                constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string()
             },
             TransactionBody::Regular(RegularTransactionBody {
                 amount,
@@ -1915,9 +1916,10 @@ impl<
             .change_context(ConnectorError::AmountConversionFailed)?;
         let (query, transaction_body) = if item.router_data.request.is_mandate_payment() {
             (
-                match item.router_data.request.is_auto_capture()? {
-                    true => constants::CHARGE_AND_VAULT_TRANSACTION_MUTATION.to_string(),
-                    false => constants::AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION.to_string(),
+                if item.router_data.request.is_auto_capture()? {
+                    constants::CHARGE_AND_VAULT_TRANSACTION_MUTATION.to_string()
+                } else {
+                    constants::AUTHORIZE_AND_VAULT_CREDIT_CARD_MUTATION.to_string()
                 },
                 TransactionBody::Vault(VaultTransactionBody {
                     amount,
@@ -1936,9 +1938,10 @@ impl<
             )
         } else {
             (
-                match item.router_data.request.is_auto_capture()? {
-                    true => constants::CHARGE_CREDIT_CARD_MUTATION.to_string(),
-                    false => constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string(),
+                if item.router_data.request.is_auto_capture()? {
+                    constants::CHARGE_CREDIT_CARD_MUTATION.to_string()
+                } else {
+                    constants::AUTHORIZE_CREDIT_CARD_MUTATION.to_string()
                 },
                 TransactionBody::Regular(RegularTransactionBody {
                     amount,
