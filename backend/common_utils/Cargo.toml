@@ -12,7 +12,7 @@ tracing = "0.1.40"
 once_cell = "1.19"
 chrono = "0.4.31"
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "58e42bd94", package = "masking" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "02caf600b", package = "masking" }
 
 error-stack = "0.4.1"
 serde = { version = "1.0.189", features = ["derive"] }
