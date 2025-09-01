@@ -75,11 +75,101 @@ fn extract_vault_headers_from_metadata(
         }
     }
 
+    // Extract x-external-vault-metadata header
+    if let Some(external_vault_metadata) = metadata.get("x-external-vault-metadata") {
+        if let Ok(value_str) = external_vault_metadata.to_str() {
+            // Extract vault proxy URL and certificate from external vault metadata
+            match extract_vault_info_from_external_metadata(value_str) {
+                Ok((proxy_url, processed_certificate)) => {
+                    // Add extracted proxy URL as x-vault-proxy-url header
+                    additional_headers.insert(
+                        "x-vault-proxy-url".to_string(),
+                        Secret::new(proxy_url),
+                    );
+                    // Add processed certificate as x-ca-certificate header  
+                    additional_headers.insert(
+                        "x-ca-certificate".to_string(),
+                        Secret::new(processed_certificate),
+                    );
+                    // Also keep the original metadata for reference
+                    additional_headers.insert(
+                        "x-external-vault-metadata".to_string(),
+                        Secret::new(value_str.to_string()),
+                    );
+                }
+                Err(_) => {
+                    // If processing fails, use the original value
+                    additional_headers.insert(
+                        "x-external-vault-metadata".to_string(),
+                        Secret::new(value_str.to_string()),
+                    );
+                }
+            }
+        }
+    }
+
     if additional_headers.is_empty() {
         None
     } else {
         Some(additional_headers)
     }
+}
+
+/// Extract vault proxy URL and certificate from external vault metadata
+fn extract_vault_info_from_external_metadata(encoded_metadata: &str) -> Result<(String, String), String> {
+    use base64::Engine;
+    
+    // Try to decode the base64 encoded metadata
+    let decoded_bytes = base64::engine::general_purpose::STANDARD.decode(encoded_metadata)
+        .map_err(|_| "Failed to decode base64 metadata")?;
+    
+    let decoded_string = String::from_utf8(decoded_bytes)
+        .map_err(|_| "Failed to convert decoded bytes to string")?;
+    
+    // Try to parse as VGS metadata JSON
+    let external_metadata: ExternalVaultProxyMetadata = serde_json::from_str(&decoded_string)
+        .map_err(|_| "Failed to parse external vault metadata JSON")?;
+    
+    match external_metadata {
+        ExternalVaultProxyMetadata::VgsMetadata(vgs_data) => {
+            // Extract proxy URL as string
+            let proxy_url = vgs_data.proxy_url.to_string();
+            
+            // Process certificate - convert to newline-separated format
+            let processed_certificate = process_certificate_content(&vgs_data.certificate)?;
+            
+            Ok((proxy_url, processed_certificate.expose().to_string()))
+        }
+    }
+}
+
+/// Process certificate content by base64 decoding and converting to newline format
+fn process_certificate_content(certificate: &Secret<String>) -> Result<Secret<String>, String> {
+    use base64::Engine;
+    
+    let cert_content = certificate.clone().expose();
+    
+    // Try to decode the certificate if it's base64 encoded
+    let decoded_cert = match base64::engine::general_purpose::STANDARD.decode(&cert_content) {
+        Ok(decoded_bytes) => {
+            // Successfully decoded, convert to string
+            String::from_utf8(decoded_bytes)
+                .map_err(|_| "Failed to convert decoded certificate to string")?
+        }
+        Err(_) => {
+            // Not base64 encoded, use as-is
+            cert_content
+        }
+    };
+    
+    // Convert multi-line certificate to newline-separated format
+    // Replace actual newlines with \n strings for transport
+    let processed_cert = decoded_cert
+        .lines()
+        .collect::<Vec<&str>>()
+        .join("\n");
+    
+    Ok(Secret::new(processed_cert))
 }
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
@@ -91,7 +181,7 @@ use crate::{
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
+        ExternalVaultProxyMetadata, MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
