@@ -4256,6 +4256,65 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for crate::connector_types::CompleteAuthorizeRequestData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let email: Option<Email> = match value.email {
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
+            None => None,
+        };
+
+        let payment_method_data = PaymentMethodData::<crate::payment_method_data::DefaultPCIHolder>::foreign_try_from(
+            value.payment_method.clone().ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Payment method data is required".to_owned(),
+                    error_object: None,
+                })
+            })?,
+        )
+        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+            error_identifier: 400,
+            error_message: "Payment method data construction failed".to_owned(),
+            error_object: None,
+        }))?;
+
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            payment_method_data: Some(payment_method_data),
+            capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
+                value.capture_method(),
+            )?),
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
+            redirect_response: None, // Will be populated from redirect responses
+            integrity_object: None,
+            email,
+            customer_name: value.customer_name,
+            complete_authorize_url: value.complete_authorize_url,
+        })
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
     for RepeatPaymentData
 {
