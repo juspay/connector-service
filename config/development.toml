@@ -86,5 +86,7 @@ field_prefix = "lineage_"
 "message.log_type" = "API_CALL"
 
 [events.extractions]
-"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"x-request-id" = "req.metadata.x-request-id"
+"udf_txn_uuid" = "req.merchant_order_reference_id|reference_id"
+
+[events.unmasked_headers]
+keys = ["x-reference-id", "x-request-id", "x-lineage-ids"]

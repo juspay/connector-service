@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use hyperswitch_masking::Secret;
 
 use crate::{
     global_id::{
@@ -190,6 +191,7 @@ pub struct Event {
     pub request_data: Option<SecretSerdeValue>,
     pub connector_request_data: Option<SecretSerdeValue>,
     pub connector_response_data: Option<SecretSerdeValue>,
+    pub headers: HashMap<String, Secret<String>>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
     #[serde(flatten)]
@@ -256,6 +258,12 @@ impl EventStage {
     }
 }
 
+/// Configuration for unmasked headers in audit logs
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct UnmaskedHeaders {
+    pub keys: Vec<String>,
+}
+
 /// Configuration for events system
 #[derive(Debug, Clone, Deserialize)]
 pub struct EventConfig {
@@ -269,6 +277,8 @@ pub struct EventConfig {
     pub static_values: HashMap<String, String>, // target_path → static_value
     #[serde(default)]
     pub extractions: HashMap<String, String>, // target_path → extraction_path
+    #[serde(default)]
+    pub unmasked_headers: UnmaskedHeaders, // headers allowed in plaintext in audit logs
 }
 
 impl Default for EventConfig {
@@ -281,6 +291,7 @@ impl Default for EventConfig {
             transformations: HashMap::new(),
             static_values: HashMap::new(),
             extractions: HashMap::new(),
+            unmasked_headers: UnmaskedHeaders::default(),
         }
     }
 }

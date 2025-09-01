@@ -99,7 +99,8 @@ impl Config {
                     .with_list_parse_key("redis.cluster_urls")
                     .with_list_parse_key("database.tenants")
                     .with_list_parse_key("log.kafka.brokers")
-                    .with_list_parse_key("events.brokers"),
+                    .with_list_parse_key("events.brokers")
+                    .with_list_parse_key("events.unmasked_headers.keys"),
             )
             .build()?;
 
