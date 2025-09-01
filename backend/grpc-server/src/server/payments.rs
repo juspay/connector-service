@@ -5,11 +5,11 @@ use common_utils::{consts, errors::CustomResult, events, pii};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        self, Authorize, Capture, CreateOrder, CreateSessionToken, PSync, Refund, RepeatPayment,
+        self, Authorize, Capture, CompleteAuthorize, CreateOrder, CreateSessionToken, PSync, Refund, RepeatPayment,
         SetupMandate, Void,
     },
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        CompleteAuthorizeRequestData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
@@ -1338,6 +1338,210 @@ impl PaymentService for Payments {
                     generate_repeat_payment_response(response).map_err(|e| e.into_grpc_status())?;
 
                 Ok(tonic::Response::new(repeat_payment_response))
+            })
+        })
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "complete_authorize",
+        fields(
+            name = consts::NAME,
+            service_name = tracing::field::Empty,
+            service_method = "CompleteAuthorize",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = "CompleteAuthorize",
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn complete_authorize(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        info!("COMPLETE_AUTHORIZE_FLOW: initiated");
+
+        let service_name: String = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
+        grpc_logging_wrapper(request, &service_name, |request| {
+            Box::pin(async {
+                let (connector, _merchant_id, _tenant_id, request_id) =
+                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
+                        request.metadata(),
+                    )
+                    .map_err(|e| e.into_grpc_status())?;
+                let connector_auth_details =
+                    auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let metadata = request.metadata().clone();
+                let payload = request.into_inner();
+
+                //get connector data
+                let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+                // Get connector integration for CompleteAuthorize
+                let connector_integration: BoxedConnectorIntegrationV2<
+                    '_,
+                    CompleteAuthorize,
+                    PaymentFlowData,
+                    CompleteAuthorizeRequestData,
+                    PaymentsResponseData,
+                > = connector_data.connector.get_connector_integration_v2();
+
+                // Create common request data
+                let payment_flow_data = PaymentFlowData::foreign_try_from((
+                    payload.clone(),
+                    self.config.connectors.clone(),
+                    &metadata,
+                ))
+                .map_err(|e| e.into_grpc_status())?;
+
+                // Create complete authorize request data
+                let complete_authorize_data = CompleteAuthorizeRequestData::foreign_try_from(payload.clone())
+                    .map_err(|e| e.into_grpc_status())?;
+
+                // Check if auto-capture is needed
+                let should_auto_capture = matches!(
+                    complete_authorize_data.capture_method, 
+                    Some(common_enums::CaptureMethod::Automatic)
+                );
+
+                // First, execute the CompleteAuthorize flow
+                let router_data = RouterDataV2::<
+                    CompleteAuthorize,
+                    PaymentFlowData,
+                    CompleteAuthorizeRequestData,
+                    PaymentsResponseData,
+                > {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: payment_flow_data.clone(),
+                    connector_auth_type: connector_auth_details.clone(),
+                    request: complete_authorize_data,
+                    response: Err(ErrorResponse::default()),
+                };
+
+                let event_params = EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: events::FlowName::Authorize, // Use Authorize flow name for now
+                    event_config: &self.config.events,
+                    raw_request_data: Some(pii::SecretSerdeValue::new(
+                        payload.masked_serialize().unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                };
+
+                let authorize_response = execute_connector_processing_step(
+                    &self.config.proxy,
+                    connector_integration,
+                    router_data,
+                    None,
+                    event_params,
+                )
+                .await
+                .switch()
+                .map_err(|e| e.into_grpc_status())?;
+
+                // Check if authorization was successful and auto-capture is needed
+                let final_response = if should_auto_capture {
+                    match &authorize_response.response {
+                        Ok(PaymentsResponseData::TransactionResponse { 
+                            resource_id, 
+                            status_code: _,
+                            .. 
+                        }) => {
+                            tracing::info!("Authorization successful, proceeding with auto-capture");
+                            
+                            // Auto-capture: Create capture request using the transaction ID from authorize response
+                            let capture_integration: BoxedConnectorIntegrationV2<
+                                '_,
+                                Capture,
+                                PaymentFlowData,
+                                PaymentsCaptureData,
+                                PaymentsResponseData,
+                            > = connector_data.connector.get_connector_integration_v2();
+
+                            let capture_data = PaymentsCaptureData {
+                                amount_to_capture: payload.amount,
+                                minor_amount_to_capture: common_utils::types::MinorUnit::new(payload.minor_amount),
+                                currency: common_enums::Currency::foreign_try_from(payload.currency()).map_err(|e| e.into_grpc_status())?,
+                                connector_transaction_id: resource_id.clone(),
+                                multiple_capture_data: None,
+                                connector_metadata: None,
+                                browser_info: payload.browser_info.map(|info| BrowserInformation::foreign_try_from(info)).transpose().map_err(|e| e.into_grpc_status())?,
+                                integrity_object: None,
+                            };
+
+                            let capture_router_data = RouterDataV2::<
+                                Capture,
+                                PaymentFlowData,
+                                PaymentsCaptureData,
+                                PaymentsResponseData,
+                            > {
+                                flow: std::marker::PhantomData,
+                                resource_common_data: payment_flow_data,
+                                connector_auth_type: connector_auth_details,
+                                request: capture_data,
+                                response: Err(ErrorResponse::default()),
+                            };
+
+                            let capture_event_params = EventProcessingParams {
+                                connector_name: &connector.to_string(),
+                                service_name: &service_name,
+                                flow_name: events::FlowName::Capture,
+                                event_config: &self.config.events,
+                                raw_request_data: Some(pii::SecretSerdeValue::new(
+                                    payload.masked_serialize().unwrap_or_default(),
+                                )),
+                                request_id: &request_id,
+                            };
+
+                            match execute_connector_processing_step(
+                                &self.config.proxy,
+                                capture_integration,
+                                capture_router_data,
+                                None,
+                                capture_event_params,
+                            )
+                            .await
+                            .switch() {
+                                Ok(capture_response) => {
+                                    tracing::info!("Auto-capture completed successfully");
+                                    capture_response
+                                },
+                                Err(capture_error) => {
+                                    tracing::error!("Auto-capture failed: {:?}", capture_error);
+                                    // Return the original authorize response since capture failed
+                                    authorize_response
+                                }
+                            }
+                        },
+                        _ => {
+                            tracing::info!("Authorization failed or incomplete, skipping auto-capture");
+                            authorize_response
+                        }
+                    }
+                } else {
+                    tracing::info!("Manual capture mode, skipping auto-capture");
+                    authorize_response
+                };
+
+                // Generate the final response
+                let complete_authorize_response = domain_types::types::generate_payment_authorize_response(final_response)
+                    .map_err(|e| e.into_grpc_status())?;
+
+                Ok(tonic::Response::new(complete_authorize_response))
             })
         })
         .await

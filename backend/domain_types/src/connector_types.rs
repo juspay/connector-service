@@ -24,10 +24,10 @@ use crate::{
     router_data::PaymentMethodToken,
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
-        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
+        CaptureIntegrityObject, CompleteAuthorizeIntegrityObject, CreateOrderIntegrityObject,
+        DefendDisputeIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -84,7 +84,6 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Novalnet => Ok(Self::Novalnet),
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
-            grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1029,6 +1028,42 @@ pub struct PaymentCreateOrderResponse {
     pub order_id: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct CompleteAuthorizeRequestData {
+    pub payment_method_data: Option<PaymentMethodData>,
+    pub amount: i64,
+    pub email: Option<common_utils::pii::Email>,
+    pub currency: Currency,
+    pub confirm: bool,
+    pub statement_descriptor_suffix: Option<String>,
+    pub statement_descriptor: Option<String>,
+    pub capture_method: Option<common_enums::CaptureMethod>,
+    pub router_return_url: Option<String>,
+    pub webhook_url: Option<String>,
+    pub complete_authorize_url: Option<String>,
+    pub mandate_id: Option<MandateIds>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
+    pub off_session: Option<bool>,
+    pub browser_info: Option<BrowserInformation>,
+    pub redirect_response: Option<CompleteAuthorizeRedirectResponse>,
+    pub connector_transaction_id: Option<String>,
+    pub connector_meta: Option<serde_json::Value>,
+    pub metadata: Option<serde_json::Value>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
+    pub minor_amount: MinorUnit,
+    pub merchant_account_id: Option<String>,
+    pub merchant_config_currency: Option<Currency>,
+    pub customer_id: Option<common_utils::id_type::CustomerId>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
+    pub request_incremental_authorization: bool,
+    pub integrity_object: Option<CompleteAuthorizeIntegrityObject>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompleteAuthorizeRedirectResponse {
+    pub params: Option<hyperswitch_masking::Secret<String>>,
+    pub payload: Option<serde_json::Value>,
+}
 #[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
