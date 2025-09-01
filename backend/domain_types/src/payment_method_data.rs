@@ -53,17 +53,11 @@ impl RawCardNumber<DefaultPCIHolder> {
     pub fn peek(&self) -> &str {
         self.0.peek()
     }
-    pub fn get_card_isin(&self) -> String {
-        self.0.peek().chars().take(6).collect::<String>()
-    }
 }
 
 impl RawCardNumber<VaultTokenHolder> {
     pub fn peek(&self) -> &str {
         &self.0
-    }
-    pub fn get_card_isin(&self) -> String {
-        self.peek().chars().take(6).collect::<String>()
     }
 }
 
