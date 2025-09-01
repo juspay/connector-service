@@ -114,12 +114,7 @@ impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::C
             grpc_api_types::payments::CaptureMethod::Manual => Ok(Self::Manual),
             grpc_api_types::payments::CaptureMethod::ManualMultiple => Ok(Self::ManualMultiple),
             grpc_api_types::payments::CaptureMethod::Scheduled => Ok(Self::Scheduled),
-            _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "unsupported_capture_method".to_string(),
-                error_identifier: 4001,
-                error_message: format!("Capture method {value:?} is not supported"),
-                error_object: None,
-            }))),
+            _ => Ok(Self::Automatic),
         }
     }
 }
@@ -934,15 +929,17 @@ impl<
         value: PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                    error_identifier: 400,
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
 
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }))
-            })?),
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
             None => None,
         };
 
@@ -1069,20 +1066,22 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for Address {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email = match value.email.clone() {
-            Some(email) => Some(common_utils::pii::Email::from_str(&email).change_context(
-                ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }),
-            )?),
+            Some(email) => Some(
+                common_utils::pii::Email::from_str(&email.expose()).change_context(
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }),
+                )?,
+            ),
             None => None,
         };
         Ok(Self {
             address: Some(AddressDetails::foreign_try_from(value.clone())?),
             phone: value.phone_number.map(|phone_number| PhoneDetails {
-                number: Some(phone_number.into()),
+                number: Some(phone_number),
                 country_code: value.phone_country_code,
             }),
             email,
@@ -1357,15 +1356,15 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
         value: grpc_api_types::payments::Address,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(Self {
-            city: value.city.clone(),
+            city: value.city.clone().map(|city| city.expose()),
             country: Some(common_enums::CountryAlpha2::foreign_try_from(
                 value.country_alpha2_code(),
             )?),
-            line1: value.line1.map(|val| val.into()),
-            line2: value.line2.map(|val| val.into()),
-            line3: value.line3.map(|val| val.into()),
-            zip: value.zip_code.map(|val| val.into()),
-            state: value.state.map(|val| val.into()),
+            line1: value.line1,
+            line2: value.line2,
+            line3: value.line3,
+            zip: value.zip_code,
+            state: value.state,
             first_name: value.first_name.map(|val| val.into()),
             last_name: value.last_name.map(|val| val.into()),
         })
@@ -1557,14 +1556,9 @@ impl
             payment_method: common_enums::PaymentMethod::Card, //TODO
             address,
             auth_type: common_enums::AuthenticationType::default(),
-            connector_request_reference_id: value
-                .transaction_id
-                .and_then(|id| id.id_type)
-                .and_then(|id_type| match id_type {
-                    grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
-                    _ => None,
-                })
-                .unwrap_or_default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
             customer_id: None,
             connector_customer: None,
             description: None,
@@ -3608,15 +3602,17 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
         value: PaymentServiceRegisterRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                    error_identifier: 400,
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
 
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }))
-            })?),
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
             None => None,
         };
         let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
@@ -4274,22 +4270,13 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         let currency = value.currency();
         let payment_method_type =
             <Option<PaymentMethodType>>::foreign_try_from(value.payment_method_type())?;
-        let capture_method = match value.capture_method {
-            Some(method) => {
-                let grpc_capture_method = grpc_api_types::payments::CaptureMethod::try_from(method)
-                    .unwrap_or(grpc_api_types::payments::CaptureMethod::Unspecified);
-                Some(common_enums::CaptureMethod::foreign_try_from(
-                    grpc_capture_method,
-                )?)
-            }
-            None => None,
-        };
+        let capture_method = value.capture_method();
         let merchant_order_reference_id = value.merchant_order_reference_id;
         let metadata = value.metadata;
         let webhook_url = value.webhook_url;
 
         // Extract mandate reference
-        let mandate_reference = value.mandate_reference.ok_or_else(|| {
+        let mandate_reference = value.mandate_reference.clone().ok_or_else(|| {
             ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "MISSING_MANDATE_REFERENCE".to_owned(),
                 error_identifier: 400,
@@ -4299,15 +4286,17 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
         })?;
 
         let email: Option<Email> = match value.email {
-            Some(ref email_str) => Some(Email::try_from(email_str.clone()).map_err(|_| {
-                error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                    error_identifier: 400,
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
 
-                    error_message: "Invalid email".to_owned(),
-                    error_object: None,
-                }))
-            })?),
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
             None => None,
         };
 
@@ -4341,7 +4330,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequ
             },
             webhook_url,
             integrity_object: None,
-            capture_method,
+            capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
+                capture_method,
+            )?),
             email,
             browser_info: value
                 .browser_info

@@ -5,14 +5,13 @@
 use grpc_server::{app, configs};
 mod common;
 
-use cards::CardNumber;
-use hyperswitch_masking::Secret;
 use std::{
     env,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -25,6 +24,7 @@ use grpc_api_types::{
         RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -145,7 +145,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         webhook_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {

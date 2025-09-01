@@ -832,17 +832,17 @@ message Address {
   optional string last_name = 2;
   
   // Address Details
-  optional string line1 = 3;
-  optional string line2 = 4;
-  optional string line3 = 5;
-  optional string city = 6;
-  optional string state = 7;
-  optional string zip_code = 8;
+  optional SecretString line1 = 3;
+  optional SecretString line2 = 4;
+  optional SecretString line3 = 5;
+  optional SecretString city = 6;
+  optional SecretString state = 7;
+  optional SecretString zip_code = 8;
   optional CountryAlpha2 country_alpha2_code = 9;
 
   // Contact Information
-  optional string email = 10;
-  optional string phone_number = 11;
+  optional SecretString email = 10;
+  optional SecretString phone_number = 11;
   optional string phone_country_code = 12;
 }
 
@@ -1097,7 +1097,7 @@ message PaymentServiceAuthorizeRequest {
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
   
   // Customer Information
-  optional string email = 9; // Email address of the customer
+  optional SecretString email = 9; // Email address of the customer
   optional string customer_name = 10; // Name of the customer
   optional string connector_customer_id = 11; // Customer ID as recognized by the connector
   
@@ -1210,7 +1210,7 @@ message PaymentServiceGetResponse {
   
   // Additional Context
   optional string customer_name = 20; // Name of the customer
-  optional string email = 21; // Email address of the customer
+  optional SecretString email = 21; // Email address of the customer
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
@@ -1344,7 +1344,7 @@ message RefundResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1406,7 +1406,7 @@ message PaymentServiceRegisterRequest {
   optional int64 minor_amount = 4; // Optional: Amount to authorize during mandate setup
   
   // Customer Information
-  optional string email = 5; // Email address of the customer
+  optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
   
@@ -1494,7 +1494,7 @@ message PaymentServiceRepeatEverythingRequest {
   optional CaptureMethod capture_method = 11; // Method for capturing the payment
 
   // Customer Information
-  optional string email = 12; // Email address of the customer
+  optional SecretString email = 12; // Email address of the customer
 
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
@@ -1597,7 +1597,7 @@ message PaymentServiceRefundResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1632,7 +1632,7 @@ message RefundServiceGetResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector

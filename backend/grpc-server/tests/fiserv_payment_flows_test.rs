@@ -5,8 +5,6 @@
 use grpc_server::{app, configs};
 mod common;
 
-use cards::CardNumber;
-use hyperswitch_masking::Secret;
 use std::{
     collections::HashMap,
     env,
@@ -15,6 +13,7 @@ use std::{
 };
 
 use base64::{engine::general_purpose, Engine};
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -26,6 +25,7 @@ use grpc_api_types::{
         PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for Fiserv connector
@@ -167,7 +167,7 @@ fn create_payment_authorize_request(
                 card_type: Some(card_details),
             })),
         }), //i32::from(payment_method::PaymentMethod::Card),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {

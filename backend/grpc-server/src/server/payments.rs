@@ -37,6 +37,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -175,15 +176,19 @@ impl Payments {
         let should_do_session_token = connector_data.connector.should_do_session_token();
 
         let payment_flow_data = if should_do_session_token {
-            // let mut flow_data = payment_flow_data;
+            let event_params = EventParams {
+                connector_name: &connector.to_string(),
+                service_name,
+                request_id,
+            };
+
             let payment_session_data = self
                 .handle_session_token(
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
+                    event_params,
                     &payload,
-                    &connector.to_string(),
-                    service_name,
                 )
                 .await?;
             tracing::info!(
@@ -232,7 +237,7 @@ impl Payments {
             flow_name: events::FlowName::Authorize,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(&payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id,
         };
@@ -384,7 +389,7 @@ impl Payments {
             flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
@@ -481,7 +486,7 @@ impl Payments {
             flow_name: events::FlowName::CreateOrder,
             event_config: &self.config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
         };
@@ -523,12 +528,11 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
+        event_params: EventParams<'_>,
         payload: &P,
-        connector_name: &str,
-        service_name: &str,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
-        P: Clone,
+        P: Clone + ErasedMaskSerialize,
         SessionTokenRequestData: ForeignTryFrom<P, Error = ApplicationErrorResponse>,
     {
         // Get connector integration
@@ -565,13 +569,15 @@ impl Payments {
         };
 
         // Execute connector processing
-        let event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            flow_name: events::FlowName::Authorize, // Use Authorize as fallback since CreateSessionToken doesn't exist
+        let external_event_params = EventProcessingParams {
+            connector_name: event_params.connector_name,
+            service_name: event_params.service_name,
+            flow_name: events::FlowName::CreateSessionToken,
             event_config: &self.config.events,
-            raw_request_data: None, // Don't serialize P since it doesn't implement Serialize
-            request_id: "session_token_request", // TODO: Pass actual request_id
+            raw_request_data: Some(pii::SecretSerdeValue::new(
+                payload.masked_serialize().unwrap_or_default(),
+            )),
+            request_id: event_params.request_id,
         };
 
         let response = execute_connector_processing_step(
@@ -579,7 +585,7 @@ impl Payments {
             connector_integration,
             session_token_router_data,
             None,
-            event_params,
+            external_event_params,
         )
         .await
         .switch()
@@ -1199,7 +1205,7 @@ impl PaymentService for Payments {
                     flow_name: events::FlowName::SetupMandate,
                     event_config: &self.config.events,
                     raw_request_data: Some(pii::SecretSerdeValue::new(
-                        serde_json::to_value(payload).unwrap_or_default(),
+                        payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };
@@ -1308,10 +1314,10 @@ impl PaymentService for Payments {
                 let event_params = EventProcessingParams {
                     connector_name: &connector.to_string(),
                     service_name: &service_name,
-                    flow_name: events::FlowName::Authorize,
+                    flow_name: events::FlowName::RepeatPayment,
                     event_config: &self.config.events,
                     raw_request_data: Some(pii::SecretSerdeValue::new(
-                        serde_json::to_value(payload).unwrap_or_default(),
+                        payload.masked_serialize().unwrap_or_default(),
                     )),
                     request_id: &request_id,
                 };

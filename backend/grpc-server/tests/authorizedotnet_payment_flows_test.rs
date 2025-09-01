@@ -308,7 +308,7 @@ fn create_payment_authorize_request(
 
     request.connector_customer_id = Some("TEST_CONNECTOR".to_string());
     // Set the customer information with unique email
-    request.email = Some(generate_unique_email());
+    request.email = Some(generate_unique_email().into());
 
     // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
@@ -319,12 +319,12 @@ fn create_payment_authorize_request(
         billing_address: Some(Address {
             first_name: Some(billing_first_name),
             last_name: Some(billing_last_name),
-            line1: Some("14 Main Street".to_string()),
+            line1: Some("14 Main Street".to_string().into()),
             line2: None,
             line3: None,
-            city: Some("Pecan Springs".to_string()),
-            state: Some("TX".to_string()),
-            zip_code: Some("44628".to_string()),
+            city: Some("Pecan Springs".to_string().into()),
+            state: Some("TX".to_string().into()),
+            zip_code: Some("44628".to_string().into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             phone_number: None,
             phone_country_code: None,
@@ -527,7 +527,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
 
     // Set customer information with unique email
     request.customer_name = Some(TEST_CARD_HOLDER.to_string());
-    request.email = Some(generate_unique_email());
+    request.email = Some(generate_unique_email().into());
 
     // Add customer acceptance as required by the server (matching your JSON: "acceptance_type": "OFFLINE")
     request.customer_acceptance = Some(CustomerAcceptance {
@@ -541,16 +541,16 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         billing_address: Some(Address {
             first_name: Some("Test".to_string()),
             last_name: Some("Customer001".to_string()),
-            line1: Some("123 Test St".to_string()),
+            line1: Some("123 Test St".to_string().into()),
             line2: None,
             line3: None,
-            city: Some("Test City".to_string()),
-            state: Some("NY".to_string()),
-            zip_code: Some("10001".to_string()),
+            city: Some("Test City".to_string().into()),
+            state: Some("NY".to_string().into()),
+            zip_code: Some("10001".to_string().into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             phone_number: None,
             phone_country_code: None,
-            email: Some(generate_unique_email()),
+            email: Some(generate_unique_email().into()),
         }),
         shipping_address: None,
     });
