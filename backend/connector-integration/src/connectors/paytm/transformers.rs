@@ -1428,6 +1428,7 @@ impl<
             connector_response_reference_id: connector_txn_id,
             incremental_authorization_allowed: None,
             status_code: item.http_code,
+            state: None,
         });
 
         Ok(router_data)
@@ -1522,6 +1523,7 @@ impl
                 connector_response_reference_id: connector_txn_id,
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
+                state: None,
             }),
         };
 

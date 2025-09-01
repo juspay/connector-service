@@ -13,7 +13,7 @@ use domain_types::connector_types::{
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
-        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
+        AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
         CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
         PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
         RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
@@ -337,6 +337,29 @@ impl GetIntegrityObject<SessionTokenIntegrityObject> for SessionTokenRequestData
             amount: self.amount,
             currency: self.currency,
         }
+    }
+}
+
+impl GetIntegrityObject<AccessTokenIntegrityObject> for () {
+    fn get_response_integrity_object(&self) -> Option<AccessTokenIntegrityObject> {
+        None // Access token responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> AccessTokenIntegrityObject {
+        AccessTokenIntegrityObject {
+            // No fields needed for access token requests
+        }
+    }
+}
+
+impl CheckIntegrity<(), AccessTokenIntegrityObject> for () {
+    fn check_integrity(
+        &self,
+        _request: &(),
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        // Access tokens have no data to verify, so integrity always passes
+        Ok(())
     }
 }
 
@@ -726,6 +749,19 @@ impl FlowIntegrity for SessionTokenIntegrityObject {
         }
 
         check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for AccessTokenIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        _req_integrity_object: Self,
+        _res_integrity_object: Self,
+        _connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        // Access tokens have no fields to compare, so integrity always passes
+        Ok(())
     }
 }
 

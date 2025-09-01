@@ -1764,6 +1764,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRefundResponse, Self>>
                 connector_refund_id: transaction_response.transaction_id.clone(),
                 refund_status,
                 status_code: http_code,
+                state: None,
             }),
         };
 
@@ -1811,6 +1812,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetPSyncResponse, Self>>
                     connector_response_reference_id: Some(transaction.transaction_id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: http_code,
+                    state: None,
                 });
 
                 Ok(new_router_data)
@@ -2095,6 +2097,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: http_status_code,
+                state: None,
             })
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponse(trans_res)) => {
@@ -2130,6 +2133,7 @@ pub fn convert_to_payments_response_data_or_error(
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: http_status_code,
+                state: None,
             })
         }
         None => {
@@ -2271,6 +2275,7 @@ impl TryFrom<ResponseRouterData<AuthorizedotnetRSyncResponse, Self>>
                     connector_refund_id: transaction.transaction_id,
                     refund_status,
                     status_code: http_code,
+                    state: None,
                 });
 
                 Ok(new_router_data)
@@ -2469,6 +2474,7 @@ impl<
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
                 status_code: http_code,
+                state: None,
             });
         } else {
             let error_response = ErrorResponse {

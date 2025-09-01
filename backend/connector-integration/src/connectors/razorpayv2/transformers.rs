@@ -532,6 +532,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -575,6 +576,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -729,6 +731,7 @@ impl<
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {
@@ -782,6 +785,7 @@ impl<
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {

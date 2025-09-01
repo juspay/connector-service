@@ -560,6 +560,7 @@ impl<
                             ),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
+                            state: None,
                         }),
                         resource_common_data: PaymentFlowData {
                             status: common_enums::AttemptStatus::AuthenticationPending,
@@ -583,6 +584,7 @@ impl<
                             ),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
+                            state: None,
                         }),
                         ..item.router_data
                     })

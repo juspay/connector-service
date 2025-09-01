@@ -738,6 +738,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             status_code: http_code,
+            state: None,
         };
 
         Ok(Self {
@@ -773,6 +774,7 @@ impl
             connector_refund_id: response.id,
             refund_status: status,
             status_code: http_code,
+            state: None,
         };
 
         Ok(Self {
@@ -842,6 +844,7 @@ impl<F, Req>
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
                     status_code: _http_code,
+                    state: None,
                 };
                 let error = None;
 
@@ -866,6 +869,7 @@ impl<F, Req>
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
                     status_code: _http_code,
+                    state: None,
                 };
                 let error = None;
 
@@ -1351,6 +1355,7 @@ impl<F, Req>
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
                 status_code: http_code,
+                state: None,
             }),
             resource_common_data: PaymentFlowData {
                 status,
@@ -1689,6 +1694,7 @@ impl<F, Req>
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
             status_code: _status_code,
+            state: None,
         };
 
         Ok(RouterDataV2 {

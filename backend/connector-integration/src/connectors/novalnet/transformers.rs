@@ -707,6 +707,7 @@ impl<
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -819,6 +820,7 @@ impl<
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -908,6 +910,7 @@ impl
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -1254,6 +1257,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
                         connector_refund_id: refund_id,
                         refund_status: common_enums::RefundStatus::from(transaction_status),
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -1404,6 +1408,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -1484,6 +1489,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -1579,6 +1585,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundSyncResponse, Self>>
                         connector_refund_id: refund_id,
                         refund_status: common_enums::RefundStatus::from(transaction_status),
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })
@@ -1693,6 +1700,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
                         status_code: item.http_code,
+                        state: None,
                     }),
                     ..item.router_data
                 })

@@ -11,7 +11,7 @@ use domain_types::{
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        SessionTokenResponseData, AccessTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
         WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
@@ -29,6 +29,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentSyncV2
     + PaymentOrderCreate
     + PaymentSessionToken
+    + PaymentAccessToken
     + PaymentVoidV2
     + IncomingWebhook
     + RefundV2
@@ -57,6 +58,10 @@ pub trait ValidationTrait {
     fn should_do_session_token(&self) -> bool {
         false
     }
+
+    fn should_do_access_token(&self) -> bool {
+        false
+    }
 }
 
 pub trait PaymentOrderCreate:
@@ -75,6 +80,16 @@ pub trait PaymentSessionToken:
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData,
+>
+{
+}
+
+pub trait PaymentAccessToken:
+    ConnectorIntegrationV2<
+    connector_flow::AccessToken,
+    PaymentFlowData,
+    (),
+    AccessTokenResponseData,
 >
 {
 }

@@ -897,6 +897,7 @@ impl<
             connector_response_reference_id: Some(transaction_id),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
+            state: None,
         };
 
         Ok(Self {

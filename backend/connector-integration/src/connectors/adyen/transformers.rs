@@ -1312,6 +1312,7 @@ impl TryFrom<ResponseRouterData<AdyenVoidResponse, Self>>
             incremental_authorization_allowed: None,
             mandate_reference: None,
             status_code: http_code,
+            state: None,
         };
 
         Ok(Self {
@@ -1385,6 +1386,7 @@ pub fn get_adyen_response(
         incremental_authorization_allowed: None,
         mandate_reference: mandate_reference.map(Box::new),
         status_code,
+        state: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -1459,6 +1461,7 @@ pub fn get_redirection_response(
         incremental_authorization_allowed: None,
         mandate_reference: None,
         status_code,
+        state: None,
     };
     Ok((status, error, payments_response_data))
 }
@@ -2068,6 +2071,7 @@ impl<F, Req> TryFrom<ResponseRouterData<AdyenRefundResponse, Self>>
             connector_refund_id: response.psp_reference,
             refund_status: status,
             status_code: http_code,
+            state: None,
         };
 
         Ok(Self {
@@ -2176,6 +2180,7 @@ impl<F> TryFrom<ResponseRouterData<AdyenCaptureResponse, Self>>
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
                 status_code: http_code,
+                state: None,
             }),
             resource_common_data: PaymentFlowData {
                 status: AttemptStatus::Pending,
