@@ -10,9 +10,11 @@ connector-integration = { path = "../connector-integration" }
 external-services = { path = "../external-services" }
 domain_types = { path = "../domain_types" }
 interfaces = { path = "../interfaces" }
-cards = { path = "../cards" }
-common_enums = { path = "../common_enums" }
-common_utils = { path = "../common_utils" }
+cards = { path = "../cards", package = "ucs_cards" }
+common_enums = { path = "../common_enums", package = "ucs_common_enums" }
+common_utils = { path = "../common_utils", package = "ucs_common_utils" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.116.0", package = "masking" }
+tracing-kafka = { path = "../tracing-kafka", optional = true }
 
 # Third-party dependencies
 config = "0.14.0"
@@ -73,6 +75,10 @@ rand = "0.8.5"
 uuid = { version = "1.0", features = ["v4"] }
 reqwest = { version = "0.11", features = ["json"] }
 
+
+[features]
+default = []
+kafka = ["tracing-kafka"]
 
 [lints]
 workspace = true

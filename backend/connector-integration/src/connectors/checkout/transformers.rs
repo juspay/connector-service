@@ -517,7 +517,6 @@ impl<
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             let connector_meta =
@@ -532,7 +531,6 @@ impl<
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: http_code,
             });
         }
@@ -746,7 +744,6 @@ impl<F>
             network_txn_id: None,
             connector_response_reference_id: response.reference,
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
             status_code: http_code,
         });
 
@@ -798,7 +795,6 @@ impl<F>
             network_txn_id: None,
             connector_response_reference_id: None,
             incremental_authorization_allowed: None,
-            raw_connector_response: None,
             status_code: http_code,
         });
 
@@ -858,7 +854,6 @@ impl<F>
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             });
         } else {
             // Always include the connector metadata in the response
@@ -875,7 +870,6 @@ impl<F>
                 network_txn_id: None,
                 connector_response_reference_id: Some(response.reference.unwrap_or(response.id)),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: http_code,
             });
         }
@@ -919,7 +913,6 @@ impl<F>
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id: checkout_refund_response.response.action_id,
             refund_status,
-            raw_connector_response: None,
             status_code: http_code,
         });
 
@@ -956,7 +949,6 @@ impl<F>
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id: response.action_id,
             refund_status,
-            raw_connector_response: None,
             status_code: http_code,
         });
 
@@ -1047,7 +1039,6 @@ impl<F>
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id: response.action_id.clone(),
             refund_status,
-            raw_connector_response: None,
             status_code: http_code,
         });
 

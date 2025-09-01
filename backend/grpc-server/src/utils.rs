@@ -3,17 +3,62 @@ use std::str::FromStr;
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
+    events::FlowName,
 };
 use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+    },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
     router_data::ConnectorAuthType,
 };
 use error_stack::{Report, ResultExt};
 use http::request::Request;
+use hyperswitch_masking;
 use tonic::metadata;
 
 use crate::error::ResultExtGrpc;
+
+// Helper function to map flow markers to flow names
+pub fn flow_marker_to_flow_name<F>() -> FlowName
+where
+    F: 'static,
+{
+    let type_id = std::any::TypeId::of::<F>();
+
+    if type_id == std::any::TypeId::of::<Authorize>() {
+        FlowName::Authorize
+    } else if type_id == std::any::TypeId::of::<PSync>() {
+        FlowName::Psync
+    } else if type_id == std::any::TypeId::of::<RSync>() {
+        FlowName::Rsync
+    } else if type_id == std::any::TypeId::of::<Void>() {
+        FlowName::Void
+    } else if type_id == std::any::TypeId::of::<Refund>() {
+        FlowName::Refund
+    } else if type_id == std::any::TypeId::of::<Capture>() {
+        FlowName::Capture
+    } else if type_id == std::any::TypeId::of::<SetupMandate>() {
+        FlowName::SetupMandate
+    } else if type_id == std::any::TypeId::of::<RepeatPayment>() {
+        FlowName::RepeatPayment
+    } else if type_id == std::any::TypeId::of::<CreateOrder>() {
+        FlowName::CreateOrder
+    } else if type_id == std::any::TypeId::of::<CreateSessionToken>() {
+        FlowName::CreateSessionToken
+    } else if type_id == std::any::TypeId::of::<Accept>() {
+        FlowName::AcceptDispute
+    } else if type_id == std::any::TypeId::of::<DefendDispute>() {
+        FlowName::DefendDispute
+    } else if type_id == std::any::TypeId::of::<SubmitEvidence>() {
+        FlowName::SubmitEvidence
+    } else {
+        tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
+        FlowName::Unknown
+    }
+}
 
 /// Record the header's fields in request's trace
 pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> tracing::Span {
@@ -206,11 +251,11 @@ where
         )?;
     let current_span = tracing::Span::current();
     let req_body = request.get_ref();
-    let req_body_json = match serde_json::to_string(req_body) {
-        Ok(json) => json,
+    let req_body_json = match hyperswitch_masking::masked_serialize(req_body) {
+        Ok(masked_value) => masked_value.to_string(),
         Err(e) => {
-            tracing::error!("Serialization error: {:?}", e);
-            "<serialization error>".to_string()
+            tracing::error!("Masked serialization error: {:?}", e);
+            "<masked serialization error>".to_string()
         }
     };
     current_span.record("service_name", service_name);
@@ -316,8 +361,9 @@ macro_rules! implement_connector_operation {
             $crate::utils::log_before_initialization(&request, service_name.as_str()).into_grpc_status()?;
             let start_time = tokio::time::Instant::now();
             let result = Box::pin(async{
-            let connector = $crate::utils::connector_from_metadata(request.metadata()).into_grpc_status()?;
+            let (connector, _merchant_id, _tenant_id, request_id) = $crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).into_grpc_status()?;
             let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
+            let metadata = request.metadata().clone();
             let payload = request.into_inner();
 
             // Get connector data
@@ -337,7 +383,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone()))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &metadata))
                 .into_grpc_status()?;
 
             // Create router data
@@ -355,13 +401,21 @@ macro_rules! implement_connector_operation {
             };
 
             // Execute connector processing
+            let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
+                request_id: &request_id,
+            };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 $all_keys_required,
-                &connector.to_string(),
-                &service_name,
+                event_params,
             )
             .await
             .switch()
