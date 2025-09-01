@@ -178,7 +178,7 @@ impl<T: ApiEventMetric> ApiEventMetric for &T {
 impl ApiEventMetric for TimeRange {}
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Event<'a> {
+pub struct Event {
     pub request_id: String,
     pub timestamp: i128,
     pub flow_type: FlowName,
@@ -193,7 +193,7 @@ pub struct Event<'a> {
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
     #[serde(flatten)]
-    pub lineage_ids: lineage::LineageIds<'a>,
+    pub lineage_ids: lineage::LineageIds<'static>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
