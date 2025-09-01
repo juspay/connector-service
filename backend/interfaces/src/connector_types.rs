@@ -179,6 +179,16 @@ pub trait IncomingWebhook {
         Ok(false)
     }
 
+    /// fn get_webhook_source_verification_message
+    fn get_webhook_source_verification_message(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Ok(Vec::new())
+    }
+
     fn get_event_type(
         &self,
         _request: RequestDetails,

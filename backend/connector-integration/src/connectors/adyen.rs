@@ -9,7 +9,9 @@ use std::{
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
 };
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue};
+use common_utils::{
+    errors::CustomResult, ext_traits::ByteSliceExt, pii::SecretSerdeValue, types::StringMinorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -34,6 +36,7 @@ use domain_types::{
         PaymentMethodDataType, PaymentMethodDetails, PaymentMethodSpecificFeatures,
         SupportedPaymentMethods,
     },
+    utils,
 };
 use error_stack::report;
 use hyperswitch_masking::{Mask, Maskable};
@@ -177,7 +180,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter_webhooks: StringMinorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -662,18 +667,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             notif.event_code,
             notif.additional_data.dispute_status,
         );
+
+        let amount = utils::convert_amount(
+            self.amount_converter_webhooks,
+            notif.amount.value,
+            notif.amount.currency,
+        )?;
+
         Ok(
             domain_types::connector_types::DisputeWebhookDetailsResponse {
+                amount,
+                currency: notif.amount.currency,
                 dispute_id: notif.psp_reference.clone(),
                 stage,
                 status,
                 connector_response_reference_id: Some(notif.psp_reference.clone()),
                 dispute_message: notif.reason,
+                connector_reason_code: notif.additional_data.chargeback_reason_code,
                 raw_connector_response: Some(
                     String::from_utf8_lossy(&request_body_copy).to_string(),
                 ),
                 status_code: 200,
                 response_headers: None,
+                challenge_required_by: notif.additional_data.defense_period_ends_at,
+                created_at: notif.event_date,
+                updated_at: notif.event_date,
             },
         )
     }

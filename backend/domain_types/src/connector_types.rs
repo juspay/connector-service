@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use time::PrimitiveDateTime;
 
 use common_enums::{
     AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
@@ -8,7 +9,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::MinorUnit,
+    types::{MinorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -1123,6 +1124,8 @@ pub struct RefundWebhookDetailsResponse {
 
 #[derive(Debug, Clone)]
 pub struct DisputeWebhookDetailsResponse {
+    pub amount: StringMinorUnit,
+    pub currency: common_enums::enums::Currency,
     pub dispute_id: String,
     pub status: common_enums::DisputeStatus,
     pub stage: common_enums::DisputeStage,
@@ -1131,6 +1134,14 @@ pub struct DisputeWebhookDetailsResponse {
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
+    /// connector_reason
+    pub connector_reason_code: Option<String>,
+    /// challenge_required_by
+    pub challenge_required_by: Option<PrimitiveDateTime>,
+    /// created_at
+    pub created_at: Option<PrimitiveDateTime>,
+    /// updated_at
+    pub updated_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
