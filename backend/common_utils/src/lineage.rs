@@ -30,6 +30,19 @@ impl<'a> LineageIds<'a> {
         }
     }
 
+    /// Get the inner HashMap with prefixed keys
+    pub fn inner(&self) -> HashMap<String, String> {
+        self.inner
+            .iter()
+            .map(|(k, v)| (format!("{},{}", self.prefix, k), v.clone()))
+            .collect()
+    }
+
+    /// Get the inner HashMap without prefix (raw keys)
+    pub fn inner_raw(&self) -> &HashMap<String, String> {
+        &self.inner
+    }
+
     /// Convert to an owned LineageIds with 'static lifetime
     pub fn to_owned(&self) -> LineageIds<'static> {
         LineageIds {

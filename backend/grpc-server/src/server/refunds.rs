@@ -23,8 +23,7 @@ use hyperswitch_masking::ErasedMaskSerialize;
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    implement_connector_operation, utils,
 };
 // Helper trait for refund operations
 trait RefundOperationsInternal {
@@ -114,62 +113,65 @@ impl RefundService for Refunds {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let connector =
-                connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let connector_auth_details =
-                auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let payload = request.into_inner();
+        utils::grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| async {
+                let connector = metadata_payload.connector;
+                let connector_auth_details = metadata_payload.connector_auth_type;
+                let payload = request.into_inner();
 
-            let request_details = payload
-                .request_details
-                .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                .ok_or_else(|| {
-                    tonic::Status::invalid_argument("missing request_details in the payload")
-                })?
-                .map_err(|e| e.into_grpc_status())?;
+                let request_details = payload
+                    .request_details
+                    .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                    .ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing request_details in the payload")
+                    })?
+                    .map_err(|e| e.into_grpc_status())?;
 
-            let webhook_secrets = payload
-                .webhook_secrets
-                .map(|details| {
-                    domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                        details,
+                let webhook_secrets = payload
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
+
+                // Get connector data
+                let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+                let source_verified = connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
                     )
-                    .map_err(|e| e.into_grpc_status())
-                })
-                .transpose()?;
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
-            // Get connector data
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
-
-            let source_verified = connector_data
-                .connector
-                .verify_webhook_source(
-                    request_details.clone(),
-                    webhook_secrets.clone(),
-                    Some(connector_auth_details.clone()),
+                let content = get_refunds_webhook_content(
+                    connector_data,
+                    request_details,
+                    webhook_secrets,
+                    Some(connector_auth_details),
                 )
-                .switch()
+                .await
                 .map_err(|e| e.into_grpc_status())?;
 
-            let content = get_refunds_webhook_content(
-                connector_data,
-                request_details,
-                webhook_secrets,
-                Some(connector_auth_details),
-            )
-            .await
-            .map_err(|e| e.into_grpc_status())?;
+                let response = RefundServiceTransformResponse {
+                    event_type: WebhookEventType::WebhookRefundSuccess.into(),
+                    content: Some(content),
+                    source_verified,
+                    response_ref_id: None,
+                };
 
-            let response = RefundServiceTransformResponse {
-                event_type: WebhookEventType::WebhookRefundSuccess.into(),
-                content: Some(content),
-                source_verified,
-                response_ref_id: None,
-            };
-
-            Ok(tonic::Response::new(response))
-        })
+                Ok(tonic::Response::new(response))
+            },
+        )
         .await
     }
 }

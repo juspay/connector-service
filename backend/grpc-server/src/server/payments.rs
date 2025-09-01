@@ -45,7 +45,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    utils::{self, grpc_logging_wrapper},
 };
 
 #[derive(Debug, Clone)]
@@ -153,7 +153,7 @@ impl Payments {
 
         let payment_flow_data = if should_do_order_create {
             let lineage_ids =
-                crate::utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
+                utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
             let event_params = EventParams {
                 connector_name: &connector.to_string(),
                 service_name,
@@ -181,7 +181,7 @@ impl Payments {
 
         let payment_flow_data = if should_do_session_token {
             let lineage_ids =
-                crate::utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
+                utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
             let event_params = EventParams {
                 connector_name: &connector.to_string(),
                 service_name,
@@ -237,7 +237,7 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
         let lineage_ids =
-            crate::utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
+            utils::extract_lineage_fields_from_metadata(metadata, &self.config.lineage);
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -727,15 +727,10 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| {
+        grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
             Box::pin(async {
-                let (connector, _merchant_id, _tenant_id, request_id) =
-                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
-                        request.metadata(),
-                    )
-                    .map_err(|e| e.into_grpc_status())?;
-                let connector_auth_details =
-                    auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
+                let utils::MetadataPayload {connector, merchant_id:_, tenant_id:_, request_id,lineage_ids: _, connector_auth_type} = metadata_payload;
+                let connector_auth_details = connector_auth_type;
                 let metadata = request.metadata().clone();
                 let payload = request.into_inner();
 
@@ -750,7 +745,7 @@ impl PaymentService for Payments {
                                             connector,
                                             connector_auth_details,
                                             &metadata,
-                    &service_name,
+                                            &service_name,
                                             &request_id,
                                         ))
                                         .await
@@ -902,110 +897,112 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let connector =
-                connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let connector_auth_details =
-                auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let payload = request.into_inner();
-
-            let request_details = payload
-                .request_details
-                .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                .ok_or_else(|| {
-                    tonic::Status::invalid_argument("missing request_details in the payload")
-                })?
-                .map_err(|e| e.into_grpc_status())?;
-
-            let webhook_secrets = payload
-                .webhook_secrets
-                .map(|details| {
-                    domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                        details,
-                    )
-                    .map_err(|e| e.into_grpc_status())
-                })
-                .transpose()?;
-
-            //get connector data
-            let connector_data: ConnectorData<DefaultPCIHolder> =
-                ConnectorData::get_connector_by_name(&connector);
-
-            let source_verified = connector_data
-                .connector
-                .verify_webhook_source(
-                    request_details.clone(),
-                    webhook_secrets.clone(),
-                    // TODO: do we need to force authentication? we can make it optional
-                    Some(connector_auth_details.clone()),
-                )
-                .switch()
-                .to_grpc_status()?;
-
-            let event_type = connector_data
-                .connector
-                .get_event_type(
-                    request_details.clone(),
-                    webhook_secrets.clone(),
-                    Some(connector_auth_details.clone()),
-                )
-                .switch()
-                .to_grpc_status()?;
-
-            // Get content for the webhook based on the event type using categorization
-            let content = if event_type.is_payment_event() {
-                get_payments_webhook_content(
-                    connector_data,
-                    &request_details,
-                    webhook_secrets.as_ref(),
-                    Some(&connector_auth_details),
-                )
-                .await
-                .to_grpc_status()?
-            } else if event_type.is_refund_event() {
-                get_refunds_webhook_content(
-                    connector_data,
-                    &request_details,
-                    webhook_secrets.as_ref(),
-                    Some(&connector_auth_details),
-                )
-                .await
-                .to_grpc_status()?
-            } else if event_type.is_dispute_event() {
-                get_disputes_webhook_content(
-                    connector_data,
-                    &request_details,
-                    webhook_secrets.as_ref(),
-                    Some(&connector_auth_details),
-                )
-                .await
-                .to_grpc_status()?
-            } else {
-                // For all other event types, default to payment webhook content for now
-                // This includes mandate, payout, recovery, and misc events
-                get_payments_webhook_content(
-                    connector_data,
-                    &request_details,
-                    webhook_secrets.as_ref(),
-                    Some(&connector_auth_details),
-                )
-                .await
-                .to_grpc_status()?
-            };
-
-            let api_event_type =
-                grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| async {
+                let connector = metadata_payload.connector;
+                let connector_auth_details = metadata_payload.connector_auth_type;
+                let payload = request.into_inner();
+                let request_details = payload
+                    .request_details
+                    .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                    .ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing request_details in the payload")
+                    })?
                     .map_err(|e| e.into_grpc_status())?;
 
-            let response = PaymentServiceTransformResponse {
-                event_type: api_event_type.into(),
-                content: Some(content),
-                source_verified,
-                response_ref_id: None,
-            };
+                let webhook_secrets = payload
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
 
-            Ok(tonic::Response::new(response))
-        })
+                //get connector data
+                let connector_data: ConnectorData<DefaultPCIHolder> =
+                    ConnectorData::get_connector_by_name(&connector);
+
+                let source_verified = connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        // TODO: do we need to force authentication? we can make it optional
+                        Some(connector_auth_details.clone()),
+                    )
+                    .switch()
+                    .to_grpc_status()?;
+
+                let event_type = connector_data
+                    .connector
+                    .get_event_type(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
+                    )
+                    .switch()
+                    .to_grpc_status()?;
+
+                // Get content for the webhook based on the event type using categorization
+                let content = if event_type.is_payment_event() {
+                    get_payments_webhook_content(
+                        connector_data,
+                        &request_details,
+                        webhook_secrets.as_ref(),
+                        Some(&connector_auth_details),
+                    )
+                    .await
+                    .to_grpc_status()?
+                } else if event_type.is_refund_event() {
+                    get_refunds_webhook_content(
+                        connector_data,
+                        &request_details,
+                        webhook_secrets.as_ref(),
+                        Some(&connector_auth_details),
+                    )
+                    .await
+                    .to_grpc_status()?
+                } else if event_type.is_dispute_event() {
+                    get_disputes_webhook_content(
+                        connector_data,
+                        &request_details,
+                        webhook_secrets.as_ref(),
+                        Some(&connector_auth_details),
+                    )
+                    .await
+                    .to_grpc_status()?
+                } else {
+                    // For all other event types, default to payment webhook content for now
+                    // This includes mandate, payout, recovery, and misc events
+                    get_payments_webhook_content(
+                        connector_data,
+                        &request_details,
+                        webhook_secrets.as_ref(),
+                        Some(&connector_auth_details),
+                    )
+                    .await
+                    .to_grpc_status()?
+                };
+
+                let api_event_type =
+                    grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
+                        .map_err(|e| e.into_grpc_status())?;
+
+                let response = PaymentServiceTransformResponse {
+                    event_type: api_event_type.into(),
+                    content: Some(content),
+                    source_verified,
+                    response_ref_id: None,
+                };
+
+                Ok(tonic::Response::new(response))
+            },
+        )
         .await
     }
 
@@ -1067,12 +1064,17 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |_request| async {
-            let response = DisputeResponse {
-                ..Default::default()
-            };
-            Ok(tonic::Response::new(response))
-        })
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |_request, _metadata_payload| async {
+                let response = DisputeResponse {
+                    ..Default::default()
+                };
+                Ok(tonic::Response::new(response))
+            },
+        )
         .await
     }
 
@@ -1135,119 +1137,113 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| {
-            Box::pin(async {
-                let (connector, _merchant_id, _tenant_id, request_id) =
-                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
-                        request.metadata(),
-                    )
-                    .map_err(|e| e.into_grpc_status())?;
-                let connector_auth_details =
-                    auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-                let metadata = request.metadata().clone();
-                let payload = request.into_inner();
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let (connector, request_id) =
+                        (metadata_payload.connector, metadata_payload.request_id);
+                    let connector_auth_details = metadata_payload.connector_auth_type;
+                    let metadata = request.metadata().clone();
+                    let payload = request.into_inner();
 
-                //get connector data
-                let connector_data = ConnectorData::get_connector_by_name(&connector);
+                    //get connector data
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-                // Get connector integration
-                let connector_integration: BoxedConnectorIntegrationV2<
-                    '_,
-                    SetupMandate,
-                    PaymentFlowData,
-                    SetupMandateRequestData<DefaultPCIHolder>,
-                    PaymentsResponseData,
-                > = connector_data.connector.get_connector_integration_v2();
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData<DefaultPCIHolder>,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
 
-                // Create common request data
-                let payment_flow_data = PaymentFlowData::foreign_try_from((
-                    payload.clone(),
-                    self.config.connectors.clone(),
-                    self.config.common.environment.clone(),
-                    &metadata,
-                ))
-                .map_err(|e| e.into_grpc_status())?;
-
-                let should_do_order_create = connector_data.connector.should_do_order_create();
-
-                let order_id = if should_do_order_create {
-                    let lineage_ids = crate::utils::extract_lineage_fields_from_metadata(
+                    // Create common request data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        self.config.common.environment.clone(),
                         &metadata,
-                        &self.config.lineage,
-                    );
-                    let event_params = EventParams {
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    let should_do_order_create = connector_data.connector.should_do_order_create();
+
+                    let order_id = if should_do_order_create {
+                        let event_params = EventParams {
+                            connector_name: &connector.to_string(),
+                            service_name: &service_name,
+                            request_id: &request_id,
+                            lineage_ids: &metadata_payload.lineage_ids,
+                        };
+
+                        Some(
+                            self.handle_order_creation_for_setup_mandate(
+                                connector_data.clone(),
+                                &payment_flow_data,
+                                connector_auth_details.clone(),
+                                event_params,
+                                &payload,
+                            )
+                            .await?,
+                        )
+                    } else {
+                        None
+                    };
+                    let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
+
+                    let setup_mandate_request_data =
+                        SetupMandateRequestData::foreign_try_from(payload.clone())
+                            .map_err(|e| e.into_grpc_status())?;
+
+                    // Create router data
+                    let router_data: RouterDataV2<
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData<DefaultPCIHolder>,
+                        PaymentsResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: setup_mandate_request_data,
+                        response: Err(ErrorResponse::default()),
+                    };
+                    let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
+                        flow_name: events::FlowName::SetupMandate,
+                        event_config: &self.config.events,
+                        raw_request_data: Some(pii::SecretSerdeValue::new(
+                            payload.masked_serialize().unwrap_or_default(),
+                        )),
                         request_id: &request_id,
-                        lineage_ids: &lineage_ids,
+                        lineage_ids: &metadata_payload.lineage_ids,
                     };
 
-                    Some(
-                        self.handle_order_creation_for_setup_mandate(
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            connector_auth_details.clone(),
-                            event_params,
-                            &payload,
-                        )
-                        .await?,
+                    let response = execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        event_params,
                     )
-                } else {
-                    None
-                };
-                let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
-                let setup_mandate_request_data =
-                    SetupMandateRequestData::foreign_try_from(payload.clone())
+                    // Generate response
+                    let setup_mandate_response = generate_setup_mandate_response(response)
                         .map_err(|e| e.into_grpc_status())?;
 
-                // Create router data
-                let router_data: RouterDataV2<
-                    SetupMandate,
-                    PaymentFlowData,
-                    SetupMandateRequestData<DefaultPCIHolder>,
-                    PaymentsResponseData,
-                > = RouterDataV2 {
-                    flow: std::marker::PhantomData,
-                    resource_common_data: payment_flow_data,
-                    connector_auth_type: connector_auth_details,
-                    request: setup_mandate_request_data,
-                    response: Err(ErrorResponse::default()),
-                };
-                let lineage_ids = crate::utils::extract_lineage_fields_from_metadata(
-                    &metadata,
-                    &self.config.lineage,
-                );
-                let event_params = EventProcessingParams {
-                    connector_name: &connector.to_string(),
-                    service_name: &service_name,
-                    flow_name: events::FlowName::SetupMandate,
-                    event_config: &self.config.events,
-                    raw_request_data: Some(pii::SecretSerdeValue::new(
-                        payload.masked_serialize().unwrap_or_default(),
-                    )),
-                    request_id: &request_id,
-                    lineage_ids: &lineage_ids,
-                };
-
-                let response = execute_connector_processing_step(
-                    &self.config.proxy,
-                    connector_integration,
-                    router_data,
-                    None,
-                    event_params,
-                )
-                .await
-                .switch()
-                .map_err(|e| e.into_grpc_status())?;
-
-                // Generate response
-                let setup_mandate_response =
-                    generate_setup_mandate_response(response).map_err(|e| e.into_grpc_status())?;
-
-                Ok(tonic::Response::new(setup_mandate_response))
-            })
-        })
+                    Ok(tonic::Response::new(setup_mandate_response))
+                })
+            },
+        )
         .await
     }
 
@@ -1280,90 +1276,88 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| {
-            Box::pin(async {
-                let (connector, _merchant_id, _tenant_id, request_id) =
-                    crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(
-                        request.metadata(),
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| {
+                let service_name = service_name.clone();
+                Box::pin(async move {
+                    let (connector, request_id) =
+                        (metadata_payload.connector, metadata_payload.request_id);
+                    let connector_auth_details = metadata_payload.connector_auth_type;
+                    let metadata = request.metadata().clone();
+                    let payload = request.into_inner();
+
+                    //get connector data
+                    let connector_data: ConnectorData<DefaultPCIHolder> =
+                        ConnectorData::get_connector_by_name(&connector);
+
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        RepeatPayment,
+                        PaymentFlowData,
+                        RepeatPaymentData,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
+
+                    // Create payment flow data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &metadata,
+                    ))
+                    .map_err(|e| e.into_grpc_status())?;
+
+                    // Create repeat payment data
+                    let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
+
+                    // Create router data
+                    let router_data: RouterDataV2<
+                        RepeatPayment,
+                        PaymentFlowData,
+                        RepeatPaymentData,
+                        PaymentsResponseData,
+                    > = RouterDataV2 {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: repeat_payment_data,
+                        response: Err(ErrorResponse::default()),
+                    };
+                    let event_params = EventProcessingParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        flow_name: events::FlowName::RepeatPayment,
+                        event_config: &self.config.events,
+                        raw_request_data: Some(pii::SecretSerdeValue::new(
+                            payload.masked_serialize().unwrap_or_default(),
+                        )),
+                        request_id: &request_id,
+                        lineage_ids: &metadata_payload.lineage_ids,
+                    };
+
+                    let response = execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        event_params,
                     )
-                    .map_err(|e| e.into_grpc_status())?;
-                let connector_auth_details =
-                    auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-                let metadata = request.metadata().clone();
-                let payload = request.into_inner();
-
-                //get connector data
-                let connector_data: ConnectorData<DefaultPCIHolder> =
-                    ConnectorData::get_connector_by_name(&connector);
-
-                // Get connector integration
-                let connector_integration: BoxedConnectorIntegrationV2<
-                    '_,
-                    RepeatPayment,
-                    PaymentFlowData,
-                    RepeatPaymentData,
-                    PaymentsResponseData,
-                > = connector_data.connector.get_connector_integration_v2();
-
-                // Create payment flow data
-                let payment_flow_data = PaymentFlowData::foreign_try_from((
-                    payload.clone(),
-                    self.config.connectors.clone(),
-                    &metadata,
-                ))
-                .map_err(|e| e.into_grpc_status())?;
-
-                // Create repeat payment data
-                let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                    .await
+                    .switch()
                     .map_err(|e| e.into_grpc_status())?;
 
-                // Create router data
-                let router_data: RouterDataV2<
-                    RepeatPayment,
-                    PaymentFlowData,
-                    RepeatPaymentData,
-                    PaymentsResponseData,
-                > = RouterDataV2 {
-                    flow: std::marker::PhantomData,
-                    resource_common_data: payment_flow_data,
-                    connector_auth_type: connector_auth_details,
-                    request: repeat_payment_data,
-                    response: Err(ErrorResponse::default()),
-                };
-                let lineage_ids = crate::utils::extract_lineage_fields_from_metadata(
-                    &metadata,
-                    &self.config.lineage,
-                );
-                let event_params = EventProcessingParams {
-                    connector_name: &connector.to_string(),
-                    service_name: &service_name,
-                    flow_name: events::FlowName::RepeatPayment,
-                    event_config: &self.config.events,
-                    raw_request_data: Some(pii::SecretSerdeValue::new(
-                        payload.masked_serialize().unwrap_or_default(),
-                    )),
-                    request_id: &request_id,
-                    lineage_ids: &lineage_ids,
-                };
+                    // Generate response
+                    let repeat_payment_response = generate_repeat_payment_response(response)
+                        .map_err(|e| e.into_grpc_status())?;
 
-                let response = execute_connector_processing_step(
-                    &self.config.proxy,
-                    connector_integration,
-                    router_data,
-                    None,
-                    event_params,
-                )
-                .await
-                .switch()
-                .map_err(|e| e.into_grpc_status())?;
-
-                // Generate response
-                let repeat_payment_response =
-                    generate_repeat_payment_response(response).map_err(|e| e.into_grpc_status())?;
-
-                Ok(tonic::Response::new(repeat_payment_response))
-            })
-        })
+                    Ok(tonic::Response::new(repeat_payment_response))
+                })
+            },
+        )
         .await
     }
 }

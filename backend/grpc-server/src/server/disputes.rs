@@ -35,7 +35,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{auth_from_metadata, connector_from_metadata, grpc_logging_wrapper},
+    utils::{self, grpc_logging_wrapper},
 };
 
 // Helper trait for dispute operations
@@ -100,77 +100,83 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let metadata = request.metadata().clone();
-            let payload = request.into_inner();
-            let (connector, _merchant_id, _tenant_id, request_id) =
-                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| async {
+                let payload = request.into_inner();
+                let utils::MetadataPayload {
+                    connector,
+                    merchant_id: _,
+                    tenant_id: _,
+                    request_id,
+                    lineage_ids,
+                    connector_auth_type,
+                } = metadata_payload;
+                let connector_data: ConnectorData<DefaultPCIHolder> =
+                    ConnectorData::get_connector_by_name(&connector);
+
+                let connector_integration: BoxedConnectorIntegrationV2<
+                    '_,
+                    SubmitEvidence,
+                    DisputeFlowData,
+                    SubmitEvidenceData,
+                    DisputeResponseData,
+                > = connector_data.connector.get_connector_integration_v2();
+
+                let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
                     .map_err(|e| e.into_grpc_status())?;
-            let connector_data: ConnectorData<DefaultPCIHolder> =
-                ConnectorData::get_connector_by_name(&connector);
 
-            let connector_integration: BoxedConnectorIntegrationV2<
-                '_,
-                SubmitEvidence,
-                DisputeFlowData,
-                SubmitEvidenceData,
-                DisputeResponseData,
-            > = connector_data.connector.get_connector_integration_v2();
-
-            let dispute_data = SubmitEvidenceData::foreign_try_from(payload.clone())
+                let dispute_flow_data = DisputeFlowData::foreign_try_from((
+                    payload.clone(),
+                    self.config.connectors.clone(),
+                ))
                 .map_err(|e| e.into_grpc_status())?;
 
-            let dispute_flow_data = DisputeFlowData::foreign_try_from((
-                payload.clone(),
-                self.config.connectors.clone(),
-            ))
-            .map_err(|e| e.into_grpc_status())?;
+                let connector_auth_details = connector_auth_type;
 
-            let connector_auth_details =
-                auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+                let router_data: RouterDataV2<
+                    SubmitEvidence,
+                    DisputeFlowData,
+                    SubmitEvidenceData,
+                    DisputeResponseData,
+                > = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: dispute_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: dispute_data,
+                    response: Err(ErrorResponse::default()),
+                };
+                let event_params = external_services::service::EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: common_utils::events::FlowName::SubmitEvidence,
+                    event_config: &self.config.events,
+                    raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                        payload.masked_serialize().unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                    lineage_ids: &lineage_ids,
+                };
 
-            let router_data: RouterDataV2<
-                SubmitEvidence,
-                DisputeFlowData,
-                SubmitEvidenceData,
-                DisputeResponseData,
-            > = RouterDataV2 {
-                flow: std::marker::PhantomData,
-                resource_common_data: dispute_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: dispute_data,
-                response: Err(ErrorResponse::default()),
-            };
-            let lineage_ids =
-                crate::utils::extract_lineage_fields_from_metadata(&metadata, &self.config.lineage);
-            let event_params = external_services::service::EventProcessingParams {
-                connector_name: &connector.to_string(),
-                service_name: &service_name,
-                flow_name: common_utils::events::FlowName::SubmitEvidence,
-                event_config: &self.config.events,
-                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                    payload.masked_serialize().unwrap_or_default(),
-                )),
-                request_id: &request_id,
-                lineage_ids,
-            };
+                let response = external_services::service::execute_connector_processing_step(
+                    &self.config.proxy,
+                    connector_integration,
+                    router_data,
+                    None,
+                    event_params,
+                )
+                .await
+                .switch()
+                .map_err(|e| e.into_grpc_status())?;
 
-            let response = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                None,
-                event_params,
-            )
-            .await
-            .switch()
-            .map_err(|e| e.into_grpc_status())?;
+                let dispute_response = generate_submit_evidence_response(response)
+                    .map_err(|e| e.into_grpc_status())?;
 
-            let dispute_response =
-                generate_submit_evidence_response(response).map_err(|e| e.into_grpc_status())?;
-
-            Ok(tonic::Response::new(dispute_response))
-        })
+                Ok(tonic::Response::new(dispute_response))
+            },
+        )
         .await
     }
 
@@ -206,13 +212,18 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let _payload = request.into_inner();
-            let response = DisputeResponse {
-                ..Default::default()
-            };
-            Ok(tonic::Response::new(response))
-        })
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, _metadata_payload| async {
+                let _payload = request.into_inner();
+                let response = DisputeResponse {
+                    ..Default::default()
+                };
+                Ok(tonic::Response::new(response))
+            },
+        )
         .await
     }
 
@@ -275,79 +286,85 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let metadata = request.metadata().clone();
-            let payload = request.into_inner();
-            let (connector, _merchant_id, _tenant_id, request_id) =
-                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| async {
+                let payload = request.into_inner();
+                let utils::MetadataPayload {
+                    connector,
+                    merchant_id: _,
+                    tenant_id: _,
+                    request_id,
+                    lineage_ids,
+                    connector_auth_type,
+                } = metadata_payload;
+
+                let connector_data: ConnectorData<DefaultPCIHolder> =
+                    ConnectorData::get_connector_by_name(&connector);
+
+                let connector_integration: BoxedConnectorIntegrationV2<
+                    '_,
+                    Accept,
+                    DisputeFlowData,
+                    AcceptDisputeData,
+                    DisputeResponseData,
+                > = connector_data.connector.get_connector_integration_v2();
+
+                let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
                     .map_err(|e| e.into_grpc_status())?;
 
-            let connector_data: ConnectorData<DefaultPCIHolder> =
-                ConnectorData::get_connector_by_name(&connector);
-
-            let connector_integration: BoxedConnectorIntegrationV2<
-                '_,
-                Accept,
-                DisputeFlowData,
-                AcceptDisputeData,
-                DisputeResponseData,
-            > = connector_data.connector.get_connector_integration_v2();
-
-            let dispute_data = AcceptDisputeData::foreign_try_from(payload.clone())
+                let dispute_flow_data = DisputeFlowData::foreign_try_from((
+                    payload.clone(),
+                    self.config.connectors.clone(),
+                ))
                 .map_err(|e| e.into_grpc_status())?;
 
-            let dispute_flow_data = DisputeFlowData::foreign_try_from((
-                payload.clone(),
-                self.config.connectors.clone(),
-            ))
-            .map_err(|e| e.into_grpc_status())?;
+                let connector_auth_details = connector_auth_type;
 
-            let connector_auth_details =
-                auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+                let router_data: RouterDataV2<
+                    Accept,
+                    DisputeFlowData,
+                    AcceptDisputeData,
+                    DisputeResponseData,
+                > = RouterDataV2 {
+                    flow: std::marker::PhantomData,
+                    resource_common_data: dispute_flow_data,
+                    connector_auth_type: connector_auth_details,
+                    request: dispute_data,
+                    response: Err(ErrorResponse::default()),
+                };
 
-            let router_data: RouterDataV2<
-                Accept,
-                DisputeFlowData,
-                AcceptDisputeData,
-                DisputeResponseData,
-            > = RouterDataV2 {
-                flow: std::marker::PhantomData,
-                resource_common_data: dispute_flow_data,
-                connector_auth_type: connector_auth_details,
-                request: dispute_data,
-                response: Err(ErrorResponse::default()),
-            };
+                let event_params = external_services::service::EventProcessingParams {
+                    connector_name: &connector.to_string(),
+                    service_name: &service_name,
+                    flow_name: common_utils::events::FlowName::AcceptDispute,
+                    event_config: &self.config.events,
+                    raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                        payload.masked_serialize().unwrap_or_default(),
+                    )),
+                    request_id: &request_id,
+                    lineage_ids: &lineage_ids,
+                };
 
-            let lineage_ids =
-                crate::utils::extract_lineage_fields_from_metadata(&metadata, &self.config.lineage);
-            let event_params = external_services::service::EventProcessingParams {
-                connector_name: &connector.to_string(),
-                service_name: &service_name,
-                flow_name: common_utils::events::FlowName::AcceptDispute,
-                event_config: &self.config.events,
-                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                    payload.masked_serialize().unwrap_or_default(),
-                )),
-                request_id: &request_id,
-                lineage_ids,
-            };
+                let response = external_services::service::execute_connector_processing_step(
+                    &self.config.proxy,
+                    connector_integration,
+                    router_data,
+                    None,
+                    event_params,
+                )
+                .await
+                .switch()
+                .map_err(|e| e.into_grpc_status())?;
 
-            let response = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                None,
-                event_params,
-            )
-            .await
-            .switch()
-            .map_err(|e| e.into_grpc_status())?;
+                let dispute_response =
+                    generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
 
-            let dispute_response =
-                generate_accept_dispute_response(response).map_err(|e| e.into_grpc_status())?;
-
-            Ok(tonic::Response::new(dispute_response))
-        })
+                Ok(tonic::Response::new(dispute_response))
+            },
+        )
         .await
     }
 
@@ -381,62 +398,65 @@ impl DisputeService for Disputes {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, |request| async {
-            let connector =
-                connector_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let connector_auth_details =
-                auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
-            let payload = request.into_inner();
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| async {
+                let connector = metadata_payload.connector;
+                let connector_auth_details = metadata_payload.connector_auth_type;
+                let payload = request.into_inner();
 
-            let request_details = payload
-                .request_details
-                .map(domain_types::connector_types::RequestDetails::foreign_try_from)
-                .ok_or_else(|| {
-                    tonic::Status::invalid_argument("missing request_details in the payload")
-                })?
-                .map_err(|e| e.into_grpc_status())?;
+                let request_details = payload
+                    .request_details
+                    .map(domain_types::connector_types::RequestDetails::foreign_try_from)
+                    .ok_or_else(|| {
+                        tonic::Status::invalid_argument("missing request_details in the payload")
+                    })?
+                    .map_err(|e| e.into_grpc_status())?;
 
-            let webhook_secrets = payload
-                .webhook_secrets
-                .map(|details| {
-                    domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
-                        details,
+                let webhook_secrets = payload
+                    .webhook_secrets
+                    .map(|details| {
+                        domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
+                            details,
+                        )
+                        .map_err(|e| e.into_grpc_status())
+                    })
+                    .transpose()?;
+
+                // Get connector data
+                let connector_data = ConnectorData::get_connector_by_name(&connector);
+
+                let source_verified = connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
                     )
-                    .map_err(|e| e.into_grpc_status())
-                })
-                .transpose()?;
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
-            // Get connector data
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
-
-            let source_verified = connector_data
-                .connector
-                .verify_webhook_source(
-                    request_details.clone(),
-                    webhook_secrets.clone(),
-                    Some(connector_auth_details.clone()),
+                let content = get_disputes_webhook_content(
+                    connector_data,
+                    request_details,
+                    webhook_secrets,
+                    Some(connector_auth_details),
                 )
-                .switch()
+                .await
                 .map_err(|e| e.into_grpc_status())?;
 
-            let content = get_disputes_webhook_content(
-                connector_data,
-                request_details,
-                webhook_secrets,
-                Some(connector_auth_details),
-            )
-            .await
-            .map_err(|e| e.into_grpc_status())?;
+                let response = DisputeServiceTransformResponse {
+                    event_type: WebhookEventType::WebhookDisputeOpened.into(),
+                    content: Some(content),
+                    source_verified,
+                    response_ref_id: None,
+                };
 
-            let response = DisputeServiceTransformResponse {
-                event_type: WebhookEventType::WebhookDisputeOpened.into(),
-                content: Some(content),
-                source_verified,
-                response_ref_id: None,
-            };
-
-            Ok(tonic::Response::new(response))
-        })
+                Ok(tonic::Response::new(response))
+            },
+        )
         .await
     }
 }
