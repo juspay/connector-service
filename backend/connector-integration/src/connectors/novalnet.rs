@@ -5,10 +5,7 @@ use std::fmt::Debug;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    crypto::{self, VerifySignature},
-    errors::CustomResult,
-    ext_traits::ByteSliceExt,
-    types::StringMinorUnit,
+    crypto, errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -528,19 +525,33 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Novalnet<T>
 {
+    fn get_webhook_source_verification_algorithm(
+        &self,
+        _request: &RequestDetails,
+    ) -> CustomResult<Box<dyn crypto::VerifySignature + Send>, domain_types::errors::ConnectorError>
+    {
+        Ok(Box::new(crypto::Sha256))
+    }
+
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let notif_item = get_webhook_object_from_body(&request.body)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        hex::decode(notif_item.event.checksum)
+            .change_context(errors::ConnectorError::WebhookVerificationSecretInvalid)
+    }
+
     fn get_webhook_source_verification_message(
         &self,
-        request: RequestDetails,
-        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        request: &RequestDetails,
+        connector_webhook_secrets: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
         let notif = get_webhook_object_from_body(&request.body)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-
-        let webhook_secret = match connector_webhook_secret {
-            Some(secrets) => secrets,
-            None => return Ok(Vec::new()),
-        };
 
         let (amount, currency) = match notif.transaction {
             novalnet::NovalnetWebhookTransactionData::CaptureTransactionData(data) => {
@@ -565,7 +576,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .map(|amount| amount.to_string())
             .unwrap_or("".to_string());
 
-        let secret_auth = String::from_utf8(webhook_secret.secret.to_vec())
+        let secret_auth = String::from_utf8(connector_webhook_secrets.secret.to_vec())
             .change_context(errors::ConnectorError::WebhookVerificationSecretInvalid)
             .attach_printable("Could not convert webhook secret auth to UTF-8")?;
         let reversed_secret_auth = novalnet::reverse_string(&secret_auth);
@@ -581,38 +592,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         );
 
         Ok(message.into_bytes())
-    }
-
-    fn verify_webhook_source(
-        &self,
-        request: RequestDetails,
-        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        connector_account_details: Option<ConnectorAuthType>,
-    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        let algorithm = Box::new(crypto::Sha256);
-
-        let webhook_secret = match connector_webhook_secret.clone() {
-            Some(secrets) => secrets,
-            None => return Ok(false),
-        };
-
-        let notif_item = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-
-        let signature = hex::decode(notif_item.event.checksum)
-            .change_context(errors::ConnectorError::WebhookVerificationSecretInvalid)?;
-
-        let message = self
-            .get_webhook_source_verification_message(
-                request,
-                connector_webhook_secret,
-                connector_account_details,
-            )
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?;
-
-        algorithm
-            .verify_signature(&webhook_secret.secret, &signature, &message)
-            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
     }
 
     fn get_event_type(
@@ -679,8 +658,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundWebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
-        let notif = get_webhook_object_from_body(&request.body)
-            .change_context(errors::ConnectorError::WebhookReferenceIdNotFound)?;
+        let notif: novalnet::NovalnetWebhookNotificationResponseRefunds = request
+            .body
+            .parse_struct("NovalnetWebhookNotificationResponse")
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed)?;
 
         let response = RefundWebhookDetailsResponse::try_from(notif)
             .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);

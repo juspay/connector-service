@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use common_enums::{AttemptStatus, CaptureMethod, PaymentMethod, PaymentMethodType};
-use common_utils::{CustomResult, SecretSerdeValue};
+use common_utils::{crypto, CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
@@ -172,21 +172,88 @@ pub trait DisputeDefend:
 pub trait IncomingWebhook {
     fn verify_webhook_source(
         &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        Ok(false)
+        let algorithm = self
+            .get_webhook_source_verification_algorithm(&request)
+            .change_context(
+                domain_types::errors::ConnectorError::WebhookSourceVerificationFailed,
+            )?;
+
+        let connector_webhook_secrets = self
+            .get_webhook_source_verification_merchant_secret(&request, &connector_webhook_secret)
+            .change_context(
+                domain_types::errors::ConnectorError::WebhookSourceVerificationFailed,
+            )?;
+
+        let signature = self
+            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
+            .change_context(
+                domain_types::errors::ConnectorError::WebhookSourceVerificationFailed,
+            )?;
+
+        let message = self
+            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
+            .change_context(
+                domain_types::errors::ConnectorError::WebhookSourceVerificationFailed,
+            )?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    /// fn get_webhook_source_verification_algorithm
+    fn get_webhook_source_verification_algorithm(
+        &self,
+        _request: &RequestDetails,
+    ) -> Result<
+        Box<dyn crypto::VerifySignature + Send>,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        Ok(Box::new(crypto::NoAlgorithm))
+    }
+
+    /// fn get_webhook_source_verification_signature
+    fn get_webhook_source_verification_signature(
+        &self,
+        _request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Ok(Vec::new())
     }
 
     /// fn get_webhook_source_verification_message
     fn get_webhook_source_verification_message(
         &self,
-        _request: RequestDetails,
-        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
-        _connector_account_details: Option<ConnectorAuthType>,
+        _request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
     ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
         Ok(Vec::new())
+    }
+
+    /// fn get_webhook_source_verification_merchant_secret
+    fn get_webhook_source_verification_merchant_secret(
+        &self,
+        _request: &RequestDetails,
+        connector_webhook_secret: &Option<ConnectorWebhookSecrets>,
+    ) -> Result<ConnectorWebhookSecrets, error_stack::Report<domain_types::errors::ConnectorError>>
+    {
+        let default_secret = "default_secret".to_string();
+        let merchant_secret = match connector_webhook_secret {
+            Some(secrets) => secrets.to_owned(),
+
+            None => ConnectorWebhookSecrets {
+                secret: default_secret.into_bytes(),
+                additional_secret: None,
+            },
+        };
+
+        //If merchant has not set the secret for webhook source verification, "default_secret" is returned.
+        //So it will fail during verification step and goes to psync flow.
+        Ok(merchant_secret)
     }
 
     fn get_event_type(

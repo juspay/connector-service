@@ -1754,6 +1754,13 @@ pub struct NovalnetWebhookNotificationResponse {
     pub transaction: NovalnetWebhookTransactionData,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NovalnetWebhookNotificationResponseRefunds {
+    pub event: NovalnetWebhookEvent,
+    pub result: ResultData,
+    pub transaction: NovalnetRefundsTransactionData,
+}
+
 pub fn is_refund_event(event_code: &WebhookEventType) -> bool {
     matches!(event_code, WebhookEventType::TransactionRefund)
 }
@@ -2305,46 +2312,42 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
     }
 }
 
-impl TryFrom<NovalnetWebhookNotificationResponse> for RefundWebhookDetailsResponse {
+impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetailsResponse {
     type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(notif: NovalnetWebhookNotificationResponse) -> Result<Self, Self::Error> {
-        match notif.transaction {
-            NovalnetWebhookTransactionData::RefundsTransactionData(response) => {
-                match notif.result.status {
-                    NovalnetAPIStatus::Success => {
-                        let refund_id = response
-                            .tid
-                            .map(|tid| tid.expose().to_string())
-                            .unwrap_or("".to_string());
-                        //NOTE: Mapping refund_id with "" incase we dont get any tid
+    fn try_from(notif: NovalnetWebhookNotificationResponseRefunds) -> Result<Self, Self::Error> {
+        match notif.result.status {
+            NovalnetAPIStatus::Success => {
+                let refund_id = notif
+                    .transaction
+                    .tid
+                    .map(|tid| tid.expose().to_string())
+                    .unwrap_or("".to_string());
+                //NOTE: Mapping refund_id with "" incase we dont get any tid
 
-                        let transaction_status = response.status;
+                let transaction_status = notif.transaction.status;
 
-                        Ok(Self {
-                            connector_refund_id: Some(refund_id),
-                            status: common_enums::RefundStatus::from(transaction_status),
-                            status_code: 200,
-                            connector_response_reference_id: None,
-                            error_code: None,
-                            error_message: None,
-                            raw_connector_response: None,
-                            response_headers: None,
-                        })
-                    }
-                    NovalnetAPIStatus::Failure => Ok(Self {
-                        status: common_enums::RefundStatus::Failure,
-                        connector_refund_id: None,
-                        status_code: 200,
-                        connector_response_reference_id: None,
-                        error_code: Some(notif.result.status.to_string()),
-                        error_message: Some(notif.result.status_text),
-                        raw_connector_response: None,
-                        response_headers: None,
-                    }),
-                }
+                Ok(Self {
+                    connector_refund_id: Some(refund_id),
+                    status: common_enums::RefundStatus::from(transaction_status),
+                    status_code: 200,
+                    connector_response_reference_id: None,
+                    error_code: None,
+                    error_message: None,
+                    raw_connector_response: None,
+                    response_headers: None,
+                })
             }
-            _ => Err(ConnectorError::WebhookBodyDecodingFailed)?,
+            NovalnetAPIStatus::Failure => Ok(Self {
+                status: common_enums::RefundStatus::Failure,
+                connector_refund_id: None,
+                status_code: 200,
+                connector_response_reference_id: None,
+                error_code: Some(notif.result.status.to_string()),
+                error_message: Some(notif.result.status_text),
+                raw_connector_response: None,
+                response_headers: None,
+            }),
         }
     }
 }
