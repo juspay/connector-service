@@ -86,6 +86,7 @@ pub struct Connectors {
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
+    pub easebuzz: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
