@@ -233,7 +233,7 @@ pub struct ShipTo {
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomerDetails {
-    id: Option<String>,
+    id: String,
     email: Option<Email>,
 }
 
@@ -548,22 +548,17 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_id_string = item
-        .router_data
-        .request
-        .customer_id
-        .as_ref()
-        .map(|cid| {
-            let id_str = cid.get_string_repr().to_owned();
-            if id_str.len() > MAX_ID_LENGTH {
-                id_str[..MAX_ID_LENGTH].to_string()
-            } else {
-                id_str
-            }
-        });
+    let customer_id_string = item.router_data.request.customer_id.as_ref().map(|cid| {
+        let id_str = cid.get_string_repr().to_owned();
+        if id_str.len() > MAX_ID_LENGTH {
+            id_str[..MAX_ID_LENGTH].to_string()
+        } else {
+            id_str
+        }
+    });
 
     let customer_details = customer_id_string.map(|cid| CustomerDetails {
-        id: Some(cid),
+        id: cid,
         email: item.router_data.request.email.clone(),
     });
 
@@ -760,7 +755,7 @@ impl<
             });
 
         let customer_details = customer_id_string.map(|cid| CustomerDetails {
-            id: Some(cid),
+            id: cid,
             email: item.router_data.request.email.clone(),
         });
 
