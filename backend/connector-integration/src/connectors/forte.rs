@@ -23,7 +23,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::{Connectors, FeatureStatus, PaymentMethodSpecificFeatures, CardSpecificFeatures, SupportedPaymentMethods, PaymentMethodDetails, ConnectorInfo, HyperswitchConnectorCategory, ConnectorIntegrationStatus},
+    types::{Connectors, FeatureStatus, PaymentMethodSpecificFeatures, CardSpecificFeatures, SupportedPaymentMethods, PaymentMethodDetails, ConnectorInfo},
 };
 use serde::Serialize;
 use std::fmt::Debug;
@@ -34,6 +34,8 @@ use interfaces::{
 };
 
 use common_enums;
+use error_stack::ResultExt;
+use domain_types::connector_types::SupportedPaymentMethodsExt;
 use std::sync::LazyLock;
 use hyperswitch_masking;
 use transformers::{
@@ -196,7 +198,7 @@ macros::create_all_prerequisites!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
-    curl_request: Format(FortePaymentsRequest),
+    curl_request: Json(FortePaymentsRequest),
     curl_response: FortePaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -230,7 +232,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
-    curl_request: Format(ForteSyncRequest),
+    curl_request: Json(ForteSyncRequest),
     curl_response: FortePaymentsSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -267,7 +269,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
-    curl_request: Format(ForteRefundRequest),
+    curl_request: Json(ForteRefundRequest),
     curl_response: RefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
@@ -301,7 +303,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
-    curl_request: Format(ForteRSyncRequest),
+    curl_request: Json(ForteRSyncRequest),
     curl_response: RefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
@@ -327,7 +329,7 @@ macros::macro_connector_implementation!(
                 self.connector_base_url_refunds(req),
                 auth.organization_id.peek(),
                 auth.location_id.peek(),
-                req.request.get_connector_refund_id()?
+req.request.connector_refund_id.clone()
             ))
         }
     }
@@ -336,7 +338,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
-    curl_request: Format(ForteCaptureRequest),
+    curl_request: Json(ForteCaptureRequest),
     curl_response: ForteCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
@@ -370,7 +372,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Forte,
-    curl_request: Format(ForteCancelRequest),
+    curl_request: Json(ForteCancelRequest),
     curl_response: ForteCancelResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
@@ -711,7 +713,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            connector_metadata: None,
         })
     }
 }
@@ -793,8 +794,7 @@ static FORTE_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
     display_name: "Forte",
     description:
         "CSG Forte offers a unified payments platform, enabling businesses to securely process credit cards, debit cards, ACH/eCheck transactions, and more, with advanced fraud prevention and seamless integration.",
-    connector_type: HyperswitchConnectorCategory::PaymentGateway,
-    integration_status: ConnectorIntegrationStatus::Sandbox,
+    connector_type: common_enums::ConnectorCategory::PaymentGateway,
 };
 
 static FORTE_SUPPORTED_WEBHOOK_FLOWS: [common_enums::EventClass; 0] = [];

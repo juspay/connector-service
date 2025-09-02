@@ -1,4 +1,5 @@
 use cards::CardNumber;
+use std::str::FromStr;
 use common_enums;
 use common_utils::types::FloatMajorUnit;
 use domain_types::{
@@ -108,14 +109,15 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
                     true => ForteAction::Sale,
                     false => ForteAction::Authorize,
                 };
-                let card_type = ForteCardType::try_from(ccard.get_card_issuer()?)?;
-                let address = item.get_billing_address()?;
+                let card_issuer = CardIssuer::get_card_issuer(&ccard.card_number.peek(), &ccard.card_exp_month.peek(), &ccard.card_exp_year.peek())?;
+                let card_type = ForteCardType::try_from(card_issuer)?;
+                let address = item.resource_common_data.get_billing_address()?;
                 let card = Card {
                     card_type,
                     name_on_card: item
-                        .get_optional_billing_full_name()
+                        .resource_common_data.get_optional_billing_full_name()
                         .unwrap_or(Secret::new("".to_string())),
-                    account_number: ccard.card_number.clone(),
+                    account_number: CardNumber::from_str(&ccard.card_number.peek()).map_err(|_| ConnectorError::InvalidCardData { field: "card_number".to_string() })?,
                     expire_month: ccard.card_exp_month.clone(),
                     expire_year: ccard.card_exp_year.clone(),
                     card_verification_value: ccard.card_cvc.clone(),
@@ -125,7 +127,7 @@ impl<T: PaymentMethodDataTypes + Debug> TryFrom<&RouterDataV2<domain_types::conn
                     first_name: first_name.clone(),
                     last_name: address.get_last_name().unwrap_or(first_name).clone(),
                 };
-                let authorization_amount = item.request.amount.into();
+                let authorization_amount = FloatMajorUnit::from_minor_unit_with_exponent(item.request.minor_amount, item.request.currency.minor_unit_exponent())?;
                 Ok(Self {
                     action,
                     authorization_amount,
@@ -269,7 +271,7 @@ pub struct FortePaymentsResponse {
     pub response: ResponseStatus,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ForteMeta {
     pub auth_id: String,
 }
@@ -285,7 +287,6 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<FortePaymentsResponse, RouterDataV2
         let action = item.response.action;
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
-            status: get_status(response_code, action),
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(transaction_id.to_string()),
                 redirection_data: None,
@@ -296,9 +297,9 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<FortePaymentsResponse, RouterDataV2
                 network_txn_id: None,
                 connector_response_reference_id: Some(transaction_id.to_string()),
                 incremental_authorization_allowed: None,
-                charges: None,
+                status_code: item.http_code,
             }),
-            ..item.data
+            ..item.router_data
         })
     }
 }
@@ -360,7 +361,6 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<FortePaymentsSyncResponse, RouterDa
     ) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
-            status: common_enums::AttemptStatus::from(item.response.status),
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(transaction_id.to_string()),
                 redirection_data: None,
@@ -371,9 +371,9 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<FortePaymentsSyncResponse, RouterDa
                 network_txn_id: None,
                 connector_response_reference_id: Some(transaction_id.to_string()),
                 incremental_authorization_allowed: None,
-                charges: None,
+                status_code: item.http_code,
             }),
-            ..item.data
+            ..item.router_data
         })
     }
 }
@@ -392,11 +392,15 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowDat
     fn try_from(item: &RouterDataV2<domain_types::connector_flow::Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let trn_id = item.request.connector_transaction_id.clone();
         let connector_auth_id: ForteMeta =
-            serde_json::from_value(item.request.connector_meta.clone().unwrap_or_default()).unwrap_or_default();
+            serde_json::from_value(item.request.connector_metadata.clone().unwrap_or_default()).unwrap_or_default();
         let auth_code = connector_auth_id.auth_id;
         Ok(Self {
             action: "capture".to_string(),
-            transaction_id: trn_id,
+            transaction_id: match trn_id {
+                ResponseId::ConnectorTransactionId(id) => id,
+                ResponseId::NoResponseId => String::new(),
+                ResponseId::EncodedData(data) => data,
+            },
             authorization_code: auth_code,
         })
     }
@@ -429,7 +433,6 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<ForteCaptureResponse, RouterDataV2<
     ) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
-            status: common_enums::AttemptStatus::from(item.response.response.response_code),
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                 redirection_data: None,
@@ -440,9 +443,9 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<ForteCaptureResponse, RouterDataV2<
                 network_txn_id: None,
                 connector_response_reference_id: Some(item.response.transaction_id.to_string()),
                 incremental_authorization_allowed: None,
-                charges: None,
+                status_code: item.http_code,
             }),
-            ..item.data
+            ..item.router_data
         })
     }
 }
@@ -459,8 +462,8 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, 
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: &RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let action = "void".to_string();
-        let connector_auth_id: ForteMeta =
-            serde_json::from_value(item.request.connector_meta.clone().unwrap_or_default()).unwrap_or_default();
+        // PaymentVoidData doesn't have connector_metadata field, use default
+        let connector_auth_id: ForteMeta = ForteMeta::default();
         let authorization_code = connector_auth_id.auth_id;
         Ok(Self {
             action,
@@ -496,7 +499,6 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<ForteCancelResponse, RouterDataV2<F
     ) -> Result<Self, Self::Error> {
         let transaction_id = &item.response.transaction_id;
         Ok(Self {
-            status: common_enums::AttemptStatus::from(item.response.response.response_code),
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(transaction_id.to_string()),
                 redirection_data: None,
@@ -507,9 +509,9 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<ForteCancelResponse, RouterDataV2<F
                 network_txn_id: None,
                 connector_response_reference_id: Some(transaction_id.to_string()),
                 incremental_authorization_allowed: None,
-                charges: None,
+                status_code: item.http_code,
             }),
-            ..item.data
+            ..item.router_data
         })
     }
 }
@@ -532,7 +534,7 @@ impl TryFrom<&RouterDataV2<domain_types::connector_flow::Refund, RefundFlowData,
         let connector_auth_id: ForteMeta =
             serde_json::from_value(item.request.connector_metadata.clone().unwrap_or_default()).unwrap_or_default();
         let auth_code = connector_auth_id.auth_id;
-        let authorization_amount = item.request.refund_amount.into();
+        let authorization_amount = FloatMajorUnit::from_minor_unit_with_exponent(item.request.minor_refund_amount, item.request.currency.minor_unit_exponent())?;
         Ok(Self {
             action: "reverse".to_string(),
             authorization_amount,
@@ -591,8 +593,9 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<RefundResponse, RouterDataV2<F, FCD
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id,
                 refund_status: common_enums::RefundStatus::from(item.response.response.response_code),
+                status_code: item.http_code,
             }),
-            ..item.data
+            ..item.router_data
         })
     }
 }
@@ -632,8 +635,9 @@ impl<F, FCD, Req> TryFrom<ResponseRouterData<RefundSyncResponse, RouterDataV2<F,
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id,
                 refund_status: common_enums::RefundStatus::from(item.response.status),
+                status_code: item.http_code,
             }),
-            ..item.data
+            ..item.router_data
         })
     }
 }
