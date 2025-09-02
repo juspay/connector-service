@@ -553,17 +553,18 @@ fn create_regular_transaction_request<
         .request
         .customer_id
         .as_ref()
-        .map(|cid| cid.get_string_repr().to_owned());
+        .map(|cid| {
+            let id_str = cid.get_string_repr().to_owned();
+            if id_str.len() > MAX_ID_LENGTH {
+                id_str[..MAX_ID_LENGTH].to_string()
+            } else {
+                id_str
+            }
+        });
 
-    let customer_details = customer_id_string.as_ref().and_then(|cid| {
-        if cid.len() > MAX_ID_LENGTH {
-            None
-        } else {
-            Some(CustomerDetails {
-                id: Some(cid.clone()),
-                email: item.router_data.request.email.clone(),
-            })
-        }
+    let customer_details = customer_id_string.map(|cid| CustomerDetails {
+        id: Some(cid),
+        email: item.router_data.request.email.clone(),
     });
 
     // Check if we should create a profile for future mandate usage
@@ -744,13 +745,32 @@ impl<
 
         let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
 
+        let customer_id_string = item
+            .router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .map(|cid| {
+                let id_str = cid.get_string_repr().to_owned();
+                if id_str.len() > MAX_ID_LENGTH {
+                    id_str[..MAX_ID_LENGTH].to_string()
+                } else {
+                    id_str
+                }
+            });
+
+        let customer_details = customer_id_string.map(|cid| CustomerDetails {
+            id: Some(cid),
+            email: item.router_data.request.email.clone(),
+        });
+
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
             amount: item.router_data.request.amount.to_string(),
             currency_code: currency,
             profile,
             order: Some(order),
-            customer: None,
+            customer: customer_details,
             user_fields,
         };
 
