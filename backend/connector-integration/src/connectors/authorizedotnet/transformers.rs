@@ -548,12 +548,12 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_id_string = item.router_data.request.customer_id.as_ref().map(|cid| {
+    let customer_id_string = item.router_data.request.customer_id.as_ref().and_then(|cid| {
         let id_str = cid.get_string_repr().to_owned();
         if id_str.len() > MAX_ID_LENGTH {
-            id_str[..MAX_ID_LENGTH].to_string()
+            None
         } else {
-            id_str
+            Some(id_str)
         }
     });
 
@@ -745,12 +745,12 @@ impl<
             .resource_common_data
             .customer_id
             .as_ref()
-            .map(|cid| {
+            .and_then(|cid| {
                 let id_str = cid.get_string_repr().to_owned();
                 if id_str.len() > MAX_ID_LENGTH {
-                    id_str[..MAX_ID_LENGTH].to_string()
+                    None
                 } else {
-                    id_str
+                    Some(id_str)
                 }
             });
 
