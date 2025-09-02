@@ -233,7 +233,7 @@ pub struct ShipTo {
 #[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomerDetails {
-    id: String,
+    id: Option<String>,
     email: Option<Email>,
 }
 
@@ -548,18 +548,23 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_id_string: String = item
+    let customer_id_string = item
         .router_data
         .request
         .customer_id
         .as_ref()
-        .map(|cid| cid.get_string_repr().to_owned())
-        .unwrap_or_else(|| "anonymous_customer".to_string());
+        .map(|cid| cid.get_string_repr().to_owned());
 
-    let customer_details = CustomerDetails {
-        id: customer_id_string,
-        email: item.router_data.request.email.clone(),
-    };
+    let customer_details = customer_id_string.as_ref().and_then(|cid| {
+        if cid.len() > MAX_ID_LENGTH {
+            None
+        } else {
+            Some(CustomerDetails {
+                id: Some(cid.clone()),
+                email: item.router_data.request.email.clone(),
+            })
+        }
+    });
 
     // Check if we should create a profile for future mandate usage
     let profile = if item.router_data.request.setup_future_usage.is_some() {
@@ -577,7 +582,7 @@ fn create_regular_transaction_request<
         payment: Some(payment_details),
         profile,
         order: Some(order),
-        customer: Some(customer_details),
+        customer: customer_details,
         bill_to,
         user_fields,
         processing_options: None,
@@ -716,18 +721,6 @@ impl<
             description: order_description,
         };
 
-        let customer_id_string =
-            if item.router_data.resource_common_data.payment_id.len() <= MAX_ID_LENGTH {
-                item.router_data.resource_common_data.payment_id.clone()
-            } else {
-                "repeat_payment_customer".to_string()
-            };
-
-        let customer_details = CustomerDetails {
-            id: customer_id_string,
-            email: None, // Email not available in RepeatPaymentData
-        };
-
         // Extract user fields from metadata
         let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
             Some(metadata) => {
@@ -757,7 +750,7 @@ impl<
             currency_code: currency,
             profile,
             order: Some(order),
-            customer: Some(customer_details),
+            customer: None,
             user_fields,
         };
 
