@@ -2328,10 +2328,10 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
             NovalnetAPIStatus::Success => {
                 let refund_id = notif
                     .transaction
+                    .refund
                     .tid
                     .map(|tid| tid.expose().to_string())
-                    .unwrap_or("".to_string());
-                //NOTE: Mapping refund_id with "" incase we dont get any tid
+                    .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
 
                 let transaction_status = notif.transaction.status;
 
