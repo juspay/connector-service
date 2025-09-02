@@ -126,6 +126,7 @@ pub struct MetadataPayload {
     pub connector: connector_types::ConnectorEnum,
     pub lineage_ids: LineageIds<'static>,
     pub connector_auth_type: ConnectorAuthType,
+    pub reference_id: Option<String>,
 }
 
 pub fn get_metadata_payload(
@@ -138,6 +139,7 @@ pub fn get_metadata_payload(
     let request_id = request_id_from_metadata(metadata)?;
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
     let connector_auth_type = auth_from_metadata(metadata)?;
+    let reference_id = reference_id_from_metadata(metadata)?;
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -145,6 +147,7 @@ pub fn get_metadata_payload(
         connector,
         lineage_ids,
         connector_auth_type,
+        reference_id,
     })
 }
 
@@ -199,6 +202,12 @@ pub fn tenant_id_from_metadata(
     parse_metadata(metadata, consts::X_TENANT_ID)
         .map(|s| s.to_string())
         .or_else(|_| Ok("DefaultTenantId".to_string()))
+}
+
+pub fn reference_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+    parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
 }
 
 pub fn auth_from_metadata(
@@ -280,6 +289,24 @@ fn parse_metadata<'a>(
         })
 }
 
+fn parse_optional_metadata<'a>(
+    metadata: &'a metadata::MetadataMap,
+    key: &str,
+) -> CustomResult<Option<&'a str>, ApplicationErrorResponse> {
+    metadata
+        .get(key)
+        .map(|value| value.to_str())
+        .transpose()
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_METADATA".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid {key} in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
+}
+
 pub fn log_before_initialization<T>(
     request: &tonic::Request<T>,
     service_name: &str,
@@ -293,8 +320,7 @@ where
         merchant_id,
         tenant_id,
         request_id,
-        lineage_ids: _,
-        connector_auth_type: _,
+        ..
     } = metadata_payload;
     let current_span = tracing::Span::current();
     let req_body = request.get_ref();
@@ -460,6 +486,7 @@ macro_rules! implement_connector_operation {
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
+                reference_id: &metadata_payload.reference_id,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
