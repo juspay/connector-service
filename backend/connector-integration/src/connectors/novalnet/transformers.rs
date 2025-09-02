@@ -2274,7 +2274,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
             NovalnetWebhookTransactionData::SyncTransactionData(response) => {
                 match notif.result.status {
                     NovalnetAPIStatus::Success => {
-                        let _mandate_reference_id =
+                        let mandate_reference_id =
                             NovalnetSyncResponseTransactionData::get_token(Some(&response));
                         let transaction_id = response.tid.map(|tid| tid.expose().to_string());
                         let transaction_status = response.status;
@@ -2287,8 +2287,15 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                                     .map(ResponseId::ConnectorTransactionId)
                                     .unwrap_or(ResponseId::NoResponseId),
                             ),
+                            mandate_reference: mandate_reference_id
+                                .as_ref()
+                                .map(|id| MandateReference {
+                                    connector_mandate_id: Some(id.clone()),
+                                    payment_method_id: None,
+                                })
+                                .map(Box::new),
                             status_code: 200,
-                            connector_response_reference_id: None,
+                            connector_response_reference_id: transaction_id.clone(),
                             error_code: None,
                             error_message: None,
                             raw_connector_response: None,
@@ -2299,6 +2306,7 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         status: common_enums::AttemptStatus::Failure,
                         resource_id: None,
                         status_code: 200,
+                        mandate_reference: None,
                         connector_response_reference_id: None,
                         error_code: Some(notif.result.status.to_string()),
                         error_message: Some(notif.result.status_text),
