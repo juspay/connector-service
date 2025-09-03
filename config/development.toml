@@ -16,8 +16,8 @@ buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"
-port = 8001
-type = "http"
+port = 8000
+type = "grpc"
 
 [metrics]
 host = "127.0.0.1"
@@ -57,6 +57,11 @@ enabled = true
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
+
+[lineage]
+enabled = true
+header_name = "x-lineage-ids"
+field_prefix = "lineage_"
 
 # Euler-compatible configuration
 [events.transformations]

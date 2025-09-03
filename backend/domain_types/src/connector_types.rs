@@ -38,7 +38,7 @@ use crate::{
 };
 
 // snake case for enum variants
-#[derive(Clone, Debug, Display, EnumString)]
+#[derive(Clone, Copy, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
