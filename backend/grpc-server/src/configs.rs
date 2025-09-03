@@ -15,6 +15,28 @@ pub struct Config {
     pub connectors: Connectors,
     #[serde(default)]
     pub events: EventConfig,
+    #[serde(default)]
+    pub lineage: LineageConfig,
+}
+
+#[derive(Clone, serde::Deserialize, Debug, Default, Serialize)]
+pub struct LineageConfig {
+    /// Enable processing of x-lineage-ids header
+    pub enabled: bool,
+    /// Custom header name (default: x-lineage-ids)
+    #[serde(default = "default_lineage_header")]
+    pub header_name: String,
+    /// Prefix for lineage fields in events
+    #[serde(default = "default_lineage_prefix")]
+    pub field_prefix: String,
+}
+
+fn default_lineage_header() -> String {
+    consts::X_LINEAGE_IDS.to_string()
+}
+
+fn default_lineage_prefix() -> String {
+    consts::LINEAGE_FIELD_PREFIX.to_string()
 }
 
 #[derive(Clone, Deserialize, Debug, Serialize)]
