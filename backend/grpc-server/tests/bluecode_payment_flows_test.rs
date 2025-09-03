@@ -15,6 +15,7 @@ use grpc_api_types::{
         PaymentStatus, WalletPaymentMethodType,
     },
 };
+use hyperswitch_masking::Secret;
 use rand::{distributions::Alphanumeric, Rng};
 use std::{
     collections::HashMap,
@@ -162,7 +163,7 @@ fn create_payment_authorize_request(
     request.minor_amount = TEST_AMOUNT;
     request.currency = 146; // Currency value from working grpcurl
 
-    request.email = Some(generate_unique_email());
+    request.email = Some(Secret::new(generate_unique_email()));
 
     // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
@@ -173,12 +174,12 @@ fn create_payment_authorize_request(
         billing_address: Some(Address {
             first_name: Some(billing_first_name),
             last_name: Some(billing_last_name),
-            line1: Some("14 Main Street".to_string()),
+            line1: Some(Secret::new("14 Main Street".to_string())),
             line2: None,
             line3: None,
-            city: Some("Pecan Springs".to_string()),
-            state: Some("TX".to_string()),
-            zip_code: Some("44628".to_string()),
+            city: Some(Secret::new("Pecan Springs".to_string())),
+            state: Some(Secret::new("TX".to_string())),
+            zip_code: Some(Secret::new("44628".to_string())),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             phone_number: None,
             phone_country_code: None,
