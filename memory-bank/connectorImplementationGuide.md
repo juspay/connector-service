@@ -2174,8 +2174,14 @@ impl ConnectorIntegration
 impl IncomingWebhook
 impl ConnectorSpecifications
 ```
+121. **Build using command `cargo build`**: Build the project and fix the build errors using the errorFixGuide mentioned at step number 122
 
-121. To resolve the common errors step by step run the instructions written in this file
+122. To resolve the common errors step by step run the instructions written in this file
 ``
 ./connectorErrorFixGuide.md
+``
+
+123. Write the Test file by following the steps present in ai_generated_test file.
+``
+./ai_generate_test.md
 ``
