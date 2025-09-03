@@ -5,6 +5,7 @@
 #![allow(clippy::print_stdout)]
 #![allow(clippy::panic_in_result_fn)]
 
+use cards::CardNumber;
 use grpc_api_types::payments::{
     card_payment_method_type, identifier::IdType, payment_method,
     payment_service_client::PaymentServiceClient, Address, AuthenticationType, BrowserInformation,
@@ -12,11 +13,10 @@ use grpc_api_types::payments::{
     PaymentMethod, PaymentServiceAuthorizeRequest,
 };
 use grpc_server::{app, configs};
-use serde_json::json;
-use tonic::{transport::Channel, Request};
 use hyperswitch_masking::Secret;
-use cards::CardNumber;
+use serde_json::json;
 use std::str::FromStr;
+use tonic::{transport::Channel, Request};
 mod common;
 
 #[tokio::test]
@@ -30,9 +30,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             amount: 1000,
             minor_amount: 1000,
             currency: Currency::Inr as i32,
-            email: Some(Secret::new(
-                "example@gmail.com".to_string(),
-            )),
+            email: Some(Secret::new("example@gmail.com".to_string())),
             payment_method: Some(PaymentMethod {
                 payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
                     card_type: Some(card_payment_method_type::CardType::Debit(CardDetails {
