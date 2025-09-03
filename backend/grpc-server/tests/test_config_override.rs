@@ -29,14 +29,14 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             amount: 1000,
             minor_amount: 1000,
             currency: Currency::Inr as i32,
-            email: Some("example@gmail.com".to_string()),
+            email: Some("example@gmail.com".to_string().into()),
             payment_method: Some(PaymentMethod {
                 payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
                     card_type: Some(card_payment_method_type::CardType::Debit(CardDetails {
-                        card_number: "5123456789012346".to_string(),
-                        card_exp_month: "07".to_string(),
-                        card_exp_year: "2030".to_string(),
-                        card_cvc: "100".to_string(),
+                        card_number: Some("5123456789012346".parse().expect("valid card number")),
+                        card_exp_month: Some("07".to_string().into()),
+                        card_exp_year: Some("2030".to_string().into()),
+                        card_cvc: Some("100".to_string().into()),
                         ..Default::default()
                     })),
                 })),
@@ -44,7 +44,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             address: Some(PaymentAddress {
                 shipping_address: None,
                 billing_address: Some(Address {
-                    phone_number: Some("9876354210".to_string()),
+                    phone_number: Some("9876354210".to_string().into()),
                     phone_country_code: Some("+1".to_string()),
                     ..Default::default()
                 }),

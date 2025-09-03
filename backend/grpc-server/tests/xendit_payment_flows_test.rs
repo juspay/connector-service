@@ -7,9 +7,11 @@ mod common;
 
 use std::{
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -21,6 +23,7 @@ use grpc_api_types::{
         PaymentStatus, RefundResponse, RefundServiceGetRequest, RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Helper function to get current timestamp
@@ -84,11 +87,11 @@ fn extract_refund_id(response: &RefundResponse) -> &String {
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: None,
         card_type: None,
@@ -108,7 +111,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         return_url: Some(
             "https://hyperswitch.io/connector-service/authnet_webhook_grpcurl".to_string(),
         ),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(grpc_api_types::payments::PaymentAddress::default()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
@@ -179,6 +182,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_id: refund_id.to_string(),
         refund_reason: None,
         request_ref_id: None,
+        browser_info: None,
     }
 }
 

@@ -6,6 +6,7 @@ use domain_types::{
     connector_flow::{FlowName, RSync},
     connector_types::{RefundFlowData, RefundSyncData, RefundsResponseData},
     errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
     router_data::ConnectorAuthType,
     types::generate_refund_sync_response,
     utils::ForeignTryFrom,
@@ -17,6 +18,7 @@ use grpc_api_types::payments::{
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 
 use crate::{
     configs::Config,
@@ -160,7 +162,7 @@ impl RefundService for Refunds {
             .map_err(|e| e.into_grpc_status())?;
 
             let response = RefundServiceTransformResponse {
-                event_type: WebhookEventType::WebhookRefund.into(),
+                event_type: WebhookEventType::WebhookRefundSuccess.into(),
                 content: Some(content),
                 source_verified,
                 response_ref_id: None,
@@ -173,7 +175,7 @@ impl RefundService for Refunds {
 }
 
 async fn get_refunds_webhook_content(
-    connector_data: ConnectorData,
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,

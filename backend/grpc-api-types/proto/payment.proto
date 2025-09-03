@@ -65,29 +65,7 @@ enum PaymentStatus {
   UNRESOLVED = 19;    // Status could not be determined
 }
 
-// Status of a mandate setup attempt.
-enum MandateStatus {
-  MANDATE_STATUS_UNSPECIFIED = 0; // Default value
-
-  // Initial states
-  MANDATE_INITIATED = 1;           // Mandate setup has been initiated
-  MANDATE_PENDING = 2;             // Mandate setup is pending (waiting for processing)
-  
-  // Authentication flow
-  MANDATE_AUTHENTICATION_PENDING = 3;      // Waiting for customer authentication
-  MANDATE_AUTHENTICATION_SUCCESSFUL = 4;   // Customer authentication successful
-  MANDATE_AUTHENTICATION_FAILED = 5;       // Customer authentication failed
-
-  // Setup completion states
-  MANDATE_ESTABLISHED = 6;         // Mandate has been successfully established
-  MANDATE_FAILED = 7;              // Mandate setup failed
-  MANDATE_CANCELLED = 8;           // Mandate setup was cancelled
-  MANDATE_EXPIRED = 9;             // Mandate setup expired
-
-  // Terminal/fallback states
-  MANDATE_ROUTER_DECLINED = 10;    // Mandate declined by router
-  MANDATE_UNRESOLVED = 11;         // Status could not be determined
-}
+// Note: MandateStatus enum removed - mandate setup now uses PaymentStatus with optional sub_status for detailed information
 
 // Status of a refund.
 enum RefundStatus {
@@ -157,11 +135,64 @@ enum PaymentExperience {
 
 // Type of event that a webhook can represent.
 enum WebhookEventType {
-  WEBHOOK_EVENT_TYPE_UNSPECIFIED = 0;  // Default, unspecified webhook event type.
-  WEBHOOK_PAYMENT = 1;                 // Webhook event related to a payment.
-  WEBHOOK_REFUND = 2;                  // Webhook event related to a refund.
-  WEBHOOK_DISPUTE = 3;                 // Webhook event related to a dispute.
+  INCOMING_WEBHOOK_EVENT_UNSPECIFIED = 0; // Default unspecified event
+
+  // Payment intent events
+  PAYMENT_INTENT_FAILURE = 1;              // Authorization + Capture failure
+  PAYMENT_INTENT_SUCCESS = 2;              // Authorization + Capture success
+  PAYMENT_INTENT_PROCESSING = 3;           // Payment intent is processing
+  PAYMENT_INTENT_PARTIALLY_FUNDED = 4;     // Payment intent is partially funded
+  PAYMENT_INTENT_CANCELLED = 5;            // Payment intent cancelled
+  PAYMENT_INTENT_CANCEL_FAILURE = 6;       // Payment intent cancel failure
+  PAYMENT_INTENT_AUTHORIZATION_SUCCESS = 7; // Authorization success
+  PAYMENT_INTENT_AUTHORIZATION_FAILURE = 8; // Authorization failure
+  PAYMENT_INTENT_CAPTURE_SUCCESS = 9;      // Capture success
+  PAYMENT_INTENT_CAPTURE_FAILURE = 10;     // Capture failure
+  PAYMENT_INTENT_EXPIRED = 11;             // Payment intent expired
+  PAYMENT_ACTION_REQUIRED = 12;            // Payment requires additional action
+
+  SOURCE_CHARGEABLE = 13;                  // Source is chargeable
+  SOURCE_TRANSACTION_CREATED = 14;         // Source transaction created
+
+  // Refund events
+  WEBHOOK_REFUND_FAILURE = 15;                     // Refund failure
+  WEBHOOK_REFUND_SUCCESS = 16;                     // Refund success
+
+  // Dispute events
+  WEBHOOK_DISPUTE_OPENED = 17;                     // Dispute opened
+  WEBHOOK_DISPUTE_EXPIRED = 18;                    // Dispute expired
+  WEBHOOK_DISPUTE_ACCEPTED = 19;                   // Dispute accepted
+  WEBHOOK_DISPUTE_CANCELLED = 20;                  // Dispute cancelled
+  WEBHOOK_DISPUTE_CHALLENGED = 21;                 // Dispute challenged
+  WEBHOOK_DISPUTE_WON = 22;                        // Dispute successfully challenged by merchant
+  WEBHOOK_DISPUTE_LOST = 23;                       // Dispute unsuccessfully challenged
+
+  // Mandate events
+  MANDATE_ACTIVE = 24;                     // Mandate is active
+  MANDATE_REVOKED = 25;                    // Mandate revoked
+
+  // Misc events
+  ENDPOINT_VERIFICATION = 26;              // Endpoint verification
+  EXTERNAL_AUTHENTICATION_ARES = 27;       // External authentication ARes
+  FRM_APPROVED = 28;                       // Fraud risk management approved
+  FRM_REJECTED = 29;                       // Fraud risk management rejected
+
+  // Payout events
+  PAYOUT_SUCCESS = 30;                     // Payout success
+  PAYOUT_FAILURE = 31;                     // Payout failure
+  PAYOUT_PROCESSING = 32;                  // Payout processing
+  PAYOUT_CANCELLED = 33;                   // Payout cancelled
+  PAYOUT_CREATED = 34;                     // Payout created
+  PAYOUT_EXPIRED = 35;                     // Payout expired
+  PAYOUT_REVERSED = 36;                    // Payout reversed
+
+  // Recovery events
+  RECOVERY_PAYMENT_FAILURE = 37;           // Recovery payment failure
+  RECOVERY_PAYMENT_SUCCESS = 38;           // Recovery payment success
+  RECOVERY_PAYMENT_PENDING = 39;           // Recovery payment pending
+  RECOVERY_INVOICE_CANCEL = 40;            // Recovery invoice cancelled
 }
+
 
 // Enum for currency codes (ISO 4217).
 enum Currency {
@@ -421,6 +452,9 @@ enum Connector {
   XENDIT = 88;
   ZEN = 89;
   ZSL = 90;
+  PHONEPE = 91;
+  CASHFREE = 92;
+  PAYTM = 93;
 }
 
 // Payment method types.
@@ -507,21 +541,24 @@ enum PaymentMethodType {
   TWINT = 79;
   UPI_COLLECT = 80;
   UPI_INTENT = 81;
-  VIPPS = 82;
-  VIET_QR = 83;
-  VENMO = 84;
-  WALLEY = 85;
-  WE_CHAT_PAY = 86;
-  SEVEN_ELEVEN = 87;
-  LAWSON = 88;
-  MINI_STOP = 89;
-  FAMILY_MART = 90;
-  SEICOMART = 91;
-  PAY_EASY = 92;
-  LOCAL_BANK_TRANSFER = 93;
-  OPEN_BANKING_PIS = 94;
-  DIRECT_CARRIER_BILLING = 95;
-  INSTANT_BANK_TRANSFER = 96;
+  UPI_QR = 82;
+  VIPPS = 83;
+  VIET_QR = 84;
+  VENMO = 85;
+  WALLEY = 86;
+  WE_CHAT_PAY = 87;
+  SEVEN_ELEVEN = 88;
+  LAWSON = 89;
+  MINI_STOP = 90;
+  FAMILY_MART = 91;
+  SEICOMART = 92;
+  PAY_EASY = 93;
+  LOCAL_BANK_TRANSFER = 94;
+  OPEN_BANKING_PIS = 95;
+  DIRECT_CARRIER_BILLING = 96;
+  INSTANT_BANK_TRANSFER = 97;
+  PAY_PAL = 98;
+  REVOLUT_PAY = 99;
 }
 
 
@@ -795,17 +832,17 @@ message Address {
   optional string last_name = 2;
   
   // Address Details
-  optional string line1 = 3;
-  optional string line2 = 4;
-  optional string line3 = 5;
-  optional string city = 6;
-  optional string state = 7;
-  optional string zip_code = 8;
+  optional SecretString line1 = 3;
+  optional SecretString line2 = 4;
+  optional SecretString line3 = 5;
+  optional SecretString city = 6;
+  optional SecretString state = 7;
+  optional SecretString zip_code = 8;
   optional CountryAlpha2 country_alpha2_code = 9;
 
   // Contact Information
-  optional string email = 10;
-  optional string phone_number = 11;
+  optional SecretString email = 10;
+  optional SecretString phone_number = 11;
   optional string phone_country_code = 12;
 }
 
@@ -1060,7 +1097,7 @@ message PaymentServiceAuthorizeRequest {
   optional CaptureMethod capture_method = 8; // Method for capturing the payment
   
   // Customer Information
-  optional string email = 9; // Email address of the customer
+  optional SecretString email = 9; // Email address of the customer
   optional string customer_name = 10; // Name of the customer
   optional string connector_customer_id = 11; // Customer ID as recognized by the connector
   
@@ -1098,6 +1135,8 @@ message PaymentServiceAuthorizeRequest {
   optional CustomerAcceptance customer_acceptance = 28; // Details of customer acceptance
   optional BrowserInformation browser_info = 29; // Information about the customer's browser
   optional PaymentExperience payment_experience = 30; // Preferred payment experience
+
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
 }
 
 // Response message for a payment authorization.
@@ -1109,6 +1148,8 @@ message PaymentServiceAuthorizeResponse {
   PaymentStatus status = 2; // Status of the payment attempt
   optional string error_code = 3; // Error code if the authorization failed
   optional string error_message = 4; // Error message if the authorization failed
+  uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
   // Redirection and Transaction Details
   optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
@@ -1117,6 +1158,9 @@ message PaymentServiceAuthorizeResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 8; // Indicates if incremental authorization is allowed
+  
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
   
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
@@ -1140,6 +1184,8 @@ message PaymentServiceGetResponse {
   PaymentStatus status = 2; // Current status of the payment attempt
   optional string error_code = 3; // Error code if synchronization encountered an issue
   optional string error_message = 4; // Error message if synchronization encountered an issue
+  uint32 status_code = 26; // HTTP status code from the connector
+  map<string, string> response_headers = 27; // Optional HTTP response headers from the connector
   
   // Transaction Details
   optional MandateReference mandate_reference = 5; // Mandate reference, if applicable
@@ -1164,7 +1210,7 @@ message PaymentServiceGetResponse {
   
   // Additional Context
   optional string customer_name = 20; // Name of the customer
-  optional string email = 21; // Email address of the customer
+  optional SecretString email = 21; // Email address of the customer
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
@@ -1182,6 +1228,9 @@ message PaymentServiceVoidRequest {
   // Void Details
   optional string cancellation_reason = 3; // Reason for cancelling/voiding the payment
   optional bool all_keys_required = 4;
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5; // Information about the customer's browser
 }
 
 // Response message for a payment void operation.
@@ -1193,6 +1242,8 @@ message PaymentServiceVoidResponse {
   PaymentStatus status = 2; // Status of the payment attempt after voiding
   optional string error_code = 3; // Error code if the void operation failed
   optional string error_message = 4; // Error message if the void operation failed
+  uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
@@ -1213,6 +1264,9 @@ message PaymentServiceCaptureRequest {
   
   // Multiple Capture Information
   optional MultipleCaptureRequestData multiple_capture_data = 6; // Data for multiple capture scenarios
+
+  // Browser Information
+  optional BrowserInformation browser_info = 7; // Browser information, if relevant
 }
 
 // Response message for a payment capture operation.
@@ -1224,6 +1278,8 @@ message PaymentServiceCaptureResponse {
   PaymentStatus status = 2; // Status of the payment after the capture attempt
   optional string error_code = 3; // Error code if the capture failed
   optional string error_message = 4; // Error message if the capture failed
+  uint32 status_code = 6; // HTTP status code from the connector
+  map<string, string> response_headers = 7; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from response_reference_id
@@ -1267,6 +1323,8 @@ message RefundResponse {
   RefundStatus status = 3; // Current status of the refund
   optional string error_code = 4; // Error code if synchronization encountered an issue
   optional string error_message = 5; // Error message if synchronization encountered an issue
+  uint32 status_code = 22; // HTTP status code from the connector
+  map<string, string> response_headers = 23; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1286,7 +1344,7 @@ message RefundResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1315,6 +1373,8 @@ message DisputeResponse {
   optional string connector_status_code = 5; // Connector status code
   optional string error_code = 6; // Error code if retrieval failed
   optional string error_message = 7; // Error message if retrieval failed
+  uint32 status_code = 18; // HTTP status code from the connector
+  map<string, string> response_headers = 19; // Optional HTTP response headers from the connector
   
   // Dispute Details
   optional int64 dispute_amount = 8; // Amount in dispute (minor currency units)
@@ -1346,7 +1406,7 @@ message PaymentServiceRegisterRequest {
   optional int64 minor_amount = 4; // Optional: Amount to authorize during mandate setup
   
   // Customer Information
-  optional string email = 5; // Email address of the customer
+  optional SecretString email = 5; // Email address of the customer
   optional string customer_name = 6; // Name of the customer
   optional string connector_customer_id = 7; // Customer ID as recognized by the connector
   
@@ -1394,9 +1454,11 @@ message PaymentServiceRegisterResponse {
   Identifier registration_id = 1; // Identifier for the mandate registration
   
   // Status Information
-  MandateStatus status = 2; // Status of the mandate setup attempt
+  PaymentStatus status = 2; // Status of the mandate setup attempt (using PaymentStatus with mandate values)
   optional string error_code = 3; // Error code if the mandate setup failed
   optional string error_message = 4; // Error message if the mandate setup failed
+  uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
   
   // Mandate Details
   MandateReference mandate_reference = 5; // Reference to the created mandate
@@ -1408,6 +1470,57 @@ message PaymentServiceRegisterResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+}
+
+// Request message for repeat payment (MIT - Merchant Initiated Transaction).
+message PaymentServiceRepeatEverythingRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Mandate Information (required for MIT)
+  MandateReference mandate_reference = 2; // Reference to existing mandate
+  
+  // Amount Information
+  int64 amount = 3; // The amount for the payment in major currency units
+  Currency currency = 4; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 5; // The minor amount for the payment (e.g., cents)
+  
+  // Optional fields
+  optional string merchant_order_reference_id = 6; // Merchant's reference ID for the order
+  map<string, string> metadata = 7; // Additional metadata for the connector
+  optional string webhook_url = 8; // URL for webhook notifications
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 11; // Method for capturing the payment
+
+  // Customer Information
+  optional SecretString email = 12; // Email address of the customer
+
+  // Browser Information
+  optional BrowserInformation browser_info = 13; // Browser information, if relevant
+
+  optional bool test_mode = 31; // A boolean value to indicate if the connector is in Test mode
+  optional PaymentMethodType payment_method_type = 32; // Indicates the sub type of payment method. Eg: 'google_pay' & 'apple_pay'
+}
+
+// Response message for repeat payment operation.
+message PaymentServiceRepeatEverythingResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the payment attempt
+  optional string error_code = 3; // Error code if the payment failed
+  optional string error_message = 4; // Error message if the payment failed
+  uint32 status_code = 8; // HTTP status code from the connector
+  map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
+  
+  // Transaction Details
+  optional string network_txn_id = 5; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 6; // Reference ID from the connector response
+  
+  // Raw Response
+  optional string raw_connector_response = 7; // Raw response from the connector for debugging
 }
 
 // Request message for PaymentService.Transform RPC
@@ -1450,6 +1563,9 @@ message RefundServiceGetRequest {
   
   // Refund Details
   optional string refund_reason = 4; // Reason for the refund, if provided during sync
+
+  // Browser Information
+  optional BrowserInformation browser_info = 5; // Information about the customer's browser
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -1481,7 +1597,7 @@ message PaymentServiceRefundResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1516,7 +1632,7 @@ message RefundServiceGetResponse {
   
   // Additional Context
   optional string customer_name = 16; // Name of the customer
-  optional string email = 17; // Email address of the customer
+  optional SecretString email = 17; // Email address of the customer
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
@@ -1579,6 +1695,8 @@ message DisputeServiceSubmitEvidenceResponse {
   optional string connector_status_code = 4; // Renamed from connector_dispute_status_code
   optional string error_code = 5; // Error code if submitting evidence failed
   optional string error_message = 6; // Error message if submitting evidence failed
+  uint32 status_code = 8; // HTTP status code from the connector
+  map<string, string> response_headers = 9; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 7; // Response reference ID for tracking
@@ -1708,6 +1826,8 @@ message DisputeDefendResponse {
   optional string connector_status_code = 3; // Connector status code
   optional string error_code = 4; // Error code if defending failed
   optional string error_message = 5; // Error message if defending failed
+  uint32 status_code = 7; // HTTP status code from the connector
+  map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1731,6 +1851,8 @@ message AcceptDisputeResponse {
   optional string connector_status_code = 3; // Connector status code
   optional string error_code = 4; // Error code if accepting failed
   optional string error_message = 5; // Error message if accepting failed
+  uint32 status_code = 7; // HTTP status code from the connector
+  map<string, string> response_headers = 8; // Optional HTTP response headers from the connector
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
@@ -1748,16 +1870,3 @@ message DisputesSyncResponse {
   DisputeStatus status = 4;
   DisputeStage stage = 5;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

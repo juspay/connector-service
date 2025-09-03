@@ -99,10 +99,19 @@ pub struct Service {
 impl Service {
     /// # Panics
     ///
-    /// Will panic either if database password, hash key isn't present in configs or unable to
+    /// Will panic if EventPublisher initialization fails, database password, hash key isn't present in configs or unable to
     /// deserialize any of the above keys
     #[allow(clippy::expect_used)]
     pub async fn new(config: Arc<configs::Config>) -> Self {
+        // Initialize the global EventPublisher - fail fast on startup
+        if config.events.enabled {
+            common_utils::init_event_publisher(&config.events)
+                .expect("Failed to initialize global EventPublisher during startup");
+            logger::info!("Global EventPublisher initialized successfully");
+        } else {
+            logger::info!("EventPublisher disabled in configuration");
+        }
+
         Self {
             health_check_service: crate::server::health_check::HealthCheck,
             payments_service: crate::server::payments::Payments {

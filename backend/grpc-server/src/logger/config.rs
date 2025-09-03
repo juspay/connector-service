@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 pub struct Log {
     /// Logging to a console.
     pub console: LogConsole,
+    /// Logging to Kafka (optional).
+    #[serde(default)]
+    pub kafka: Option<LogKafka>,
 }
 
 /// Logging to a console.
@@ -62,4 +65,28 @@ pub enum LogFormat {
     /// JSON based structured logging
     #[default]
     Json,
+}
+
+/// Logging to Kafka.
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct LogKafka {
+    /// Whether Kafka logging is enabled.
+    pub enabled: bool,
+    /// Minimum log level for Kafka logging.
+    pub level: Level,
+    /// Directive which sets the log level for one or more crates/modules.
+    pub filtering_directive: Option<String>,
+    /// Kafka broker addresses.
+    pub brokers: Vec<String>,
+    /// Topic name for logs.
+    pub topic: String,
+    /// Batch size for Kafka messages (optional, defaults to Kafka default).
+    #[serde(default)]
+    pub batch_size: Option<usize>,
+    /// Flush interval in milliseconds (optional, defaults to Kafka default).
+    #[serde(default)]
+    pub flush_interval_ms: Option<u64>,
+    /// Buffer limit for Kafka messages (optional, defaults to Kafka default).
+    #[serde(default)]
+    pub buffer_limit: Option<usize>,
 }

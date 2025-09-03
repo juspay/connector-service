@@ -159,6 +159,16 @@ pub enum CryptoError {
     InvalidIvLength,
 }
 
+impl ErrorSwitchFrom<common_enums::CurrencyError> for ParsingError {
+    fn switch_from(error: &common_enums::CurrencyError) -> Self {
+        match error {
+            common_enums::CurrencyError::UnsupportedCurrency { .. } => {
+                Self::StructParseFailure("currency decimal configuration")
+            }
+        }
+    }
+}
+
 /// Integrity check errors.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct IntegrityCheckError {
@@ -166,4 +176,30 @@ pub struct IntegrityCheckError {
     pub field_names: String,
     /// Connector transaction reference id
     pub connector_transaction_id: Option<String>,
+}
+
+/// Event publisher errors.
+#[derive(Debug, thiserror::Error)]
+pub enum EventPublisherError {
+    /// Failed to initialize Kafka writer
+    #[error("Failed to initialize Kafka writer")]
+    KafkaWriterInitializationFailed,
+    /// Failed to serialize event data
+    #[error("Failed to serialize event data")]
+    EventSerializationFailed,
+    /// Failed to publish event to Kafka
+    #[error("Failed to publish event to Kafka")]
+    EventPublishFailed,
+    /// Invalid configuration provided
+    #[error("Invalid configuration: {message}")]
+    InvalidConfiguration { message: String },
+    /// Event publisher already initialized
+    #[error("Event publisher already initialized")]
+    AlreadyInitialized,
+    /// Failed to process event transformations
+    #[error("Failed to process event transformations")]
+    EventProcessingFailed,
+    /// Invalid path provided for nested value setting
+    #[error("Invalid path provided: {path}")]
+    InvalidPath { path: String },
 }

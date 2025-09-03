@@ -38,7 +38,7 @@ impl<'de> Deserialize<'de> for AlphaNumericId {
 
 impl AlphaNumericId {
     /// Creates a new alphanumeric id from string by applying validation checks
-    pub fn from(input_string: std::borrow::Cow<'static, str>) -> Result<Self, AlphaNumericIdError> {
+    pub fn from(input_string: Cow<'static, str>) -> Result<Self, AlphaNumericIdError> {
         // For simplicity, we'll accept any string - in production you'd validate alphanumeric
         Ok(Self(input_string.to_string()))
     }
@@ -65,7 +65,7 @@ impl CustomerId {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for CustomerId {
+impl<'de> Deserialize<'de> for CustomerId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -75,7 +75,7 @@ impl<'de> serde::Deserialize<'de> for CustomerId {
     }
 }
 
-impl std::str::FromStr for CustomerId {
+impl FromStr for CustomerId {
     type Err = error_stack::Report<ValidationError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -83,13 +83,15 @@ impl std::str::FromStr for CustomerId {
     }
 }
 
-impl TryFrom<std::borrow::Cow<'_, str>> for CustomerId {
+impl TryFrom<Cow<'_, str>> for CustomerId {
     type Error = error_stack::Report<ValidationError>;
 
-    fn try_from(value: std::borrow::Cow<'_, str>) -> Result<Self, Self::Error> {
+    fn try_from(value: Cow<'_, str>) -> Result<Self, Self::Error> {
         Ok(Self(value.to_string()))
     }
 }
+
+impl hyperswitch_masking::SerializableSecret for CustomerId {}
 
 #[derive(Debug, Clone, Serialize, Hash, PartialEq, Eq)]
 
@@ -107,7 +109,7 @@ impl MerchantId {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for MerchantId {
+impl<'de> Deserialize<'de> for MerchantId {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -117,7 +119,7 @@ impl<'de> serde::Deserialize<'de> for MerchantId {
     }
 }
 
-impl std::str::FromStr for MerchantId {
+impl FromStr for MerchantId {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -181,7 +183,7 @@ impl PaymentId {
 
     /// Wrap a string inside PaymentId
     pub fn wrap(payment_id_string: String) -> CustomResult<Self, ValidationError> {
-        Self::try_from(std::borrow::Cow::from(payment_id_string))
+        Self::try_from(Cow::from(payment_id_string))
     }
 }
 
@@ -287,10 +289,10 @@ impl crate::events::ApiEventMetric for ProfileId {
 }
 
 impl FromStr for ProfileId {
-    type Err = error_stack::Report<crate::errors::ValidationError>;
+    type Err = error_stack::Report<ValidationError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cow_string = std::borrow::Cow::Owned(s.to_string());
+        let cow_string = Cow::Owned(s.to_string());
         Self::try_from(cow_string)
     }
 }
@@ -358,7 +360,7 @@ impl crate::events::ApiEventMetric for ApiKeyId {
     }
 }
 
-impl crate::events::ApiEventMetric for (super::MerchantId, ApiKeyId) {
+impl crate::events::ApiEventMetric for (MerchantId, ApiKeyId) {
     fn get_api_event_type(&self) -> Option<crate::events::ApiEventsType> {
         Some(crate::events::ApiEventsType::ApiKey {
             key_id: self.1.clone(),
@@ -366,7 +368,7 @@ impl crate::events::ApiEventMetric for (super::MerchantId, ApiKeyId) {
     }
 }
 
-impl crate::events::ApiEventMetric for (&super::MerchantId, &ApiKeyId) {
+impl crate::events::ApiEventMetric for (&MerchantId, &ApiKeyId) {
     fn get_api_event_type(&self) -> Option<crate::events::ApiEventsType> {
         Some(crate::events::ApiEventsType::ApiKey {
             key_id: self.1.clone(),
@@ -392,7 +394,7 @@ crate::impl_serializable_secret_id_type!(MerchantConnectorAccountId);
 impl MerchantConnectorAccountId {
     /// Get a merchant connector account id from String
     pub fn wrap(merchant_connector_account_id: String) -> CustomResult<Self, ValidationError> {
-        Self::try_from(std::borrow::Cow::from(merchant_connector_account_id))
+        Self::try_from(Cow::from(merchant_connector_account_id))
     }
 }
 
@@ -430,10 +432,10 @@ impl crate::events::ApiEventMetric for ProfileAcquirerId {
 }
 
 impl FromStr for ProfileAcquirerId {
-    type Err = error_stack::Report<crate::errors::ValidationError>;
+    type Err = error_stack::Report<ValidationError>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cow_string = std::borrow::Cow::Owned(s.to_string());
+        let cow_string = Cow::Owned(s.to_string());
         Self::try_from(cow_string)
     }
 }

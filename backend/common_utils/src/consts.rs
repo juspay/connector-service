@@ -52,6 +52,8 @@ pub const X_KEY1: &str = "x-key1";
 pub const X_KEY2: &str = "x-key2";
 /// API secret header
 pub const X_API_SECRET: &str = "x-api-secret";
+/// Auth Key Map header
+pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
 
 // =============================================================================
 // Error Messages and Codes
@@ -105,6 +107,9 @@ pub const LOG_TIME: &str = "time";
 pub const NAME: &str = "UCS";
 /// Constant variable for payment service name
 pub const PAYMENT_SERVICE_NAME: &str = "payment_service";
+
+pub const CONST_DEVELOPMENT: &str = "development";
+pub const CONST_PRODUCTION: &str = "production";
 
 // =============================================================================
 // Environment and Configuration

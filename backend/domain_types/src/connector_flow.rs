@@ -23,6 +23,9 @@ pub struct Capture;
 pub struct SetupMandate;
 
 #[derive(Debug, Clone)]
+pub struct RepeatPayment;
+
+#[derive(Debug, Clone)]
 pub struct Accept;
 
 #[derive(Debug, Clone)]
@@ -30,6 +33,9 @@ pub struct SubmitEvidence;
 
 #[derive(Debug, Clone)]
 pub struct DefendDispute;
+
+#[derive(Debug, Clone)]
+pub struct CreateSessionToken;
 
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
@@ -40,6 +46,7 @@ pub enum FlowName {
     Psync,
     Void,
     SetupMandate,
+    RepeatPayment,
     Capture,
     AcceptDispute,
     SubmitEvidence,
@@ -47,4 +54,5 @@ pub enum FlowName {
     CreateOrder,
     IncomingWebhook,
     Dsync,
+    CreateSessionToken,
 }

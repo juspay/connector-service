@@ -13,8 +13,8 @@ use serde_json::Value;
 use time::PrimitiveDateTime;
 
 use crate::{
-    errors::{self, ParsingError},
-    payment_method_data::{Card, PaymentMethodData},
+    errors::{self, ApiError, ApplicationErrorResponse, ParsingError},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes},
     router_data::ErrorResponse,
     router_response_types::Response,
     types::PaymentMethodDataType,
@@ -103,7 +103,6 @@ pub fn handle_json_response_deserialization_failure(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: Some(response_data),
         }),
     }
 }
@@ -192,6 +191,13 @@ pub fn get_header_key_value<'a>(
     get_header_field(headers.get(key))
 }
 
+pub fn get_http_header<'a>(
+    key: &str,
+    headers: &'a http::HeaderMap,
+) -> CustomResult<&'a str, errors::ConnectorError> {
+    get_header_field(headers.get(key))
+}
+
 fn get_header_field(
     field: Option<&http::HeaderValue>,
 ) -> CustomResult<&str, errors::ConnectorError> {
@@ -237,10 +243,13 @@ pub fn is_payment_failure(status: common_enums::AttemptStatus) -> bool {
     }
 }
 
-pub fn get_card_details(
-    payment_method_data: PaymentMethodData,
+pub fn get_card_details<T>(
+    payment_method_data: PaymentMethodData<T>,
     connector_name: &'static str,
-) -> Result<Card, errors::ConnectorError> {
+) -> Result<Card<T>, errors::ConnectorError>
+where
+    T: PaymentMethodDataTypes,
+{
     match payment_method_data {
         PaymentMethodData::Card(details) => Ok(details),
         _ => Err(errors::ConnectorError::NotSupported {
@@ -250,12 +259,15 @@ pub fn get_card_details(
     }
 }
 
-pub fn is_mandate_supported(
-    selected_pmd: PaymentMethodData,
+pub fn is_mandate_supported<T>(
+    selected_pmd: PaymentMethodData<T>,
     payment_method_type: Option<PaymentMethodType>,
     mandate_implemented_pmds: HashSet<PaymentMethodDataType>,
     connector: &'static str,
-) -> core::result::Result<(), Error> {
+) -> core::result::Result<(), Error>
+where
+    T: PaymentMethodDataTypes,
+{
     if mandate_implemented_pmds.contains(&PaymentMethodDataType::from(selected_pmd.clone())) {
         Ok(())
     } else {
@@ -346,3 +358,39 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map.insert(CardIssuer::CarteBlanche, Regex::new(r"^389[0-9]{11}$"));
         map
     });
+
+/// Helper function for extracting merchant ID from metadata
+pub fn extract_merchant_id_from_metadata(
+    metadata: &tonic::metadata::MetadataMap,
+) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
+    let merchant_id_str = metadata
+        .get(common_utils::consts::X_MERCHANT_ID)
+        .ok_or_else(|| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: "Missing merchant ID in request metadata".to_owned(),
+                error_object: None,
+            })
+        })?
+        .to_str()
+        .map_err(|e| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: format!("Invalid merchant ID in request metadata: {e}"),
+                error_object: None,
+            })
+        })?;
+
+    Ok(merchant_id_str
+        .parse::<common_utils::id_type::MerchantId>()
+        .map_err(|e| {
+            ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_MERCHANT_ID".to_owned(),
+                error_identifier: 400,
+                error_message: format!("Failed to parse merchant ID from header: {e}"),
+                error_object: None,
+            })
+        })?)
+}
