@@ -253,21 +253,36 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> String {
-            req.resource_common_data.connectors.easebuzz.base_url.to_string()
+            let base_url = &req.resource_common_data.connectors.easebuzz.base_url;
+            if base_url.is_empty() {
+                "https://pay.easebuzz.in".to_string()
+            } else {
+                base_url.to_string()
+            }
         }
 
-        pub fn connector_base_url_payments<'a, F, Req, Res>(
+        pub fn connector_base_url_payments<F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.easebuzz.base_url
+            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> String {
+            let base_url = &req.resource_common_data.connectors.easebuzz.base_url;
+            if base_url.is_empty() {
+                "https://pay.easebuzz.in".to_string()
+            } else {
+                base_url.to_string()
+            }
         }
 
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+        pub fn connector_base_url_refunds<F, Req, Res>(
             &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.easebuzz.base_url
+            req: &RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> String {
+            let base_url = &req.resource_common_data.connectors.easebuzz.base_url;
+            if base_url.is_empty() {
+                "https://pay.easebuzz.in".to_string()
+            } else {
+                base_url.to_string()
+            }
         }
 
         pub fn build_headers<F, FCD, Req, Res>(

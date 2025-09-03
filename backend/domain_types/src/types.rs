@@ -68,24 +68,43 @@ use crate::{
 #[derive(Clone, serde::Deserialize, Debug, Default)]
 pub struct Connectors {
     // Added pub
+    #[serde(default)]
     pub adyen: ConnectorParams,
+    #[serde(default)]
     pub razorpay: ConnectorParams,
+    #[serde(default)]
     pub razorpayv2: ConnectorParams,
+    #[serde(default)]
     pub fiserv: ConnectorParams,
+    #[serde(default)]
     pub elavon: ConnectorParams, // Add your connector params
+    #[serde(default)]
     pub xendit: ConnectorParams,
+    #[serde(default)]
     pub checkout: ConnectorParams,
+    #[serde(default)]
     pub authorizedotnet: ConnectorParams, // Add your connector params
+    #[serde(default)]
     pub mifinity: ConnectorParams,
+    #[serde(default)]
     pub phonepe: ConnectorParams,
+    #[serde(default)]
     pub cashfree: ConnectorParams,
+    #[serde(default)]
     pub paytm: ConnectorParams,
+    #[serde(default)]
     pub fiuu: ConnectorParams,
+    #[serde(default)]
     pub payu: ConnectorParams,
+    #[serde(default)]
     pub cashtocode: ConnectorParams,
+    #[serde(default)]
     pub novalnet: ConnectorParams,
+    #[serde(default)]
     pub nexinets: ConnectorParams,
+    #[serde(default)]
     pub noon: ConnectorParams,
+    #[serde(default)]
     pub easebuzz: ConnectorParams,
 }
 
