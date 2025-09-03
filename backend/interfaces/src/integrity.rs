@@ -351,7 +351,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PaymentMethodTokenIntegrityOb
 
     fn get_request_integrity_object(&self) -> PaymentMethodTokenIntegrityObject {
         PaymentMethodTokenIntegrityObject {
-            amount: common_utils::types::MinorUnit::new(self.amount.unwrap_or_default()),
+            amount: self.amount,
             currency: self.currency,
         }
     }

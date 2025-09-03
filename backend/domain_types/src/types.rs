@@ -4311,7 +4311,7 @@ impl<
         let customer_acceptance = value.customer_acceptance.clone();
 
         Ok(Self {
-            amount: Some(value.amount),
+            amount: common_utils::types::MinorUnit::new(value.amount),
             currency,
             payment_method_data: PaymentMethodData::<T>::foreign_try_from(
                 value.payment_method.ok_or_else(|| {

@@ -682,7 +682,7 @@ impl Payments {
                 )
             })?;
         let payment_method_tokenization_data = PaymentMethodTokenizationData {
-            amount: Some(payload.amount),
+            amount: common_utils::types::MinorUnit::new(payload.amount),
             currency,
             integrity_object: None,
             browser_info: None,
