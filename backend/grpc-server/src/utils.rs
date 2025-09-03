@@ -130,7 +130,7 @@ pub struct MetadataPayload {
 
 pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
-    server_config: configs::Config,
+    server_config: Arc<configs::Config>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
     let connector = connector_from_metadata(metadata)?;
     let merchant_id = merchant_id_from_metadata(metadata)?;
@@ -265,9 +265,9 @@ pub fn auth_from_metadata(
 pub fn config_from_metadata(
     config_override: Option<String>,
     config: configs::Config,
-) -> CustomResult<configs::Config, ApplicationErrorResponse> {
+) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse> {
     match config_override {
-        None => Ok(config),
+        None => Ok(Arc::new(config)),
         Some(config_override) => {
             let override_value = serde_json::from_str(&config_override).map_err(|e| {
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
@@ -286,7 +286,7 @@ pub fn config_from_metadata(
                 }))
             })?;
             let merged = merge_configs(&override_value, &base_value);
-            serde_json::from_value(merged).map_err(|e| {
+            serde_json::from_value(merged).map(Arc::new).map_err(|e| {
                 Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "CANNOT_DESERIALIZE_JSON".into(),
                     error_identifier: 400,
@@ -463,7 +463,7 @@ where
 pub async fn grpc_logging_wrapper<T, F, Fut, R>(
     request: tonic::Request<T>,
     service_name: &str,
-    config: configs::Config,
+    config: Arc<configs::Config>,
     handler: F,
 ) -> Result<tonic::Response<R>, tonic::Status>
 where
@@ -486,13 +486,13 @@ where
 
 pub fn get_config_from_request<T>(
     request: &tonic::Request<T>,
-) -> CustomResult<configs::Config, ApplicationErrorResponse>
+) -> CustomResult<Arc<configs::Config>, ApplicationErrorResponse>
 where
     T: serde::Serialize,
 {
     request
         .extensions()
-        .get::<configs::Config>()
+        .get::<Arc<configs::Config>>()
         .cloned()
         .ok_or_else(|| {
             Report::new(ApplicationErrorResponse::InternalServerError(ApiError {

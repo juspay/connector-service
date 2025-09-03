@@ -13,9 +13,10 @@ use grpc_api_types::payments::{
 };
 use grpc_server::{app, configs};
 use serde_json::json;
-// use std::collections::HashMap;
 use tonic::{transport::Channel, Request};
-
+use hyperswitch_masking::Secret;
+use cards::CardNumber;
+use std::str::FromStr;
 mod common;
 
 #[tokio::test]
@@ -29,14 +30,16 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             amount: 1000,
             minor_amount: 1000,
             currency: Currency::Inr as i32,
-            email: Some("example@gmail.com".to_string().into()),
+            email: Some(Secret::new(
+                "example@gmail.com".to_string(),
+            )),
             payment_method: Some(PaymentMethod {
                 payment_method: Some(payment_method::PaymentMethod::Card(CardPaymentMethodType {
                     card_type: Some(card_payment_method_type::CardType::Debit(CardDetails {
-                        card_number: Some("5123456789012346".parse().expect("valid card number")),
-                        card_exp_month: Some("07".to_string().into()),
-                        card_exp_year: Some("2030".to_string().into()),
-                        card_cvc: Some("100".to_string().into()),
+                        card_number: Some(CardNumber::from_str("5123456789012346").unwrap()),
+                        card_exp_month: Some(Secret::new("07".to_string())),
+                        card_exp_year: Some(Secret::new("2030".to_string())),
+                        card_cvc: Some(Secret::new("100".to_string())),
                         ..Default::default()
                     })),
                 })),
@@ -44,7 +47,7 @@ async fn test_config_override() -> Result<(), Box<dyn std::error::Error>> {
             address: Some(PaymentAddress {
                 shipping_address: None,
                 billing_address: Some(Address {
-                    phone_number: Some("9876354210".to_string().into()),
+                    phone_number: Some(Secret::new("9876354210".to_string())),
                     phone_country_code: Some("+1".to_string()),
                     ..Default::default()
                 }),
