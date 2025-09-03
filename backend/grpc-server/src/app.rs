@@ -1,5 +1,3 @@
-use std::{future::Future, net, sync::Arc};
-
 use axum::{extract::Request, http};
 use common_utils::consts;
 use external_services::shared_metrics as metrics;
@@ -10,6 +8,7 @@ use grpc_api_types::{
         payment_service_server, refund_service_handler, refund_service_server,
     },
 };
+use std::{future::Future, net, sync::Arc};
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
@@ -17,7 +16,9 @@ use tokio::{
 use tonic::transport::Server;
 use tower_http::{request_id::MakeRequestUuid, trace as tower_trace};
 
-use crate::{configs, error::ConfigurationError, logger, utils};
+use crate::{
+    config_overrides::RequestExtensionsLayer, configs, error::ConfigurationError, logger, utils,
+};
 
 /// # Panics
 ///
@@ -203,11 +204,13 @@ impl Service {
         let propagate_request_id_layer = tower_http::request_id::PropagateRequestIdLayer::new(
             http::HeaderName::from_static(consts::X_REQUEST_ID),
         );
+        let config_override_layer = RequestExtensionsLayer::new();
 
         Server::builder()
             .layer(logging_layer)
             .layer(request_id_layer)
             .layer(propagate_request_id_layer)
+            .layer(config_override_layer)
             .layer(metrics_layer)
             .add_service(reflection_service)
             .add_service(health_server::HealthServer::new(self.health_check_service))

@@ -1,5 +1,3 @@
-use std::{fmt::Debug, sync::Arc};
-
 use common_enums;
 use common_utils::{consts, errors::CustomResult, events, lineage, pii};
 use connector_integration::types::ConnectorData;
@@ -39,13 +37,14 @@ use grpc_api_types::payments::{
 };
 use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
+use std::{fmt::Debug, sync::Arc};
 use tracing::info;
 
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{self, grpc_logging_wrapper},
+    utils::{self, get_config_from_request, grpc_logging_wrapper},
 };
 
 #[derive(Debug, Clone)]
@@ -124,6 +123,7 @@ impl Payments {
         metadata_payload: &utils::MetadataPayload,
         service_name: &str,
         request_id: &str,
+        config: &Config,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -140,7 +140,7 @@ impl Payments {
         // Create common request data
         let payment_flow_data = PaymentFlowData::foreign_try_from((
             payload.clone(),
-            self.config.connectors.clone(),
+            config.connectors.clone(),
             metadata,
         ))
         .map_err(|err| {
@@ -172,6 +172,7 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
+                    config,
                 )
                 .await?;
 
@@ -199,6 +200,7 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
+                    config,
                 )
                 .await?;
             tracing::info!(
@@ -244,7 +246,7 @@ impl Payments {
             connector_name: &connector.to_string(),
             service_name,
             flow_name: events::FlowName::Authorize,
-            event_config: &self.config.events,
+            event_config: &config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
                 payload.masked_serialize().unwrap_or_default(),
             )),
@@ -254,7 +256,7 @@ impl Payments {
         };
 
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             router_data,
             None,
@@ -348,6 +350,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
+        config: &Config,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -398,7 +401,7 @@ impl Payments {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
             flow_name: events::FlowName::CreateOrder,
-            event_config: &self.config.events,
+            event_config: &config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
                 payload.masked_serialize().unwrap_or_default(),
             )),
@@ -408,7 +411,7 @@ impl Payments {
         };
 
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
@@ -454,6 +457,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &PaymentServiceRegisterRequest,
+        config: &Config,
     ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -496,7 +500,7 @@ impl Payments {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
             flow_name: events::FlowName::CreateOrder,
-            event_config: &self.config.events,
+            event_config: &config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
                 payload.masked_serialize().unwrap_or_default(),
             )),
@@ -506,7 +510,7 @@ impl Payments {
         };
 
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             order_router_data,
             None,
@@ -544,6 +548,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &P,
+        config: &Config,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
         P: Clone + ErasedMaskSerialize,
@@ -587,7 +592,7 @@ impl Payments {
             connector_name: event_params.connector_name,
             service_name: event_params.service_name,
             flow_name: events::FlowName::CreateSessionToken,
-            event_config: &self.config.events,
+            event_config: &config.events,
             raw_request_data: Some(pii::SecretSerdeValue::new(
                 payload.masked_serialize().unwrap_or_default(),
             )),
@@ -597,7 +602,7 @@ impl Payments {
         };
 
         let response = execute_connector_processing_step(
-            &self.config.proxy,
+            &config.proxy,
             connector_integration,
             session_token_router_data,
             None,
@@ -726,13 +731,13 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceAuthorizeRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
         info!("PAYMENT_AUTHORIZE_FLOW: initiated");
-
+        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
         let service_name: String = request
             .extensions()
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
+        grpc_logging_wrapper(request, &service_name, config.clone(), |request, metadata_payload| {
             let service_name = service_name.clone();
             Box::pin(async move {
                 let utils::MetadataPayload {connector, ref request_id, ref connector_auth_type, ..} = metadata_payload;
@@ -754,6 +759,7 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
+                                            &config,
                                         ))
                                         .await
                                         {
@@ -770,6 +776,7 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
+                                            &config,
                                         ))
                                         .await
                                         {
@@ -788,6 +795,7 @@ impl PaymentService for Payments {
                                     &metadata_payload,
                                     &service_name,
                                     request_id,
+                                    &config,
                                 ))
                                 .await
                                 {
@@ -806,6 +814,7 @@ impl PaymentService for Payments {
                             &metadata_payload,
                             &service_name,
                             request_id,
+                            &config,
                         ))
                         .await
                         {
@@ -902,6 +911,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceTransformRequest>,
     ) -> Result<tonic::Response<PaymentServiceTransformResponse>, tonic::Status> {
+        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -910,7 +920,7 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             |request, metadata_payload| {
                 async move {
                     let connector = metadata_payload.connector;
@@ -1063,6 +1073,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceDisputeRequest>,
     ) -> Result<tonic::Response<DisputeResponse>, tonic::Status> {
+        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -1071,7 +1082,7 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             |_request, _metadata_payload| async {
                 let response = DisputeResponse {
                     ..Default::default()
@@ -1136,6 +1147,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRegisterRequest>,
     ) -> Result<tonic::Response<PaymentServiceRegisterResponse>, tonic::Status> {
         info!("SETUP_MANDATE_FLOW: initiated");
+        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -1144,7 +1156,7 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -1169,8 +1181,8 @@ impl PaymentService for Payments {
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        self.config.connectors.clone(),
-                        self.config.common.environment.clone(),
+                        config.connectors.clone(),
+                        config.common.environment.clone(),
                         &metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -1185,7 +1197,6 @@ impl PaymentService for Payments {
                             lineage_ids: &metadata_payload.lineage_ids,
                             reference_id: &metadata_payload.reference_id,
                         };
-
                         Some(
                             self.handle_order_creation_for_setup_mandate(
                                 connector_data.clone(),
@@ -1193,6 +1204,7 @@ impl PaymentService for Payments {
                                 connector_auth_details.clone(),
                                 event_params,
                                 &payload,
+                                &config,
                             )
                             .await?,
                         )
@@ -1222,7 +1234,7 @@ impl PaymentService for Payments {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         flow_name: events::FlowName::SetupMandate,
-                        event_config: &self.config.events,
+                        event_config: &config.events,
                         raw_request_data: Some(pii::SecretSerdeValue::new(
                             payload.masked_serialize().unwrap_or_default(),
                         )),
@@ -1232,7 +1244,7 @@ impl PaymentService for Payments {
                     };
 
                     let response = execute_connector_processing_step(
-                        &self.config.proxy,
+                        &config.proxy,
                         connector_integration,
                         router_data,
                         None,
@@ -1277,6 +1289,7 @@ impl PaymentService for Payments {
         request: tonic::Request<PaymentServiceRepeatEverythingRequest>,
     ) -> Result<tonic::Response<PaymentServiceRepeatEverythingResponse>, tonic::Status> {
         info!("REPEAT_PAYMENT_FLOW: initiated");
+        let config = get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -1285,7 +1298,7 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -1311,7 +1324,7 @@ impl PaymentService for Payments {
                     // Create payment flow data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
-                        self.config.connectors.clone(),
+                        config.connectors.clone(),
                         &metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -1337,7 +1350,7 @@ impl PaymentService for Payments {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         flow_name: events::FlowName::RepeatPayment,
-                        event_config: &self.config.events,
+                        event_config: &config.events,
                         raw_request_data: Some(pii::SecretSerdeValue::new(
                             payload.masked_serialize().unwrap_or_default(),
                         )),
@@ -1347,7 +1360,7 @@ impl PaymentService for Payments {
                     };
 
                     let response = execute_connector_processing_step(
-                        &self.config.proxy,
+                        &config.proxy,
                         connector_integration,
                         router_data,
                         None,

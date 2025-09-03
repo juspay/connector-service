@@ -4,8 +4,8 @@ use common_utils::{consts, events::EventConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
-
-#[derive(Clone, serde::Deserialize, Debug)]
+use serde::{Deserialize, Serialize};
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub common: Common,
     pub server: Server,
@@ -19,7 +19,7 @@ pub struct Config {
     pub lineage: LineageConfig,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, serde::Deserialize, Debug, Default, Serialize)]
 pub struct LineageConfig {
     /// Enable processing of x-lineage-ids header
     pub enabled: bool,
@@ -39,7 +39,7 @@ fn default_lineage_prefix() -> String {
     consts::LINEAGE_FIELD_PREFIX.to_string()
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Common {
     pub environment: String,
 }
@@ -56,7 +56,7 @@ impl Common {
     }
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct Server {
     pub host: String,
     pub port: u16,
@@ -64,13 +64,13 @@ pub struct Server {
     pub type_: ServiceType,
 }
 
-#[derive(Clone, serde::Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Serialize)]
 pub struct MetricsServer {
     pub host: String,
     pub port: u16,
 }
 
-#[derive(Clone, serde::Deserialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, Debug, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum ServiceType {
     #[default]
