@@ -548,18 +548,24 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_id_string: String = item
+    let customer_id_string = item
         .router_data
         .request
         .customer_id
         .as_ref()
-        .map(|cid| cid.get_string_repr().to_owned())
-        .unwrap_or_else(|| "anonymous_customer".to_string());
+        .and_then(|cid| {
+            let id_str = cid.get_string_repr().to_owned();
+            if id_str.len() > MAX_ID_LENGTH {
+                None
+            } else {
+                Some(id_str)
+            }
+        });
 
-    let customer_details = CustomerDetails {
-        id: customer_id_string,
+    let customer_details = customer_id_string.map(|cid| CustomerDetails {
+        id: cid,
         email: item.router_data.request.email.clone(),
-    };
+    });
 
     // Check if we should create a profile for future mandate usage
     let profile = if item.router_data.request.setup_future_usage.is_some() {
@@ -577,7 +583,7 @@ fn create_regular_transaction_request<
         payment: Some(payment_details),
         profile,
         order: Some(order),
-        customer: Some(customer_details),
+        customer: customer_details,
         bill_to,
         user_fields,
         processing_options: None,
@@ -716,18 +722,6 @@ impl<
             description: order_description,
         };
 
-        let customer_id_string =
-            if item.router_data.resource_common_data.payment_id.len() <= MAX_ID_LENGTH {
-                item.router_data.resource_common_data.payment_id.clone()
-            } else {
-                "repeat_payment_customer".to_string()
-            };
-
-        let customer_details = CustomerDetails {
-            id: customer_id_string,
-            email: None, // Email not available in RepeatPaymentData
-        };
-
         // Extract user fields from metadata
         let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
             Some(metadata) => {
@@ -751,13 +745,32 @@ impl<
 
         let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
 
+        let customer_id_string = item
+            .router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .and_then(|cid| {
+                let id_str = cid.get_string_repr().to_owned();
+                if id_str.len() > MAX_ID_LENGTH {
+                    None
+                } else {
+                    Some(id_str)
+                }
+            });
+
+        let customer_details = customer_id_string.map(|cid| CustomerDetails {
+            id: cid,
+            email: item.router_data.request.email.clone(),
+        });
+
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
             amount: item.router_data.request.amount.to_string(),
             currency_code: currency,
             profile,
             order: Some(order),
-            customer: Some(customer_details),
+            customer: customer_details,
             user_fields,
         };
 
