@@ -7,8 +7,8 @@ pub mod fiserv;
 pub mod razorpayv2;
 
 pub use self::{
-    adyen::Adyen, authorizedotnet::Authorizedotnet, fiserv::Fiserv, razorpay::Razorpay,
-    razorpayv2::RazorpayV2,
+    adyen::Adyen, authorizedotnet::Authorizedotnet, fiserv::Fiserv, mifinity::Mifinity,
+    razorpay::Razorpay, razorpayv2::RazorpayV2,
 };
 
 pub mod elavon;
@@ -22,11 +22,15 @@ pub mod macros;
 pub mod checkout;
 pub use self::checkout::Checkout;
 
+pub mod mifinity;
 pub mod phonepe;
 pub use self::phonepe::Phonepe;
 
 pub mod cashfree;
 pub use self::cashfree::Cashfree;
+
+pub mod paytm;
+pub use self::paytm::Paytm;
 
 pub mod fiuu;
 pub use self::fiuu::Fiuu;
@@ -39,6 +43,12 @@ pub use self::cashtocode::Cashtocode;
 
 pub mod novalnet;
 pub use self::novalnet::Novalnet;
+
+pub mod nexinets;
+pub use self::nexinets::Nexinets;
+
+pub mod noon;
+pub use self::noon::Noon;
 
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;

@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
-use cards::CardNumber;
 use common_enums::{self, AttemptStatus, CardNetwork};
 use common_utils::{ext_traits::ByteSliceExt, pii::Email, request::Method, types::MinorUnit};
 use domain_types::{
@@ -12,7 +11,7 @@ use domain_types::{
         RefundsResponseData, ResponseId,
     },
     errors,
-    payment_method_data::{Card, PaymentMethodData},
+    payment_method_data::{Card, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
@@ -51,8 +50,15 @@ pub enum ConnectorError {
 #[serde_with::skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct RazorpayCard {
-    number: CardNumber,
+pub struct RazorpayCard<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    number: RawCardNumber<T>,
     expiry_month: Secret<String>,
     expiry_year: Secret<String>,
     cvc: Option<Secret<String>>,
@@ -64,9 +70,16 @@ pub struct RazorpayCard {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
-pub enum RazorpayPaymentMethod {
+pub enum RazorpayPaymentMethod<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     #[serde(rename = "scheme")]
-    RazorpayCard(Box<RazorpayCard>),
+    RazorpayCard(Box<RazorpayCard<T>>),
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
@@ -89,15 +102,29 @@ pub struct Address {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
-pub enum PaymentMethod {
-    RazorpayPaymentMethod(Box<RazorpayPaymentMethod>),
+pub enum PaymentMethod<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    RazorpayPaymentMethod(Box<RazorpayPaymentMethod<T>>),
 }
 
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub struct CardDetails {
-    pub number: CardNumber,
+pub struct CardDetails<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    pub number: RawCardNumber<T>,
     pub name: Option<String>,
     pub expiry_month: Option<Secret<String>>,
     pub expiry_year: Secret<String>,
@@ -133,14 +160,21 @@ pub struct BrowserInfo {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub struct RazorpayPaymentRequest {
+pub struct RazorpayPaymentRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
     pub amount: MinorUnit,
     pub currency: String,
     pub contact: Secret<String>,
     pub email: Email,
     pub order_id: String,
     pub method: PaymentMethodType,
-    pub card: PaymentMethodSpecificData,
+    pub card: PaymentMethodSpecificData<T>,
     pub authentication: Option<AuthenticationDetails>,
     pub browser: Option<BrowserInfo>,
     pub ip: Secret<String>,
@@ -150,8 +184,15 @@ pub struct RazorpayPaymentRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged, rename_all = "snake_case")]
-pub enum PaymentMethodSpecificData {
-    Card(CardDetails),
+pub enum PaymentMethodSpecificData<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    Card(CardDetails<T>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,10 +271,18 @@ impl TryFrom<&ConnectorAuthType> for RazorpayAuthType {
     }
 }
 
-impl TryFrom<(&Card, Option<Secret<String>>)> for RazorpayPaymentMethod {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<(&Card<T>, Option<Secret<String>>)> for RazorpayPaymentMethod<T>
+{
     type Error = ConnectorError;
     fn try_from(
-        (card, card_holder_name): (&Card, Option<Secret<String>>),
+        (card, card_holder_name): (&Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
         let razorpay_card = RazorpayCard {
             number: card.card_number.clone(),
@@ -248,10 +297,18 @@ impl TryFrom<(&Card, Option<Secret<String>>)> for RazorpayPaymentMethod {
     }
 }
 
-fn extract_payment_method_and_data(
-    payment_method_data: &PaymentMethodData,
+fn extract_payment_method_and_data<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+>(
+    payment_method_data: &PaymentMethodData<T>,
     customer_name: Option<String>,
-) -> Result<(PaymentMethodType, PaymentMethodSpecificData), domain_types::errors::ConnectorError> {
+) -> Result<(PaymentMethodType, PaymentMethodSpecificData<T>), domain_types::errors::ConnectorError>
+{
     match payment_method_data {
         PaymentMethodData::Card(card_data) => {
             let card_holder_name = customer_name.clone();
@@ -291,13 +348,25 @@ fn extract_payment_method_and_data(
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<(
         &RazorpayRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
-        &Card,
-    )> for RazorpayPaymentRequest
+        &Card<T>,
+    )> for RazorpayPaymentRequest<T>
 {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
@@ -307,11 +376,11 @@ impl
                 &RouterDataV2<
                     Authorize,
                     PaymentFlowData,
-                    PaymentsAuthorizeData,
+                    PaymentsAuthorizeData<T>,
                     PaymentsResponseData,
                 >,
             >,
-            &Card,
+            &Card<T>,
         ),
     ) -> Result<Self, Self::Error> {
         let (item, _card_data) = value;
@@ -408,18 +477,35 @@ impl
     }
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         &RazorpayRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
-    > for RazorpayPaymentRequest
+    > for RazorpayPaymentRequest<T>
 {
     type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
     fn try_from(
         item: &RazorpayRouterData<
-            &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            &RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
         >,
     ) -> Result<Self, Self::Error> {
         match &item.router_data.request.payment_method_data {
@@ -651,7 +737,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
             status_code: http_code,
         };
 
@@ -687,7 +772,6 @@ impl
         let refunds_response_data = RefundsResponseData {
             connector_refund_id: response.id,
             refund_status: status,
-            raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
             status_code: http_code,
         };
 
@@ -757,10 +841,6 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: data
-                        .resource_common_data
-                        .raw_connector_response
-                        .clone(),
                     status_code: _http_code,
                 };
                 let error = None;
@@ -785,10 +865,6 @@ impl<F, Req>
                     connector_response_reference_id: data.resource_common_data.reference_id.clone(),
                     incremental_authorization_allowed: None,
                     mandate_reference: None,
-                    raw_connector_response: data
-                        .resource_common_data
-                        .raw_connector_response
-                        .clone(),
                     status_code: _http_code,
                 };
                 let error = None;
@@ -1274,7 +1350,6 @@ impl<F, Req>
                 connector_response_reference_id: Some(response.order_id),
                 incremental_authorization_allowed: None,
                 mandate_reference: None,
-                raw_connector_response: data.resource_common_data.raw_connector_response.clone(),
                 status_code: http_code,
             }),
             resource_common_data: PaymentFlowData {
@@ -1368,13 +1443,20 @@ pub struct RazorpayWebCollectRequest {
     pub account_id: Option<String>,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         &RazorpayRouterData<
             &RouterDataV2<
                 domain_types::connector_flow::Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData,
+                PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
         >,
@@ -1387,7 +1469,7 @@ impl
             &RouterDataV2<
                 domain_types::connector_flow::Authorize,
                 PaymentFlowData,
-                PaymentsAuthorizeData,
+                PaymentsAuthorizeData<T>,
                 PaymentsResponseData,
             >,
         >,
@@ -1552,7 +1634,7 @@ impl<F, Req>
     type Error = domain_types::errors::ConnectorError;
 
     fn foreign_try_from(
-        (upi_response, data, _status_code, raw_response): (
+        (upi_response, data, _status_code, _raw_response): (
             RazorpayUpiPaymentsResponse,
             RouterDataV2<F, PaymentFlowData, Req, PaymentsResponseData>,
             u16,
@@ -1606,7 +1688,6 @@ impl<F, Req>
             network_txn_id: None,
             connector_response_reference_id: data.resource_common_data.reference_id.clone(),
             incremental_authorization_allowed: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&raw_response).to_string()),
             status_code: _status_code,
         };
 

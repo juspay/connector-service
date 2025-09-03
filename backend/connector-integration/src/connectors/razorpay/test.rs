@@ -6,7 +6,7 @@ mod tests {
     use domain_types::{
         connector_types::{PaymentFlowData, PaymentsAuthorizeData},
         payment_address::{Address, PhoneDetails},
-        payment_method_data::{Card, PaymentMethodData},
+        payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
         router_request_types::BrowserInformation,
         router_response_types::Response,
     };
@@ -31,7 +31,7 @@ mod tests {
         use domain_types::{
             connector_types::{PaymentFlowData, PaymentsAuthorizeData},
             payment_address::{Address, PaymentAddress, PhoneDetails},
-            payment_method_data::{Card, PaymentMethodData},
+            payment_method_data::{Card, DefaultPCIHolder, PaymentMethodData, RawCardNumber},
             router_data::{ConnectorAuthType, ErrorResponse},
             router_data_v2::RouterDataV2,
             router_request_types::BrowserInformation,
@@ -89,6 +89,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -97,7 +98,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -105,7 +105,9 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(Card {
-                        card_number: CardNumber::from_str("5123456789012346").unwrap(),
+                        card_number: RawCardNumber(
+                            CardNumber::from_str("5123456789012346").unwrap(),
+                        ),
                         card_exp_month: "12".to_string().into(),
                         card_exp_year: "2026".to_string().into(),
                         card_cvc: "123".to_string().into(),
@@ -181,11 +183,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data);
             let request_content = result.unwrap();
 
@@ -253,6 +254,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -261,7 +263,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -269,7 +270,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(Card {
-                        card_number: CardNumber::from_str("").unwrap_or_default(),
+                        card_number: RawCardNumber(CardNumber::from_str("").unwrap_or_default()),
                         card_exp_month: "".to_string().into(),
                         card_exp_year: "".to_string().into(),
                         card_cvc: "".to_string().into(),
@@ -325,11 +326,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data);
 
             assert!(
@@ -371,6 +371,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -379,7 +380,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -387,7 +387,7 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(Card {
-                        card_number: CardNumber::from_str("123").unwrap_or_default(),
+                        card_number: RawCardNumber(CardNumber::from_str("123").unwrap_or_default()),
                         card_exp_month: "99".to_string().into(),
                         card_exp_year: "1999".to_string().into(),
                         card_cvc: "1".to_string().into(),
@@ -443,11 +443,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data);
 
             assert!(
@@ -469,7 +468,7 @@ mod tests {
                 router_data_v2::RouterDataV2,
                 types::{ConnectorParams, Connectors},
             };
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
             let data = RouterDataV2 {
@@ -511,6 +510,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -519,7 +519,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -527,7 +526,9 @@ mod tests {
                 },
                 request: PaymentsAuthorizeData {
                     payment_method_data: PaymentMethodData::Card(Card {
-                        card_number: CardNumber::from_str("5123450000000008").unwrap(),
+                        card_number: RawCardNumber(
+                            CardNumber::from_str("5123450000000008").unwrap(),
+                        ),
                         card_exp_month: "12".to_string().into(),
                         card_exp_year: "2025".to_string().into(),
                         card_cvc: "123".to_string().into(),
@@ -603,7 +604,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -657,15 +657,16 @@ mod tests {
                 status_code: 400,
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-            let result = <dyn ConnectorServiceTrait + Sync as ConnectorIntegrationV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData,
-                PaymentsResponseData,
-            >>::get_error_response_v2(&**connector, http_response, None)
-            .unwrap();
+            let result =
+                <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<DefaultPCIHolder>,
+                    PaymentsResponseData,
+                >>::get_error_response_v2(&**connector, http_response, None)
+                .unwrap();
 
             let actual_json = to_value(&result).unwrap();
 
@@ -702,14 +703,15 @@ mod tests {
                 status_code: 400,
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-            let result = <dyn ConnectorServiceTrait + Sync as ConnectorIntegrationV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData,
-                PaymentsResponseData,
-            >>::get_error_response_v2(&**connector, http_response, None);
+            let result =
+                <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                    Authorize,
+                    PaymentFlowData,
+                    PaymentsAuthorizeData<DefaultPCIHolder>,
+                    PaymentsResponseData,
+                >>::get_error_response_v2(&**connector, http_response, None);
 
             assert!(
                 result.is_err(),
@@ -742,14 +744,15 @@ mod tests {
             status_code: 400,
         };
 
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait + Sync as ConnectorIntegrationV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData,
-            PaymentsResponseData,
-        >>::get_error_response_v2(&**connector, http_response, None);
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<DefaultPCIHolder>,
+                PaymentsResponseData,
+            >>::get_error_response_v2(&**connector, http_response, None);
 
         assert!(
             result.is_err(),
@@ -771,7 +774,7 @@ mod tests {
             types::{ConnectorParams, Connectors},
         };
 
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
         let data = RouterDataV2 {
@@ -813,6 +816,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -821,7 +825,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -829,7 +832,7 @@ mod tests {
             },
             request: PaymentsAuthorizeData {
                 payment_method_data: PaymentMethodData::Card(Card {
-                    card_number: CardNumber::from_str("5123450000000008").unwrap(),
+                    card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
                     card_exp_year: "2025".to_string().into(),
                     card_cvc: "123".to_string().into(),
@@ -903,7 +906,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -944,7 +946,7 @@ mod tests {
             types::{ConnectorParams, Connectors},
         };
 
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
 
         let data = RouterDataV2 {
@@ -986,6 +988,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -994,7 +997,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1002,7 +1004,7 @@ mod tests {
             },
             request: PaymentsAuthorizeData {
                 payment_method_data: PaymentMethodData::Card(Card {
-                    card_number: CardNumber::from_str("5123450000000008").unwrap(),
+                    card_number: RawCardNumber(CardNumber::from_str("5123450000000008").unwrap()),
                     card_exp_month: "12".to_string().into(),
                     card_exp_year: "2025".to_string().into(),
                     card_cvc: "123".to_string().into(),
@@ -1076,7 +1078,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1099,6 +1100,7 @@ mod tests {
         use common_utils::{pii::Email, request::RequestContent};
         use domain_types::{
             payment_address::{Address, PhoneDetails},
+            payment_method_data::DefaultPCIHolder,
             router_data::ConnectorAuthType,
             types::{ConnectorParams, Connectors},
         };
@@ -1160,6 +1162,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: domain_types::types::Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1168,7 +1171,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1191,11 +1193,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data).unwrap();
 
             let actual_json: Value = match result {
@@ -1257,6 +1258,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1265,7 +1267,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1288,11 +1289,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data);
             let req = result.unwrap();
 
@@ -1359,6 +1359,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1367,7 +1368,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1431,11 +1431,10 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
-            let connector: BoxedConnector = Box::new(Razorpay::new());
+            let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
             let result = connector.get_request_body(&test_router_data);
 
             assert!(
@@ -1457,7 +1456,7 @@ mod tests {
             types::{ConnectorParams, Connectors},
         };
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
         let data = RouterDataV2 {
             flow: std::marker::PhantomData,
@@ -1498,6 +1497,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1506,7 +1506,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1529,7 +1528,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1577,7 +1575,7 @@ mod tests {
         };
 
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
         let data = RouterDataV2 {
             flow: std::marker::PhantomData,
@@ -1618,6 +1616,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1626,7 +1625,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1649,7 +1647,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1686,7 +1683,7 @@ mod tests {
         };
 
         let email = Email::try_from("testuser@gmail.com".to_string()).unwrap();
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
         let data = RouterDataV2 {
             flow: std::marker::PhantomData,
@@ -1727,6 +1724,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1735,7 +1733,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1758,7 +1755,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1802,15 +1798,16 @@ mod tests {
             .into(),
             status_code: 400,
         };
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait + Sync as ConnectorIntegrationV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >>::get_error_response_v2(&**connector, http_response, None)
-        .unwrap();
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                domain_types::connector_flow::CreateOrder,
+                domain_types::connector_types::PaymentFlowData,
+                domain_types::connector_types::PaymentCreateOrderData,
+                domain_types::connector_types::PaymentCreateOrderResponse,
+            >>::get_error_response_v2(&**connector, http_response, None)
+            .unwrap();
 
         let actual_json = to_value(&result).unwrap();
         let expected_json = json!({
@@ -1832,14 +1829,15 @@ mod tests {
             status_code: 400,
         };
 
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait + Sync as ConnectorIntegrationV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >>::get_error_response_v2(&**connector, http_response, None);
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                domain_types::connector_flow::CreateOrder,
+                domain_types::connector_types::PaymentFlowData,
+                domain_types::connector_types::PaymentCreateOrderData,
+                domain_types::connector_types::PaymentCreateOrderResponse,
+            >>::get_error_response_v2(&**connector, http_response, None);
 
         assert!(result.is_err(), "Expected error for invalid JSON");
     }
@@ -1856,14 +1854,15 @@ mod tests {
             status_code: 400,
         };
 
-        let connector: BoxedConnector = Box::new(Razorpay::new());
+        let connector: BoxedConnector<DefaultPCIHolder> = Box::new(Razorpay::new());
 
-        let result = <dyn ConnectorServiceTrait + Sync as ConnectorIntegrationV2<
-            domain_types::connector_flow::CreateOrder,
-            domain_types::connector_types::PaymentFlowData,
-            domain_types::connector_types::PaymentCreateOrderData,
-            domain_types::connector_types::PaymentCreateOrderResponse,
-        >>::get_error_response_v2(&**connector, http_response, None);
+        let result =
+            <dyn ConnectorServiceTrait<DefaultPCIHolder> + Sync as ConnectorIntegrationV2<
+                domain_types::connector_flow::CreateOrder,
+                domain_types::connector_types::PaymentFlowData,
+                domain_types::connector_types::PaymentCreateOrderData,
+                domain_types::connector_types::PaymentCreateOrderResponse,
+            >>::get_error_response_v2(&**connector, http_response, None);
 
         assert!(result.is_err(), "Expected error for missing 'error' field");
     }

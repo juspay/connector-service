@@ -9,6 +9,7 @@ use domain_types::{
         SubmitEvidenceData,
     },
     errors::{ApiError, ApplicationErrorResponse},
+    payment_method_data::DefaultPCIHolder,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
@@ -26,6 +27,7 @@ use grpc_api_types::payments::{
     DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
+use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -101,8 +103,11 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(request, &service_name, |request| async {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
-            let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+            let (connector, _merchant_id, _tenant_id, request_id) =
+                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+                    .map_err(|e| e.into_grpc_status())?;
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -137,13 +142,23 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name: common_utils::events::FlowName::SubmitEvidence,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    payload.masked_serialize().unwrap_or_default(),
+                )),
+                request_id: &request_id,
+            };
+
             let response = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 None,
-                &connector.to_string(),
-                &service_name,
+                event_params,
             )
             .await
             .switch()
@@ -261,9 +276,12 @@ impl DisputeService for Disputes {
         grpc_logging_wrapper(request, &service_name, |request| async {
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
-            let connector = connector_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
+            let (connector, _merchant_id, _tenant_id, request_id) =
+                crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(&metadata)
+                    .map_err(|e| e.into_grpc_status())?;
 
-            let connector_data = ConnectorData::get_connector_by_name(&connector);
+            let connector_data: ConnectorData<DefaultPCIHolder> =
+                ConnectorData::get_connector_by_name(&connector);
 
             let connector_integration: BoxedConnectorIntegrationV2<
                 '_,
@@ -298,13 +316,23 @@ impl DisputeService for Disputes {
                 response: Err(ErrorResponse::default()),
             };
 
+            let event_params = external_services::service::EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name: &service_name,
+                flow_name: common_utils::events::FlowName::AcceptDispute,
+                event_config: &self.config.events,
+                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
+                    payload.masked_serialize().unwrap_or_default(),
+                )),
+                request_id: &request_id,
+            };
+
             let response = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
                 connector_integration,
                 router_data,
                 None,
-                &connector.to_string(),
-                &service_name,
+                event_params,
             )
             .await
             .switch()
@@ -396,7 +424,7 @@ impl DisputeService for Disputes {
             .map_err(|e| e.into_grpc_status())?;
 
             let response = DisputeServiceTransformResponse {
-                event_type: WebhookEventType::WebhookDispute.into(),
+                event_type: WebhookEventType::WebhookDisputeOpened.into(),
                 content: Some(content),
                 source_verified,
                 response_ref_id: None,
@@ -409,7 +437,7 @@ impl DisputeService for Disputes {
 }
 
 async fn get_disputes_webhook_content(
-    connector_data: ConnectorData,
+    connector_data: ConnectorData<DefaultPCIHolder>,
     request_details: domain_types::connector_types::RequestDetails,
     webhook_secrets: Option<domain_types::connector_types::ConnectorWebhookSecrets>,
     connector_auth_details: Option<ConnectorAuthType>,
