@@ -3,6 +3,7 @@ pub mod transformers;
 use common_enums;
 use common_utils::{
     consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -526,7 +527,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: FloatMajorUnit
+    ],
     member_functions: {
         fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,
