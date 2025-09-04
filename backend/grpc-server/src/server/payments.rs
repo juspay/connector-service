@@ -46,7 +46,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{self, auth_from_metadata, grpc_logging_wrapper},
+    utils::{self,auth_from_metadata, connector_from_metadata,  grpc_logging_wrapper},
 };
 
 #[derive(Debug, Clone)]
@@ -189,6 +189,7 @@ impl Payments {
                 None,
             )
         })?;
+
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
         let should_do_order_create = connector_data.connector.should_do_order_create();
@@ -286,10 +287,10 @@ impl Payments {
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
-            flow_name: FlowName::Authorize,
-            event_config: &event_config,
+            flow_name: events::FlowName::Authorize,
+            event_config: &self.config.events,
             raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(&payload).unwrap_or_default(),
+                payload.masked_serialize().unwrap_or_default(),
             )),
             request_id,
             lineage_ids,
@@ -1235,17 +1236,17 @@ impl PaymentService for Payments {
                     let metadata = request.metadata().clone();
                     let payload = request.into_inner();
 
-                    //get connector data
-                    let connector_data = ConnectorData::get_connector_by_name(&connector);
+                //get connector data
+                let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-                    // Get connector integration
-                    let connector_integration: BoxedConnectorIntegrationV2<
-                        '_,
-                        SetupMandate,
-                        PaymentFlowData,
-                        SetupMandateRequestData<DefaultPCIHolder>,
-                        PaymentsResponseData,
-                    > = connector_data.connector.get_connector_integration_v2();
+                // Get connector integration
+                let connector_integration: BoxedConnectorIntegrationV2<
+                    '_,
+                    SetupMandate,
+                    PaymentFlowData,
+                    SetupMandateRequestData<DefaultPCIHolder>,
+                    PaymentsResponseData,
+                > = connector_data.connector.get_connector_integration_v2();
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -1256,7 +1257,7 @@ impl PaymentService for Payments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let should_do_order_create = connector_data.connector.should_do_order_create();
+                let should_do_order_create = connector_data.connector.should_do_order_create();
 
                     let order_id = if should_do_order_create {
                         let event_params = EventParams {
@@ -1284,9 +1285,9 @@ impl PaymentService for Payments {
                     };
                     let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
 
-                    let setup_mandate_request_data =
-                        SetupMandateRequestData::foreign_try_from(payload.clone())
-                            .map_err(|e| e.into_grpc_status())?;
+                let setup_mandate_request_data =
+                    SetupMandateRequestData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
 
                     // Create router data
                     let router_data: RouterDataV2<
@@ -1402,9 +1403,9 @@ impl PaymentService for Payments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    // Create repeat payment data
-                    let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
-                        .map_err(|e| e.into_grpc_status())?;
+                // Create repeat payment data
+                let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                    .map_err(|e| e.into_grpc_status())?;
 
                     // Create router data
                     let router_data: RouterDataV2<
