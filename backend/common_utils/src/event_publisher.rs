@@ -221,7 +221,18 @@ impl EventPublisher {
 
         // Process extraction
         for (target_path, extraction_path) in &self.config.extractions {
-            if let Some(value) = self.extract_from_request(&result, extraction_path) {
+            // Support fallback paths separated by |
+            let paths: Vec<&str> = extraction_path.split('|').collect();
+            let mut extracted_value = None;
+            
+            for path in paths {
+                if let Some(value) = self.extract_from_request(&result, path.trim()) {
+                    extracted_value = Some(value);
+                    break; // Use first successful extraction
+                }
+            }
+            
+            if let Some(value) = extracted_value {
                 // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
                 let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
                 if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
@@ -250,6 +261,20 @@ impl EventPublisher {
 
         let source = match first_part {
             "req" => event_value.get("request_data")?.clone(),
+            "header" => {
+                let headers = event_value.get("headers")?;
+                let header_name = path_parts.next()?;
+                let header_value = headers.get(header_name)?.as_str()?;
+                
+                // Check if there's a third part (structured header parsing)
+                if let Some(key) = path_parts.next() {
+                    // Parse structured header: "key1:value1,key2:value2"
+                    return self.parse_structured_header(header_value, key);
+                } else {
+                    // Return the raw header value
+                    return Some(serde_json::Value::String(header_value.to_string()));
+                }
+            }
             _ => return None,
         };
 
@@ -259,6 +284,18 @@ impl EventPublisher {
         }
 
         Some(current.clone())
+    }
+
+    fn parse_structured_header(&self, header_value: &str, target_key: &str) -> Option<serde_json::Value> {
+        // Parse "key1:value1,key2:value2" format
+        for pair in header_value.split(',') {
+            if let Some((key, value)) = pair.split_once(':') {
+                if key.trim() == target_key {
+                    return Some(serde_json::Value::String(value.trim().to_string()));
+                }
+            }
+        }
+        None
     }
 
     fn set_nested_value(
