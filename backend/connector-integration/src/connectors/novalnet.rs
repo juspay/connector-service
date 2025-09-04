@@ -5,7 +5,10 @@ use std::fmt::Debug;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
-    crypto, errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
+    crypto::{self, VerifySignature},
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    types::StringMinorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -525,14 +528,6 @@ macros::macro_connector_implementation!(
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::IncomingWebhook for Novalnet<T>
 {
-    fn get_webhook_source_verification_algorithm(
-        &self,
-        _request: &RequestDetails,
-    ) -> CustomResult<Box<dyn crypto::VerifySignature + Send>, domain_types::errors::ConnectorError>
-    {
-        Ok(Box::new(crypto::Sha256))
-    }
-
     fn get_webhook_source_verification_signature(
         &self,
         request: &RequestDetails,
@@ -592,6 +587,66 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         );
 
         Ok(message.into_bytes())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let algorithm = crypto::Sha256;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => {
+                tracing::warn!(
+                    target: "novalnet_webhook",
+                    "Missing webhook secret for Novalnet webhook verification - verification failed but continuing processing"
+                );
+                return Ok(false);
+            }
+        };
+
+        let signature = match self
+            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
+        {
+            Ok(sig) => sig,
+            Err(error) => {
+                tracing::warn!(
+                    target: "novalnet_webhook",
+                    "Failed to get webhook source verification signature for Novalnet: {} - verification failed but continuing processing",
+                    error
+                );
+                return Ok(false);
+            }
+        };
+
+        let message = match self
+            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
+        {
+            Ok(msg) => msg,
+            Err(error) => {
+                tracing::warn!(
+                    target: "novalnet_webhook",
+                    "Failed to get webhook source verification message for Novalnet: {} - verification failed but continuing processing",
+                    error
+                );
+                return Ok(false);
+            }
+        };
+
+        match algorithm.verify_signature(&connector_webhook_secrets.secret, &signature, &message) {
+            Ok(is_verified) => Ok(is_verified),
+            Err(error) => {
+                tracing::warn!(
+                    target: "novalnet_webhook",
+                    "Failed to verify webhook signature for Novalnet: {} - verification failed but continuing processing",
+                    error
+                );
+                Ok(false)
+            }
+        }
     }
 
     fn get_event_type(
