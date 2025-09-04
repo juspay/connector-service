@@ -12,9 +12,10 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
+use url::Url;
 
 use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
@@ -148,6 +149,23 @@ impl ConnectorMandateReferenceId {
     }
 }
 
+/// External vault proxy metadata
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(untagged)]
+pub enum ExternalVaultProxyMetadata {
+    /// VGS proxy data variant
+    VgsMetadata(VgsMetadata),
+}
+
+/// VGS proxy data
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct VgsMetadata {
+    /// External vault url
+    pub proxy_url: Url,
+    /// CA certificates to verify the vault server
+    pub certificate: Secret<String>,
+}
+
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
     fn get_raw_connector_response(&self) -> Option<String>;
@@ -279,6 +297,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    pub additional_headers: Option<std::collections::HashMap<String, Secret<String>>>,
 }
 
 impl PaymentFlowData {
@@ -679,6 +698,21 @@ impl PaymentFlowData {
 
     pub fn get_return_url(&self) -> Option<String> {
         self.return_url.clone()
+    }
+
+    // Helper methods for additional headers
+    pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
+        self.additional_headers.as_ref().and_then(|h| h.get(key))
+    }
+
+    pub fn get_vault_proxy_url(&self) -> Option<String> {
+        self.get_header("x-vault-proxy-url")
+            .map(|s| s.clone().expose().to_string())
+    }
+
+    pub fn get_ca_certificate(&self) -> Option<String> {
+        self.get_header("x-ca-certificate")
+            .map(|s| s.clone().expose().to_string())
     }
 }
 

@@ -169,7 +169,8 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
-                    )
+                        None,
+            )
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
@@ -361,7 +362,8 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
-                    )
+                        None,
+            )
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
