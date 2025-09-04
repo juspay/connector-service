@@ -7,6 +7,7 @@ use grpc_api_types::payments::{
     payment_service_client::PaymentServiceClient, PaymentServiceTransformRequest, RequestDetails,
 };
 use serde_json::json;
+use std::fmt::Write;
 use tonic::{transport::Channel, Request};
 
 // Helper function to construct Authorize.Net customer payment profile creation webhook JSON body
@@ -128,10 +129,10 @@ fn generate_webhook_signature(webhook_body: &[u8], secret: &str) -> String {
         .expect("Failed to generate signature");
 
     // Convert bytes to hex string manually
-    let hex_string = signature
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
+    let mut hex_string = String::with_capacity(signature.len() * 2);
+    for b in signature {
+        write!(&mut hex_string, "{:02x}", b).expect("writing to a String should never fail");
+    }
 
     format!("sha512={hex_string}")
 }

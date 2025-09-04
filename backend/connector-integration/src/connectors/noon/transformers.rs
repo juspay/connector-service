@@ -384,6 +384,7 @@ impl<
                         | WalletData::CashappQr(_)
                         | WalletData::SwishQr(_)
                         | WalletData::Mifinity(_)
+                        | WalletData::BluecodeRedirect { .. }
                         | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         )),
@@ -1187,6 +1188,7 @@ impl<
                         | WalletData::WeChatPayQr(_)
                         | WalletData::CashappQr(_)
                         | WalletData::SwishQr(_)
+                        | WalletData::BluecodeRedirect { .. }
                         | WalletData::Mifinity(_)
                         | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
