@@ -1,6 +1,6 @@
+use crate::connectors::macros::FlowTypes;
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
 use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::MinorUnit};
-use crate::connectors::macros::FlowTypes;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
@@ -37,7 +37,12 @@ const MAX_ID_LENGTH: usize = 20;
 
 // Helper function to get converted amount from router data
 fn get_converted_amount<
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + serde::Serialize,
     RD: FlowTypes,
 >(
     connector_router_data: &AuthorizedotnetRouterData<RD, T>,
@@ -597,7 +602,7 @@ fn create_regular_transaction_request<
     Ok(AuthorizedotnetTransactionRequest {
         transaction_type,
         amount: Some(get_converted_amount(
-            &item,
+            item,
             item.router_data.request.minor_amount,
             item.router_data.request.currency,
         )?),
