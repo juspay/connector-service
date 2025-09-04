@@ -1,5 +1,5 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::StringMajorUnit};
+use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
@@ -324,7 +324,7 @@ struct AuthorizationIndicatorType {
 pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     // General structure for transaction details in Authorize
     transaction_type: TransactionType,
-    amount: Option<StringMajorUnit>,
+    amount: Option<FloatMajorUnit>,
     currency_code: Option<api_enums::Currency>,
     payment: Option<PaymentDetails<T>>,
     profile: Option<ProfileDetails>,
@@ -623,7 +623,7 @@ pub struct CreateRepeatPaymentRequest {
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
     transaction_type: TransactionType,
-    amount: StringMajorUnit,
+    amount: FloatMajorUnit,
     currency_code: api_enums::Currency,
     profile: ProfileDetails,
     order: Option<Order>,
@@ -809,7 +809,7 @@ impl<
 pub struct AuthorizedotnetCaptureTransactionInternal {
     // Specific transaction details for Capture
     transaction_type: TransactionType,
-    amount: StringMajorUnit,
+    amount: FloatMajorUnit,
     ref_trans_id: String,
 }
 
@@ -1168,7 +1168,7 @@ enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetRefundTransactionDetails<T: PaymentMethodDataTypes> {
     transaction_type: TransactionType,
-    amount: StringMajorUnit,
+    amount: FloatMajorUnit,
     payment: PaymentDetails<T>,
     ref_trans_id: String,
 }
