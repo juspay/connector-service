@@ -1,5 +1,6 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, ext_traits::OptionExt, pii::Email};
+use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::MinorUnit};
+use crate::connectors::macros::FlowTypes;
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
@@ -33,6 +34,23 @@ type Error = error_stack::Report<domain_types::errors::ConnectorError>;
 
 // Constants
 const MAX_ID_LENGTH: usize = 20;
+
+// Helper function to get converted amount from router data
+fn get_converted_amount<
+    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize,
+    RD: FlowTypes,
+>(
+    connector_router_data: &AuthorizedotnetRouterData<RD, T>,
+    amount: MinorUnit,
+    currency: common_enums::Currency,
+) -> Result<String, Error> {
+    connector_router_data
+        .connector
+        .amount_converter
+        .convert(amount, currency)
+        .change_context(ConnectorError::RequestEncodingFailed)
+        .map(|converted| converted.get_amount_as_string())
+}
 
 // Helper functions for creating RawCardNumber from string
 fn create_raw_card_number_for_default_pci(
@@ -578,7 +596,11 @@ fn create_regular_transaction_request<
 
     Ok(AuthorizedotnetTransactionRequest {
         transaction_type,
-        amount: Some(item.router_data.request.amount.to_string()),
+        amount: Some(get_converted_amount(
+            &item,
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        )?),
         currency_code: Some(currency),
         payment: Some(payment_details),
         profile,
@@ -766,7 +788,11 @@ impl<
 
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
-            amount: item.router_data.request.amount.to_string(),
+            amount: get_converted_amount(
+                &item,
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )?,
             currency_code: currency,
             profile,
             order: Some(order),
@@ -858,12 +884,11 @@ impl<
 
         let transaction_request_payload = AuthorizedotnetCaptureTransactionInternal {
             transaction_type: TransactionType::PriorAuthCaptureTransaction,
-            amount: item
-                .router_data
-                .request
-                .amount_to_capture
-                .to_string()
-                .clone(),
+            amount: get_converted_amount(
+                &item,
+                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.currency,
+            )?,
             ref_trans_id: original_connector_txn_id,
         };
 
@@ -1268,7 +1293,11 @@ impl
         // Build the refund transaction request with parsed payment details
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
-            amount: item.router_data.request.minor_refund_amount.to_string(),
+            amount: get_converted_amount(
+                &item,
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )?,
             payment: payment_details,
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
@@ -1375,7 +1404,11 @@ impl
         // Build the refund transaction request with parsed payment details
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
-            amount: item.router_data.request.minor_refund_amount.to_string(),
+            amount: get_converted_amount(
+                &item,
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )?,
             payment: payment_details,
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
