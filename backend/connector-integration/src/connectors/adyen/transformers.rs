@@ -29,6 +29,7 @@ use domain_types::{
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
+use time::PrimitiveDateTime;
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
@@ -1593,6 +1594,8 @@ pub enum DisputeStatus {
 pub struct AdyenAdditionalDataWH {
     pub dispute_status: Option<DisputeStatus>,
     pub chargeback_reason_code: Option<String>,
+    #[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+    pub defense_period_ends_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1600,12 +1603,21 @@ pub struct AdyenAdditionalDataWH {
 pub struct AdyenNotificationRequestItemWH {
     pub original_reference: Option<String>,
     pub psp_reference: String,
+    pub amount: AdyenAmountWH,
     pub event_code: WebhookEventCode,
     pub merchant_account_code: String,
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
     pub additional_data: AdyenAdditionalDataWH,
+    #[serde(default, with = "common_utils::custom_serde::iso8601::option")]
+    pub event_date: Option<PrimitiveDateTime>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdyenAmountWH {
+    pub value: MinorUnit,
+    pub currency: common_enums::Currency,
 }
 
 fn is_success_scenario(is_success: &str) -> bool {
