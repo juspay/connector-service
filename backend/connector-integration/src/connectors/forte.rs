@@ -24,7 +24,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface};
+use hyperswitch_masking::{ExposeInterface, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
@@ -122,6 +122,27 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 
 // Empty ConnectorIntegrationV2 implementations for unsupported flows
+// Core payment flow implementations
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData> for Forte<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData> for Forte<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Forte<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData> for Forte<T>
+{
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData> for Forte<T>
 {
@@ -288,15 +309,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &ForteRouterData<PaymentsCaptureData, T>,
-            connectors: &Connectors,
-        ) -> CustomResult<Vec<(String, masking::Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 connector_types::PaymentCapture::get_content_type(self)
                     .to_string()
                     .into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.auth_type)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -304,7 +324,6 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &ForteRouterData<PaymentsCaptureData, T>,
-            connectors: &Connectors,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_payment_id = req
                 .request
@@ -313,7 +332,7 @@ macros::macro_connector_implementation!(
                 .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
             Ok(format!(
                 "{}/transactions/{}/capture",
-                self.base_url(connectors),
+                self.base_url(&req.connectors),
                 connector_payment_id
             ))
         }
@@ -336,15 +355,14 @@ macros::macro_connector_implementation!(
         fn get_headers(
             &self,
             req: &ForteRouterData<PaymentVoidData, T>,
-            connectors: &Connectors,
-        ) -> CustomResult<Vec<(String, masking::Maskable<String>)>, errors::ConnectorError> {
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
                 connector_types::PaymentVoidV2::get_content_type(self)
                     .to_string()
                     .into(),
             )];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            let mut api_key = self.get_auth_header(&req.auth_type)?;
             header.append(&mut api_key);
             Ok(header)
         }
@@ -352,7 +370,6 @@ macros::macro_connector_implementation!(
         fn get_url(
             &self,
             req: &ForteRouterData<PaymentVoidData, T>,
-            connectors: &Connectors,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_payment_id = req
                 .request
@@ -361,7 +378,7 @@ macros::macro_connector_implementation!(
                 .ok_or(errors::ConnectorError::MissingConnectorTransactionID)?;
             Ok(format!(
                 "{}/transactions/{}/void",
-                self.base_url(connectors),
+                self.base_url(&req.connectors),
                 connector_payment_id
             ))
         }

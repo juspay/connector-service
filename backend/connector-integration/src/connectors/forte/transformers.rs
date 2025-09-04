@@ -81,9 +81,9 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            amount: item.request.amount.into(),
+            amount: utils::to_currency_base_unit(item.request.amount, item.request.currency)?,
             currency: item.request.currency.to_string(),
-            payment_method_data: item.request.payment_method_data.clone(),
+            payment_method_data: item.request.payment_method_data,
         })
     }
 }
@@ -297,6 +297,7 @@ impl<T> TryFrom<ResponseRouterData<RefundResponse, T>>
         Ok(Self {
             connector_refund_id: refund_id.to_string(),
             refund_status: enums::RefundStatus::Success,
+            status_code: item.http_code,
         })
     }
 }
@@ -314,6 +315,7 @@ impl<T> TryFrom<ResponseRouterData<RefundSyncResponse, T>>
         Ok(Self {
             connector_refund_id: refund_id.to_string(),
             refund_status: enums::RefundStatus::Success,
+            status_code: item.http_code,
         })
     }
 }
