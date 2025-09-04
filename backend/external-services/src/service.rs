@@ -3,7 +3,12 @@ use std::{str::FromStr, time::Duration};
 use base64::engine::Engine;
 use common_enums::ApiClientError;
 use common_utils::ext_traits::AsyncExt;
-use common_utils::request::{Method, Request, RequestContent};
+// use base64::engine::Engine;
+use common_utils::{
+    lineage,
+    // consts::BASE64_ENGINE,
+    request::{Method, Request, RequestContent},
+};
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiErrorResponse, ConnectorError},
@@ -335,6 +340,8 @@ pub struct EventProcessingParams<'a> {
     pub event_config: &'a EventConfig,
     pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
+    pub lineage_ids: &'a lineage::LineageIds<'a>,
+    pub reference_id: &'a Option<String>,
 }
 
 #[tracing::instrument(
@@ -496,8 +503,18 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_ids = event_params.lineage_ids.to_owned();
+                        let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
+                            let mut additional_fields = std::collections::HashMap::new();
+                            if let Some(ref_id) = reference_id_clone {
+                                additional_fields.insert(
+                                    "reference_id".to_string(),
+                                    SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                );
+                            }
+
                             let event = Event {
                                 request_id: request_id.to_string(),
                                 timestamp: chrono::Utc::now().timestamp().into(),
@@ -510,7 +527,8 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields,
+                                lineage_ids,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -546,8 +564,18 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_ids = event_params.lineage_ids.to_owned();
+                        let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
+                            let mut additional_fields = std::collections::HashMap::new();
+                            if let Some(ref_id) = reference_id_clone {
+                                additional_fields.insert(
+                                    "reference_id".to_string(),
+                                    SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                );
+                            }
+
                             let event = Event {
                                 request_id: request_id.to_string(),
                                 timestamp: chrono::Utc::now().timestamp().into(),
@@ -560,7 +588,8 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields,
+                                lineage_ids,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -595,8 +624,18 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_ids = event_params.lineage_ids.to_owned();
+                        let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
+                            let mut additional_fields = std::collections::HashMap::new();
+                            if let Some(ref_id) = reference_id_clone {
+                                additional_fields.insert(
+                                    "reference_id".to_string(),
+                                    SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                );
+                            }
+
                             let event = Event {
                                 request_id: request_id.to_string(),
                                 timestamp: chrono::Utc::now().timestamp().into(),
@@ -609,7 +648,8 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: None,
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields,
+                                lineage_ids,
                             };
 
                             match emit_event_with_config(event, &event_config).await {

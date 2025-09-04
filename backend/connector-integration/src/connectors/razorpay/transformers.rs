@@ -400,11 +400,17 @@ impl<
                 field_name: "contact",
             })?;
 
-        let email = item.router_data.request.email.clone().ok_or(
-            domain_types::errors::ConnectorError::MissingRequiredField {
+        let billing_email = item
+            .router_data
+            .resource_common_data
+            .get_billing_email()
+            .ok();
+
+        let email = billing_email
+            .or(item.router_data.request.email.clone())
+            .ok_or(domain_types::errors::ConnectorError::MissingRequiredField {
                 field_name: "email",
-            },
-        )?;
+            })?;
 
         let order_id = item
             .router_data
