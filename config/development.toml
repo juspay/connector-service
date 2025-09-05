@@ -49,6 +49,7 @@ novalnet.base_url = "https://payport.novalnet.de/v2"
 nexinets.base_url = "https://apitest.payengine.de/v1"
 noon.base_url = "https://api-test.noonpayments.com/"
 mifinity.base_url = "https://demo.mifinity.com/"
+helcim.base_url = "https://api.helcim.com/"
 
 # Generic Events Configuration
 [events]
