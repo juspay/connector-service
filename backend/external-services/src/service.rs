@@ -51,8 +51,8 @@ use masking::{ErasedMaskSerialize, Maskable, Secret};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
-use tracing::field::Empty;
 use std::collections::HashMap;
+use tracing::field::Empty;
 
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;

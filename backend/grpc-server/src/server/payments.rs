@@ -48,7 +48,6 @@ use crate::{
     utils::{self, extract_headers_with_masking, grpc_logging_wrapper},
 };
 
-
 // Error handling utilities for webhook processing
 trait WebhookErrorExt<T> {
     #[allow(clippy::result_large_err)]
@@ -1138,7 +1137,7 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload: utils::MetadataPayload| {
+            |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let (connector, request_id) =

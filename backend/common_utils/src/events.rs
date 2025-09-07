@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
 use hyperswitch_masking::Secret;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     global_id::{
