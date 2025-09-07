@@ -206,7 +206,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),
@@ -268,7 +268,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),
@@ -329,7 +329,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),

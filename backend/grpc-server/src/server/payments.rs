@@ -1,7 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::{consts, errors::CustomResult, events, lineage, pii};
+use common_utils::{consts, errors::CustomResult, events, pii};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -48,14 +48,6 @@ use crate::{
     utils::{self, extract_headers_with_masking, grpc_logging_wrapper},
 };
 
-#[derive(Debug, Clone)]
-struct EventParams<'a> {
-    connector_name: &'a str,
-    service_name: &'a str,
-    request_id: &'a str,
-    lineage_ids: &'a lineage::LineageIds<'a>,
-    reference_id: &'a Option<String>,
-}
 
 // Error handling utilities for webhook processing
 trait WebhookErrorExt<T> {
@@ -415,8 +407,8 @@ impl Payments {
         // Execute connector processing
         let event_params = EventProcessingParams {
             flow_name: events::FlowName::CreateOrder,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
+            lineage_ids: base_event_params.lineage_ids,
+            reference_id: base_event_params.reference_id,
             ..base_event_params
         };
 
@@ -507,8 +499,8 @@ impl Payments {
         // Execute connector processing
         let event_params = EventProcessingParams {
             flow_name: events::FlowName::CreateOrder,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
+            lineage_ids: base_event_params.lineage_ids,
+            reference_id: base_event_params.reference_id,
             ..base_event_params
         };
 
@@ -592,8 +584,8 @@ impl Payments {
         // Execute connector processing
         let event_params = EventProcessingParams {
             flow_name: events::FlowName::CreateSessionToken,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
+            lineage_ids: base_event_params.lineage_ids,
+            reference_id: base_event_params.reference_id,
             ..base_event_params
         };
 
@@ -1146,7 +1138,7 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            |request, metadata_payload: utils::MetadataPayload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let (connector, request_id) =
@@ -1358,6 +1350,12 @@ impl PaymentService for Payments {
                             payload.masked_serialize().unwrap_or_default(),
                         )),
                         request_id: &request_id,
+                        headers: Some(extract_headers_with_masking(
+                            &metadata,
+                            &self.config.events.unmasked_headers.keys,
+                        )),
+                        lineage_ids: &metadata_payload.lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
                     };
 
                     let response = execute_connector_processing_step(
