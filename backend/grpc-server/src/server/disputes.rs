@@ -107,6 +107,7 @@ impl DisputeService for Disputes {
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 async move {
+                    let metadata = request.metadata().clone();
                     let payload = request.into_inner();
                     let utils::MetadataPayload {
                         connector,
@@ -152,7 +153,7 @@ impl DisputeService for Disputes {
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
-                    let headers = crate::utils::extract_headers_with_masking(
+                    let headers = utils::extract_headers_with_masking(
                         &metadata,
                         &self.config.events.unmasked_headers.keys,
                     );
@@ -305,6 +306,7 @@ impl DisputeService for Disputes {
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 async move {
+                    let metadata = request.metadata().clone();
                     let payload = request.into_inner();
                     let utils::MetadataPayload {
                         connector,
@@ -350,7 +352,7 @@ impl DisputeService for Disputes {
                         response: Err(ErrorResponse::default()),
                     };
 
-                    let headers = crate::utils::extract_headers_with_masking(
+                    let headers = utils::extract_headers_with_masking(
                         &metadata,
                         &self.config.events.unmasked_headers.keys,
                     );
