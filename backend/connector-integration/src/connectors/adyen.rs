@@ -690,9 +690,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 ),
                 status_code: 200,
                 response_headers: None,
-                challenge_required_by: notif.additional_data.defense_period_ends_at,
-                created_at: notif.event_date,
-                updated_at: notif.event_date,
             },
         )
     }

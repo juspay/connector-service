@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use time::PrimitiveDateTime;
 
 use common_enums::{
     AttemptStatus, AuthenticationType, Currency, DisputeStatus, EventClass, PaymentMethod,
@@ -1137,12 +1136,6 @@ pub struct DisputeWebhookDetailsResponse {
     pub response_headers: Option<http::HeaderMap>,
     /// connector_reason
     pub connector_reason_code: Option<String>,
-    /// challenge_required_by
-    pub challenge_required_by: Option<PrimitiveDateTime>,
-    /// created_at
-    pub created_at: Option<PrimitiveDateTime>,
-    /// updated_at
-    pub updated_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
