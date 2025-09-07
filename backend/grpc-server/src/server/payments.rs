@@ -1680,7 +1680,7 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload: utils::MetadataPayload| {
+            |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let (connector, request_id) =

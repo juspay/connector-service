@@ -1,4 +1,4 @@
-use std::{collections::HashMap, {str::FromStr}, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
@@ -517,13 +517,12 @@ macro_rules! implement_connector_operation {
 }
 }
 
-
 pub fn extract_headers_with_masking(
     metadata: &metadata::MetadataMap,
-    unmasked_keys: &[String]
+    unmasked_keys: &[String],
 ) -> HashMap<String, hyperswitch_masking::Secret<String>> {
     let mut headers = HashMap::new();
-    
+
     for key_and_value in metadata.iter() {
         if let metadata::KeyAndValueRef::Ascii(key, value) = key_and_value {
             let key_str = key.as_str().to_lowercase();
@@ -534,10 +533,10 @@ pub fn extract_headers_with_masking(
                 // Mask all other headers
                 "**MASKED**".to_string()
             };
-            
+
             headers.insert(
                 key.as_str().to_string(),
-                hyperswitch_masking::Secret::new(header_value)
+                hyperswitch_masking::Secret::new(header_value),
             );
         }
     }
