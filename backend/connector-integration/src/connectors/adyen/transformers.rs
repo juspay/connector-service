@@ -29,7 +29,6 @@ use domain_types::{
 use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use time::PrimitiveDateTime;
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
@@ -1594,8 +1593,6 @@ pub enum DisputeStatus {
 pub struct AdyenAdditionalDataWH {
     pub dispute_status: Option<DisputeStatus>,
     pub chargeback_reason_code: Option<String>,
-    #[serde(default, with = "common_utils::custom_serde::iso8601::option")]
-    pub defense_period_ends_at: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1610,8 +1607,6 @@ pub struct AdyenNotificationRequestItemWH {
     pub success: String,
     pub reason: Option<String>,
     pub additional_data: AdyenAdditionalDataWH,
-    #[serde(default, with = "common_utils::custom_serde::iso8601::option")]
-    pub event_date: Option<PrimitiveDateTime>,
 }
 
 #[derive(Debug, Deserialize)]
