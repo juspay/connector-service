@@ -150,19 +150,16 @@ impl ConnectorMandateReferenceId {
 }
 
 /// External vault proxy metadata
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 #[serde(untagged)]
 pub enum ExternalVaultProxyMetadata {
-    /// VGS proxy data variant
     VgsMetadata(VgsMetadata),
 }
 
-/// VGS proxy data
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct VgsMetadata {
-    /// External vault url
     pub proxy_url: Url,
-    /// CA certificates to verify the vault server
     pub certificate: Secret<String>,
 }
 
