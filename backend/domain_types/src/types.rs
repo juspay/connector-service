@@ -63,7 +63,7 @@ use crate::{
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        ExternalVaultProxyMetadata, MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
+        MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,

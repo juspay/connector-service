@@ -250,19 +250,18 @@ where
 
                 // Use the injector API with the updated signature
                 let injector_request = injector::InjectorRequest::new(
-                    request.url.clone(),               // endpoint (now single URL)
-                    request.method.to_http_method(),   // http_method
-                    template,                          // template
-                    token_data,                        // token_data
-                    Some(headers),                     // headers
-                    // Fallback proxy configuration
+                    request.url.clone(),
+                    request.method.to_http_method(),
+                    template,
+                    token_data,
+                    Some(headers),
                     proxy.https_url
                         .as_ref()
                         .or(proxy.http_url.as_ref())
-                        .map(|url| Secret::new(url.clone())),  // proxy_url
-                    None, // No fallback client cert
-                    None, // No fallback client key
-                    None, // No fallback CA cert
+                        .map(|url| Secret::new(url.clone())),
+                    None,
+                    None,
+                    None,
                 );
 
                 // New injector handles HTTP request internally and returns enhanced response

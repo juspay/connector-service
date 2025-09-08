@@ -149,19 +149,6 @@ impl ConnectorMandateReferenceId {
     }
 }
 
-/// External vault proxy metadata
-#[derive(Debug, Clone, serde::Deserialize)]
-#[serde(untagged)]
-pub enum ExternalVaultProxyMetadata {
-    VgsMetadata(VgsMetadata),
-}
-
-
-#[derive(Debug, Clone, serde::Deserialize)]
-pub struct VgsMetadata {
-    pub proxy_url: Url,
-    pub certificate: Secret<String>,
-}
 
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
