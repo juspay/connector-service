@@ -435,7 +435,7 @@ impl<
                             error_object: None,
                         })
                     })?;
-                    
+
                     Ok(PaymentMethodData::Crypto(
                         payment_method_data::CryptoData {
                             pay_currency: crypto_currency.pay_currency,
