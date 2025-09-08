@@ -197,29 +197,14 @@ where
                             connector: event_params.connector_name.to_string(),
                             url: Some(url.clone()),
                             stage: EventStage::ConnectorCall,
-                            latency: Some(latency),
+                            latency_ms: Some(latency),
                             status_code: Some(status_code),
-                            request_data: event_params.raw_request_data.clone(),
-                            connector_request_data: req.clone().map(Secret::new),
-                            connector_response_data: res_body.map(Secret::new),
-                            processing_status: None,
-                            error_details: None,
+                            request_data: req.clone(),
+                            response_data: res_body,
                             additional_fields: std::collections::HashMap::new(),
                         };
 
-                        match emit_event_with_config(event, event_params.event_config) {
-                            Ok(true) => tracing::info!(
-                                "Successfully published response event for {}",
-                                event_params.connector_name
-                            ),
-                            Ok(false) => tracing::info!(
-                                "Event publishing is disabled for {}",
-                                event_params.connector_name
-                            ),
-                            Err(e) => {
-                                tracing::error!("Failed to publish response event: {:?}", e)
-                            }
-                        }
+                        emit_event_with_config(event, event_params.event_config);
                     }
                 }
                 Ok(Err(error_body)) => {
@@ -239,29 +224,14 @@ where
                             connector: event_params.connector_name.to_string(),
                             url: Some(url.clone()),
                             stage: EventStage::ConnectorCall,
-                            latency: Some(latency),
+                            latency_ms: Some(latency),
                             status_code: Some(status_code),
-                            request_data: event_params.raw_request_data.clone(),
-                            connector_request_data: req.clone().map(Secret::new),
-                            connector_response_data: error_res_body.map(Secret::new),
-                            processing_status: None,
-                            error_details: None,
+                            request_data: req.clone(),
+                            response_data: error_res_body,
                             additional_fields: std::collections::HashMap::new(),
                         };
 
-                        match emit_event_with_config(event, event_params.event_config) {
-                            Ok(true) => tracing::info!(
-                                "Successfully published error response event for {}",
-                                event_params.connector_name
-                            ),
-                            Ok(false) => tracing::info!(
-                                "Event publishing is disabled for {}",
-                                event_params.connector_name
-                            ),
-                            Err(e) => {
-                                tracing::error!("Failed to publish error response event: {:?}", e)
-                            }
-                        }
+                        emit_event_with_config(event, event_params.event_config);
                     }
                 }
                 Err(network_error) => {
@@ -270,6 +240,9 @@ where
                         event_params.connector_name,
                         network_error
                     );
+
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
 
                     // Emit network error event
                     {
@@ -280,29 +253,14 @@ where
                             connector: event_params.connector_name.to_string(),
                             url: Some(url.clone()),
                             stage: EventStage::ConnectorCall,
-                            latency: None,
+                            latency_ms: Some(latency),
                             status_code: None,
-                            request_data: event_params.raw_request_data.clone(),
-                            connector_request_data: req.clone().map(Secret::new),
-                            connector_response_data: None,
-                            processing_status: None,
-                            error_details: None,
+                            request_data: req.clone(),
+                            response_data: None,
                             additional_fields: std::collections::HashMap::new(),
                         };
 
-                        match emit_event_with_config(event, event_params.event_config) {
-                            Ok(true) => tracing::info!(
-                                "Successfully published network error event for {}",
-                                event_params.connector_name
-                            ),
-                            Ok(false) => tracing::info!(
-                                "Event publishing is disabled for {}",
-                                event_params.connector_name
-                            ),
-                            Err(e) => {
-                                tracing::error!("Failed to publish network error event: {:?}", e)
-                            }
-                        }
+                        emit_event_with_config(event, event_params.event_config);
                     }
                 }
             }
@@ -372,82 +330,9 @@ where
                             match handle_response_result {
                                 Ok(data) => {
                                     tracing::info!("Transformer completed successfully");
-
-                                    // Emit successful response processing audit event
-                                    {
-                                        let event = Event {
-                                            request_id: event_params.request_id.to_string(),
-                                            timestamp: chrono::Utc::now().timestamp().into(),
-                                            flow_type: event_params.flow_name,
-                                            connector: event_params.connector_name.to_string(),
-                                            url: None,
-                                            stage: EventStage::ConnectorResponseProcessing,
-                                            latency: None,
-                                            status_code: None,
-                                            request_data: None,
-                                            connector_request_data: None,
-                                            connector_response_data: None,
-                                            processing_status: Some("success".to_string()),
-                                            error_details: None,
-                                            additional_fields: std::collections::HashMap::new(),
-                                        };
-
-                                        match emit_event_with_config(event, event_params.event_config) {
-                                            Ok(true) => tracing::info!(
-                                                "Successfully published response processing success event for {}",
-                                                event_params.connector_name
-                                            ),
-                                            Ok(false) => tracing::info!(
-                                                "Event publishing is disabled for {}",
-                                                event_params.connector_name
-                                            ),
-                                            Err(e) => tracing::error!(
-                                                "Failed to publish response processing success event: {:?}",
-                                                e
-                                            ),
-                                        }
-                                    }
-
                                     Ok(data)
                                 }
-                                Err(err) => {
-                                    // Emit failed response processing audit event
-                                    {
-                                        let event = Event {
-                                            request_id: event_params.request_id.to_string(),
-                                            timestamp: chrono::Utc::now().timestamp().into(),
-                                            flow_type: event_params.flow_name,
-                                            connector: event_params.connector_name.to_string(),
-                                            url: None,
-                                            stage: EventStage::ConnectorResponseProcessing,
-                                            latency: None,
-                                            status_code: None,
-                                            request_data: None,
-                                            connector_request_data: None,
-                                            connector_response_data: None,
-                                            processing_status: Some("failed".to_string()),
-                                            error_details: Some(err.to_string()),
-                                            additional_fields: std::collections::HashMap::new(),
-                                        };
-
-                                        match emit_event_with_config(event, event_params.event_config) {
-                                            Ok(true) => tracing::info!(
-                                                "Successfully published response processing failure event for {}",
-                                                event_params.connector_name
-                                            ),
-                                            Ok(false) => tracing::info!(
-                                                "Event publishing is disabled for {}",
-                                                event_params.connector_name
-                                            ),
-                                            Err(e) => tracing::error!(
-                                                "Failed to publish response processing failure event: {:?}",
-                                                e
-                                            ),
-                                        }
-                                    }
-
-                                    Err(err)
-                                }
+                                Err(err) => Err(err),
                             }?
                         }
                         Err(body) => {

@@ -12,7 +12,6 @@ use crate::{
     },
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
     types::TimeRange,
-    SecretSerdeValue,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -184,15 +183,12 @@ pub struct Event {
     pub connector: String,
     pub url: Option<String>,
     pub stage: EventStage,
-    pub latency: Option<u64>,
+    pub latency_ms: Option<u64>,
     pub status_code: Option<u16>,
-    pub request_data: Option<SecretSerdeValue>,
-    pub connector_request_data: Option<SecretSerdeValue>,
-    pub connector_response_data: Option<SecretSerdeValue>,
-    pub processing_status: Option<String>,
-    pub error_details: Option<String>,
+    pub request_data: Option<serde_json::Value>,
+    pub response_data: Option<serde_json::Value>,
     #[serde(flatten)]
-    pub additional_fields: HashMap<String, SecretSerdeValue>,
+    pub additional_fields: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -241,18 +237,14 @@ impl FlowName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventStage {
     ConnectorCall,
-    ConnectorResponseProcessing,
     GrpcRequest,
-    GrpcResponse,
 }
 
 impl EventStage {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ConnectorCall => "CONNECTOR_CALL",
-            Self::ConnectorResponseProcessing => "CONNECTOR_RESPONSE_PROCESSING",
             Self::GrpcRequest => "GRPC_REQUEST",
-            Self::GrpcResponse => "GRPC_RESPONSE",
         }
     }
 }
