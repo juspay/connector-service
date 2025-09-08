@@ -41,6 +41,3 @@ TARGET_BASE="backend/connector-integration/src/connectors"
 cp "$TEMP_DIR/$SPARSE_FILE_PATH" "$TARGET_BASE"
 
 echo "Connector file copied to: $TARGET_BASE"
-
-# Final cleanup
-rm -rf "$TEMP_DIR"

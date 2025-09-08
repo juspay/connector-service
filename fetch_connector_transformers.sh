@@ -45,6 +45,3 @@ mkdir -p "$TARGET_BASE"
 cp -r ".hyperswitch_tmp_clone/crates/hyperswitch_connectors/src/connectors/${CONNECTOR_NAME}" "$TARGET_FOLDER"
 
 echo "Connector folder copied to: $TARGET_FOLDER"
-
-# Final cleanup
-rm -rf "$TEMP_DIR"
