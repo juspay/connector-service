@@ -18,10 +18,10 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
     ConnectorData<T>
 {
     pub fn get_connector_by_name(connector_name: &ConnectorEnum) -> Self {
-        let connector = Self::convert_connector(connector_name.clone());
+        let connector = Self::convert_connector(*connector_name);
         Self {
             connector,
-            connector_name: connector_name.clone(),
+            connector_name: *connector_name,
         }
     }
 

@@ -37,6 +37,8 @@ pub const X_REQUEST_ID: &str = "x-request-id";
 pub const X_CONNECTOR: &str = "x-connector";
 /// Header key for merchant identification
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
+/// Header key for reference identification
+pub const X_REFERENCE_ID: &str = "x-reference-id";
 
 // =============================================================================
 // Authentication Headers (Internal)
@@ -54,6 +56,12 @@ pub const X_KEY2: &str = "x-key2";
 pub const X_API_SECRET: &str = "x-api-secret";
 /// Auth Key Map header
 pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
+
+/// Header key for lineage metadata fields
+pub const X_LINEAGE_IDS: &str = "x-lineage-ids";
+
+/// Prefix for lineage fields in additional_fields
+pub const LINEAGE_FIELD_PREFIX: &str = "lineage_";
 
 // =============================================================================
 // Error Messages and Codes
