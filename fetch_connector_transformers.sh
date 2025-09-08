@@ -15,7 +15,7 @@ REPO_URL="https://github.com/juspay/hyperswitch.git"
 SPARSE_PATH="crates/hyperswitch_connectors/src/connectors/${CONNECTOR_NAME}"
 
 # Temporary directory (in current directory)
-TEMP_DIR=".hyperswitch_tmp_clone"
+TEMP_DIR=".hyperswitch_tmp_clone_transformers"
 
 # Clean up previous temp if it exists
 rm -rf "$TEMP_DIR"
@@ -36,12 +36,12 @@ cd "$OLDPWD"
 
 # Define destination path
 TARGET_BASE="backend/connector-integration/src/connectors"
-TARGET_FOLDER="${TARGET_BASE}/${CONNECTOR_NAME}"
+TARGET_FOLDER="${TARGET_BASE}/"
 
 # Create target directory if it doesn't exist
 mkdir -p "$TARGET_BASE"
 
 # Copy only the connector folder
-cp -r ".hyperswitch_tmp_clone/crates/hyperswitch_connectors/src/connectors/${CONNECTOR_NAME}" "$TARGET_FOLDER"
+cp -r ".hyperswitch_tmp_clone_transformers/crates/hyperswitch_connectors/src/connectors/${CONNECTOR_NAME}" "$TARGET_FOLDER"
 
 echo "Connector folder copied to: $TARGET_FOLDER"
