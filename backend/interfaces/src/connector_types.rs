@@ -5,7 +5,7 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, CompleteAuthorizeRequestData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
+        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
@@ -39,7 +39,6 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + RefundSyncV2
     + DisputeDefend
     + SubmitEvidenceV2
-    + CompleteAuthorizeV2
 {
 }
 
@@ -170,15 +169,6 @@ pub trait DisputeDefend:
 {
 }
 
-pub trait CompleteAuthorizeV2:
-    ConnectorIntegrationV2<
-    connector_flow::CompleteAuthorize,
-    PaymentFlowData,
-    CompleteAuthorizeRequestData,
-    PaymentsResponseData,
->
-{
-}
 
 pub trait IncomingWebhook {
     fn verify_webhook_source(
