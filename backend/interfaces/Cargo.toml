@@ -13,7 +13,7 @@ serde = { version = "1.0.189", features = ["derive"] }
 serde_json = "1.0.107"
 
 
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "cff1b2d52", package = "masking" }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", rev = "382532fbd", package = "masking" }
 
 
 utoipa = { version = "4.2.0", features = ["preserve_order", "preserve_path_order"] }
