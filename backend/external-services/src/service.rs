@@ -217,47 +217,29 @@ where
                 tracing::debug!("Creating injector request with token data using unified API");
                 
 
-                // Get the request body template
-                let template = request
-                    .body
-                    .as_ref()
+                // Extract template and combine headers
+                let template = request.body.as_ref()
                     .ok_or(ConnectorError::RequestEncodingFailed)?
-                    .get_inner_value()
-                    .expose()
-                    .to_string();
+                    .get_inner_value().expose().to_string();
 
-                // Convert and combine all headers for injector
-                let mut headers: HashMap<String, Secret<String>> = request.headers
-                    .iter()
-                    .map(|(key, value)| {
-                        let header_value = match value {
-                            Maskable::Normal(val) => val.clone(),
-                            Maskable::Masked(val) => val.clone().expose().to_string(),
-                        };
-                        (key.clone(), Secret::new(header_value))
-                    })
+                let headers = request.headers.iter()
+                    .map(|(key, value)| (key.clone(), Secret::new(match value {
+                        Maskable::Normal(val) => val.clone(),
+                        Maskable::Masked(val) => val.clone().expose().to_string(),
+                    })))
+                    .chain(router_data.resource_common_data.get_additional_headers()
+                        .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
+                        .into_iter().flatten())
                     .collect();
 
-                // Add additional headers from router data (including vault metadata)
-                if let Some(additional_headers) = router_data.resource_common_data.get_additional_headers() {
-                    tracing::debug!(
-                        additional_header_count = additional_headers.len(),
-                        has_vault_metadata = additional_headers.contains_key(EXTERNAL_VAULT_METADATA_HEADER),
-                        "Adding additional headers from router data to injector request"
-                    );
-                    headers.extend(additional_headers.iter().map(|(k, v)| (k.clone(), v.clone())));
-                }
-
-                // Use the injector API with the updated signature
+                // Create injector request
                 let injector_request = injector::InjectorRequest::new(
                     request.url.clone(),
                     request.method.to_http_method(),
                     template,
                     token_data,
                     Some(headers),
-                    proxy.https_url
-                        .as_ref()
-                        .or(proxy.http_url.as_ref())
+                    proxy.https_url.as_ref().or(proxy.http_url.as_ref())
                         .map(|url| Secret::new(url.clone())),
                     None,
                     None,
