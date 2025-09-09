@@ -21,7 +21,7 @@ pub trait ConnectorRequestReference {
 }
 
 pub trait AdditionalHeaders {
-    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>>;
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>>;
 }
 
 impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowData {
@@ -31,8 +31,8 @@ impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowDat
 }
 
 impl AdditionalHeaders for domain_types::connector_types::PaymentFlowData {
-    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
-        self.additional_vault_headers.as_ref()
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        self.vault_headers.as_ref()
     }
 }
 
@@ -43,8 +43,8 @@ impl ConnectorRequestReference for domain_types::connector_types::RefundFlowData
 }
 
 impl AdditionalHeaders for domain_types::connector_types::RefundFlowData {
-    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
-        // RefundFlowData might not have additional_vault_headers, so return None
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        // RefundFlowData might not have vault_headers, so return None
         None
     }
 }
@@ -56,8 +56,8 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 
 impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
-    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
-        // DisputeFlowData might not have additional_vault_headers, so return None
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        // DisputeFlowData might not have vault_headers, so return None
         None
     }
 }
@@ -234,7 +234,7 @@ where
                     .chain(
                         router_data
                             .resource_common_data
-                            .get_additional_vault_headers()
+                            .get_vault_headers()
                             .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
                             .into_iter()
                             .flatten(),

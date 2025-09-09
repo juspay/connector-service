@@ -279,7 +279,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
-    pub additional_vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
+    pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
 }
 
 impl PaymentFlowData {
@@ -684,9 +684,7 @@ impl PaymentFlowData {
 
     // Helper methods for additional headers
     pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
-        self.additional_vault_headers
-            .as_ref()
-            .and_then(|h| h.get(key))
+        self.vault_headers.as_ref().and_then(|h| h.get(key))
     }
 }
 

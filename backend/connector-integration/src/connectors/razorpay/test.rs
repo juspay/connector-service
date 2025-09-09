@@ -97,7 +97,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -263,7 +263,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -381,7 +381,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -521,7 +521,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -828,7 +828,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
-                additional_vault_headers: None,
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1001,7 +1001,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
-                additional_vault_headers: None,
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1176,7 +1176,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1273,7 +1273,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1375,7 +1375,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
-                    additional_vault_headers: None,
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1514,7 +1514,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
-                additional_vault_headers: None,
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1634,7 +1634,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
-                additional_vault_headers: None,
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1743,7 +1743,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
-                additional_vault_headers: None,
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
