@@ -391,8 +391,7 @@ impl<F> TryFrom<ResponseRouterData<VoltPsyncResponse, Self>>
             Err(err) => err.attempt_status.unwrap_or(AttemptStatus::Pending),
         };
         let status = get_attempt_status((item.response.status.clone(), current_status));
-        let mut router_data = item.router_data;
-        router_data.response = match status {
+        let payments_response_data = match status {
             AttemptStatus::Failure => {
                 Err(ErrorResponse {
                     code: item.response.status.clone().to_string(),
@@ -423,7 +422,15 @@ impl<F> TryFrom<ResponseRouterData<VoltPsyncResponse, Self>>
                 })
             }
         };
-        Ok(router_data)
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response: payments_response_data,
+            ..item.router_data
+        })
     }
 }
 
