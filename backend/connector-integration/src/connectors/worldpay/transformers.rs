@@ -794,25 +794,25 @@ pub fn get_resource_id<T, F>(
 where
     F: Fn(String) -> T,
 {
+    // First check top-level _links (for capture, authorize, etc.)
     let optional_reference_id = response
-        .other_fields
+        .links
         .as_ref()
-        .and_then(|other_fields| match other_fields {
-            WorldpayPaymentResponseFields::AuthorizedResponse(res) => res
-                .links
-                .as_ref()
-                .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h)),
-            WorldpayPaymentResponseFields::DDCResponse(res) => {
-                res.actions.supply_ddc_data.href.split('/').nth_back(1)
-            }
-            WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
-                .actions
-                .complete_three_ds_challenge
-                .href
-                .split('/')
-                .nth_back(1),
-            WorldpayPaymentResponseFields::FraudHighRisk(_)
-            | WorldpayPaymentResponseFields::RefusedResponse(_) => None,
+        .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h))
+        .or_else(|| {
+            // Fallback to variant-specific logic for DDC and 3DS challenges
+            response.other_fields.as_ref().and_then(|other_fields| match other_fields {
+                WorldpayPaymentResponseFields::DDCResponse(res) => {
+                    res.actions.supply_ddc_data.href.split('/').nth_back(1)
+                }
+                WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
+                    .actions
+                    .complete_three_ds_challenge
+                    .href
+                    .split('/')
+                    .nth_back(1),
+                _ => None,
+            })
         })
         .map(|href| {
             urlencoding::decode(href)
