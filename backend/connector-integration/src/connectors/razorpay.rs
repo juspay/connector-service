@@ -857,6 +857,7 @@ impl<
                 notif.entity.entity,
                 notif.entity.status,
             )?,
+            mandate_reference: None,
             connector_response_reference_id: None,
             error_code: notif.entity.error_code,
             error_message: notif.entity.error_reason,

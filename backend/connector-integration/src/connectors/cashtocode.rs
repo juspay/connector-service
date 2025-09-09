@@ -237,6 +237,7 @@ impl<
             ),
             status: common_enums::AttemptStatus::Charged,
             status_code: 200,
+            mandate_reference: None,
             connector_response_reference_id: None,
             error_code: None,
             error_message: None,

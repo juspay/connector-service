@@ -261,6 +261,7 @@ impl<
             resource_id: Some(ResponseId::ConnectorTransactionId(transaction_id.clone())),
             status: common_enums::AttemptStatus::from(status),
             status_code: 200,
+            mandate_reference: None,
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
