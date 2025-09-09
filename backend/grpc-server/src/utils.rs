@@ -169,7 +169,7 @@ pub fn auth_from_metadata(
             key1: parse_metadata(metadata, X_KEY1)?.to_string().into(),
             api_secret: parse_metadata(metadata, X_API_SECRET)?.to_string().into(),
         }),
-        "huth-key" => Ok(ConnectorAuthType::MultiAuthKey {
+        "multi-auth-key" => Ok(ConnectorAuthType::MultiAuthKey {
             api_key: parse_metadata(metadata, X_API_KEY)?.to_string().into(),
             key1: parse_metadata(metadata, X_KEY1)?.to_string().into(),
             key2: parse_metadata(metadata, X_KEY2)?.to_string().into(),
