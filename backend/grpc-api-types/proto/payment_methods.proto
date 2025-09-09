@@ -141,9 +141,9 @@ message OnlineBankingPaymentMethodType {
     Sofort sofort = 11;                                      // Sofort - German online banking payment method
     Trustly trustly = 12;                                    // Trustly - European online banking payment method
     Giropay giropay = 13;                                    // Giropay - German bank transfer payment method
-    EPS eps = 14;                                            // EPS - Austrian bank transfer system
+    Eps eps = 14;                                            // EPS - Austrian bank transfer system
     Przelewy24 przelewy24 = 15;                              // Przelewy24 - Polish payment system
-    PSE pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
+    Pse pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
   }
 }
 
@@ -626,10 +626,9 @@ message PermataBankTransfer {
 */
 
 // ============================================================================
-// ONLINE BANKING PAYMENT METHODS - TODO: Not yet supported
+// ONLINE BANKING PAYMENT METHODS
 // ============================================================================
 
-/*
 // Thai online banking systems
 message OnlineBankingThailand {
   // Fields will be added as needed for Thai online banking integration
@@ -659,15 +658,15 @@ message OnlineBankingPoland {
 message OnlineBankingSlovakia {
   // Fields will be added as needed for Slovak online banking integration
 }
-*/
 
 // UK Open Banking - Open Banking implementation in the UK
 message OpenBankingUK {
   // Country code for UK Open Banking
   optional string country = 1;
+  // Bank issuer for UK Open Banking
+  optional string issuer = 2;
 }
 
-/*
 // Open Banking Payment Initiation Service
 message OpenBankingPIS {
   // Fields will be added as needed for Open Banking PIS integration
@@ -699,7 +698,7 @@ message Giropay {
 }
 
 // EPS (Electronic Payment Standard) - Austrian bank transfer system
-message EPS {
+message Eps {
   // Fields will be added as needed for EPS integration
 }
 
@@ -709,10 +708,9 @@ message Przelewy24 {
 }
 
 // PSE (Pagos Seguros en Línea) - Colombian online banking
-message PSE {
+message Pse {
   // Fields will be added as needed for PSE integration
 }
-*/
 
 // ============================================================================
 // BUY NOW, PAY LATER PAYMENT METHODS - TODO: Not yet supported

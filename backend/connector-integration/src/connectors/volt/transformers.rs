@@ -2,6 +2,7 @@
 use common_enums::{self, AttemptStatus, Currency};
 use common_utils::{
     consts,
+    id_type::CustomerId,
     request::Method,
     types::MinorUnit,
 };
@@ -154,11 +155,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             .router_data
                             .resource_common_data
                             .get_billing_last_name()?,
-                        reference: item.router_data.request.customer_id.clone().ok_or(
-                            errors::ConnectorError::MissingRequiredField {
-                                field_name: "customer_id"
-                            }
-                        )?,
+                        reference: item.router_data.resource_common_data
+                            .get_customer_id()
+                            .unwrap_or_else(|_| CustomerId::default()),
                     };
                     let transaction_type = TransactionType::Services; //transaction_type is a form of enum, it is pre defined and value for this can not be taken from user so we are keeping it as Services as this transaction is type of service.
 

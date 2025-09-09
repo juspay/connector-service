@@ -428,18 +428,14 @@ impl<
                         },
                     }
                 },
-                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking) => {
-                    match online_banking.online_banking_type {
+                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
+                    match online_banking_type.online_banking_type {
                         Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(open_banking_uk)) => {
-                            let country = match open_banking_uk.country {
-                                Some(country_str) => CountryAlpha2::from_str(&country_str).ok(),
-                                None => None,
-                            };
-                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::OpenBankingUk {
-                                issuer: None, // Will be determined by the connector
-                                country,
+                            Ok(PaymentMethodData::BankRedirect(crate::payment_method_data::BankRedirectData::OpenBankingUk {
+                                issuer: open_banking_uk.issuer.and_then(|i| common_enums::BankNames::from_str(&i).ok()),
+                                country: open_banking_uk.country.and_then(|c| CountryAlpha2::from_str(&c).ok()),
                             }))
-                        },
+                        }
                         _ => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -983,6 +979,7 @@ impl<
             None => None,
         };
 
+        println!("Converted email: {:?}", value);
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
