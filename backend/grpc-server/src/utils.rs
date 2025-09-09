@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
@@ -239,7 +239,7 @@ pub fn auth_from_metadata(
         "temporary-auth" => Ok(ConnectorAuthType::TemporaryAuth),
         "currency-auth-key" => {
             let auth_key_map_str = parse_metadata(metadata, X_AUTH_KEY_MAP)?;
-            let auth_key_map: std::collections::HashMap<
+            let auth_key_map: HashMap<
                 common_enums::enums::Currency,
                 common_utils::pii::SecretSerdeValue,
             > = serde_json::from_str(auth_key_map_str).change_context(
@@ -478,6 +478,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
+            let headers = $crate::utils::extract_headers_with_masking(&metadata, &self.config.events.unmasked_headers.keys);
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -487,6 +488,7 @@ macro_rules! implement_connector_operation {
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,
+                headers: Some(headers),
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
@@ -510,4 +512,34 @@ macro_rules! implement_connector_operation {
         result
     }
 }
+}
+
+pub fn extract_headers_with_masking(
+    metadata: &metadata::MetadataMap,
+    unmasked_keys: &[String],
+) -> HashMap<String, String> {
+    metadata
+        .iter()
+        .filter_map(|key_and_value| {
+            if let metadata::KeyAndValueRef::Ascii(key, value) = key_and_value {
+                let key_str = key.as_str();
+                
+                let header_value = if unmasked_keys.iter().any(|unmasked_key| unmasked_key.eq_ignore_ascii_case(key_str)) {
+                    value.to_str().unwrap_or_else(|_| {
+                        tracing::warn!(
+                            header_name = %key_str,
+                            "Invalid UTF-8 in header value"
+                        );
+                        "<invalid-utf8>"
+                    }).to_string()
+                } else {
+                    "**MASKED**".to_string()
+                };
+
+                Some((key_str.to_string(), header_value))
+            } else {
+                None
+            }
+        })
+        .collect()
 }

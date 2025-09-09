@@ -74,6 +74,7 @@ field_prefix = "lineage_"
 "message.stage" = "stage"
 "message.req_body" = "connector_request_data"
 "message.res_body" = "connector_response_data"
+"udf_txn_uuid" = "reference_id"
 
 [events.static_values]
 "hostname" = "connector-service"
@@ -82,6 +83,5 @@ field_prefix = "lineage_"
 "message.req_type" = "EXTERNAL"
 "message.log_type" = "API_CALL"
 
-[events.extractions]
-"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"x-request-id" = "req.metadata.x-request-id"
+[events.unmasked_headers]
+keys = ["x-reference-id", "x-request-id", "x-lineage-ids"]

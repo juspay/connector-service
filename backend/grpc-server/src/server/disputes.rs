@@ -107,6 +107,7 @@ impl DisputeService for Disputes {
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 async move {
+                    let metadata = request.metadata().clone();
                     let payload = request.into_inner();
                     let utils::MetadataPayload {
                         connector,
@@ -134,7 +135,9 @@ impl DisputeService for Disputes {
                         payload.clone(),
                         self.config.connectors.clone(),
                     ))
-                    .map_err(|e| e.into_grpc_status())?;
+                    .map_err(
+                        |e: error_stack::Report<ApplicationErrorResponse>| e.into_grpc_status(),
+                    )?;
 
                     let connector_auth_details = connector_auth_type;
 
@@ -150,6 +153,10 @@ impl DisputeService for Disputes {
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
+                    let headers = utils::extract_headers_with_masking(
+                        &metadata,
+                        &self.config.events.unmasked_headers.keys,
+                    );
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
@@ -161,6 +168,7 @@ impl DisputeService for Disputes {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        headers: Some(headers),
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
@@ -297,6 +305,7 @@ impl DisputeService for Disputes {
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 async move {
+                    let metadata = request.metadata().clone();
                     let payload = request.into_inner();
                     let utils::MetadataPayload {
                         connector,
@@ -342,6 +351,10 @@ impl DisputeService for Disputes {
                         response: Err(ErrorResponse::default()),
                     };
 
+                    let headers = utils::extract_headers_with_masking(
+                        &metadata,
+                        &self.config.events.unmasked_headers.keys,
+                    );
                     let event_params = external_services::service::EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
@@ -353,6 +366,7 @@ impl DisputeService for Disputes {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        headers: Some(headers),
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
