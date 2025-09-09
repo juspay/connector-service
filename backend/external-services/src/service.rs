@@ -110,7 +110,7 @@ pub struct EventProcessingParams<'a> {
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
-    pub headers: Option<HashMap<String, Secret<String>>>,
+    pub headers: Option<HashMap<String, String>>,
 }
 
 #[tracing::instrument(

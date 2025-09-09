@@ -520,25 +520,29 @@ macro_rules! implement_connector_operation {
 pub fn extract_headers_with_masking(
     metadata: &metadata::MetadataMap,
     unmasked_keys: &[String],
-) -> HashMap<String, hyperswitch_masking::Secret<String>> {
-    let mut headers = HashMap::new();
+) -> HashMap<String, String> {
+    metadata
+        .iter()
+        .filter_map(|key_and_value| {
+            if let metadata::KeyAndValueRef::Ascii(key, value) = key_and_value {
+                let key_str = key.as_str();
+                
+                let header_value = if unmasked_keys.iter().any(|unmasked_key| unmasked_key.eq_ignore_ascii_case(key_str)) {
+                    value.to_str().unwrap_or_else(|_| {
+                        tracing::warn!(
+                            header_name = %key_str,
+                            "Invalid UTF-8 in header value"
+                        );
+                        "<invalid-utf8>"
+                    }).to_string()
+                } else {
+                    "**MASKED**".to_string()
+                };
 
-    for key_and_value in metadata.iter() {
-        if let metadata::KeyAndValueRef::Ascii(key, value) = key_and_value {
-            let key_str = key.as_str().to_lowercase();
-            let header_value = if unmasked_keys.contains(&key_str) {
-                // Unmask whitelisted headers
-                value.to_str().unwrap_or("").to_string()
+                Some((key_str.to_string(), header_value))
             } else {
-                // Mask all other headers
-                "**MASKED**".to_string()
-            };
-
-            headers.insert(
-                key.as_str().to_string(),
-                hyperswitch_masking::Secret::new(header_value),
-            );
-        }
-    }
-    headers
+                None
+            }
+        })
+        .collect()
 }

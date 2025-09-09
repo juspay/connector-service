@@ -191,7 +191,7 @@ pub struct Event {
     pub request_data: Option<SecretSerdeValue>,
     pub connector_request_data: Option<SecretSerdeValue>,
     pub connector_response_data: Option<SecretSerdeValue>,
-    pub headers: HashMap<String, Secret<String>>,
+    pub headers: HashMap<String, String>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
     #[serde(flatten)]
