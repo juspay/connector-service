@@ -877,7 +877,7 @@ macro_rules! create_amount_converter_wrapper {
             pub struct [<$connector_name AmountConvertor>];
 
             impl [<$connector_name AmountConvertor>] {
-                pub fn convert_amount(
+                pub fn convert(
                     amount: common_utils::types::MinorUnit,
                     currency: common_enums::Currency,
                 ) -> Result<common_utils::types::$amount_type, error_stack::Report<errors::ConnectorError>> {
@@ -888,7 +888,7 @@ macro_rules! create_amount_converter_wrapper {
                     )
                 }
 
-                pub fn convert_back_amount_to_minor_units(
+                pub fn convert_back(
                     amount: common_utils::types::$amount_type,
                     currency: common_enums::Currency,
                 ) -> Result<common_utils::types::MinorUnit, error_stack::Report<errors::ConnectorError>> {

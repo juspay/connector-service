@@ -359,7 +359,7 @@ impl<
         let router_data = &item.router_data;
 
         let currency = item.router_data.request.currency;
-        let amount = XenditAmountConvertor::convert_amount(
+        let amount = XenditAmountConvertor::convert(
             router_data.request.minor_amount,
             router_data.request.currency,
         )
@@ -484,7 +484,7 @@ impl<
 
         let response_integrity_object = match response.amount {
             Some(amount) => {
-                let response_amount = XenditAmountConvertor::convert_back_amount_to_minor_units(
+                let response_amount = XenditAmountConvertor::convert_back(
                     amount,
                     response.currency,
                 )?;
@@ -565,7 +565,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                 let response_integrity_object = match payment_response.amount {
                     Some(amount) => {
                         let response_amount =
-                            XenditAmountConvertor::convert_back_amount_to_minor_units(
+                            XenditAmountConvertor::convert_back(
                                 amount,
                                 payment_response.currency,
                             )?;
@@ -636,7 +636,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = XenditAmountConvertor::convert_amount(
+        let amount = XenditAmountConvertor::convert(
             item.router_data.request.minor_amount_to_capture,
             item.router_data.request.currency,
         )
@@ -736,7 +736,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let amount = XenditAmountConvertor::convert_amount(
+        let amount = XenditAmountConvertor::convert(
             item.router_data.request.minor_refund_amount,
             item.router_data.request.currency,
         )
@@ -780,7 +780,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let response_currency = Currency::from_str(response.currency.to_uppercase().as_str())
             .change_context(errors::ConnectorError::ParsingFailed)?;
-        let response_amount = XenditAmountConvertor::convert_back_amount_to_minor_units(
+        let response_amount = XenditAmountConvertor::convert_back(
             response.amount,
             response_currency,
         )?;
