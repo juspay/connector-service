@@ -219,6 +219,8 @@ impl Payments {
                 connector_name: &connector.to_string(),
                 service_name,
                 request_id,
+                lineage_ids,
+                reference_id,
             };
             let payment_method_token_data = self
                 .handle_payment_session_token(
@@ -750,6 +752,8 @@ impl Payments {
                 serde_json::to_value(payload).unwrap_or_default(),
             )),
             request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids,
+            reference_id: event_params.reference_id,
         };
         let response = execute_connector_processing_step(
             &self.config.proxy,
