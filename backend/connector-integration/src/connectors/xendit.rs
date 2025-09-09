@@ -36,8 +36,8 @@ use interfaces::{
 use serde::Serialize;
 use transformers::{
     self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
-    XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
-    XenditPaymentsCaptureRequest, XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
+    XenditPaymentResponse, XenditPaymentsCaptureRequest, XenditPaymentsRequest, 
+    XenditRefundRequest, XenditResponse, XenditCaptureResponse
 };
 
 use super::macros;
