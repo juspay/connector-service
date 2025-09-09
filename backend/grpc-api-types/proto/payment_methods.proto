@@ -39,7 +39,7 @@ message PaymentMethod {
     UpiQr upi_qr = 6;                                    // UPI QR payment method - SUPPORTED
     TokenPaymentMethodType token = 5;                    // Tokenized payment methods - SUPPORTED
     // BankTransferPaymentMethodType bank_transfer = 6;     // Bank transfer payment methods - TODO: Not yet supported
-    // OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods - TODO: Not yet supported
+    OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods
     // BNPLPaymentMethodType bnpl = 8;                      // Buy now, pay later payment methods - TODO: Not yet supported
     // MobilePaymentMethodType mobile_payment = 9;          // Mobile payment methods - TODO: Not yet supported
     // CryptoCurrencyPaymentMethodType crypto = 10;         // Cryptocurrency payment methods - TODO: Not yet supported
@@ -124,30 +124,28 @@ message BankTransferPaymentMethodType {
 }
 */
 
-// Online banking payment methods category - TODO: Not yet supported
+// Online banking payment methods category
 // Includes online banking systems and open banking initiatives
-/*
 message OnlineBankingPaymentMethodType {
   oneof online_banking_type {
-    OnlineBankingThailand online_banking_thailand = 1;       // Thai online banking
-    OnlineBankingCzechRepublic online_banking_czech_republic = 2; // Czech Republic online banking
-    OnlineBankingFinland online_banking_finland = 3;         // Finnish online banking
-    OnlineBankingFPX online_banking_fpx = 4;                 // Financial Process Exchange - Malaysian online banking
-    OnlineBankingPoland online_banking_poland = 5;           // Polish online banking
-    OnlineBankingSlovakia online_banking_slovakia = 6;       // Slovak online banking
+    // OnlineBankingThailand online_banking_thailand = 1;       // Thai online banking
+    // OnlineBankingCzechRepublic online_banking_czech_republic = 2; // Czech Republic online banking
+    // OnlineBankingFinland online_banking_finland = 3;         // Finnish online banking
+    // OnlineBankingFPX online_banking_fpx = 4;                 // Financial Process Exchange - Malaysian online banking
+    // OnlineBankingPoland online_banking_poland = 5;           // Polish online banking
+    // OnlineBankingSlovakia online_banking_slovakia = 6;       // Slovak online banking
     OpenBankingUK open_banking_uk = 7;                       // UK Open Banking
-    OpenBankingPIS open_banking_pis = 8;                     // Open Banking Payment Initiation Service
-    LocalBankRedirect local_bank_redirect = 9;               // Generic local bank redirect payment
-    Ideal ideal = 10;                                        // iDEAL - Dutch online banking payment method
-    Sofort sofort = 11;                                      // Sofort - German online banking payment method
-    Trustly trustly = 12;                                    // Trustly - European online banking payment method
-    Giropay giropay = 13;                                    // Giropay - German bank transfer payment method
-    EPS eps = 14;                                            // EPS - Austrian bank transfer system
-    Przelewy24 przelewy24 = 15;                              // Przelewy24 - Polish payment system
-    PSE pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
+    // OpenBankingPIS open_banking_pis = 8;                     // Open Banking Payment Initiation Service
+    // LocalBankRedirect local_bank_redirect = 9;               // Generic local bank redirect payment
+    // Ideal ideal = 10;                                        // iDEAL - Dutch online banking payment method
+    // Sofort sofort = 11;                                      // Sofort - German online banking payment method
+    // Trustly trustly = 12;                                    // Trustly - European online banking payment method
+    // Giropay giropay = 13;                                    // Giropay - German bank transfer payment method
+    // EPS eps = 14;                                            // EPS - Austrian bank transfer system
+    // Przelewy24 przelewy24 = 15;                              // Przelewy24 - Polish payment system
+    // PSE pse = 16;                                            // PSE - Pagos Seguros en Línea - Colombian online banking
   }
 }
-*/
 
 // Buy now, pay later payment methods category - TODO: Not yet supported
 // Includes installment payment services
@@ -632,7 +630,6 @@ message PermataBankTransfer {
 // ============================================================================
 
 /*
-
 // Thai online banking systems
 message OnlineBankingThailand {
   // Fields will be added as needed for Thai online banking integration
@@ -662,12 +659,15 @@ message OnlineBankingPoland {
 message OnlineBankingSlovakia {
   // Fields will be added as needed for Slovak online banking integration
 }
+*/
 
 // UK Open Banking - Open Banking implementation in the UK
 message OpenBankingUK {
-  // Fields will be added as needed for UK Open Banking integration
+  // Country code for UK Open Banking
+  optional string country = 1;
 }
 
+/*
 // Open Banking Payment Initiation Service
 message OpenBankingPIS {
   // Fields will be added as needed for Open Banking PIS integration
