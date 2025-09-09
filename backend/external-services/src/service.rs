@@ -9,89 +9,6 @@ use common_utils::{
     request::{Method, Request, RequestContent},
 };
 
-/// Trait to get flow name from flow types
-pub trait GetFlowName {
-    fn get_flow_name() -> &'static str;
-}
-
-// Implement GetFlowName for all flow types
-impl GetFlowName for domain_types::connector_flow::CreateOrder {
-    fn get_flow_name() -> &'static str {
-        "create_order"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::Authorize {
-    fn get_flow_name() -> &'static str {
-        "authorize"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::PSync {
-    fn get_flow_name() -> &'static str {
-        "psync"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::Capture {
-    fn get_flow_name() -> &'static str {
-        "capture"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::Void {
-    fn get_flow_name() -> &'static str {
-        "void"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::Refund {
-    fn get_flow_name() -> &'static str {
-        "refund"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::RSync {
-    fn get_flow_name() -> &'static str {
-        "rsync"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::SetupMandate {
-    fn get_flow_name() -> &'static str {
-        "setup_mandate"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::RepeatPayment {
-    fn get_flow_name() -> &'static str {
-        "repeat_payment"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::Accept {
-    fn get_flow_name() -> &'static str {
-        "accept_dispute"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::SubmitEvidence {
-    fn get_flow_name() -> &'static str {
-        "submit_evidence"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::DefendDispute {
-    fn get_flow_name() -> &'static str {
-        "defend_dispute"
-    }
-}
-
-impl GetFlowName for domain_types::connector_flow::CreateSessionToken {
-    fn get_flow_name() -> &'static str {
-        "create_session_token"
-    }
-}
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
@@ -256,7 +173,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     test_context: Option<TestContext>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
-    F: Clone + 'static + GetFlowName,
+    F: Clone + 'static,
     T: FlowIntegrity,
     Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,
     Resp: Clone + 'static + std::fmt::Debug,
@@ -713,6 +630,12 @@ pub async fn call_connector_api(
     request: Request,
     _flow_name: &str,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
+    // Validate URL is not empty before parsing
+    if request.url.trim().is_empty() {
+        return Err(error_stack::report!(ApiClientError::UrlEncodingFailed)
+            .attach_printable("Request URL is empty"));
+    }
+    
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
