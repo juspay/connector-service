@@ -2824,6 +2824,12 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     .collect()
             })
             .unwrap_or_default();
+        let mandate_reference_grpc =
+            value
+                .mandate_reference
+                .map(|m| grpc_api_types::payments::MandateReference {
+                    mandate_id: m.connector_mandate_id,
+                });
         Ok(Self {
             transaction_id: value
                 .resource_id
@@ -2832,7 +2838,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 })
                 .transpose()?,
             status: status as i32,
-            mandate_reference: None,
+            mandate_reference: mandate_reference_grpc,
             error_code: value.error_code,
             error_message: value.error_message,
             network_txn_id: None,

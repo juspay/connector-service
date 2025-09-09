@@ -8,7 +8,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::MinorUnit,
+    types::{MinorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -38,7 +38,7 @@ use crate::{
 };
 
 // snake case for enum variants
-#[derive(Clone, Debug, Display, EnumString)]
+#[derive(Clone, Copy, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -1102,6 +1102,7 @@ pub struct WebhookDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: common_enums::AttemptStatus,
     pub connector_response_reference_id: Option<String>,
+    pub mandate_reference: Option<Box<MandateReference>>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
@@ -1123,6 +1124,8 @@ pub struct RefundWebhookDetailsResponse {
 
 #[derive(Debug, Clone)]
 pub struct DisputeWebhookDetailsResponse {
+    pub amount: StringMinorUnit,
+    pub currency: common_enums::enums::Currency,
     pub dispute_id: String,
     pub status: common_enums::DisputeStatus,
     pub stage: common_enums::DisputeStage,
@@ -1131,6 +1134,8 @@ pub struct DisputeWebhookDetailsResponse {
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
+    /// connector_reason
+    pub connector_reason_code: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
