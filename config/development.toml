@@ -29,6 +29,11 @@ port = 8080
 idle_pool_connection_timeout = 90               # Timeout for idle pool connections (defaults to 90s)
 bypass_proxy_urls = ["localhost", "local"]
 
+[test]
+enabled = true
+mock_server_url = "http://localhost:3000"
+
+
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
@@ -41,10 +46,6 @@ checkout.base_url = "https://api.sandbox.checkout.com/"
 authorizedotnet.base_url = "https://apitest.authorize.net/xml/v1/request.api"
 phonepe.base_url = "https://api.phonepe.com/apis/hermes/"
 cashfree.base_url = "https://sandbox.cashfree.com/"
-
-[test]
-enabled = true
-mock_server_url = "http://localhost:3000"
 fiuu.base_url = "https://sandbox.merchant.razer.com/"
 payu.base_url = "https://test.payu.in/"
 paytm.base_url = "https://securegw-stage.paytm.in/"
