@@ -868,6 +868,7 @@ impl PaymentService for Payments {
                             &metadata_payload,
                             &service_name,
                             request_id,
+                            &metadata,
                         ))
                         .await
                         {
