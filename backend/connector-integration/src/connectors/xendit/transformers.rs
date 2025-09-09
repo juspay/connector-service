@@ -484,10 +484,8 @@ impl<
 
         let response_integrity_object = match response.amount {
             Some(amount) => {
-                let response_amount = XenditAmountConvertor::convert_back(
-                    amount,
-                    response.currency,
-                )?;
+                let response_amount =
+                    XenditAmountConvertor::convert_back(amount, response.currency)?;
                 Some(AuthoriseIntegrityObject {
                     amount: response_amount,
                     currency: response.currency,
@@ -565,10 +563,7 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                 let response_integrity_object = match payment_response.amount {
                     Some(amount) => {
                         let response_amount =
-                            XenditAmountConvertor::convert_back(
-                                amount,
-                                payment_response.currency,
-                            )?;
+                            XenditAmountConvertor::convert_back(amount, payment_response.currency)?;
                         Some(PaymentSynIntegrityObject {
                             amount: response_amount,
                             currency: payment_response.currency,
@@ -780,10 +775,8 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
 
         let response_currency = Currency::from_str(response.currency.to_uppercase().as_str())
             .change_context(errors::ConnectorError::ParsingFailed)?;
-        let response_amount = XenditAmountConvertor::convert_back(
-            response.amount,
-            response_currency,
-        )?;
+        let response_amount =
+            XenditAmountConvertor::convert_back(response.amount, response_currency)?;
 
         let response_integrity_object = {
             Some(RefundIntegrityObject {
