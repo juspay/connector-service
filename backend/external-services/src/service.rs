@@ -8,7 +8,6 @@ use common_utils::{
     lineage,
     request::{Method, Request, RequestContent},
 };
-
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
@@ -635,7 +634,7 @@ pub async fn call_connector_api(
         return Err(error_stack::report!(ApiClientError::UrlEncodingFailed)
             .attach_printable("Request URL is empty"));
     }
-    
+
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
