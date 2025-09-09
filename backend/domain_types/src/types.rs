@@ -1568,7 +1568,7 @@ impl
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: value.access_token,
             session_token: None,
             reference_id: None,
             payment_method_token: None,

@@ -1012,32 +1012,40 @@ impl PaymentService for Payments {
                 let connector_data: ConnectorData<DefaultPCIHolder> =
                     ConnectorData::get_connector_by_name(&connector);
 
-                // STEP 1: Extract access token from Hyperswitch request
+                // Extract access token from Hyperswitch request
                 let cached_access_token = payload.access_token.clone();
 
-                // STEP 2: Check if connector supports access tokens
+                // Check if connector supports access tokens
                 let should_do_access_token = connector_data.connector.should_do_access_token();
 
-                // STEP 3: Conditional token generation - ONLY if not provided by Hyperswitch
-                if should_do_access_token {
-                    if cached_access_token.is_none() {
+                // Conditional token generation - ONLY if not provided by Hyperswitch
+                let final_payload = if should_do_access_token {
+                    if cached_access_token.is_some() {
+                        // If provided cached token - use it, don't generate new one
+                        tracing::info!("Using cached access token from Hyperswitch for sync flow");
+                        payload
+                    } else {
                         // No cached token - generate fresh one
                         tracing::info!("No cached access token found, generating new token for sync flow");
+                        
+                        // Create initial PaymentFlowData for access token generation
+                        let initial_payment_flow_data = PaymentFlowData::foreign_try_from((
+                            payload.clone(),
+                            self.config.connectors.clone(),
+                            &metadata,
+                        ))
+                        .map_err(|e| e.into_grpc_status())?;
+
                         let event_params = EventParams {
                             connector_name: &connector.to_string(),
                             service_name: &service_name,
                             request_id: &request_id,
                         };
                         
-                        let _access_token_data = self
+                        let access_token_data = self
                             .handle_access_token(
                                 connector_data.clone(),
-                                &PaymentFlowData::foreign_try_from((
-                                    payload.clone(),
-                                    self.config.connectors.clone(),
-                                    &metadata,
-                                ))
-                                .map_err(|e| e.into_grpc_status())?,
+                                &initial_payment_flow_data,
                                 connector_auth_details.clone(),
                                 event_params,
                                 &payload,
@@ -1048,15 +1056,24 @@ impl PaymentService for Payments {
                                 tonic::Status::internal(message)
                             })?;
                         
-                        tracing::info!("Access token created successfully for sync flow");
-                    } else {
-                        tracing::info!("Using cached access token from Hyperswitch for sync flow");
-                    }
-                }
+                        tracing::info!(
+                            "Access token created successfully for sync flow with expiry: {:?}",
+                            access_token_data.expires_in
+                        );
 
-                // STEP 4: Continue with normal flow execution
-                // Recreate the request with metadata and call internal_payment_sync
-                let mut new_request = tonic::Request::new(payload);
+                        // Update payload with generated access token 
+                        let mut updated_payload = payload.clone();
+                        updated_payload.access_token = Some(access_token_data.access_token.clone());
+                        updated_payload
+                    }
+                } else {
+                    // Connector doesn't support access tokens
+                    payload
+                };
+
+                // Continue with normal sync flow execution
+                // The macro will extract access_token from payload into PaymentFlowData
+                let mut new_request = tonic::Request::new(final_payload);
                 *new_request.metadata_mut() = metadata;
                 
                 self.internal_payment_sync(new_request).await
