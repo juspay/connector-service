@@ -172,6 +172,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    authentication_data: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -315,6 +316,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    authentication_data: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -432,6 +434,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    authentication_data: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -593,6 +596,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    authentication_data: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -895,6 +899,7 @@ mod tests {
                 merchant_account_id: None,
                 merchant_config_currency: None,
                 all_keys_required: None,
+                authentication_data: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1067,6 +1072,7 @@ mod tests {
                 merchant_account_id: None,
                 merchant_config_currency: None,
                 all_keys_required: None,
+                authentication_data: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1420,6 +1426,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    authentication_data: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),

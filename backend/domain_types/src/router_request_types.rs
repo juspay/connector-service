@@ -111,6 +111,12 @@ pub struct AuthenticationData {
     pub threeds_server_transaction_id: Option<String>,
     pub message_version: Option<SemanticVersion>,
     pub ds_trans_id: Option<String>,
+    pub created_at: time::PrimitiveDateTime,
+    pub challenge_code: Option<String>,
+    pub challenge_cancel: Option<String>,
+    pub challenge_code_reason: Option<String>,
+    pub message_extension: Option<pii::SecretSerdeValue>,
+    pub acs_trans_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]

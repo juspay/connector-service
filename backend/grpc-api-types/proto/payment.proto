@@ -871,6 +871,19 @@ message AuthenticationData {
   
   // Directory Server Transaction ID (DS Trans ID).
   optional string ds_transaction_id = 5;
+
+  optional string challenge_code = 6;
+  
+  optional string challenge_cancel = 7;
+
+  optional string challenge_code_reason = 8;
+
+  optional string acs_trans_id = 9;
+
+  optional string message_extension = 10;
+
+  optional string created_at = 11;
+
 }
 
 // Details of customer acceptance for mandates or terms.

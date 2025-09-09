@@ -86,6 +86,7 @@ pub struct Connectors {
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
+    pub cybersource: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1027,6 +1028,7 @@ impl<
             integrity_object: None,
             merchant_config_currency: None,
             all_keys_required: None, // Field not available in new proto structure
+            authentication_data: value.authentication_data,
         })
     }
 }

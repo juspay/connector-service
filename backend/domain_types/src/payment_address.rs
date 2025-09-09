@@ -311,6 +311,23 @@ impl AddressDetails {
     pub fn get_optional_country(&self) -> Option<common_enums::CountryAlpha2> {
         self.country
     }
+
+    pub fn to_state_code(&self) -> Result<Secret<String>, Error> {
+        self.get_state().cloned()
+    }
+
+    pub fn to_state_code_as_optional(&self) -> Result<Option<Secret<String>>, Error> {
+        self.state
+            .as_ref()
+            .map(|state| {
+                if state.peek().len() == 2 {
+                    Ok(state.to_owned())
+                } else {
+                    self.to_state_code()
+                }
+            })
+            .transpose()
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
