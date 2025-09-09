@@ -124,7 +124,6 @@ impl Payments {
         metadata_payload: &utils::MetadataPayload,
         service_name: &str,
         request_id: &str,
-        session_id: Option<String>,
         request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         tracing::info!(
@@ -198,7 +197,6 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
-                    session_id.clone(),
                     request_metadata,
                 )
                 .await?;
@@ -207,7 +205,7 @@ impl Payments {
             payment_flow_data.set_order_reference_id(Some(order_id))
         } else {
             // No order creation needed
-            if test_context.as_ref().map_or(false, |ctx| ctx.is_test_env) {
+            if test_context.as_ref().is_some_and(|ctx| ctx.is_test_env) {
                 tracing::info!("Test mode enabled: no order creation required, proceeding directly to authorization");
             }
             payment_flow_data
@@ -231,6 +229,7 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
+                    request_metadata,
                 )
                 .await?;
             tracing::info!(
@@ -383,7 +382,6 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
-        session_id: Option<String>,
         request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
@@ -593,6 +591,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &P,
+        request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
         P: Clone + ErasedMaskSerialize,
@@ -645,12 +644,23 @@ impl Payments {
             reference_id: event_params.reference_id,
         };
 
+        // Create test context if needed
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                self.config.test.mock_server_url.clone(),
+                request_metadata,
+            ))
+        } else {
+            None
+        };
+
         let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
             None,
             external_event_params,
+            test_context,
         )
         .await
         .switch()
@@ -787,17 +797,6 @@ impl PaymentService for Payments {
                 let utils::MetadataPayload {connector, ref request_id, ref connector_auth_type, ..} = metadata_payload;
                 let connector_auth_details = connector_auth_type.clone();
                 let metadata = request.metadata().clone();
-                let session_id = crate::utils::session_id_from_metadata(&metadata);
-        grpc_logging_wrapper(request, &service_name, |request| {
-            Box::pin(async {
-                let metadata = request.metadata();
-                let connector =
-                    connector_from_metadata(metadata).map_err(|e| e.into_grpc_status())?;
-                let connector_auth_details =
-                    auth_from_metadata(metadata).map_err(|e| e.into_grpc_status())?;
-                let session_id = crate::utils::session_id_from_metadata(metadata);
-                // Clone metadata before moving request
-                let metadata_clone = metadata.clone();
                 let payload = request.into_inner();
 
                 let authorize_response = match payload.payment_method.as_ref() {
@@ -814,8 +813,7 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
-                                            session_id,
-                    &metadata_clone,
+                                            &metadata,
                 ))
                                         .await
                                         {
@@ -832,6 +830,7 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
+                                            &metadata,
                                         ))
                                         .await
                                         {
@@ -850,6 +849,7 @@ impl PaymentService for Payments {
                                     &metadata_payload,
                                     &service_name,
                                     request_id,
+                                    &metadata,
                                 ))
                                 .await
                                 {
@@ -1299,7 +1299,7 @@ impl PaymentService for Payments {
                         router_data,
                         None,
                         event_params,
-                    None, // TODO: Add test context support for setup mandate
+                        None, // TODO: Add test context support for setup mandate
                     )
                     .await
                     .switch()
@@ -1415,7 +1415,7 @@ impl PaymentService for Payments {
                         router_data,
                         None,
                         event_params,
-                    None, // TODO: Add test context support for repeat payment
+                        None, // TODO: Add test context support for repeat payment
                     )
                     .await
                     .switch()

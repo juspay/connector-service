@@ -478,7 +478,7 @@ impl<
         _req: &domain_types::router_data_v2::RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> Option<String> {

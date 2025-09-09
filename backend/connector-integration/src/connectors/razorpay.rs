@@ -1,6 +1,7 @@
 pub mod test;
 pub mod transformers;
 use std::sync::LazyLock;
+
 //adding comment to retrig build
 use common_enums::{
     AttemptStatus, CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType,
@@ -490,7 +491,7 @@ impl<
         _req: &RouterDataV2<
             Authorize,
             PaymentFlowData,
-            PaymentsAuthorizeData,
+            PaymentsAuthorizeData<T>,
             PaymentsResponseData,
         >,
     ) -> Option<String> {

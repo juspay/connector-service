@@ -204,9 +204,7 @@ pub fn tenant_id_from_metadata(
         .or_else(|_| Ok("DefaultTenantId".to_string()))
 }
 
-pub fn session_id_from_metadata(
-    metadata: &metadata::MetadataMap,
-) -> Option<String> {
+pub fn session_id_from_metadata(metadata: &metadata::MetadataMap) -> Option<String> {
     parse_metadata(metadata, X_SESSION_ID)
         .map(|inner| inner.to_string())
         .ok()

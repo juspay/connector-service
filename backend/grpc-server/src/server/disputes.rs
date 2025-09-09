@@ -169,7 +169,7 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
-                None, // TODO: Add test context support for disputes
+                        None, // TODO: Add test context support for disputes
                     )
                     .await
                     .switch()
@@ -356,17 +356,17 @@ impl DisputeService for Disputes {
                         reference_id: &reference_id,
                     };
 
-            let response = external_services::service::execute_connector_processing_step(
-                &self.config.proxy,
-                connector_integration,
-                router_data,
-                None,
-                &connector.to_string(),
-                &service_name,
-            )
-            .await
-            .switch()
-            .map_err(|e| e.into_grpc_status())?;
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        event_params,
+                        None,
+                    )
+                    .await
+                    .switch()
+                    .map_err(|e| e.into_grpc_status())?;
 
                     let dispute_response = generate_accept_dispute_response(response)
                         .map_err(|e| e.into_grpc_status())?;

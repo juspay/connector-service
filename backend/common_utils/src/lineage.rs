@@ -1,7 +1,8 @@
 //! Lineage ID domain types for tracking request lineage across services
 
-use serde;
 use std::collections::HashMap;
+
+use serde;
 
 /// A domain type representing lineage IDs as key-value pairs(uses hashmap internally).
 ///

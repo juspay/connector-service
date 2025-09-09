@@ -3,9 +3,9 @@ use std::{str::FromStr, time::Duration};
 use common_utils::ext_traits::AsyncExt;
 // use base64::engine::Engine;
 use common_utils::{
-    lineage,
     // consts::BASE64_ENGINE,
     consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
+    lineage,
     request::{Method, Request, RequestContent},
 };
 
@@ -86,6 +86,12 @@ impl GetFlowName for domain_types::connector_flow::DefendDispute {
         "defend_dispute"
     }
 }
+
+impl GetFlowName for domain_types::connector_flow::CreateSessionToken {
+    fn get_flow_name() -> &'static str {
+        "create_session_token"
+    }
+}
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiClientError, ApiErrorResponse, ConnectorError},
@@ -135,7 +141,6 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
-
 /// Test context for mock server integration
 #[derive(Debug, Clone)]
 pub struct TestContext {
@@ -145,26 +150,29 @@ pub struct TestContext {
 }
 
 impl TestContext {
-    pub fn new(mock_server_url: Option<String>, tonic_metadata: &tonic::metadata::MetadataMap) -> Self {
+    pub fn new(
+        mock_server_url: Option<String>,
+        tonic_metadata: &tonic::metadata::MetadataMap,
+    ) -> Self {
         let is_test_env = mock_server_url.is_some();
-        
+
         // Extract metadata from tonic MetadataMap
         let mut metadata = std::collections::HashMap::new();
-        
+
         // Extract session ID
         if let Some(session_id) = tonic_metadata.get(X_SESSION_ID) {
             if let Ok(session_id_str) = session_id.to_str() {
                 metadata.insert(X_SESSION_ID.to_string(), session_id_str.to_string());
             }
         }
-        
+
         // Extract API tag
         if let Some(api_tag) = tonic_metadata.get(X_API_TAG) {
             if let Ok(api_tag_str) = api_tag.to_str() {
                 metadata.insert(X_API_TAG.to_string(), api_tag_str.to_string());
             }
         }
-        
+
         Self {
             mock_server_url,
             is_test_env,
@@ -173,7 +181,11 @@ impl TestContext {
     }
 
     /// Get test headers to be added to connector requests
-    pub fn get_test_headers(&self, original_url: &str, api_tag: Option<String>) -> Vec<(String, Maskable<String>)> {
+    pub fn get_test_headers(
+        &self,
+        original_url: &str,
+        api_tag: Option<String>,
+    ) -> Vec<(String, Maskable<String>)> {
         let mut headers = Vec::new();
 
         if self.is_test_env {
@@ -258,20 +270,26 @@ where
     let mut connector_request = connector.build_request_v2(&router_data)?;
 
     // Apply test environment modifications if test context is provided
-    if let (Some(ref mut request), Some(ref test_ctx)) = (connector_request.as_mut(), test_context.as_ref()) {
+    if let (Some(ref mut request), Some(test_ctx)) =
+        (connector_request.as_mut(), test_context.as_ref())
+    {
         if test_ctx.is_test_env {
             // Store original URL for x-api-url header
             let original_url = request.url.clone();
-            
+
             // Replace URL with mock server URL
             request.url = test_ctx.get_request_url(request.url.clone());
-            
+
             // Add test headers with API tag from connector
             let api_tag = connector.get_api_tag(&router_data);
             let test_headers = test_ctx.get_test_headers(&original_url, api_tag);
             request.headers.extend(test_headers);
-            
-            tracing::info!("Test mode enabled: redirected {} to {}", original_url, request.url);
+
+            tracing::info!(
+                "Test mode enabled: redirected {} to {}",
+                original_url,
+                request.url
+            );
         }
     }
 
