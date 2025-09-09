@@ -1,7 +1,12 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::{consts, errors::CustomResult, events::{self, EventConfig, FlowName}, lineage, pii::SecretSerdeValue};
+use common_utils::{
+    errors::CustomResult,
+    events::{EventConfig, FlowName},
+    lineage,
+    pii::SecretSerdeValue,
+};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -46,13 +51,13 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{self,auth_from_metadata, connector_from_metadata,  grpc_logging_wrapper},
+    utils::{self, auth_from_metadata, grpc_logging_wrapper},
 };
 
 #[derive(Debug, Clone)]
 struct EventParams<'a> {
-    connector_name: &'a str,
-    service_name: &'a str,
+    _connector_name: &'a str,
+    _service_name: &'a str,
     request_id: &'a str,
     lineage_ids: &'a lineage::LineageIds<'a>,
     reference_id: &'a Option<String>,
@@ -196,8 +201,8 @@ impl Payments {
 
         let payment_flow_data = if should_do_order_create {
             let event_params = EventParams {
-                connector_name: &connector.to_string(),
-                service_name,
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
                 request_id,
                 lineage_ids,
                 reference_id,
@@ -225,8 +230,8 @@ impl Payments {
 
         let payment_flow_data = if should_do_session_token {
             let event_params = EventParams {
-                connector_name: &connector.to_string(),
-                service_name,
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
                 request_id,
                 lineage_ids,
                 reference_id,
@@ -283,11 +288,10 @@ impl Payments {
         };
 
         // Execute connector processing
-        let event_config = EventConfig::default();
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
-            flow_name: events::FlowName::Authorize,
+            flow_name: FlowName::Authorize,
             event_config: &self.config.events,
             raw_request_data: Some(SecretSerdeValue::new(
                 payload.masked_serialize().unwrap_or_default(),
@@ -488,6 +492,7 @@ impl Payments {
             )),
         }
     }
+    #[allow(clippy::too_many_arguments)]
     async fn handle_order_creation_for_setup_mandate<
         T: PaymentMethodDataTypes
             + Default
@@ -797,8 +802,7 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
             let service_name = service_name.clone();
             Box::pin(async move {
-                let utils::MetadataPayload {connector, ref request_id, ref connector_auth_type, ..} = metadata_payload;
-                let connector_auth_details = connector_auth_type.clone();
+                let utils::MetadataPayload {connector, ref request_id, ..} = metadata_payload;
                 let metadata = request.metadata().clone();
                 let connector_auth_details =
                     auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -867,7 +871,7 @@ impl PaymentService for Payments {
                                     &metadata,
                                     &metadata_payload,
                                     &service_name,
-                                    &request_id,
+                                    request_id,
                                     None,
                                 ))
                                 .await
@@ -886,7 +890,7 @@ impl PaymentService for Payments {
                             &metadata,
                             &metadata_payload,
                             &service_name,
-                            &request_id,
+                            request_id,
                             None,
                         ))
                         .await
@@ -1236,17 +1240,17 @@ impl PaymentService for Payments {
                     let metadata = request.metadata().clone();
                     let payload = request.into_inner();
 
-                //get connector data
-                let connector_data = ConnectorData::get_connector_by_name(&connector);
+                    //get connector data
+                    let connector_data = ConnectorData::get_connector_by_name(&connector);
 
-                // Get connector integration
-                let connector_integration: BoxedConnectorIntegrationV2<
-                    '_,
-                    SetupMandate,
-                    PaymentFlowData,
-                    SetupMandateRequestData<DefaultPCIHolder>,
-                    PaymentsResponseData,
-                > = connector_data.connector.get_connector_integration_v2();
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        SetupMandate,
+                        PaymentFlowData,
+                        SetupMandateRequestData<DefaultPCIHolder>,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
 
                     // Create common request data
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
@@ -1257,12 +1261,12 @@ impl PaymentService for Payments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                let should_do_order_create = connector_data.connector.should_do_order_create();
+                    let should_do_order_create = connector_data.connector.should_do_order_create();
 
                     let order_id = if should_do_order_create {
                         let event_params = EventParams {
-                            connector_name: &connector.to_string(),
-                            service_name: &service_name,
+                            _connector_name: &connector.to_string(),
+                            _service_name: &service_name,
                             request_id: &request_id,
                             lineage_ids: &metadata_payload.lineage_ids,
                             reference_id: &metadata_payload.reference_id,
@@ -1285,9 +1289,9 @@ impl PaymentService for Payments {
                     };
                     let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
 
-                let setup_mandate_request_data =
-                    SetupMandateRequestData::foreign_try_from(payload.clone())
-                        .map_err(|e| e.into_grpc_status())?;
+                    let setup_mandate_request_data =
+                        SetupMandateRequestData::foreign_try_from(payload.clone())
+                            .map_err(|e| e.into_grpc_status())?;
 
                     // Create router data
                     let router_data: RouterDataV2<
@@ -1303,8 +1307,8 @@ impl PaymentService for Payments {
                         response: Err(ErrorResponse::default()),
                     };
                     // Create event processing parameters
-                let event_config = EventConfig::default();
-                let event_params = EventProcessingParams {
+                    let event_config = EventConfig::default();
+                    let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         flow_name: FlowName::SetupMandate,
@@ -1324,7 +1328,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
-                )
+                    )
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;
@@ -1403,9 +1407,9 @@ impl PaymentService for Payments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                // Create repeat payment data
-                let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
-                    .map_err(|e| e.into_grpc_status())?;
+                    // Create repeat payment data
+                    let repeat_payment_data = RepeatPaymentData::foreign_try_from(payload.clone())
+                        .map_err(|e| e.into_grpc_status())?;
 
                     // Create router data
                     let router_data: RouterDataV2<
@@ -1440,7 +1444,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
-                )
+                    )
                     .await
                     .switch()
                     .map_err(|e| e.into_grpc_status())?;

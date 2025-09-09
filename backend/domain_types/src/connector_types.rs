@@ -12,10 +12,9 @@ use common_utils::{
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
-use url::Url;
 
 use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
@@ -149,7 +148,6 @@ impl ConnectorMandateReferenceId {
     }
 }
 
-
 pub trait RawConnectorResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
     fn get_raw_connector_response(&self) -> Option<String>;
@@ -281,7 +279,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
-    pub additional_headers: Option<std::collections::HashMap<String, Secret<String>>>,
+    pub additional_vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
 }
 
 impl PaymentFlowData {
@@ -686,7 +684,9 @@ impl PaymentFlowData {
 
     // Helper methods for additional headers
     pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
-        self.additional_headers.as_ref().and_then(|h| h.get(key))
+        self.additional_vault_headers
+            .as_ref()
+            .and_then(|h| h.get(key))
     }
 }
 

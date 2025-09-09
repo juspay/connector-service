@@ -21,7 +21,7 @@ pub trait ConnectorRequestReference {
 }
 
 pub trait AdditionalHeaders {
-    fn get_additional_headers(&self) -> Option<&HashMap<String, Secret<String>>>;
+    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>>;
 }
 
 impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowData {
@@ -31,8 +31,8 @@ impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowDat
 }
 
 impl AdditionalHeaders for domain_types::connector_types::PaymentFlowData {
-    fn get_additional_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
-        self.additional_headers.as_ref()
+    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        self.additional_vault_headers.as_ref()
     }
 }
 
@@ -43,8 +43,8 @@ impl ConnectorRequestReference for domain_types::connector_types::RefundFlowData
 }
 
 impl AdditionalHeaders for domain_types::connector_types::RefundFlowData {
-    fn get_additional_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
-        // RefundFlowData might not have additional_headers, so return None
+    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        // RefundFlowData might not have additional_vault_headers, so return None
         None
     }
 }
@@ -56,8 +56,8 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
 }
 
 impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
-    fn get_additional_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
-        // DisputeFlowData might not have additional_headers, so return None  
+    fn get_additional_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        // DisputeFlowData might not have additional_vault_headers, so return None
         None
     }
 }
@@ -80,12 +80,8 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 
 // TokenData is now imported from hyperswitch_injector
-use injector::{
-    injector_core, HttpMethod, InjectorRequest, TokenData,
-    vault_metadata::EXTERNAL_VAULT_METADATA_HEADER,
-};
+use injector::{injector_core, HttpMethod, TokenData};
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
-
 
 trait ToHttpMethod {
     fn to_http_method(&self) -> HttpMethod;
@@ -102,8 +98,6 @@ impl ToHttpMethod for Method {
         }
     }
 }
-
-
 
 #[derive(Debug)]
 pub struct EventProcessingParams<'a> {
@@ -215,21 +209,36 @@ where
 
             let response = if let Some(token_data) = token_data {
                 tracing::debug!("Creating injector request with token data using unified API");
-                
 
                 // Extract template and combine headers
-                let template = request.body.as_ref()
+                let template = request
+                    .body
+                    .as_ref()
                     .ok_or(ConnectorError::RequestEncodingFailed)?
-                    .get_inner_value().expose().to_string();
+                    .get_inner_value()
+                    .expose()
+                    .to_string();
 
-                let headers = request.headers.iter()
-                    .map(|(key, value)| (key.clone(), Secret::new(match value {
-                        Maskable::Normal(val) => val.clone(),
-                        Maskable::Masked(val) => val.clone().expose().to_string(),
-                    })))
-                    .chain(router_data.resource_common_data.get_additional_headers()
-                        .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
-                        .into_iter().flatten())
+                let headers = request
+                    .headers
+                    .iter()
+                    .map(|(key, value)| {
+                        (
+                            key.clone(),
+                            Secret::new(match value {
+                                Maskable::Normal(val) => val.clone(),
+                                Maskable::Masked(val) => val.clone().expose().to_string(),
+                            }),
+                        )
+                    })
+                    .chain(
+                        router_data
+                            .resource_common_data
+                            .get_additional_vault_headers()
+                            .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
+                            .into_iter()
+                            .flatten(),
+                    )
                     .collect();
 
                 // Create injector request
@@ -239,7 +248,10 @@ where
                     template,
                     token_data,
                     Some(headers),
-                    proxy.https_url.as_ref().or(proxy.http_url.as_ref())
+                    proxy
+                        .https_url
+                        .as_ref()
+                        .or(proxy.http_url.as_ref())
                         .map(|url| Secret::new(url.clone())),
                     None,
                     None,
@@ -261,7 +273,7 @@ where
                     for (key, value) in h {
                         if let (Ok(header_name), Ok(header_value)) = (
                             reqwest::header::HeaderName::from_bytes(key.as_bytes()),
-                            reqwest::header::HeaderValue::from_str(&value)
+                            reqwest::header::HeaderValue::from_str(&value),
                         ) {
                             header_map.insert(header_name, header_value);
                         }
@@ -319,7 +331,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),
@@ -380,7 +392,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),
@@ -440,7 +452,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),

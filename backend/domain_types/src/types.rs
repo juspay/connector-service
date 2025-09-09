@@ -17,7 +17,6 @@ use serde_json::json;
 use tonic;
 use tracing::info;
 use utoipa::ToSchema;
-use base64::Engine;
 // Helper function for extracting connector request reference ID
 fn extract_connector_request_reference_id(
     identifier: &Option<grpc_api_types::payments::Identifier>,
@@ -36,21 +35,21 @@ fn extract_connector_request_reference_id(
 fn extract_headers_from_metadata(
     metadata: &tonic::metadata::MetadataMap,
 ) -> Option<HashMap<String, Secret<String>>> {
-    let mut additional_headers = HashMap::new();
+    let mut additional_vault_headers = HashMap::new();
 
     if let Some(vault_creds) = metadata.get("x-external-vault-metadata") {
         if let Ok(value_str) = vault_creds.to_str() {
-            additional_headers.insert(
+            additional_vault_headers.insert(
                 "x-external-vault-metadata".to_string(),
                 Secret::new(value_str.to_string()),
             );
         }
     }
 
-    if additional_headers.is_empty() {
+    if additional_vault_headers.is_empty() {
         None
     } else {
-        Some(additional_headers)
+        Some(additional_vault_headers)
     }
 }
 
@@ -1432,7 +1431,7 @@ impl
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
 
         // Extract specific headers for vault and other integrations
-        let additional_headers = extract_headers_from_metadata(metadata);
+        let additional_vault_headers = extract_headers_from_metadata(metadata);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1483,7 +1482,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers,
+            additional_vault_headers,
         })
     }
 }
@@ -1544,7 +1543,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -1605,7 +1604,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -1667,7 +1666,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -2050,7 +2049,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -3418,7 +3417,7 @@ impl
             external_latency: None,
             connectors,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -3471,7 +3470,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -3623,7 +3622,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
@@ -4422,7 +4421,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
-            additional_headers: None,
+            additional_vault_headers: None,
         })
     }
 }
