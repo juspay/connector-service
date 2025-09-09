@@ -1,11 +1,12 @@
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use common_enums::Currency;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
     request::Method,
-    types::{AmountConvertor, FloatMajorUnit, FloatMajorUnitForConnector},
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{Authorize, Capture},
@@ -18,13 +19,19 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
+    router_request_types::{
+        AuthoriseIntegrityObject, PaymentSynIntegrityObject, RefundIntegrityObject,
+    },
     router_response_types::RedirectForm,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
-use crate::{connectors::xendit::XenditRouterData, types::ResponseRouterData};
+use crate::{
+    connectors::xendit::{XenditAmountConvertor, XenditRouterData},
+    types::ResponseRouterData,
+};
 
 pub trait ForeignTryFrom<F>: Sized {
     type Error;
@@ -352,13 +359,11 @@ impl<
         let router_data = &item.router_data;
 
         let currency = item.router_data.request.currency;
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                router_data.request.minor_amount,
-                router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = XenditAmountConvertor::convert_amount(
+            router_data.request.minor_amount,
+            router_data.request.currency,
+        )
+        .change_context(ConnectorError::RequestEncodingFailed)?;
 
         let payment_method = Some(PaymentMethod::Card(CardPaymentRequest {
             payment_type: PaymentMethodType::CARD,
@@ -424,7 +429,7 @@ impl<
             is_auto_capture(&router_data.request)?,
         );
 
-        let response = if status == common_enums::AttemptStatus::Failure {
+        let payment_response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: response
                     .failure_code
@@ -477,8 +482,26 @@ impl<
             })
         };
 
+        let response_integrity_object = match response.amount {
+            Some(amount) => {
+                let response_amount = XenditAmountConvertor::convert_back_amount_to_minor_units(
+                    amount,
+                    response.currency,
+                )?;
+                Some(AuthoriseIntegrityObject {
+                    amount: response_amount,
+                    currency: response.currency,
+                })
+            }
+            None => None,
+        };
+
         Ok(Self {
-            response,
+            response: payment_response,
+            request: PaymentsAuthorizeData {
+                integrity_object: response_integrity_object,
+                ..router_data.request
+            },
             resource_common_data: PaymentFlowData {
                 status,
                 ..router_data.resource_common_data
@@ -538,8 +561,28 @@ impl<F> TryFrom<ResponseRouterData<XenditResponse, Self>>
                         status_code: http_code,
                     })
                 };
+
+                let response_integrity_object = match payment_response.amount {
+                    Some(amount) => {
+                        let response_amount =
+                            XenditAmountConvertor::convert_back_amount_to_minor_units(
+                                amount,
+                                payment_response.currency,
+                            )?;
+                        Some(PaymentSynIntegrityObject {
+                            amount: response_amount,
+                            currency: payment_response.currency,
+                        })
+                    }
+                    None => None,
+                };
+
                 Ok(Self {
                     response,
+                    request: PaymentsSyncData {
+                        integrity_object: response_integrity_object,
+                        ..router_data.request
+                    },
                     resource_common_data: PaymentFlowData {
                         status,
                         ..router_data.resource_common_data
@@ -593,13 +636,11 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                item.router_data.request.minor_amount_to_capture,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = XenditAmountConvertor::convert_amount(
+            item.router_data.request.minor_amount_to_capture,
+            item.router_data.request.currency,
+        )
+        .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             capture_amount: amount,
         })
@@ -695,13 +736,11 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let converter = FloatMajorUnitForConnector;
-        let amount = converter
-            .convert(
-                item.router_data.request.minor_refund_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::RequestEncodingFailed)?;
+        let amount = XenditAmountConvertor::convert_amount(
+            item.router_data.request.minor_refund_amount,
+            item.router_data.request.currency,
+        )
+        .change_context(ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             amount: amount.to_owned(),
             payment_request_id: item.router_data.request.connector_transaction_id.clone(),
@@ -738,12 +777,31 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             router_data,
             http_code,
         } = item;
+
+        let response_currency = Currency::from_str(response.currency.to_uppercase().as_str())
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+        let response_amount = XenditAmountConvertor::convert_back_amount_to_minor_units(
+            response.amount,
+            response_currency,
+        )?;
+
+        let response_integrity_object = {
+            Some(RefundIntegrityObject {
+                refund_amount: response_amount,
+                currency: response_currency,
+            })
+        };
+
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: response.id,
                 refund_status: common_enums::RefundStatus::from(response.status),
                 status_code: http_code,
             }),
+            request: RefundsData {
+                integrity_object: response_integrity_object,
+                ..router_data.request
+            },
             ..router_data
         })
     }
