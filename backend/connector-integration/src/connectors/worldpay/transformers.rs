@@ -798,6 +798,57 @@ impl<F, T>
     }
 }
 
+// Helper function to get resource ID from payment response
+pub fn get_resource_id<T, F>(
+    response: WorldpayPaymentsResponse,
+    connector_transaction_id: Option<String>,
+    transform_fn: F,
+) -> Result<T, error_stack::Report<errors::ConnectorError>>
+where
+    F: Fn(String) -> T,
+{
+    let optional_reference_id = response
+        .other_fields
+        .as_ref()
+        .and_then(|other_fields| match other_fields {
+            WorldpayPaymentResponseFields::AuthorizedResponse(res) => res
+                .links
+                .as_ref()
+                .and_then(|link| link.self_link.href.rsplit_once('/').map(|(_, h)| h)),
+            WorldpayPaymentResponseFields::DDCResponse(res) => {
+                res.actions.supply_ddc_data.href.split('/').nth_back(1)
+            }
+            WorldpayPaymentResponseFields::ThreeDsChallenged(res) => res
+                .actions
+                .complete_three_ds_challenge
+                .href
+                .split('/')
+                .nth_back(1),
+            WorldpayPaymentResponseFields::FraudHighRisk(_)
+            | WorldpayPaymentResponseFields::RefusedResponse(_) => None,
+        })
+        .map(|href| {
+            urlencoding::decode(href)
+                .map(|s| transform_fn(s.into_owned()))
+                .change_context(errors::ConnectorError::ResponseHandlingFailed)
+        })
+        .transpose()?;
+    optional_reference_id
+        .or_else(|| connector_transaction_id.map(transform_fn))
+        .ok_or_else(|| {
+            errors::ConnectorError::MissingRequiredField {
+                field_name: "_links.self.href",
+            }
+            .into()
+        })
+}
+
+// Response ID string wrapper
+#[derive(Debug, Clone)]
+pub struct ResponseIdStr {
+    pub id: String,
+}
+
 // Note: Old RouterData TryFrom implementations removed as we're using RouterDataV2
 // The following implementations are kept for compatibility with existing response processing
 // Steps 100-109: TryFrom implementations for Capture flow
