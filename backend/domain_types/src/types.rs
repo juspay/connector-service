@@ -1365,8 +1365,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             line3: value.line3,
             zip: value.zip_code,
             state: value.state,
-            first_name: value.first_name.map(|val| val.into()),
-            last_name: value.last_name.map(|val| val.into()),
+            first_name: value.first_name,
+            last_name: value.last_name,
         })
     }
 }
