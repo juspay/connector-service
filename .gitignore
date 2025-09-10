@@ -409,3 +409,7 @@ $RECYCLE.BIN/
 # DrawIO files
 **/*.drawio.bkp
 gen/**
+
+.vscode-test
+evals/*
+temp_instruction.txt
