@@ -169,6 +169,7 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
+                        None, // TODO: Add test context support for disputes
                     )
                     .await
                     .switch()
@@ -361,6 +362,7 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
+                        None,
                     )
                     .await
                     .switch()

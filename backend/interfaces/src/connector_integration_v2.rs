@@ -60,6 +60,14 @@ pub trait ConnectorIntegrationV2<Flow, ResourceCommonData, Req, Resp>:
         mime::APPLICATION_JSON.essence_str()
     }
 
+    /// returns api tag for test headers
+    fn get_api_tag(
+        &self,
+        _req: &RouterDataV2<Flow, ResourceCommonData, Req, Resp>,
+    ) -> Option<String> {
+        None
+    }
+
     /// primarily used when creating signature based on request method of payment flow
     fn get_http_method(&self) -> Method {
         Method::Post

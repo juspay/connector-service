@@ -124,7 +124,31 @@ impl Payments {
         metadata_payload: &utils::MetadataPayload,
         service_name: &str,
         request_id: &str,
+        request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
+        tracing::info!(
+            "Config check: test.enabled={}, mock_server_url={:?}",
+            self.config.test.enabled,
+            self.config.test.mock_server_url
+        );
+
+        let test_context = if self.config.test.enabled {
+            let ctx = external_services::service::TestContext::new(
+                self.config.test.mock_server_url.clone(),
+                request_metadata,
+            );
+            tracing::info!(
+                "Test context created: enabled={}, mock_server_url={:?}, is_test_env={}",
+                self.config.test.enabled,
+                self.config.test.mock_server_url,
+                ctx.is_test_env
+            );
+            Some(ctx)
+        } else {
+            tracing::info!("Test mode disabled");
+            None
+        };
+
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
 
@@ -157,6 +181,7 @@ impl Payments {
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
         let payment_flow_data = if should_do_order_create {
+            // Real order creation for production
             let event_params = EventParams {
                 connector_name: &connector.to_string(),
                 service_name,
@@ -172,12 +197,17 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
+                    request_metadata,
                 )
                 .await?;
 
             tracing::info!("Order created successfully with order_id: {}", order_id);
             payment_flow_data.set_order_reference_id(Some(order_id))
         } else {
+            // No order creation needed
+            if test_context.as_ref().is_some_and(|ctx| ctx.is_test_env) {
+                tracing::info!("Test mode enabled: no order creation required, proceeding directly to authorization");
+            }
             payment_flow_data
         };
 
@@ -199,6 +229,7 @@ impl Payments {
                     connector_auth_details.clone(),
                     event_params,
                     &payload,
+                    request_metadata,
                 )
                 .await?;
             tracing::info!(
@@ -239,6 +270,8 @@ impl Payments {
             request: payment_authorize_data,
             response: Err(ErrorResponse::default()),
         };
+
+        // test_context already created at the beginning of the function
         // Execute connector processing
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
@@ -259,6 +292,7 @@ impl Payments {
             router_data,
             None,
             event_params,
+            test_context,
         )
         .await;
 
@@ -348,6 +382,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
+        request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -393,6 +428,16 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
+        // Create test context for mock server integration
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                self.config.test.mock_server_url.clone(),
+                request_metadata,
+            ))
+        } else {
+            None
+        };
+
         // Execute connector processing
         let external_event_params = EventProcessingParams {
             connector_name: event_params.connector_name,
@@ -413,6 +458,7 @@ impl Payments {
             order_router_data,
             None,
             external_event_params,
+            test_context,
         )
         .await
         .map_err(
@@ -511,6 +557,7 @@ impl Payments {
             order_router_data,
             None,
             external_event_params,
+            None, // TODO: Add test context support for setup mandate order creation
         )
         .await
         .switch()
@@ -544,6 +591,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         event_params: EventParams<'_>,
         payload: &P,
+        request_metadata: &tonic::metadata::MetadataMap,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
         P: Clone + ErasedMaskSerialize,
@@ -596,12 +644,23 @@ impl Payments {
             reference_id: event_params.reference_id,
         };
 
+        // Create test context if needed
+        let test_context = if self.config.test.enabled {
+            Some(external_services::service::TestContext::new(
+                self.config.test.mock_server_url.clone(),
+                request_metadata,
+            ))
+        } else {
+            None
+        };
+
         let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             session_token_router_data,
             None,
             external_event_params,
+            test_context,
         )
         .await
         .switch()
@@ -754,7 +813,8 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
-                                        ))
+                                            &metadata,
+                ))
                                         .await
                                         {
                                             Ok(response) => response,
@@ -770,6 +830,7 @@ impl PaymentService for Payments {
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
+                                            &metadata,
                                         ))
                                         .await
                                         {
@@ -788,6 +849,7 @@ impl PaymentService for Payments {
                                     &metadata_payload,
                                     &service_name,
                                     request_id,
+                                    &metadata,
                                 ))
                                 .await
                                 {
@@ -806,6 +868,7 @@ impl PaymentService for Payments {
                             &metadata_payload,
                             &service_name,
                             request_id,
+                            &metadata,
                         ))
                         .await
                         {
@@ -1237,6 +1300,7 @@ impl PaymentService for Payments {
                         router_data,
                         None,
                         event_params,
+                        None, // TODO: Add test context support for setup mandate
                     )
                     .await
                     .switch()
@@ -1352,6 +1416,7 @@ impl PaymentService for Payments {
                         router_data,
                         None,
                         event_params,
+                        None, // TODO: Add test context support for repeat payment
                     )
                     .await
                     .switch()

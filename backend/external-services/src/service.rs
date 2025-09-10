@@ -3,8 +3,9 @@ use std::{str::FromStr, time::Duration};
 use common_utils::ext_traits::AsyncExt;
 // use base64::engine::Engine;
 use common_utils::{
-    lineage,
     // consts::BASE64_ENGINE,
+    consts::{X_API_TAG, X_API_URL, X_SESSION_ID},
+    lineage,
     request::{Method, Request, RequestContent},
 };
 use domain_types::{
@@ -56,6 +57,84 @@ use tracing::field::Empty;
 use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
+/// Test context for mock server integration
+#[derive(Debug, Clone)]
+pub struct TestContext {
+    pub mock_server_url: Option<String>,
+    pub is_test_env: bool,
+    pub metadata: std::collections::HashMap<String, String>,
+}
+
+impl TestContext {
+    pub fn new(
+        mock_server_url: Option<String>,
+        tonic_metadata: &tonic::metadata::MetadataMap,
+    ) -> Self {
+        let is_test_env = mock_server_url.is_some();
+
+        // Extract metadata from tonic MetadataMap
+        let mut metadata = std::collections::HashMap::new();
+
+        // Extract session ID
+        if let Some(session_id) = tonic_metadata.get(X_SESSION_ID) {
+            if let Ok(session_id_str) = session_id.to_str() {
+                metadata.insert(X_SESSION_ID.to_string(), session_id_str.to_string());
+            }
+        }
+
+        // Extract API tag
+        if let Some(api_tag) = tonic_metadata.get(X_API_TAG) {
+            if let Ok(api_tag_str) = api_tag.to_str() {
+                metadata.insert(X_API_TAG.to_string(), api_tag_str.to_string());
+            }
+        }
+
+        Self {
+            mock_server_url,
+            is_test_env,
+            metadata,
+        }
+    }
+
+    /// Get test headers to be added to connector requests
+    pub fn get_test_headers(
+        &self,
+        original_url: &str,
+        api_tag: Option<String>,
+    ) -> Vec<(String, Maskable<String>)> {
+        let mut headers = Vec::new();
+
+        if self.is_test_env {
+            // Add x-api-url header with original connector URL
+            headers.push((X_API_URL.to_string(), original_url.to_string().into()));
+
+            // Add x-api-tag header from parameter if provided, otherwise fallback to metadata
+            if let Some(tag) = api_tag {
+                headers.push((X_API_TAG.to_string(), tag.into()));
+            } else if let Some(api_tag) = self.metadata.get(X_API_TAG) {
+                headers.push((X_API_TAG.to_string(), api_tag.clone().into()));
+            }
+
+            // Add x-session-id header from metadata
+            if let Some(session_id) = self.metadata.get(X_SESSION_ID) {
+                headers.push((X_SESSION_ID.to_string(), session_id.clone().into()));
+            }
+        }
+
+        headers
+    }
+
+    /// Get the URL to use for the request (mock server URL if in test mode, otherwise original URL)
+    pub fn get_request_url(&self, original_url: String) -> String {
+        if self.is_test_env {
+            if let Some(ref mock_url) = self.mock_server_url {
+                return mock_url.clone();
+            }
+        }
+        original_url
+    }
+}
+
 #[derive(Debug)]
 pub struct EventProcessingParams<'a> {
     pub connector_name: &'a str,
@@ -90,6 +169,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
     event_params: EventProcessingParams<'_>,
+    test_context: Option<TestContext>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -103,7 +183,31 @@ where
         + ConnectorRequestReference,
 {
     let start = tokio::time::Instant::now();
-    let connector_request = connector.build_request_v2(&router_data)?;
+    let mut connector_request = connector.build_request_v2(&router_data)?;
+
+    // Apply test environment modifications if test context is provided
+    if let (Some(ref mut request), Some(test_ctx)) =
+        (connector_request.as_mut(), test_context.as_ref())
+    {
+        if test_ctx.is_test_env {
+            // Store original URL for x-api-url header
+            let original_url = request.url.clone();
+
+            // Replace URL with mock server URL
+            request.url = test_ctx.get_request_url(request.url.clone());
+
+            // Add test headers with API tag from connector
+            let api_tag = connector.get_api_tag(&router_data);
+            let test_headers = test_ctx.get_test_headers(&original_url, api_tag);
+            request.headers.extend(test_headers);
+
+            tracing::info!(
+                "Test mode enabled: redirected {} to {}",
+                original_url,
+                request.url
+            );
+        }
+    }
 
     let headers = connector_request
         .as_ref()
@@ -525,6 +629,12 @@ pub async fn call_connector_api(
     request: Request,
     _flow_name: &str,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
+    // Validate URL is not empty before parsing
+    if request.url.trim().is_empty() {
+        return Err(error_stack::report!(ApiClientError::UrlEncodingFailed)
+            .attach_printable("Request URL is empty"));
+    }
+
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
