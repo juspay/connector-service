@@ -33,16 +33,10 @@ pub mod transformers;
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use transformers::{
-    self as braintree,
-    RefundResponse,
-    RefundResponse as TrustpayRefundSyncResponse,
-    // TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse,
-    TrustpayCreateIntentRequest,
-    TrustpayCreateIntentResponse,
-    TrustpayErrorResponse,
-    TrustpayPaymentsRequest,
-    TrustpayPaymentsResponse,
-    TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
+    self as braintree, RefundResponse, RefundResponse as TrustpayRefundSyncResponse,
+    TrustpayAuthUpdateRequest, TrustpayAuthUpdateResponse, TrustpayCreateIntentRequest,
+    TrustpayCreateIntentResponse, TrustpayErrorResponse, TrustpayPaymentsRequest,
+    TrustpayPaymentsResponse, TrustpayPaymentsResponse as TrustpayPaymentsSyncResponse,
     TrustpayRefundRequest,
 };
 
@@ -143,6 +137,12 @@ macros::create_all_prerequisites!(
             request_body: TrustpayPaymentsRequest<T>,
             response_body: TrustpayPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: CreateAccessToken,
+            request_body: TrustpayAuthUpdateRequest,
+            response_body: TrustpayAuthUpdateResponse,
+            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
         ),
         (
             flow: PSync,
@@ -377,6 +377,37 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Trustpay,
+    curl_request: Json(TrustpayAuthUpdateRequest),
+    curl_response: TrustpayAuthUpdateResponse,
+    flow_name: CreateAccessToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: AccessTokenRequestData,
+    flow_response: AccessTokenResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers_for_payments(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!(
+            "{}{}",
+            req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap_or(""), "api/oauth2/token"
+        ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Trustpay,
     curl_response: TrustpayPaymentsSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -588,15 +619,6 @@ impl<
             + Serialize,
     > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Trustpay<T>
-{
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Trustpay<T>
 {
 }
 

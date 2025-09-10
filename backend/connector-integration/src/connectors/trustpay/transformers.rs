@@ -9,10 +9,11 @@ use common_utils::{
     Email, FloatMajorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, CreateOrder},
+    connector_flow::{Authorize, CreateAccessToken, CreateOrder},
     connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
+        AccessTokenRequestData, AccessTokenResponseData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData,
+        RefundFlowData, RefundsData, RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -1215,17 +1216,44 @@ pub struct TrustpayAuthUpdateRequest {
     pub grant_type: String,
 }
 
-/*
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        TrustpayRouterData<
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+            T,
+        >,
+    > for TrustpayAuthUpdateRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
 
-impl TryFrom<&RefreshTokenRouterData> for TrustpayAuthUpdateRequest {
-    type Error = Error;
-    fn try_from(_item: &RefreshTokenRouterData) -> Result<Self, Self::Error> {
+    fn try_from(
+        _item: TrustpayRouterData<
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {
             grant_type: "client_credentials".to_string(),
         })
     }
 }
-*/
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "PascalCase")]
@@ -1250,22 +1278,46 @@ pub struct TrustpayAccessTokenErrorResponse {
     pub result_info: ResultInfo,
 }
 
-/*
-
-impl<F, T> TryFrom<ResponseRouterData<F, TrustpayAuthUpdateResponse, T, AccessToken>>
-    for RouterData<F, T, AccessToken>
+impl
+    TryFrom<
+        ResponseRouterData<
+            TrustpayAuthUpdateResponse,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+        >,
+    >
+    for RouterDataV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    >
 {
-    type Error = Error;
+    type Error = error_stack::Report<ConnectorError>;
+
     fn try_from(
-        item: ResponseRouterData<F, TrustpayAuthUpdateResponse, T, AccessToken>,
+        item: ResponseRouterData<
+            TrustpayAuthUpdateResponse,
+            RouterDataV2<
+                CreateAccessToken,
+                PaymentFlowData,
+                AccessTokenRequestData,
+                AccessTokenResponseData,
+            >,
+        >,
     ) -> Result<Self, Self::Error> {
         match (item.response.access_token, item.response.expires_in) {
             (Some(access_token), Some(expires_in)) => Ok(Self {
-                response: Ok(AccessToken {
-                    token: access_token,
-                    expires: expires_in,
+                response: Ok(AccessTokenResponseData {
+                    access_token: access_token.expose(),
+                    expires_in: Some(expires_in),
+                    token_type: Some(item.router_data.request.grant_type.clone()),
                 }),
-                ..item.data
+                ..item.router_data
             }),
             _ => Ok(Self {
                 response: Err(ErrorResponse {
@@ -1280,12 +1332,11 @@ impl<F, T> TryFrom<ResponseRouterData<F, TrustpayAuthUpdateResponse, T, AccessTo
                     network_decline_code: None,
                     network_error_message: None,
                 }),
-                ..item.data
+                ..item.router_data
             }),
         }
     }
 }
-*/
 
 #[derive(Default, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

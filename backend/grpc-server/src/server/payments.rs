@@ -759,6 +759,7 @@ impl Payments {
             )),
         }
     }
+    #[allow(clippy::too_many_arguments)]
     async fn handle_access_token<
         T: PaymentMethodDataTypes
             + Default
