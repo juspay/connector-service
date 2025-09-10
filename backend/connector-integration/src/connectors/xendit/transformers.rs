@@ -311,6 +311,18 @@ fn map_payment_response_to_attempt_status(
     }
 }
 
+fn map_capture_response_to_attempt_status(
+    response: &XenditCaptureResponse,
+) -> common_enums::AttemptStatus {
+    match response.status {
+        PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
+        PaymentStatus::Succeeded | PaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+        PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
+        PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
+        PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
+    }
+}
+
 // Transformer for Request: RouterData -> XenditPaymentsRequest
 impl<
         T: PaymentMethodDataTypes
@@ -641,15 +653,7 @@ impl<F> TryFrom<ResponseRouterData<XenditCaptureResponse, Self>>
     fn try_from(
         item: ResponseRouterData<XenditCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.status {
-            PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
-            PaymentStatus::Succeeded | PaymentStatus::Verified => {
-                common_enums::AttemptStatus::Charged
-            }
-            PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
-            PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
-            PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
-        };
+        let status = map_capture_response_to_attempt_status(&item.response);
         let response = if status == common_enums::AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: item
