@@ -172,8 +172,8 @@ fn create_payment_authorize_request(
     // Minimal address structure matching working grpcurl
     request.address = Some(PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some(billing_first_name),
-            last_name: Some(billing_last_name),
+            first_name: Some(Secret::new(billing_first_name)),
+            last_name: Some(Secret::new(billing_last_name)),
             line1: Some(Secret::new("14 Main Street".to_string())),
             line2: None,
             line3: None,
