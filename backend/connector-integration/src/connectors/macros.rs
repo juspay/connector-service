@@ -842,6 +842,40 @@ macro_rules! create_all_prerequisites_resolve_templating_type {
 }
 pub(crate) use create_all_prerequisites_resolve_templating_type;
 
+macro_rules! create_amount_converter_wrapper {
+    (connector_name: $connector_name:ident, amount_type: $amount_type:ty) => {
+        paste::paste! {
+            #[derive(Default, Debug, Clone, Copy, PartialEq)]
+            pub struct [<$connector_name AmountConvertor>];
+
+            impl [<$connector_name AmountConvertor>] {
+                pub fn convert_amount(
+                    amount: common_utils::types::MinorUnit,
+                    currency: common_enums::Currency,
+                ) -> Result<common_utils::types::$amount_type, error_stack::Report<errors::ConnectorError>> {
+                    domain_types::utils::convert_amount(
+                        &common_utils::types::[<$amount_type ForConnector>],
+                        amount,
+                        currency,
+                    )
+                }
+
+                pub fn convert_back_amount_to_minor_units(
+                    amount: common_utils::types::$amount_type,
+                    currency: common_enums::Currency,
+                ) -> Result<common_utils::types::MinorUnit, error_stack::Report<errors::ConnectorError>> {
+                    domain_types::utils::convert_back_amount_to_minor_units(
+                        &common_utils::types::[<$amount_type ForConnector>],
+                        amount,
+                        currency,
+                    )
+                }
+            }
+        }
+    };
+}
+pub(crate) use create_amount_converter_wrapper;
+
 macro_rules! expand_imports {
     () => {
         use std::marker::PhantomData;
