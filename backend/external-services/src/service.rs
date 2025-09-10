@@ -3,6 +3,7 @@ use std::{str::FromStr, time::Duration};
 use common_utils::ext_traits::AsyncExt;
 // use base64::engine::Engine;
 use common_utils::{
+    lineage,
     // consts::BASE64_ENGINE,
     request::{Method, Request, RequestContent},
 };
@@ -36,21 +37,23 @@ impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowDat
     }
 }
 // use base64::engine::Engine;
-use crate::shared_metrics as metrics;
-use common_utils::emit_event_with_config;
-use common_utils::events::{Event, EventConfig, EventStage, FlowName};
-use common_utils::pii::SecretSerdeValue;
+use common_utils::{
+    emit_event_with_config,
+    events::{Event, EventConfig, EventStage, FlowName},
+    pii::SecretSerdeValue,
+};
 use error_stack::{report, ResultExt};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
-use masking::Secret;
-use masking::{ErasedMaskSerialize, Maskable};
+use masking::{ErasedMaskSerialize, Maskable, Secret};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
-use serde_json::{json, Value};
+use serde_json::json;
 use tracing::field::Empty;
+
+use crate::shared_metrics as metrics;
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
 #[derive(Debug)]
@@ -61,6 +64,8 @@ pub struct EventProcessingParams<'a> {
     pub event_config: &'a EventConfig,
     pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
+    pub lineage_ids: &'a lineage::LineageIds<'a>,
+    pub reference_id: &'a Option<String>,
 }
 
 #[tracing::instrument(
@@ -85,10 +90,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
     event_params: EventProcessingParams<'_>,
-) -> CustomResult<
-    RouterDataV2<F, ResourceCommonData, Req, Resp>,
-    domain_types::errors::ConnectorError,
->
+) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
     T: FlowIntegrity,
@@ -161,7 +163,7 @@ where
             let request_id = event_params.request_id.to_string();
             let response = call_connector_api(proxy, request, "execute_connector_processing_step")
                 .await
-                .change_context(domain_types::errors::ConnectorError::RequestEncodingFailed)
+                .change_context(ConnectorError::RequestEncodingFailed)
                 .inspect_err(|err| {
                     info_log(
                         "NETWORK_ERROR",
@@ -171,21 +173,22 @@ where
                         )),
                     );
                 });
-            let external_service_elapsed = external_service_start_latency.elapsed().as_secs_f64();
+            let external_service_elapsed = external_service_start_latency.elapsed();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[
                     &method.to_string(),
                     event_params.service_name,
                     event_params.connector_name,
                 ])
-                .observe(external_service_elapsed);
+                .observe(external_service_elapsed.as_secs_f64());
             tracing::info!(?response, "response from connector");
 
             match &response {
                 Ok(Ok(body)) => {
                     let res_body = serde_json::from_slice::<serde_json::Value>(&body.response).ok();
 
-                    let latency = external_service_elapsed as u64 * 1000; // Convert to milliseconds
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX); // Convert to milliseconds
                     let status_code = body.status_code;
 
                     // Emit success response event
@@ -197,11 +200,21 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_ids = event_params.lineage_ids.to_owned();
+                        let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
+                            let mut additional_fields = std::collections::HashMap::new();
+                            if let Some(ref_id) = reference_id_clone {
+                                additional_fields.insert(
+                                    "reference_id".to_string(),
+                                    SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                );
+                            }
+
                             let event = Event {
                                 request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
+                                timestamp: chrono::Utc::now().timestamp().into(),
                                 flow_type: flow_name,
                                 connector: connector_name.clone(),
                                 url: Some(url_clone),
@@ -211,7 +224,8 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields,
+                                lineage_ids,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -234,7 +248,8 @@ where
                     let error_res_body =
                         serde_json::from_slice::<serde_json::Value>(&error_body.response).ok();
 
-                    let latency = external_service_elapsed as u64 * 1000;
+                    let latency =
+                        u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
                     let status_code = error_body.status_code;
 
                     // Emit error response event
@@ -246,11 +261,21 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_ids = event_params.lineage_ids.to_owned();
+                        let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
+                            let mut additional_fields = std::collections::HashMap::new();
+                            if let Some(ref_id) = reference_id_clone {
+                                additional_fields.insert(
+                                    "reference_id".to_string(),
+                                    SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                );
+                            }
+
                             let event = Event {
                                 request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
+                                timestamp: chrono::Utc::now().timestamp().into(),
                                 flow_type: flow_name,
                                 connector: connector_name.clone(),
                                 url: Some(url_clone),
@@ -260,7 +285,8 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: response_data.map(Secret::new),
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields,
+                                lineage_ids,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -295,11 +321,21 @@ where
                         let raw_request_data_clone = event_params.raw_request_data.clone();
                         let url_clone = url.clone();
                         let flow_name = event_params.flow_name;
+                        let lineage_ids = event_params.lineage_ids.to_owned();
+                        let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
+                            let mut additional_fields = std::collections::HashMap::new();
+                            if let Some(ref_id) = reference_id_clone {
+                                additional_fields.insert(
+                                    "reference_id".to_string(),
+                                    SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                );
+                            }
+
                             let event = Event {
                                 request_id: request_id.to_string(),
-                                timestamp: chrono::Utc::now().timestamp() as i128,
+                                timestamp: chrono::Utc::now().timestamp().into(),
                                 flow_type: flow_name,
                                 connector: connector_name.clone(),
                                 url: Some(url_clone),
@@ -309,7 +345,8 @@ where
                                 request_data: raw_request_data_clone,
                                 connector_request_data: request_data.map(Secret::new),
                                 connector_response_data: None,
-                                additional_fields: std::collections::HashMap::new(),
+                                additional_fields,
+                                lineage_ids,
                             };
 
                             match emit_event_with_config(event, &event_config).await {
@@ -368,7 +405,7 @@ where
 
                             if !is_source_verified {
                                 return Err(error_stack::report!(
-                                    domain_types::errors::ConnectorError::SourceVerificationFailed
+                                    ConnectorError::SourceVerificationFailed
                                 ));
                             }
 
@@ -446,9 +483,7 @@ where
                 }
                 Err(err) => {
                     tracing::Span::current().record("url", tracing::field::display(url));
-                    Err(err.change_context(
-                        domain_types::errors::ConnectorError::ProcessingStepFailed(None),
-                    ))
+                    Err(err.change_context(ConnectorError::ProcessingStepFailed(None)))
                 }
             }
         }
@@ -549,8 +584,8 @@ pub async fn call_connector_api(
 pub fn create_client(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
-    _client_certificate: Option<masking::Secret<String>>,
-    _client_certificate_key: Option<masking::Secret<String>>,
+    _client_certificate: Option<Secret<String>>,
+    _client_certificate_key: Option<Secret<String>>,
 ) -> CustomResult<Client, ApiClientError> {
     get_base_client(proxy_config, should_bypass_proxy)
     // match (client_certificate, client_certificate_key) {
@@ -774,6 +809,7 @@ fn parse_json_with_bom_handling(
             // If direct parsing fails, try after removing BOM
             let cleaned_response = if response_bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
                 // UTF-8 BOM detected, remove it
+                #[allow(clippy::indexing_slicing)]
                 &response_bytes[3..]
             } else {
                 response_bytes
@@ -843,21 +879,21 @@ pub enum Tag {
 }
 
 #[inline]
-pub fn debug_log(action: &str, message: &Value) {
+pub fn debug_log(action: &str, message: &serde_json::Value) {
     tracing::debug!(tags = %action, json_value= %message);
 }
 
 #[inline]
-pub fn info_log(action: &str, message: &Value) {
+pub fn info_log(action: &str, message: &serde_json::Value) {
     tracing::info!(tags = %action, json_value= %message);
 }
 
 #[inline]
-pub fn error_log(action: &str, message: &Value) {
+pub fn error_log(action: &str, message: &serde_json::Value) {
     tracing::error!(tags = %action, json_value= %message);
 }
 
 #[inline]
-pub fn warn_log(action: &str, message: &Value) {
+pub fn warn_log(action: &str, message: &serde_json::Value) {
     tracing::warn!(tags = %action, json_value= %message);
 }

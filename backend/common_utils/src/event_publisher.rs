@@ -1,13 +1,14 @@
+use std::sync::Arc;
+
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
-use std::sync::Arc;
-use tracing_kafka::builder::KafkaWriterBuilder;
-use tracing_kafka::KafkaWriter;
+use tracing_kafka::{builder::KafkaWriterBuilder, KafkaWriter};
 
-// Use the centralized event definitions from the events module
-use crate::events::{Event, EventConfig};
-use crate::{CustomResult, EventPublisherError};
+use crate::{
+    events::{Event, EventConfig},
+    CustomResult, EventPublisherError,
+};
 
 const PARTITION_KEY_METADATA: &str = "partitionKey";
 
@@ -119,10 +120,13 @@ impl EventPublisher {
             error_stack::Report::new(EventPublisherError::EventSerializationFailed)
                 .attach_printable(format!("Serialization error: {e}"))
                 .attach_printable(format!(
-                    "Event context: request_id={}, connector={}, flow_type={}",
+                    "Event context: request_id={}, connector={}, flow_type={}, txn_uuid={}",
                     event.get("request_id").unwrap_or(&serde_json::Value::Null),
                     event.get("connector").unwrap_or(&serde_json::Value::Null),
-                    event.get("flow_type").unwrap_or(&serde_json::Value::Null)
+                    event.get("flow_type").unwrap_or(&serde_json::Value::Null),
+                    event
+                        .get("udf_txn_uuid")
+                        .unwrap_or(&serde_json::Value::Null)
                 ))
         })?;
 
@@ -142,16 +146,19 @@ impl EventPublisher {
                     .attach_printable(format!("Kafka publish error: {e}"))
                     .attach_printable(format!("Topic: {topic}"))
                     .attach_printable(format!(
-                        "Event context: request_id={}, connector={}, flow_type={}",
+                        "Event context: request_id={}, connector={}, flow_type={}, txn_uuid={}",
                         event.get("request_id").unwrap_or(&serde_json::Value::Null),
                         event.get("connector").unwrap_or(&serde_json::Value::Null),
-                        event.get("flow_type").unwrap_or(&serde_json::Value::Null)
+                        event.get("flow_type").unwrap_or(&serde_json::Value::Null),
+                        event
+                            .get("udf_txn_uuid")
+                            .unwrap_or(&serde_json::Value::Null)
                     ))
             })?;
 
+        let event_json = serde_json::to_string(&event).unwrap_or_default();
         tracing::info!(
-            topic = %topic,
-            has_partition_key = key.is_some(),
+            full_event = %event_json,
             "Event successfully published to Kafka"
         );
 
@@ -182,9 +189,12 @@ impl EventPublisher {
         // Process transformations
         for (target_path, source_field) in &self.config.transformations {
             if let Some(value) = result.get(source_field).cloned() {
-                if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+                let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
+                if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                     tracing::warn!(
                         target_path = %target_path,
+                        normalized_path = %normalized_path,
                         source_field = %source_field,
                         error = %e,
                         "Failed to set transformation, continuing with event processing"
@@ -195,10 +205,13 @@ impl EventPublisher {
 
         // Process static values - log warnings but continue processing
         for (target_path, static_value) in &self.config.static_values {
+            // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+            let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
             let value = serde_json::json!(static_value);
-            if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+            if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                 tracing::warn!(
                     target_path = %target_path,
+                    normalized_path = %normalized_path,
                     static_value = %static_value,
                     error = %e,
                     "Failed to set static value, continuing with event processing"
@@ -209,9 +222,12 @@ impl EventPublisher {
         // Process extraction
         for (target_path, extraction_path) in &self.config.extractions {
             if let Some(value) = self.extract_from_request(&result, extraction_path) {
-                if let Err(e) = self.set_nested_value(&mut result, target_path, value) {
+                // Replace _DOT_ and _dot_ with . to support nested keys in environment variables
+                let normalized_path = target_path.replace("_DOT_", ".").replace("_dot_", ".");
+                if let Err(e) = self.set_nested_value(&mut result, &normalized_path, value) {
                     tracing::warn!(
                         target_path = %target_path,
+                        normalized_path = %normalized_path,
                         extraction_path = %extraction_path,
                         error = %e,
                         "Failed to set extraction, continuing with event processing"

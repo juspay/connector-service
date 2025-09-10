@@ -10,10 +10,11 @@ use common_utils::{
 use domain_types::{
     connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -23,7 +24,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
+    utils::{self, ForeignTryFrom},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
@@ -352,6 +353,135 @@ impl<
                     custom,
                 })
             }
+            PaymentMethodData::Wallet(ref wallet_data) => match wallet_data {
+                WalletDataPaymentMethod::GooglePay(ref req_wallet) => {
+                    let novalnet_google_pay: NovalNetPaymentData<T> =
+                        NovalNetPaymentData::GooglePay(NovalnetGooglePay {
+                            wallet_data: Secret::new(
+                                req_wallet
+                                    .tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::MissingRequiredField {
+                                        field_name: "gpay wallet_token",
+                                    })?
+                                    .clone(),
+                            ),
+                        });
+
+                    let transaction = NovalnetPaymentsRequestTransaction {
+                        test_mode,
+                        payment_type: NovalNetPaymentTypes::GOOGLEPAY,
+                        amount: NovalNetAmount::StringMinor(amount.clone()),
+                        currency: item.router_data.request.currency,
+                        order_no: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        hook_url: Some(hook_url),
+                        return_url: None,
+                        error_return_url: None,
+                        payment_data: Some(novalnet_google_pay),
+                        enforce_3d,
+                        create_token,
+                        scheme_tid: None,
+                    };
+
+                    Ok(Self {
+                        merchant,
+                        transaction,
+                        customer,
+                        custom,
+                    })
+                }
+                WalletDataPaymentMethod::ApplePay(payment_method_data) => {
+                    let transaction = NovalnetPaymentsRequestTransaction {
+                        test_mode,
+                        payment_type: NovalNetPaymentTypes::APPLEPAY,
+                        amount: NovalNetAmount::StringMinor(amount.clone()),
+                        currency: item.router_data.request.currency,
+                        order_no: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        hook_url: Some(hook_url),
+                        return_url: None,
+                        error_return_url: None,
+                        payment_data: Some(NovalNetPaymentData::ApplePay(NovalnetApplePay {
+                            wallet_data: payment_method_data.get_applepay_decoded_payment_data()?,
+                        })),
+                        enforce_3d: None,
+                        create_token,
+                        scheme_tid: None,
+                    };
+
+                    Ok(Self {
+                        merchant,
+                        transaction,
+                        customer,
+                        custom,
+                    })
+                }
+                WalletDataPaymentMethod::PaypalRedirect(_) => {
+                    let transaction = NovalnetPaymentsRequestTransaction {
+                        test_mode,
+                        payment_type: NovalNetPaymentTypes::PAYPAL,
+                        amount: NovalNetAmount::StringMinor(amount.clone()),
+                        currency: item.router_data.request.currency,
+                        order_no: item
+                            .router_data
+                            .resource_common_data
+                            .connector_request_reference_id
+                            .clone(),
+                        hook_url: Some(hook_url),
+                        return_url: Some(return_url.clone()),
+                        error_return_url: Some(return_url.clone()),
+                        payment_data: None,
+                        enforce_3d: None,
+                        create_token,
+                        scheme_tid: None,
+                    };
+                    Ok(Self {
+                        merchant,
+                        transaction,
+                        customer,
+                        custom,
+                    })
+                }
+                WalletDataPaymentMethod::AliPayQr(_)
+                | WalletDataPaymentMethod::AliPayRedirect(_)
+                | WalletDataPaymentMethod::AliPayHkRedirect(_)
+                | WalletDataPaymentMethod::AmazonPayRedirect(_)
+                | WalletDataPaymentMethod::MomoRedirect(_)
+                | WalletDataPaymentMethod::KakaoPayRedirect(_)
+                | WalletDataPaymentMethod::GoPayRedirect(_)
+                | WalletDataPaymentMethod::GcashRedirect(_)
+                | WalletDataPaymentMethod::ApplePayRedirect(_)
+                | WalletDataPaymentMethod::ApplePayThirdPartySdk(_)
+                | WalletDataPaymentMethod::DanaRedirect {}
+                | WalletDataPaymentMethod::GooglePayRedirect(_)
+                | WalletDataPaymentMethod::GooglePayThirdPartySdk(_)
+                | WalletDataPaymentMethod::MbWayRedirect(_)
+                | WalletDataPaymentMethod::MobilePayRedirect(_)
+                | WalletDataPaymentMethod::RevolutPay(_)
+                | WalletDataPaymentMethod::PaypalSdk(_)
+                | WalletDataPaymentMethod::Paze(_)
+                | WalletDataPaymentMethod::SamsungPay(_)
+                | WalletDataPaymentMethod::TwintRedirect {}
+                | WalletDataPaymentMethod::VippsRedirect {}
+                | WalletDataPaymentMethod::TouchNGoRedirect(_)
+                | WalletDataPaymentMethod::WeChatPayRedirect(_)
+                | WalletDataPaymentMethod::CashappQr(_)
+                | WalletDataPaymentMethod::SwishQr(_)
+                | WalletDataPaymentMethod::WeChatPayQr(_)
+                | WalletDataPaymentMethod::Mifinity(_) => {
+                    Err(errors::ConnectorError::NotImplemented(
+                        utils::get_unimplemented_payment_method_error_message("novalnet"),
+                    )
+                    .into())
+                }
+            },
             _ => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             )
@@ -466,7 +596,6 @@ pub fn get_error_response(result: ResultData, status_code: u16) -> ErrorResponse
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
-        raw_connector_response: None,
     }
 }
 
@@ -578,7 +707,6 @@ impl<
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -691,7 +819,6 @@ impl<
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -781,7 +908,6 @@ impl
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1128,7 +1254,6 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundResponse, Self>>
                     response: Ok(RefundsResponseData {
                         connector_refund_id: refund_id,
                         refund_status: common_enums::RefundStatus::from(transaction_status),
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1279,7 +1404,6 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1360,7 +1484,6 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1456,7 +1579,6 @@ impl<F> TryFrom<ResponseRouterData<NovalnetRefundSyncResponse, Self>>
                     response: Ok(RefundsResponseData {
                         connector_refund_id: refund_id,
                         refund_status: common_enums::RefundStatus::from(transaction_status),
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1571,7 +1693,6 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
                         incremental_authorization_allowed: None,
-                        raw_connector_response: None,
                         status_code: item.http_code,
                     }),
                     ..item.router_data
@@ -1633,6 +1754,13 @@ pub struct NovalnetWebhookNotificationResponse {
     pub transaction: NovalnetWebhookTransactionData,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NovalnetWebhookNotificationResponseRefunds {
+    pub event: NovalnetWebhookEvent,
+    pub result: ResultData,
+    pub transaction: NovalnetRefundsTransactionData,
+}
+
 pub fn is_refund_event(event_code: &WebhookEventType) -> bool {
     matches!(event_code, WebhookEventType::TransactionRefund)
 }
@@ -1653,6 +1781,18 @@ pub fn get_novalnet_dispute_status(status: WebhookEventType) -> WebhookDisputeSt
         WebhookEventType::Chargeback => WebhookDisputeStatus::DisputeOpened,
         WebhookEventType::Credit => WebhookDisputeStatus::DisputeWon,
         _ => WebhookDisputeStatus::Unknown,
+    }
+}
+
+impl ForeignTryFrom<WebhookDisputeStatus> for common_enums::DisputeStatus {
+    type Error = ConnectorError;
+
+    fn foreign_try_from(value: WebhookDisputeStatus) -> error_stack::Result<Self, Self::Error> {
+        match value {
+            WebhookDisputeStatus::DisputeOpened => Ok(Self::DisputeOpened),
+            WebhookDisputeStatus::DisputeWon => Ok(Self::DisputeWon),
+            WebhookDisputeStatus::Unknown => Err(ConnectorError::WebhookBodyDecodingFailed)?,
+        }
     }
 }
 
@@ -1805,7 +1945,15 @@ impl<
                 WalletDataPaymentMethod::GooglePay(ref req_wallet) => {
                     let novalnet_google_pay: NovalNetPaymentData<T> =
                         NovalNetPaymentData::GooglePay(NovalnetGooglePay {
-                            wallet_data: Secret::new(req_wallet.tokenization_data.token.clone()),
+                            wallet_data: Secret::new(
+                                req_wallet
+                                    .tokenization_data
+                                    .get_encrypted_google_pay_token()
+                                    .change_context(errors::ConnectorError::MissingRequiredField {
+                                        field_name: "gpay wallet_token",
+                                    })?
+                                    .clone(),
+                            ),
                         });
 
                     let transaction = NovalnetPaymentsRequestTransaction {
@@ -2044,7 +2192,10 @@ impl<
                     token: Secret::new(connector_mandate_id),
                 });
 
-                let payment_type = NovalNetPaymentTypes::CREDITCARD;
+                let payment_type = match item.router_data.request.payment_method_type {
+                    Some(pm_type) => NovalNetPaymentTypes::try_from(&pm_type)?,
+                    None => NovalNetPaymentTypes::CREDITCARD,
+                };
 
                 let transaction = NovalnetPaymentsRequestTransaction {
                     test_mode,
@@ -2076,6 +2227,135 @@ impl<
                 utils::get_unimplemented_payment_method_error_message("novalnet"),
             )
             .into()),
+        }
+    }
+}
+
+pub fn get_incoming_webhook_event(
+    status: WebhookEventType,
+    transaction_status: NovalnetTransactionStatus,
+) -> EventType {
+    match status {
+        WebhookEventType::Payment => match transaction_status {
+            NovalnetTransactionStatus::Confirmed | NovalnetTransactionStatus::Success => {
+                EventType::PaymentIntentSuccess
+            }
+            NovalnetTransactionStatus::OnHold => EventType::PaymentIntentAuthorizationSuccess,
+            NovalnetTransactionStatus::Pending => EventType::PaymentIntentProcessing,
+            NovalnetTransactionStatus::Progress => EventType::IncomingWebhookEventUnspecified,
+            _ => EventType::PaymentIntentFailure,
+        },
+        WebhookEventType::TransactionCapture => match transaction_status {
+            NovalnetTransactionStatus::Confirmed | NovalnetTransactionStatus::Success => {
+                EventType::PaymentIntentCaptureSuccess
+            }
+            _ => EventType::PaymentIntentCaptureFailure,
+        },
+        WebhookEventType::TransactionCancel => match transaction_status {
+            NovalnetTransactionStatus::Deactivated => EventType::PaymentIntentCancelled,
+            _ => EventType::PaymentIntentCancelFailure,
+        },
+        WebhookEventType::TransactionRefund => match transaction_status {
+            NovalnetTransactionStatus::Confirmed | NovalnetTransactionStatus::Success => {
+                EventType::RefundSuccess
+            }
+            _ => EventType::RefundFailure,
+        },
+        WebhookEventType::Chargeback => EventType::DisputeOpened,
+        WebhookEventType::Credit => EventType::DisputeWon,
+    }
+}
+
+impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(notif: NovalnetWebhookNotificationResponse) -> Result<Self, Self::Error> {
+        match notif.transaction {
+            NovalnetWebhookTransactionData::SyncTransactionData(response) => {
+                match notif.result.status {
+                    NovalnetAPIStatus::Success => {
+                        let mandate_reference_id =
+                            NovalnetSyncResponseTransactionData::get_token(Some(&response));
+                        let transaction_id = response.tid.map(|tid| tid.expose().to_string());
+                        let transaction_status = response.status;
+
+                        Ok(Self {
+                            status: common_enums::AttemptStatus::from(transaction_status),
+                            resource_id: Some(
+                                transaction_id
+                                    .clone()
+                                    .map(ResponseId::ConnectorTransactionId)
+                                    .unwrap_or(ResponseId::NoResponseId),
+                            ),
+                            mandate_reference: mandate_reference_id
+                                .as_ref()
+                                .map(|id| MandateReference {
+                                    connector_mandate_id: Some(id.clone()),
+                                    payment_method_id: None,
+                                })
+                                .map(Box::new),
+                            status_code: 200,
+                            connector_response_reference_id: transaction_id.clone(),
+                            error_code: None,
+                            error_message: None,
+                            raw_connector_response: None,
+                            response_headers: None,
+                        })
+                    }
+                    NovalnetAPIStatus::Failure => Ok(Self {
+                        status: common_enums::AttemptStatus::Failure,
+                        resource_id: None,
+                        status_code: 200,
+                        mandate_reference: None,
+                        connector_response_reference_id: None,
+                        error_code: Some(notif.result.status.to_string()),
+                        error_message: Some(notif.result.status_text),
+                        raw_connector_response: None,
+                        response_headers: None,
+                    }),
+                }
+            }
+            _ => Err(ConnectorError::WebhookBodyDecodingFailed)?,
+        }
+    }
+}
+
+impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetailsResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(notif: NovalnetWebhookNotificationResponseRefunds) -> Result<Self, Self::Error> {
+        match notif.result.status {
+            NovalnetAPIStatus::Success => {
+                let refund_id = notif
+                    .transaction
+                    .refund
+                    .tid
+                    .map(|tid| tid.expose().to_string())
+                    .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
+
+                let transaction_status = notif.transaction.status;
+
+                Ok(Self {
+                    connector_refund_id: Some(refund_id),
+                    status: common_enums::RefundStatus::from(transaction_status),
+                    status_code: 200,
+                    connector_response_reference_id: None,
+                    error_code: None,
+                    error_message: None,
+                    raw_connector_response: None,
+                    response_headers: None,
+                })
+            }
+            NovalnetAPIStatus::Failure => Ok(Self {
+                status: common_enums::RefundStatus::Failure,
+                connector_refund_id: None,
+                status_code: 200,
+                connector_response_reference_id: None,
+                error_code: Some(notif.result.status.to_string()),
+                error_message: Some(notif.result.status_text),
+                raw_connector_response: None,
+                response_headers: None,
+            }),
         }
     }
 }

@@ -5,15 +5,18 @@
 #![allow(dead_code)]
 
 use grpc_server::{app, configs};
+use hyperswitch_masking::Secret;
 mod common;
 
 use std::{
     any::Any,
     collections::HashMap,
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -201,6 +204,8 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         capture_method: None,
         email: None,
         browser_info: None,
+        test_mode: None,
+        payment_method_type: None,
     }
 }
 
@@ -282,11 +287,11 @@ fn create_payment_authorize_request(
 
     // Set up card payment method using the correct structure
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: Some(2_i32), // Mastercard network for 5123456789012346
         card_type: None,
@@ -303,7 +308,7 @@ fn create_payment_authorize_request(
 
     request.connector_customer_id = Some("TEST_CONNECTOR".to_string());
     // Set the customer information with unique email
-    request.email = Some(generate_unique_email());
+    request.email = Some(generate_unique_email().into());
 
     // Generate random names for billing to prevent duplicate transaction errors
     let billing_first_name = random_name();
@@ -312,14 +317,14 @@ fn create_payment_authorize_request(
     // Minimal address structure matching working grpcurl
     request.address = Some(PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some(billing_first_name),
-            last_name: Some(billing_last_name),
-            line1: Some("14 Main Street".to_string()),
+            first_name: Some(billing_first_name.into()),
+            last_name: Some(billing_last_name.into()),
+            line1: Some("14 Main Street".to_string().into()),
             line2: None,
             line3: None,
-            city: Some("Pecan Springs".to_string()),
-            state: Some("TX".to_string()),
-            zip_code: Some("44628".to_string()),
+            city: Some("Pecan Springs".to_string().into()),
+            state: Some("TX".to_string().into()),
+            zip_code: Some("44628".to_string().into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             phone_number: None,
             phone_country_code: None,
@@ -501,11 +506,11 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
 
     // Set up card payment method with Visa network as in your JSON
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: Some(1_i32),
         card_type: None,
@@ -522,7 +527,7 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
 
     // Set customer information with unique email
     request.customer_name = Some(TEST_CARD_HOLDER.to_string());
-    request.email = Some(generate_unique_email());
+    request.email = Some(generate_unique_email().into());
 
     // Add customer acceptance as required by the server (matching your JSON: "acceptance_type": "OFFLINE")
     request.customer_acceptance = Some(CustomerAcceptance {
@@ -534,18 +539,18 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
     // Add billing address matching your JSON format
     request.address = Some(PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some("Test".to_string()),
-            last_name: Some("Customer001".to_string()),
-            line1: Some("123 Test St".to_string()),
+            first_name: Some("Test".to_string().into()),
+            last_name: Some("Customer001".to_string().into()),
+            line1: Some("123 Test St".to_string().into()),
             line2: None,
             line3: None,
-            city: Some("Test City".to_string()),
-            state: Some("NY".to_string()),
-            zip_code: Some("10001".to_string()),
+            city: Some("Test City".to_string().into()),
+            state: Some("NY".to_string().into()),
+            zip_code: Some("10001".to_string().into()),
             country_alpha2_code: Some(i32::from(CountryAlpha2::Us)),
             phone_number: None,
             phone_country_code: None,
-            email: Some(generate_unique_email()),
+            email: Some(generate_unique_email().into()),
         }),
         shipping_address: None,
     });

@@ -1,6 +1,9 @@
 //! Kafka layer implementation that reuses log_utils formatting.
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use log_utils::{
     AdditionalFieldsPlacement, JsonFormattingLayer, JsonFormattingLayerConfig, LoggerError,
@@ -8,9 +11,10 @@ use log_utils::{
 use tracing::Subscriber;
 use tracing_subscriber::Layer;
 
-use crate::builder::KafkaWriterBuilder;
-use crate::writer::{KafkaWriter, KafkaWriterError};
-use std::time::Duration;
+use crate::{
+    builder::KafkaWriterBuilder,
+    writer::{KafkaWriter, KafkaWriterError},
+};
 
 /// Tracing layer that sends JSON-formatted logs to Kafka
 ///

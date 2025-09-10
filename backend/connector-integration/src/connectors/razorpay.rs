@@ -309,7 +309,6 @@ impl<
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 }
@@ -821,9 +820,9 @@ impl<
         })?;
 
         if payload.refund.is_some() {
-            Ok(EventType::Refund)
+            Ok(EventType::RefundSuccess)
         } else {
-            Ok(EventType::Payment)
+            Ok(EventType::PaymentIntentSuccess)
         }
     }
 
@@ -849,6 +848,7 @@ impl<
                 notif.entity.entity,
                 notif.entity.status,
             )?,
+            mandate_reference: None,
             connector_response_reference_id: None,
             error_code: notif.entity.error_code,
             error_message: notif.entity.error_reason,

@@ -11,6 +11,7 @@ use crate::{
         token::GlobalTokenId,
     },
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
+    lineage,
     types::TimeRange,
     SecretSerdeValue,
 };
@@ -176,7 +177,7 @@ impl<T: ApiEventMetric> ApiEventMetric for &T {
 
 impl ApiEventMetric for TimeRange {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Event {
     pub request_id: String,
     pub timestamp: i128,
@@ -191,6 +192,8 @@ pub struct Event {
     pub connector_response_data: Option<SecretSerdeValue>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, SecretSerdeValue>,
+    #[serde(flatten)]
+    pub lineage_ids: lineage::LineageIds<'static>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -207,7 +210,10 @@ pub enum FlowName {
     Dsync,
     IncomingWebhook,
     SetupMandate,
+    RepeatPayment,
     CreateOrder,
+    CreateSessionToken,
+    Unknown,
 }
 
 impl FlowName {
@@ -225,7 +231,10 @@ impl FlowName {
             Self::Dsync => "Dsync",
             Self::IncomingWebhook => "IncomingWebhook",
             Self::SetupMandate => "SetupMandate",
+            Self::RepeatPayment => "RepeatPayment",
             Self::CreateOrder => "CreateOrder",
+            Self::CreateSessionToken => "CreateSessionToken",
+            Self::Unknown => "Unknown",
         }
     }
 }
@@ -251,11 +260,11 @@ pub struct EventConfig {
     pub brokers: Vec<String>,
     pub partition_key_field: String,
     #[serde(default)]
-    pub transformations: std::collections::HashMap<String, String>, // target_path → source_field
+    pub transformations: HashMap<String, String>, // target_path → source_field
     #[serde(default)]
-    pub static_values: std::collections::HashMap<String, String>, // target_path → static_value
+    pub static_values: HashMap<String, String>, // target_path → static_value
     #[serde(default)]
-    pub extractions: std::collections::HashMap<String, String>, // target_path → extraction_path
+    pub extractions: HashMap<String, String>, // target_path → extraction_path
 }
 
 impl Default for EventConfig {
@@ -265,9 +274,9 @@ impl Default for EventConfig {
             topic: "events".to_string(),
             brokers: vec!["localhost:9092".to_string()],
             partition_key_field: "request_id".to_string(),
-            transformations: std::collections::HashMap::new(),
-            static_values: std::collections::HashMap::new(),
-            extractions: std::collections::HashMap::new(),
+            transformations: HashMap::new(),
+            static_values: HashMap::new(),
+            extractions: HashMap::new(),
         }
     }
 }

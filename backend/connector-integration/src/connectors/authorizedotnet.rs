@@ -3,6 +3,7 @@ pub mod transformers;
 use common_enums;
 use common_utils::{
     consts, errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+    types::FloatMajorUnit,
 };
 use domain_types::{
     connector_flow::{
@@ -199,17 +200,25 @@ impl<
             })?;
 
         Ok(match webhook_body.event_type {
-            transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
-            | transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CaptureCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
-            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
-                EventType::Payment
+            transformers::AuthorizedotnetIncomingWebhookEventType::AuthorizationCreated => {
+                EventType::PaymentIntentAuthorizationSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::PriorAuthCapture
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CaptureCreated => {
+                EventType::PaymentIntentCaptureSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::AuthCapCreated => {
+                EventType::PaymentIntentSuccess // Combined auth+capture
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::VoidCreated => {
+                EventType::PaymentIntentCancelled
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::RefundCreated => {
-                EventType::Refund
+                EventType::RefundSuccess
+            }
+            transformers::AuthorizedotnetIncomingWebhookEventType::CustomerCreated
+            | transformers::AuthorizedotnetIncomingWebhookEventType::CustomerPaymentProfileCreated => {
+                EventType::MandateActive
             }
             transformers::AuthorizedotnetIncomingWebhookEventType::Unknown => {
                 tracing::warn!(
@@ -251,6 +260,7 @@ impl<
             resource_id: Some(ResponseId::ConnectorTransactionId(transaction_id.clone())),
             status: common_enums::AttemptStatus::from(status),
             status_code: 200,
+            mandate_reference: None,
             connector_response_reference_id: Some(transaction_id),
             error_code: None,
             error_message: None,
@@ -456,7 +466,6 @@ impl<
             network_decline_code: None,
             network_advice_code: None,
             network_error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&res.response).to_string()),
         })
     }
 
@@ -519,7 +528,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: FloatMajorUnit
+    ],
     member_functions: {
         fn preprocess_response_bytes<F, FCD, Req, Res>(
             &self,

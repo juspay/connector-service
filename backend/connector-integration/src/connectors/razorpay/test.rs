@@ -89,6 +89,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -98,7 +99,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -184,7 +184,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -256,6 +255,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -265,7 +265,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -329,7 +328,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -375,6 +373,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -384,7 +383,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -448,7 +446,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -516,6 +513,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -525,7 +523,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -611,7 +608,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -824,6 +820,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -833,7 +830,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -915,7 +911,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -998,6 +993,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1007,7 +1003,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1089,7 +1084,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1174,6 +1168,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: domain_types::types::Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1183,7 +1178,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1207,7 +1201,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -1273,6 +1266,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1282,7 +1276,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1306,7 +1299,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -1377,6 +1369,7 @@ mod tests {
                     test_mode: None,
                     connector_http_status_code: None,
                     external_latency: None,
+                    raw_connector_response: None,
                     connectors: Connectors {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
@@ -1386,7 +1379,6 @@ mod tests {
                         ..Default::default()
                     },
                     connector_response_headers: None,
-                    raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1450,7 +1442,6 @@ mod tests {
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 }),
             };
 
@@ -1517,6 +1508,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1526,7 +1518,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1550,7 +1541,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1639,6 +1629,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1648,7 +1639,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1672,7 +1662,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 
@@ -1750,6 +1739,7 @@ mod tests {
                 test_mode: None,
                 connector_http_status_code: None,
                 external_latency: None,
+                raw_connector_response: None,
                 connectors: Connectors {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
@@ -1759,7 +1749,6 @@ mod tests {
                     ..Default::default()
                 },
                 connector_response_headers: None,
-                raw_connector_response: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1783,7 +1772,6 @@ mod tests {
                 network_decline_code: None,
                 network_advice_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             }),
         };
 

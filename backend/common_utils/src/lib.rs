@@ -6,6 +6,7 @@ pub mod errors;
 pub mod ext_traits;
 pub mod fp_utils;
 pub mod id_type;
+pub mod lineage;
 pub mod macros;
 pub mod new_types;
 pub mod pii;
@@ -13,9 +14,9 @@ pub mod request;
 pub mod types;
 // Re-export commonly used items
 pub use errors::{CustomResult, EventPublisherError, ParsingError, ValidationError};
-
 #[cfg(feature = "kafka")]
 pub use event_publisher::{emit_event_with_config, init_event_publisher};
+
 #[cfg(not(feature = "kafka"))]
 pub fn init_event_publisher(_config: &events::EventConfig) -> CustomResult<(), ()> {
     Ok(())

@@ -7,9 +7,11 @@ mod common;
 
 use std::{
     env,
+    str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use cards::CardNumber;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -19,6 +21,7 @@ use grpc_api_types::{
         PaymentServiceAuthorizeRequest, PaymentStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -96,11 +99,11 @@ fn add_novalnet_metadata<T>(request: &mut Request<T>) {
 // Helper function to create a payment authorize request
 fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuthorizeRequest {
     let card_details = card_payment_method_type::CardType::Credit(CardDetails {
-        card_number: TEST_CARD_NUMBER.to_string(),
-        card_exp_month: TEST_CARD_EXP_MONTH.to_string(),
-        card_exp_year: TEST_CARD_EXP_YEAR.to_string(),
-        card_cvc: TEST_CARD_CVC.to_string(),
-        card_holder_name: Some(TEST_CARD_HOLDER.to_string()),
+        card_number: Some(CardNumber::from_str(TEST_CARD_NUMBER).unwrap()),
+        card_exp_month: Some(Secret::new(TEST_CARD_EXP_MONTH.to_string())),
+        card_exp_year: Some(Secret::new(TEST_CARD_EXP_YEAR.to_string())),
+        card_cvc: Some(Secret::new(TEST_CARD_CVC.to_string())),
+        card_holder_name: Some(Secret::new(TEST_CARD_HOLDER.to_string())),
         card_issuer: None,
         card_network: Some(1),
         card_type: None,
@@ -110,9 +113,9 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
     });
     let address = PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some("John".to_string()),
-            last_name: Some("Doe".to_string()),
-            email: Some("test@test.com".to_string()),
+            first_name: Some("John".to_string().into()),
+            last_name: Some("Doe".to_string().into()),
+            email: Some("test@test.com".to_string().into()),
             ..Default::default()
         }),
         shipping_address: None,
@@ -128,7 +131,7 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         }),
         return_url: Some("https://hyperswitch.io/".to_string()),
         webhook_url: Some("https://hyperswitch.io/".to_string()),
-        email: Some(TEST_EMAIL.to_string()),
+        email: Some(TEST_EMAIL.to_string().into()),
         address: Some(address),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {

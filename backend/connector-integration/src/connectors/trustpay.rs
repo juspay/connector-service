@@ -182,7 +182,7 @@ macros::create_all_prerequisites!(
                     ),
                     (
                         headers::AUTHORIZATION.to_string(),
-                        format!("Bearer {}", token).into_masked(),
+                        format!("Bearer {token}").into_masked(),
                     ),
                 ])
             }
@@ -268,7 +268,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         match response {
             Ok(response_data) => {
-                event_builder.map(|i| i.set_error_response_body(&response_data));
+                if let Some(i) = event_builder {
+                    i.set_error_response_body(&response_data);
+                }
                 let reason = response_data.errors.map(|errors| {
                     errors
                         .iter()
@@ -288,11 +290,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-                    raw_connector_response: None,
                 })
             }
             Err(_) => {
-                event_builder.map(|event| event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})));
+                if let Some(event) = event_builder {
+                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}));
+                }
                 domain_types::utils::handle_json_response_deserialization_failure(res, "trustpay")
             }
         }

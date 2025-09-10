@@ -976,7 +976,6 @@ fn handle_cards_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -989,7 +988,6 @@ fn handle_cards_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -1019,7 +1017,6 @@ fn handle_bank_redirects_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -1053,7 +1050,6 @@ fn handle_bank_redirects_error_response(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
-        raw_connector_response: None,
     });
     let payment_response_data = PaymentsResponseData::TransactionResponse {
         resource_id: ResponseId::NoResponseId,
@@ -1063,7 +1059,6 @@ fn handle_bank_redirects_error_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -1110,7 +1105,6 @@ fn handle_bank_redirects_sync_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1129,7 +1123,6 @@ fn handle_bank_redirects_sync_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -1169,7 +1162,6 @@ pub fn handle_webhook_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1182,7 +1174,6 @@ pub fn handle_webhook_response(
         network_txn_id: None,
         connector_response_reference_id: None,
         incremental_authorization_allowed: None,
-        raw_connector_response: None,
         status_code,
     };
     Ok((status, error, payment_response_data))
@@ -1519,7 +1510,7 @@ impl
             (
                 enums::PaymentMethodType::ApplePay,
                 InitResultData::AppleInitResultData(apple_pay_response),
-            ) => get_apple_pay_session::<CreateOrder, PaymentCreateOrderData>(
+            ) => get_apple_pay_session(
                 instance_id,
                 &secrets,
                 apple_pay_response,
@@ -1528,7 +1519,7 @@ impl
             (
                 enums::PaymentMethodType::GooglePay,
                 InitResultData::GoogleInitResultData(google_pay_response),
-            ) => get_google_pay_session::<CreateOrder, PaymentCreateOrderData>(
+            ) => get_google_pay_session(
                 instance_id,
                 &secrets,
                 google_pay_response,
@@ -1539,7 +1530,7 @@ impl
     }
 }
 
-pub(crate) fn get_apple_pay_session<F, T>(
+pub(crate) fn get_apple_pay_session(
     instance_id: String,
     secrets: &SdkSecretInfo,
     apple_pay_init_result: TrustpayApplePayResponse,
@@ -1596,7 +1587,7 @@ pub(crate) fn get_apple_pay_session<F, T>(
     })
 }
 
-pub(crate) fn get_google_pay_session<F, T>(
+pub(crate) fn get_google_pay_session(
     instance_id: String,
     secrets: &SdkSecretInfo,
     google_pay_init_result: TrustpayGooglePayResponse,
@@ -1880,7 +1871,6 @@ fn handle_cards_refund_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1888,7 +1878,6 @@ fn handle_cards_refund_response(
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.instance_id,
         refund_status,
-        raw_connector_response: None,
         status_code,
     };
     Ok((error, refund_response_data))
@@ -1919,7 +1908,6 @@ fn handle_webhooks_refund_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1930,7 +1918,6 @@ fn handle_webhooks_refund_response(
             .payment_request_id
             .ok_or(errors::ConnectorError::MissingConnectorRefundID)?,
         refund_status,
-        raw_connector_response: None,
         status_code,
     };
     Ok((error, refund_response_data))
@@ -1953,7 +1940,6 @@ fn handle_bank_redirects_refund_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -1961,7 +1947,6 @@ fn handle_bank_redirects_refund_response(
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.payment_request_id.to_string(),
         refund_status,
-        raw_connector_response: None,
         status_code,
     };
     (error, refund_response_data)
@@ -1995,7 +1980,6 @@ fn handle_bank_redirects_refund_sync_response(
             network_advice_code: None,
             network_decline_code: None,
             network_error_message: None,
-            raw_connector_response: None,
         })
     } else {
         None
@@ -2003,7 +1987,6 @@ fn handle_bank_redirects_refund_sync_response(
     let refund_response_data = RefundsResponseData {
         connector_refund_id: response.payment_information.references.payment_request_id,
         refund_status,
-        raw_connector_response: None,
         status_code,
     };
     (error, refund_response_data)
@@ -2024,13 +2007,11 @@ fn handle_bank_redirects_refund_sync_error_response(
         network_advice_code: None,
         network_decline_code: None,
         network_error_message: None,
-        raw_connector_response: None,
     });
     //unreachable case as we are sending error as Some()
     let refund_response_data = RefundsResponseData {
         connector_refund_id: "".to_string(),
         refund_status: enums::RefundStatus::Failure,
-        raw_connector_response: None,
         status_code,
     };
     (error, refund_response_data)
