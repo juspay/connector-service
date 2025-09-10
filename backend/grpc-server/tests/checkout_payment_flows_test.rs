@@ -152,6 +152,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("checkout_sync_{}", get_timestamp()))),
         }),
+        access_token: None,
     }
 }
 
@@ -167,6 +168,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata: std::collections::HashMap::new(),
         request_ref_id: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -190,6 +192,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
+        access_token: None,
     }
 }
 
@@ -203,6 +206,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -223,6 +227,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        access_token: None,
     }
 }
 

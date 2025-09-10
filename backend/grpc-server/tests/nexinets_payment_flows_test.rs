@@ -171,6 +171,7 @@ fn create_payment_sync_request(
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
         // all_keys_required: None,
+        access_token: None,
     }
 }
 
@@ -243,6 +244,7 @@ fn create_refund_sync_request(
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
         browser_info: None,
+        access_token: None,
     }
 }
 

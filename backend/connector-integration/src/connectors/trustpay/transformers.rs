@@ -1510,21 +1510,11 @@ impl
             (
                 enums::PaymentMethodType::ApplePay,
                 InitResultData::AppleInitResultData(apple_pay_response),
-            ) => get_apple_pay_session(
-                instance_id,
-                &secrets,
-                apple_pay_response,
-                item,
-            ),
+            ) => get_apple_pay_session(instance_id, &secrets, apple_pay_response, item),
             (
                 enums::PaymentMethodType::GooglePay,
                 InitResultData::GoogleInitResultData(google_pay_response),
-            ) => get_google_pay_session(
-                instance_id,
-                &secrets,
-                google_pay_response,
-                item,
-            ),
+            ) => get_google_pay_session(instance_id, &secrets, google_pay_response, item),
             _ => Err(error_stack::report!(errors::ConnectorError::InvalidWallet)),
         }
     }

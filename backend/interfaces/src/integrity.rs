@@ -6,18 +6,19 @@
 use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
-    AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentVoidData,
-    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData, RefundsData,
-    RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
+    AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
+    PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData,
+    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
+    SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
-        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
-        CreateOrderIntegrityObject, DefendDisputeIntegrityObject, PaymentSynIntegrityObject,
-        PaymentVoidIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject,
+        AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthoriseIntegrityObject,
+        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
     },
 };
 
@@ -149,6 +150,7 @@ impl_check_integrity!(AcceptDisputeData);
 impl_check_integrity!(DisputeDefendData);
 impl_check_integrity!(RefundSyncData);
 impl_check_integrity!(SessionTokenRequestData);
+impl_check_integrity!(AccessTokenRequestData);
 impl_check_integrity!(SubmitEvidenceData);
 impl_check_integrity!(RepeatPaymentData);
 
@@ -336,6 +338,18 @@ impl GetIntegrityObject<SessionTokenIntegrityObject> for SessionTokenRequestData
         SessionTokenIntegrityObject {
             amount: self.amount,
             currency: self.currency,
+        }
+    }
+}
+
+impl GetIntegrityObject<AccessTokenIntegrityObject> for AccessTokenRequestData {
+    fn get_response_integrity_object(&self) -> Option<AccessTokenIntegrityObject> {
+        None // Access token responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> AccessTokenIntegrityObject {
+        AccessTokenIntegrityObject {
+            grant_type: self.grant_type.clone(),
         }
     }
 }
@@ -722,6 +736,28 @@ impl FlowIntegrity for SessionTokenIntegrityObject {
                 "currency",
                 &req_integrity_object.currency.to_string(),
                 &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for AccessTokenIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.grant_type != res_integrity_object.grant_type {
+            mismatched_fields.push(format_mismatch(
+                "grant_type",
+                &req_integrity_object.grant_type,
+                &res_integrity_object.grant_type,
             ));
         }
 
