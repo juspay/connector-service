@@ -30,6 +30,7 @@ idle_pool_connection_timeout = 90               # Timeout for idle pool connecti
 bypass_proxy_urls = ["localhost", "local"]
 
 [connectors]
+# NEW_CONNECTORS_BELOW
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
