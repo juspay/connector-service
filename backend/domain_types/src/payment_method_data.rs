@@ -871,3 +871,220 @@ pub enum CardType {
     Credit,
     Debit,
 }
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(tag = "wallet_name")]
+#[serde(rename_all = "snake_case")]
+pub enum SessionToken {
+    /// The session response structure for Google Pay
+    GooglePay(Box<GpaySessionTokenResponse>),
+    /// The session response structure for Apple Pay
+    ApplePay(Box<ApplepaySessionTokenResponse>),
+    /// Whenever there is no session token response or an error in session response
+    NoSessionTokenReceived,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(untagged)]
+pub enum GpaySessionTokenResponse {
+    /// Google pay response involving third party sdk
+    ThirdPartyResponse(GooglePayThirdPartySdk),
+    /// Google pay session response for non third party sdk
+    GooglePaySession(GooglePaySessionResponse),
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub struct GooglePayThirdPartySdk {
+    /// Identifier for the delayed session response
+    pub delayed_session_token: bool,
+    /// The name of the connector
+    pub connector: String,
+    /// The next action for the sdk (ex: calling confirm or sync call)
+    pub sdk_next_action: SdkNextAction,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub struct ApplepaySessionTokenResponse {
+    /// Session object for Apple Pay
+    /// The session_token_data will be null for iOS devices because the Apple Pay session call is skipped, as there is no web domain involved
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_token_data: Option<ApplePaySessionResponse>,
+    /// Payment request object for Apple Pay
+    pub payment_request_data: Option<ApplePayPaymentRequest>,
+    /// The session token is w.r.t this connector
+    pub connector: String,
+    /// Identifier for the delayed session response
+    pub delayed_session_token: bool,
+    /// The next action for the sdk (ex: calling confirm or sync call)
+    pub sdk_next_action: SdkNextAction,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(untagged)]
+pub enum ApplePaySessionResponse {
+    ///  We get this session response, when third party sdk is involved
+    ThirdPartySdk(ThirdPartySdkSessionResponse),
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+pub struct ThirdPartySdkSessionResponse {
+    pub secrets: SecretInfoToInitiateSdk,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema, serde::Deserialize)]
+pub struct ApplePayPaymentRequest {
+    /// The code for country
+    #[schema(value_type = CountryAlpha2, example = "US")]
+    pub country_code: CountryAlpha2,
+    /// The code for currency
+    #[schema(value_type = Currency, example = "USD")]
+    pub currency_code: common_enums::Currency,
+    /// Represents the total for the payment.
+    pub total: AmountInfo,
+    /// The list of merchant capabilities(ex: whether capable of 3ds or no-3ds)
+    pub merchant_capabilities: Option<Vec<String>>,
+    /// The list of supported networks
+    pub supported_networks: Option<Vec<String>>,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema, serde::Deserialize)]
+pub struct SecretInfoToInitiateSdk {
+    // Authorization secrets used by client to initiate sdk
+    #[schema(value_type = String)]
+    pub display: Secret<String>,
+    // Authorization secrets used by client for payment
+    #[schema(value_type = String)]
+    pub payment: Secret<String>,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema, serde::Deserialize)]
+pub struct AmountInfo {
+    /// The label must be the name of the merchant.
+    pub label: String,
+    /// A value that indicates whether the line item(Ex: total, tax, discount, or grand total) is final or pending.
+    #[serde(rename = "type")]
+    pub total_type: Option<String>,
+    /// The total amount for the payment in majot unit string (Ex: 38.02)
+    #[schema(value_type = String, example = "38.02")]
+    pub amount: common_utils::StringMajorUnit,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub struct GooglePaySessionResponse {
+    /// The merchant info
+    pub merchant_info: GpayMerchantInfo,
+    /// Is shipping address required
+    pub shipping_address_required: bool,
+    /// Is email required
+    pub email_required: bool,
+    /// Shipping address parameters
+    pub shipping_address_parameters: GpayShippingAddressParameters,
+    /// List of the allowed payment meythods
+    pub allowed_payment_methods: Vec<GpayAllowedPaymentMethods>,
+    /// The transaction info Google Pay requires
+    pub transaction_info: GpayTransactionInfo,
+    /// Identifier for the delayed session response
+    pub delayed_session_token: bool,
+    /// The name of the connector
+    pub connector: String,
+    /// The next action for the sdk (ex: calling confirm or sync call)
+    pub sdk_next_action: SdkNextAction,
+    /// Secrets for sdk display and payment
+    pub secrets: Option<SecretInfoToInitiateSdk>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
+pub struct GpayTransactionInfo {
+    /// The country code
+    #[schema(value_type = CountryAlpha2, example = "US")]
+    pub country_code: CountryAlpha2,
+    /// The currency code
+    #[schema(value_type = Currency, example = "USD")]
+    pub currency_code: common_enums::Currency,
+    /// The total price status (ex: 'FINAL')
+    pub total_price_status: String,
+    /// The total price
+    #[schema(value_type = String, example = "38.02")]
+    pub total_price: common_utils::StringMajorUnit,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
+pub struct GpayAllowedPaymentMethods {
+    /// The type of payment method
+    #[serde(rename = "type")]
+    pub payment_method_type: String,
+    /// The parameters Google Pay requires
+    pub parameters: GpayAllowedMethodsParameters,
+    /// The tokenization specification for Google Pay
+    pub tokenization_specification: GpayTokenizationSpecification,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
+pub struct GpayAllowedMethodsParameters {
+    /// The list of allowed auth methods (ex: 3DS, No3DS, PAN_ONLY etc)
+    pub allowed_auth_methods: Vec<String>,
+    /// The list of allowed card networks (ex: AMEX,JCB etc)
+    pub allowed_card_networks: Vec<String>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
+pub struct GpayTokenizationSpecification {
+    /// The token specification type(ex: PAYMENT_GATEWAY)
+    #[serde(rename = "type")]
+    pub token_specification_type: String,
+    /// The parameters for the token specification Google Pay
+    pub parameters: GpayTokenParameters,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
+pub struct GpayTokenParameters {
+    /// The name of the connector
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gateway: Option<String>,
+    /// The merchant ID registered in the connector associated
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gateway_merchant_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", rename = "stripe:version")]
+    pub stripe_version: Option<String>,
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        rename = "stripe:publishableKey"
+    )]
+    pub stripe_publishable_key: Option<String>,
+    /// The protocol version for encryption
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol_version: Option<String>,
+    /// The public key provided by the merchant
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<String>)]
+    pub public_key: Option<Secret<String>>,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
+pub struct GpayMerchantInfo {
+    /// The merchant Identifier that needs to be passed while invoking Gpay SDK
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_id: Option<String>,
+    /// The name of the merchant that needs to be displayed on Gpay PopUp
+    pub merchant_name: String,
+}
+
+#[derive(Debug, Eq, PartialEq, serde::Serialize, Clone, ToSchema)]
+pub struct SdkNextAction {
+    /// The type of next action
+    pub next_action: NextActionCall,
+}
+
+#[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize, Clone, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NextActionCall {
+    /// The next action call is Post Session Tokens
+    PostSessionTokens,
+    /// The next action call is confirm
+    Confirm,
+    /// The next action call is sync
+    Sync,
+    /// The next action call is Complete Authorize
+    CompleteAuthorize,
+}
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub struct GpayShippingAddressParameters {
+    /// Is shipping phone number required
+    pub phone_number_required: bool,
+}

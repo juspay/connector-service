@@ -258,6 +258,7 @@ impl<
 
         let order_response = PaymentCreateOrderResponse {
             order_id: response.id,
+            session_token: None,
         };
 
         Ok(domain_types::router_data_v2::RouterDataV2 {

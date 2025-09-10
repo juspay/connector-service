@@ -360,7 +360,7 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
         map
     });
 
-    pub fn is_refund_failure(status: common_enums::RefundStatus) -> bool {
+pub fn is_refund_failure(status: common_enums::RefundStatus) -> bool {
     match status {
         common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
             true

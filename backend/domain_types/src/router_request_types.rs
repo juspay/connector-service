@@ -172,12 +172,6 @@ pub struct PaymentSynIntegrityObject {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct PreAuthenticateIntegrityObject {
-    pub amount: MinorUnit,
-    pub currency: Currency,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct PaymentVoidIntegrityObject {
     pub connector_transaction_id: String,
 }

@@ -20,14 +20,14 @@ use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
-    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes, SessionToken},
     router_data::PaymentMethodToken,
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
         RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType, PreAuthenticateIntegrityObject,
+        SubmitEvidenceIntegrityObject, SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -58,7 +58,7 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
-    Trustpay
+    Trustpay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -1018,31 +1018,13 @@ pub struct PaymentCreateOrderData {
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<serde_json::Value>,
     pub webhook_url: Option<String>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct PreAuthenticateRequestData<T: PaymentMethodDataTypes>{
-    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
-    pub amount: MinorUnit,
-    pub currency: Currency,
-    pub return_url: Option<String>,
-    pub browser_info: Option<BrowserInformation>,
-    pub billing_address: Option<Address>,
-    pub shipping_address: Option<Address>,
-    pub integrity_object: Option<PreAuthenticateIntegrityObject>,
-}
-
-#[derive(Debug, Clone)]
-pub struct PreAuthenticateResponseData {
-    pub authentication_id: String,
-    pub connector_metadata: Option<serde_json::Value>,
-    pub session_token: String,
-    pub connector_response_reference_id: Option<String>,
+    pub session_token: Option<SessionToken>,
 }
 
 #[derive(Debug, Clone)]
@@ -1057,7 +1039,6 @@ pub struct PostAuthenticateRequestData {
     pub authentication_id: String,
     pub authentication_value: Option<String>,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
@@ -1846,4 +1827,3 @@ impl SupportedPaymentMethodsExt for SupportedPaymentMethods {
         }
     }
 }
-

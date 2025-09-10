@@ -37,14 +37,10 @@ pub struct DefendDispute;
 #[derive(Debug, Clone)]
 pub struct CreateSessionToken;
 
-#[derive(Debug, Clone)]
-pub struct PreAuthenticate;
-
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
     Authorize,
-    PreAuthenticate,
     Refund,
     Rsync,
     Psync,
