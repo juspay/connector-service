@@ -315,7 +315,9 @@ impl From<PaymentStatus> for common_enums::AttemptStatus {
     fn from(status: PaymentStatus) -> Self {
         match status {
             PaymentStatus::Failed => common_enums::AttemptStatus::Failure,
-            PaymentStatus::Succeeded | PaymentStatus::Verified => common_enums::AttemptStatus::Charged,
+            PaymentStatus::Succeeded | PaymentStatus::Verified => {
+                common_enums::AttemptStatus::Charged
+            }
             PaymentStatus::Pending => common_enums::AttemptStatus::Pending,
             PaymentStatus::RequiresAction => common_enums::AttemptStatus::AuthenticationPending,
             PaymentStatus::AwaitingCapture => common_enums::AttemptStatus::Authorized,
