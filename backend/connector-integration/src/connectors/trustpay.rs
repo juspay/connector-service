@@ -84,6 +84,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn should_do_order_create(&self) -> bool {
         true
     }
+    fn should_do_access_token(&self) -> bool {
+        true
+    }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Trustpay<T>
