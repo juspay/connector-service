@@ -108,6 +108,7 @@ impl RefundService for Refunds {
         &self,
         request: tonic::Request<RefundServiceTransformRequest>,
     ) -> Result<tonic::Response<RefundServiceTransformResponse>, tonic::Status> {
+        let config = utils::get_config_from_request(&request).map_err(|e| e.into_grpc_status())?;
         let service_name = request
             .extensions()
             .get::<String>()
@@ -116,7 +117,7 @@ impl RefundService for Refunds {
         utils::grpc_logging_wrapper(
             request,
             &service_name,
-            self.config.clone(),
+            config.clone(),
             |request, metadata_payload| async move {
                 let connector = metadata_payload.connector;
                 let connector_auth_details = metadata_payload.connector_auth_type;

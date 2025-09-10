@@ -1,4 +1,5 @@
 pub mod app;
+pub mod config_overrides;
 pub mod configs;
 pub mod error;
 pub mod logger;
