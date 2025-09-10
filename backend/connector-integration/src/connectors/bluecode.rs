@@ -73,14 +73,28 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             None => return Ok(false),
         };
 
-        let security_header = request
-            .headers
-            .get("x-eorder-webhook-signature")
-            .ok_or(domain_types::errors::ConnectorError::WebhookSignatureNotFound)?
-            .clone();
+        let security_header = match request.headers.get("x-eorder-webhook-signature") {
+            Some(header) => header,
+            None => {
+                tracing::warn!(
+                    target: "eorder_webhook",
+                    "Missing x-eorder-webhook-signature header in webhook request - verification failed but continuing processing"
+                );
+                return Ok(false);
+            }
+        };
 
-        let signature = hex::decode(security_header)
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+        let signature = match hex::decode(security_header) {
+            Ok(sig) => sig,
+            Err(err) => {
+                tracing::warn!(
+                    target: "eorder_webhook",
+                    "Failed to decode x-eorder-webhook-signature: {:?} - continuing processing",
+                    err
+                );
+                return Ok(false);
+            }
+        };
 
         let parsed: serde_json::Value = serde_json::from_slice(&request.body)
             .map_err(|_| errors::ConnectorError::WebhookSourceVerificationFailed)?;
@@ -107,9 +121,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .body
             .parse_struct("BluecodeWebhookResponse")
             .change_context(ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| {
-                "Failed to parse Authorize.Net payment webhook body structure"
-            })?;
+            .attach_printable_lazy(|| "Failed to parse Bluecode payment webhook body structure")?;
 
         let transaction_id = webhook_body.order_id.clone();
 

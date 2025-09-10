@@ -17,7 +17,6 @@ use serde_json::json;
 use tonic;
 use tracing::info;
 use utoipa::ToSchema;
-
 // Helper function for extracting connector request reference ID
 fn extract_connector_request_reference_id(
     identifier: &Option<grpc_api_types::payments::Identifier>,
@@ -30,6 +29,28 @@ fn extract_connector_request_reference_id(
             _ => None,
         })
         .unwrap_or_default()
+}
+
+/// Extract vault-related headers from gRPC metadata
+fn extract_headers_from_metadata(
+    metadata: &tonic::metadata::MetadataMap,
+) -> Option<HashMap<String, Secret<String>>> {
+    let mut vault_headers = HashMap::new();
+
+    if let Some(vault_creds) = metadata.get("x-external-vault-metadata") {
+        if let Ok(value_str) = vault_creds.to_str() {
+            vault_headers.insert(
+                "x-external-vault-metadata".to_string(),
+                Secret::new(value_str.to_string()),
+            );
+        }
+    }
+
+    if vault_headers.is_empty() {
+        None
+    } else {
+        Some(vault_headers)
+    }
 }
 
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
@@ -429,20 +450,6 @@ impl<
                         },
                     }
                 }
-                // grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
-                //     match wallet_type.wallet_type {
-                //         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Bluecode(_)) => {
-                //             Ok(PaymentMethodData::Wallet(crate::payment_method_data::WalletData::BluecodeRedirect{}
-                //         ))
-                //         },
-                //         None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
-                //             sub_code: "INVALID_WALLET_TYPE".to_owned(),
-                //             error_identifier: 400,
-                //             error_message: "Wallet type is required".to_owned(),
-                //             error_object: None,
-                //         })))
-                //     }
-                // }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1386,8 +1393,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             line3: value.line3,
             zip: value.zip_code,
             state: value.state,
-            first_name: value.first_name.map(|val| val.into()),
-            last_name: value.last_name.map(|val| val.into()),
+            first_name: value.first_name,
+            last_name: value.last_name,
         })
     }
 }
@@ -1429,6 +1436,9 @@ impl
         };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        // Extract specific headers for vault and other integrations
+        let vault_headers = extract_headers_from_metadata(metadata);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1479,6 +1489,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers,
         })
     }
 }
@@ -1539,6 +1550,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -1599,6 +1611,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -1660,6 +1673,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -2042,6 +2056,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -2845,6 +2860,12 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     .collect()
             })
             .unwrap_or_default();
+        let mandate_reference_grpc =
+            value
+                .mandate_reference
+                .map(|m| grpc_api_types::payments::MandateReference {
+                    mandate_id: m.connector_mandate_id,
+                });
         Ok(Self {
             transaction_id: value
                 .resource_id
@@ -2853,7 +2874,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 })
                 .transpose()?,
             status: status as i32,
-            mandate_reference: None,
+            mandate_reference: mandate_reference_grpc,
             error_code: value.error_code,
             error_message: value.error_message,
             network_txn_id: None,
@@ -3409,6 +3430,7 @@ impl
             external_latency: None,
             connectors,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -3461,6 +3483,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -3612,6 +3635,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -4411,6 +4435,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }

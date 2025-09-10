@@ -1,27 +1,38 @@
-use std::{str::FromStr, time::Duration};
+use std::{collections::HashMap, str::FromStr, time::Duration};
 
+use common_enums::ApiClientError;
 use common_utils::ext_traits::AsyncExt;
-// use base64::engine::Engine;
 use common_utils::{
     lineage,
-    // consts::BASE64_ENGINE,
     request::{Method, Request, RequestContent},
 };
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
-    errors::{ApiClientError, ApiErrorResponse, ConnectorError},
+    errors::{ApiErrorResponse, ConnectorError},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Proxy,
 };
+use hyperswitch_masking::Secret;
+use injector;
 
 pub trait ConnectorRequestReference {
     fn get_connector_request_reference_id(&self) -> &str;
 }
 
+pub trait AdditionalHeaders {
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>>;
+}
+
 impl ConnectorRequestReference for domain_types::connector_types::PaymentFlowData {
     fn get_connector_request_reference_id(&self) -> &str {
         &self.connector_request_reference_id
+    }
+}
+
+impl AdditionalHeaders for domain_types::connector_types::PaymentFlowData {
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        self.vault_headers.as_ref()
     }
 }
 
@@ -31,30 +42,62 @@ impl ConnectorRequestReference for domain_types::connector_types::RefundFlowData
     }
 }
 
+impl AdditionalHeaders for domain_types::connector_types::RefundFlowData {
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        // RefundFlowData might not have vault_headers, so return None
+        None
+    }
+}
+
 impl ConnectorRequestReference for domain_types::connector_types::DisputeFlowData {
     fn get_connector_request_reference_id(&self) -> &str {
         &self.connector_request_reference_id
     }
 }
-// use base64::engine::Engine;
+
+impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
+    fn get_vault_headers(&self) -> Option<&HashMap<String, Secret<String>>> {
+        // DisputeFlowData might not have vault_headers, so return None
+        None
+    }
+}
 use common_utils::{
     emit_event_with_config,
     events::{Event, EventConfig, EventStage, FlowName},
     pii::SecretSerdeValue,
 };
 use error_stack::{report, ResultExt};
+use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
 };
-use masking::{ErasedMaskSerialize, Maskable, Secret};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
 use serde_json::json;
 use tracing::field::Empty;
 
 use crate::shared_metrics as metrics;
+
+// TokenData is now imported from hyperswitch_injector
+use injector::{injector_core, HttpMethod, TokenData};
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
+
+trait ToHttpMethod {
+    fn to_http_method(&self) -> HttpMethod;
+}
+
+impl ToHttpMethod for Method {
+    fn to_http_method(&self) -> HttpMethod {
+        match self {
+            Self::Get => HttpMethod::GET,
+            Self::Post => HttpMethod::POST,
+            Self::Put => HttpMethod::PUT,
+            Self::Patch => HttpMethod::PATCH,
+            Self::Delete => HttpMethod::DELETE,
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct EventProcessingParams<'a> {
@@ -90,6 +133,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
     all_keys_required: Option<bool>,
     event_params: EventProcessingParams<'_>,
+    token_data: Option<TokenData>,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -100,7 +144,8 @@ where
         + 'static
         + RawConnectorResponse
         + ConnectorResponseHeaders
-        + ConnectorRequestReference,
+        + ConnectorRequestReference
+        + AdditionalHeaders,
 {
     let start = tokio::time::Instant::now();
     let connector_request = connector.build_request_v2(&router_data)?;
@@ -161,18 +206,100 @@ where
             tracing::Span::current().record("request.url", tracing::field::display(&url));
             tracing::Span::current().record("request.method", tracing::field::display(method));
             let request_id = event_params.request_id.to_string();
-            let response = call_connector_api(proxy, request, "execute_connector_processing_step")
-                .await
-                .change_context(ConnectorError::RequestEncodingFailed)
-                .inspect_err(|err| {
-                    info_log(
-                        "NETWORK_ERROR",
-                        &json!(format!(
-                            "Failed getting response from connector. Error: {:?}",
-                            err
-                        )),
-                    );
+
+            let response = if let Some(token_data) = token_data {
+                tracing::debug!("Creating injector request with token data using unified API");
+
+                // Extract template and combine headers
+                let template = request
+                    .body
+                    .as_ref()
+                    .ok_or(ConnectorError::RequestEncodingFailed)?
+                    .get_inner_value()
+                    .expose()
+                    .to_string();
+
+                let headers = request
+                    .headers
+                    .iter()
+                    .map(|(key, value)| {
+                        (
+                            key.clone(),
+                            Secret::new(match value {
+                                Maskable::Normal(val) => val.clone(),
+                                Maskable::Masked(val) => val.clone().expose().to_string(),
+                            }),
+                        )
+                    })
+                    .chain(
+                        router_data
+                            .resource_common_data
+                            .get_vault_headers()
+                            .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
+                            .into_iter()
+                            .flatten(),
+                    )
+                    .collect();
+
+                // Create injector request
+                let injector_request = injector::InjectorRequest::new(
+                    request.url.clone(),
+                    request.method.to_http_method(),
+                    template,
+                    token_data,
+                    Some(headers),
+                    proxy
+                        .https_url
+                        .as_ref()
+                        .or(proxy.http_url.as_ref())
+                        .map(|url| Secret::new(url.clone())),
+                    None,
+                    None,
+                    None,
+                );
+
+                // New injector handles HTTP request internally and returns enhanced response
+                let injector_response = injector_core(injector_request)
+                    .await
+                    .change_context(ConnectorError::RequestEncodingFailed)?;
+
+                // Convert injector response to connector service Response format
+                let response_bytes = serde_json::to_vec(&injector_response.response)
+                    .map_err(|_| ConnectorError::ResponseHandlingFailed)?;
+
+                // Convert headers from HashMap<String, String> to reqwest::HeaderMap if present
+                let headers = injector_response.headers.map(|h| {
+                    let mut header_map = reqwest::header::HeaderMap::new();
+                    for (key, value) in h {
+                        if let (Ok(header_name), Ok(header_value)) = (
+                            reqwest::header::HeaderName::from_bytes(key.as_bytes()),
+                            reqwest::header::HeaderValue::from_str(&value),
+                        ) {
+                            header_map.insert(header_name, header_value);
+                        }
+                    }
+                    header_map
                 });
+
+                Ok(Ok(Response {
+                    headers,
+                    response: response_bytes.into(),
+                    status_code: injector_response.status_code, // Use actual status code from connector
+                }))
+            } else {
+                call_connector_api(proxy, request, "execute_connector_processing_step")
+                    .await
+                    .change_context(ConnectorError::RequestEncodingFailed)
+                    .inspect_err(|err| {
+                        info_log(
+                            "NETWORK_ERROR",
+                            &json!(format!(
+                                "Failed getting response from connector. Error: {:?}",
+                                err
+                            )),
+                        );
+                    })
+            };
             let external_service_elapsed = external_service_start_latency.elapsed();
             metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
                 .with_label_values(&[
@@ -204,7 +331,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),
@@ -265,7 +392,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),
@@ -325,7 +452,7 @@ where
                         let reference_id_clone = event_params.reference_id.clone();
 
                         async move {
-                            let mut additional_fields = std::collections::HashMap::new();
+                            let mut additional_fields = HashMap::new();
                             if let Some(ref_id) = reference_id_clone {
                                 additional_fields.insert(
                                     "reference_id".to_string(),

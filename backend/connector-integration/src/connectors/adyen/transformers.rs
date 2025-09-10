@@ -1601,12 +1601,19 @@ pub struct AdyenAdditionalDataWH {
 pub struct AdyenNotificationRequestItemWH {
     pub original_reference: Option<String>,
     pub psp_reference: String,
+    pub amount: AdyenAmountWH,
     pub event_code: WebhookEventCode,
     pub merchant_account_code: String,
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
     pub additional_data: AdyenAdditionalDataWH,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdyenAmountWH {
+    pub value: MinorUnit,
+    pub currency: common_enums::Currency,
 }
 
 fn is_success_scenario(is_success: &str) -> bool {

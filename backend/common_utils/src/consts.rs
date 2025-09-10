@@ -56,6 +56,8 @@ pub const X_KEY2: &str = "x-key2";
 pub const X_API_SECRET: &str = "x-api-secret";
 /// Auth Key Map header
 pub const X_AUTH_KEY_MAP: &str = "x-auth-key-map";
+/// Header key for external vault metadata
+pub const X_EXTERNAL_VAULT_METADATA: &str = "x-external-vault-metadata";
 
 /// Header key for lineage metadata fields
 pub const X_LINEAGE_IDS: &str = "x-lineage-ids";
