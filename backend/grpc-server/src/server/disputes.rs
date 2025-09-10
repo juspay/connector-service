@@ -169,6 +169,7 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
+                        None,
                     )
                     .await
                     .switch()
@@ -363,6 +364,7 @@ impl DisputeService for Disputes {
                         router_data,
                         None,
                         event_params,
+                        None,
                     )
                     .await
                     .switch()
