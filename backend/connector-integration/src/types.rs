@@ -46,7 +46,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
             ConnectorEnum::Noon => Box::new(Noon::new()),
             ConnectorEnum::Braintree => Box::new(Braintree::new()),
-            ConnectorEnum::Placetopay => todo!("Placetopay connector implementation pending"),
+            ConnectorEnum::Placetopay => Box::new(Placetopay::new()),
         }
     }
 }
