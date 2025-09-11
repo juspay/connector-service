@@ -547,17 +547,12 @@ macros::macro_connector_implementation!(
         let id = req
             .request
             .connector_refund_id.clone();
-        // Extract payment method from refund_connector_metadata
+        
         let payment_method = req.request.refund_connector_metadata
             .as_ref()
-            .ok_or(errors::ConnectorError::MissingRequiredField {
-                field_name: "refund_connector_metadata",
-            })?
-            .peek()
-            .as_str()
-            .and_then(|json_str| serde_json::from_str::<serde_json::Value>(json_str).ok())
-            .and_then(|json_obj| {
-                json_obj.get("payment_method")
+            .and_then(|metadata| {
+                let json_value = metadata.peek();
+                json_value.get("payment_method")
                     .and_then(|pm| pm.as_str())
                     .and_then(|pm_str| match pm_str {
                         "bank_redirect" => Some(common_enums::PaymentMethod::BankRedirect),
