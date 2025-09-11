@@ -31,6 +31,7 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 
 use crate::types::ResponseRouterData;
+use crate::connectors::placetopay::PlacetopayRouterData as MacroPlacetopayRouterData;
 
 #[derive(Debug, Serialize)]
 pub struct PlacetopayRouterData<T, U> {
@@ -83,8 +84,7 @@ impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
-        let nonce_bytes = common_utils::crypto::generate_cryptographically_secure_random_bytes(16)
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let nonce_bytes: [u8; 16] = common_utils::crypto::generate_cryptographically_secure_random_bytes();
         let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
@@ -213,9 +213,7 @@ impl<
             PaymentMethodData::Card(req_card) => {
                 let card = PlacetopayCard {
                     number: req_card.card_number.clone(),
-                    expiration: req_card
-                        .clone()
-                        .get_card_expiry_month_year_2_digit_with_delimiter("/".to_owned())?,
+                    expiration: format!("{}/{}", req_card.card_exp_month.peek(), req_card.card_exp_year.peek()).into(),
                     cvv: req_card.card_cvc.clone(),
                 };
                 Ok(Self {
@@ -252,6 +250,51 @@ impl<
                 .into())
             }
         }
+    }
+}
+
+// TryFrom implementation for macro-generated PlacetopayRouterData type
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        MacroPlacetopayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    > for PlacetopayPaymentsRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: MacroPlacetopayRouterData<
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        // Convert macro type to our transformers type
+        let amount = MinorUnit::new(item.router_data.request.amount);
+        let transformers_item = PlacetopayRouterData {
+            amount,
+            router_data: item.router_data,
+            payment_method_data: std::marker::PhantomData,
+        };
+        // Use existing implementation
+        Self::try_from(transformers_item)
     }
 }
 
@@ -297,6 +340,12 @@ pub struct PlacetopayPaymentsResponse {
     internal_reference: u64,
     authorization: Option<String>,
 }
+
+// Type alias for PSync to avoid macro conflicts
+pub type PlacetopayPSyncResponse = PlacetopayPaymentsResponse;
+
+// Type alias for RSync to avoid macro conflicts
+pub type PlacetopayRSyncResponse = PlacetopayRefundResponse;
 
 impl<
         T: PaymentMethodDataTypes
@@ -700,9 +749,7 @@ impl<
             PaymentMethodData::Card(req_card) => {
                 let card = PlacetopayCard {
                     number: req_card.card_number.clone(),
-                    expiration: req_card
-                        .clone()
-                        .get_card_expiry_month_year_2_digit_with_delimiter("/".to_owned())?,
+                    expiration: format!("{}/{}", req_card.card_exp_month.peek(), req_card.card_exp_year.peek()).into(),
                     cvv: req_card.card_cvc.clone(),
                 };
                 Ok(Self {
@@ -756,9 +803,7 @@ impl<
         
         Ok(Self {
             response: Ok(PaymentMethodTokenResponse {
-                payment_method_token: item.response.token.unwrap_or_default(),
-                payment_method_token_type: None,
-                status_code: item.http_code,
+                token: item.response.token.unwrap_or_default(),
             }),
             resource_common_data: PaymentFlowData {
                 status,
