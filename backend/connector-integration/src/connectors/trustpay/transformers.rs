@@ -1833,7 +1833,8 @@ impl<
             .as_str()
             .and_then(|json_str| serde_json::from_str::<serde_json::Value>(json_str).ok())
             .and_then(|json_obj| {
-                json_obj.get("payment_method")
+                json_obj
+                    .get("payment_method")
                     .and_then(|pm| pm.as_str())
                     .map(|pm_str| pm_str.to_string())
             })

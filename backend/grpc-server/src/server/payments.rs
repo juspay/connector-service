@@ -10,15 +10,15 @@ use common_utils::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateOrder, CreateSessionToken, PSync, PaymentMethodToken, Refund,
-        RepeatPayment, SetupMandate, Void, CreateAccessToken,
+        Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken, PSync,
+        PaymentMethodToken, Refund, RepeatPayment, SetupMandate, Void,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},

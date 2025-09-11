@@ -1106,25 +1106,6 @@ pub struct PaymentMethodTokenResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
-    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
-    pub browser_info: Option<BrowserInformation>,
-    pub currency: Currency,
-    pub amount: MinorUnit,
-    pub customer_acceptance: Option<CustomerAcceptance>,
-    pub setup_future_usage: Option<common_enums::FutureUsage>,
-    pub setup_mandate_details: Option<MandateData>,
-    pub mandate_id: Option<MandateIds>,
-    pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
-    // pub split_payments: Option<SplitPaymentsRequest>,
-}
-
-#[derive(Debug, Clone)]
-pub struct PaymentMethodTokenResponse {
-    pub token: String,
-}
-
-#[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
