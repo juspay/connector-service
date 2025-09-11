@@ -205,6 +205,7 @@ impl<
                     })
                 }
                 WalletData::AliPayQr(_)
+                | WalletData::BluecodeRedirect {}
                 | WalletData::AliPayRedirect(_)
                 | WalletData::AliPayHkRedirect(_)
                 | WalletData::AmazonPayRedirect(_)
