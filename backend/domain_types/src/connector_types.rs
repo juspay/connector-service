@@ -1072,7 +1072,7 @@ pub struct PaymentCreateOrderResponse {
 #[derive(Debug, Clone)]
 pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
-    pub amount: Option<i64>,
+    pub amount: MinorUnit,
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -1093,17 +1093,10 @@ pub struct CompleteAuthorizeRedirectResponse {
     pub payload: Option<SecretSerdeValue>,
 }
 
-#[derive(Clone, Default, Debug)]
-pub struct AcquirerDetails {
-    pub acquirer_bin: String,
-    pub acquirer_merchant_id: String,
-    pub acquirer_country_code: Option<String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
-    pub amount: Option<i64>,
+    pub amount: MinorUnit,
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -1121,7 +1114,7 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
-    pub amount: Option<i64>,
+    pub amount: MinorUnit,
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
@@ -1158,19 +1151,6 @@ pub struct PreAuthenticationData {
     pub acquirer_merchant_id: Option<String>,
     pub acquirer_country_code: Option<String>,
     pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub enum MessageCategory {
-    Payment,
-    NonPayment,
-}
-
-#[derive(Debug, Clone)]
-pub enum DeviceChannel {
-    Browser,
-    App,
-    ThreeRI,
 }
 
 #[derive(Debug, Clone)]

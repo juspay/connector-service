@@ -36,7 +36,7 @@ fn extract_connector_request_reference_id(
 use crate::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, PreAuthenticate, Authenticate, PostAuthenticate,
     },
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
@@ -47,7 +47,7 @@ use crate::{
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        WebhookDetailsResponse, PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -3989,6 +3989,135 @@ pub fn generate_session_token_response(
                 sub_code: "SESSION_TOKEN_ERROR".to_string(),
                 error_identifier: 500,
                 error_message: format!("Session token creation failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
+pub fn generate_pre_authenticate_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let transaction_response = router_data_v2.response;
+
+    match transaction_response {
+        Ok(response) => match response {
+            PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data: _,
+                connector_metadata: _,
+                network_txn_id: _,
+                connector_response_reference_id: _,
+                incremental_authorization_allowed: _,
+                mandate_reference: _,
+                status_code: _,
+            } => {
+                match resource_id {
+                    ResponseId::ConnectorTransactionId(id) => Ok(id),
+                    ResponseId::EncodedData(data) => Ok(data),
+                    ResponseId::NoResponseId => Ok("".to_string()),
+                }
+            }
+            PaymentsResponseData::SessionResponse { session_token, status_code: _ } => {
+                Ok(session_token)
+            }
+        },
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "PRE_AUTHENTICATE_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Pre-authentication failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
+pub fn generate_authenticate_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let authenticate_response = router_data_v2.response;
+
+    match authenticate_response {
+        Ok(response) => match response {
+            PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data: _,
+                connector_metadata: _,
+                network_txn_id: _,
+                connector_response_reference_id: _,
+                incremental_authorization_allowed: _,
+                mandate_reference: _,
+                status_code: _,
+            } => {
+                match resource_id {
+                    ResponseId::ConnectorTransactionId(id) => Ok(id),
+                    ResponseId::EncodedData(data) => Ok(data),
+                    ResponseId::NoResponseId => Ok("".to_string()),
+                }
+            }
+            PaymentsResponseData::SessionResponse { session_token, status_code: _ } => {
+                Ok(session_token)
+            }
+        },
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "AUTHENTICATE_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Authentication failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
+pub fn generate_post_authenticate_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let post_authenticate_response = router_data_v2.response;
+
+    match post_authenticate_response {
+        Ok(response) => match response {
+            PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data: _,
+                connector_metadata: _,
+                network_txn_id: _,
+                connector_response_reference_id: _,
+                incremental_authorization_allowed: _,
+                mandate_reference: _,
+                status_code: _,
+            } => {
+                match resource_id {
+                    ResponseId::ConnectorTransactionId(id) => Ok(id),
+                    ResponseId::EncodedData(data) => Ok(data),
+                    ResponseId::NoResponseId => Ok("".to_string()),
+                }
+            }
+            PaymentsResponseData::SessionResponse { session_token, status_code: _ } => {
+                Ok(session_token)
+            }
+        },
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "POST_AUTHENTICATE_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Post-authentication failed: {}", e.message),
                 error_object: None,
             }
         ))),

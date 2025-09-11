@@ -221,3 +221,21 @@ pub struct SessionTokenIntegrityObject {
     pub amount: MinorUnit,
     pub currency: Currency,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PreAuthenticateIntegrityObject {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AuthenticateIntegrityObject {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PostAuthenticateIntegrityObject {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
