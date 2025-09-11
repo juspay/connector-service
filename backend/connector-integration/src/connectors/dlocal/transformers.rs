@@ -218,6 +218,7 @@ fn get_payer_name(
     }
 }
 
+#[derive(Default, Debug, Serialize, Eq, PartialEq)]
 pub struct DlocalPaymentsSyncRequest {
     pub authz_id: String,
 }
@@ -231,6 +232,7 @@ impl TryFrom<DlocalRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncD
     }
 }
 
+#[derive(Default, Debug, Serialize, Eq, PartialEq)]
 pub struct DlocalPaymentsCancelRequest {
     pub cancel_id: String,
 }
@@ -243,6 +245,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         })
     }
 }
+
+
 
 #[derive(Default, Debug, Serialize, Eq, PartialEq)]
 pub struct DlocalPaymentsCaptureRequest {
@@ -390,6 +394,11 @@ pub struct DlocalPaymentsSyncResponse {
     order_id: Option<String>,
 }
 
+// Additional response types to avoid macro conflicts
+pub type DlocalRefundsSyncResponse = RefundResponse;
+pub type DlocalPaymentsCaptureResponse = DlocalPaymentsResponse;
+pub type DlocalPaymentsCancelResponse = DlocalPaymentsResponse;
+
 impl<F> TryFrom<ResponseRouterData<DlocalPaymentsSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
@@ -506,13 +515,14 @@ pub struct DlocalRefundsSyncRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<DlocalRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>> for DlocalRefundsSyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: DlocalRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
-        let refund_id = item.router_data.request.connector_refund_id.clone()
-            .unwrap_or_else(|| item.router_data.request.refund_id.clone());
+        let refund_id = item.router_data.request.connector_refund_id.clone();
         Ok(Self {
             refund_id,
         })
     }
 }
+
+
 
 impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>> for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData> {
     type Error = error_stack::Report<ConnectorError>;
@@ -536,6 +546,61 @@ pub struct DlocalErrorResponse {
     pub code: i32,
     pub message: String,
     pub param: Option<String>,
+}
+
+// TryFrom implementations for Capture and Void flows
+impl<F> TryFrom<ResponseRouterData<DlocalPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<DlocalPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(item.response.status),
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<DlocalPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<DlocalPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(item.response.status),
+                ..item.router_data.resource_common_data
+            },
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
 }
 
 fn get_doc_from_currency(country: String) -> Secret<String> {

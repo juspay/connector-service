@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use common_utils::{ 
-    errors::CustomResult, ext_traits::ByteSliceExt,
+    errors::CustomResult, ext_traits::ByteSliceExt, crypto::{self, SignMessage},
     };
 use domain_types::{
     connector_flow::{
@@ -33,8 +33,89 @@ use interfaces::{
 use transformers::{
     self as dlocal,
     DlocalPaymentsRequest, DlocalPaymentsResponse, DlocalPaymentsSyncRequest, DlocalRefundRequest, RefundResponse,
-    DlocalPaymentsCaptureRequest, DlocalPaymentsCancelRequest,
+    DlocalPaymentsCaptureRequest, DlocalPaymentsCancelRequest, DlocalRefundsSyncRequest,
+    DlocalPaymentsSyncResponse, DlocalRefundsSyncResponse, DlocalPaymentsCaptureResponse, DlocalPaymentsCancelResponse,
 };
+
+// Trait implementations for macro-generated DlocalRouterData
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<DlocalRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>>
+    for DlocalPaymentsRequest<T>
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: DlocalRouterData<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let wrapper = dlocal::DlocalRouterData::try_from((common_utils::types::MinorUnit::new(item.router_data.request.amount), item.router_data))?;
+        DlocalPaymentsRequest::try_from(wrapper)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<DlocalRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
+    for DlocalPaymentsSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: DlocalRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let wrapper = dlocal::DlocalRouterData::try_from((item.router_data.request.amount, item.router_data))?;
+        DlocalPaymentsSyncRequest::try_from(wrapper)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<DlocalRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for DlocalRefundRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: DlocalRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let wrapper: dlocal::DlocalRouterData<_, T> = dlocal::DlocalRouterData::try_from((item.router_data.request.minor_refund_amount, item.router_data))?;
+        DlocalRefundRequest::try_from(wrapper)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<DlocalRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for DlocalRefundsSyncRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: DlocalRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // For refund sync, we use a default amount since it's not needed for the request
+        let wrapper: dlocal::DlocalRouterData<_, T> = dlocal::DlocalRouterData::try_from((common_utils::types::MinorUnit::new(0), item.router_data))?;
+        DlocalRefundsSyncRequest::try_from(wrapper)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<DlocalRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>>
+    for DlocalPaymentsCaptureRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: DlocalRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let wrapper: dlocal::DlocalRouterData<_, T> = dlocal::DlocalRouterData::try_from((item.router_data.request.minor_amount_to_capture, item.router_data))?;
+        DlocalPaymentsCaptureRequest::try_from(wrapper)
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<DlocalRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
+    for DlocalPaymentsCancelRequest
+{
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: DlocalRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let wrapper: dlocal::DlocalRouterData<_, T> = dlocal::DlocalRouterData::try_from((common_utils::types::MinorUnit::new(0), item.router_data))?;
+        DlocalPaymentsCancelRequest::try_from(wrapper)
+    }
+}
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
@@ -132,7 +213,7 @@ macros::create_all_prerequisites!(
         (
             flow: PSync,
             request_body: DlocalPaymentsSyncRequest,
-            response_body: DlocalPaymentsResponse,
+            response_body: DlocalPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
@@ -143,20 +224,20 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: DlocalPaymentsSyncRequest,
-            response_body: RefundResponse,
+            request_body: DlocalRefundsSyncRequest,
+            response_body: DlocalRefundsSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
         (
             flow: Capture,
             request_body: DlocalPaymentsCaptureRequest,
-            response_body: DlocalPaymentsResponse,
+            response_body: DlocalPaymentsCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
             request_body: DlocalPaymentsCancelRequest,
-            response_body: DlocalPaymentsResponse,
+            response_body: DlocalPaymentsCancelResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         )
     ],
@@ -177,8 +258,7 @@ macros::create_all_prerequisites!(
                 date
             );
             
-            let authz = common_utils::crypto::Hmac::<common_utils::crypto::Sha256>::sign_message(
-                &common_utils::crypto::Hmac::<common_utils::crypto::Sha256>,
+            let authz = crypto::HmacSha256.sign_message(
                 auth.secret.peek().as_bytes(),
                 sign_req.as_bytes(),
             )
@@ -327,7 +407,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let sync_data = dlocal::DlocalPaymentsSyncRequest::try_from(req)?;
+            let router_data = dlocal::DlocalRouterData::try_from((req.request.amount, req.clone()))?;
+            let sync_data = dlocal::DlocalPaymentsSyncRequest::try_from(router_data)?;
             Ok(format!(
                 "{}payments/{}/status",
                 self.connector_base_url_payments(req),
@@ -388,7 +469,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<domain_types::connector_flow::RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let sync_data = dlocal::DlocalRefundsSyncRequest::try_from(req)?;
+            let router_data: dlocal::DlocalRouterData<_, domain_types::payment_method_data::DefaultPCIHolder> = dlocal::DlocalRouterData::try_from((common_utils::types::MinorUnit::new(0), req.clone()))?;
+            let sync_data = dlocal::DlocalRefundsSyncRequest::try_from(router_data)?;
             Ok(format!(
                 "{}refunds/{}/status",
                 self.connector_base_url_refunds(req),
@@ -449,7 +531,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let cancel_data = dlocal::DlocalPaymentsCancelRequest::try_from(req)?;
+            let router_data: dlocal::DlocalRouterData<_, domain_types::payment_method_data::DefaultPCIHolder> = dlocal::DlocalRouterData::try_from((common_utils::types::MinorUnit::new(0), req.clone()))?;
+            let cancel_data = dlocal::DlocalPaymentsCancelRequest::try_from(router_data)?;
             Ok(format!(
                 "{}payments/{}/cancel",
                 self.connector_base_url_payments(req),
