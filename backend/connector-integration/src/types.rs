@@ -63,7 +63,6 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
             ConnectorEnum::Noon => Box::new(Noon::new()),
             // NEW_CONNECTORS_ENUM_BELOW
-            ConnectorEnum::Testpragma => Box::new(Testpragma::new()),
         }
     }
 }
