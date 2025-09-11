@@ -21,8 +21,9 @@ use crate::connectors::{
     Phonepe,
     Razorpay,
     RazorpayV2,
-    Xendit,
     // NEW_CONNECTORS_IMPORT_BELOW
+    Worldpay,
+    Xendit,
 };
 
 #[derive(Clone)]
@@ -63,6 +64,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Nexinets => Box::new(Nexinets::new()),
             ConnectorEnum::Noon => Box::new(Noon::new()),
             // NEW_CONNECTORS_ENUM_BELOW
+            ConnectorEnum::Worldpay => Box::new(Worldpay::new()),
         }
     }
 }

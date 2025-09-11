@@ -31,6 +31,7 @@ bypass_proxy_urls = ["localhost", "local"]
 
 [connectors]
 # NEW_CONNECTORS_BELOW
+worldpay.base_url = "https://try.access.worldpay.com/"
 adyen.base_url = "https://checkout-test.adyen.com/"
 adyen.dispute_base_url = "https://ca-test.adyen.com/"
 razorpay.base_url = "https://api.razorpay.com/"
