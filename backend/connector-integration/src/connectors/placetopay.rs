@@ -246,7 +246,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.placetopay.base_url.as_ref()
+        let url = connectors.placetopay.base_url.as_ref();
+        println!("PlaceToPay: Base URL from config: {}", url);
+        url
     }
 
     fn build_error_response(
@@ -254,6 +256,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        println!("PlaceToPay: Building error response for status code: {}", res.status_code);
+        println!("PlaceToPay: Raw error response: {:?}", String::from_utf8_lossy(&res.response));
         let response: placetopay::PlacetopayErrorResponse = res
             .response
             .parse_struct("PlacetopayErrorResponse")
@@ -298,7 +302,170 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/process", self.connector_base_url_payments(req)))
+            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
+            let full_url = format!("{}/process", base_url);
+            println!("PlaceToPay: API URL constructed: {}", full_url);
+            Ok(full_url)
+        }
+    }
+);
+
+// Capture flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayNextActionRequest),
+    curl_response: PlacetopayPaymentsResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: U,
+    [Debug + Sync + Send + 'static],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
+            let full_url = format!("{}/process", base_url);
+            println!("PlaceToPay: Capture API URL constructed: {}", full_url);
+            Ok(full_url)
+        }
+    }
+);
+
+// PSync flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayPsyncRequest),
+    curl_response: PlacetopayPaymentsResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: U,
+    [Debug + Sync + Send + 'static],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
+            let full_url = format!("{}/query", base_url);
+            println!("PlaceToPay: PSync API URL constructed: {}", full_url);
+            Ok(full_url)
+        }
+    }
+);
+
+// Void flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayNextActionRequest),
+    curl_response: PlacetopayPaymentsResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: U,
+    [Debug + Sync + Send + 'static],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
+            let full_url = format!("{}/process", base_url);
+            println!("PlaceToPay: Void API URL constructed: {}", full_url);
+            Ok(full_url)
+        }
+    }
+);
+
+// Refund flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayRefundRequest),
+    curl_response: PlacetopayRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: U,
+    [Debug + Sync + Send + 'static],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
+            let full_url = format!("{}/process", base_url);
+            println!("PlaceToPay: Refund API URL constructed: {}", full_url);
+            Ok(full_url)
+        }
+    }
+);
+
+// RSync flow implementation
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayRsyncRequest),
+    curl_response: PlacetopayRefundResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: U,
+    [Debug + Sync + Send + 'static],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
+            let full_url = format!("{}/query", base_url);
+            println!("PlaceToPay: RSync API URL constructed: {}", full_url);
+            Ok(full_url)
         }
     }
 );

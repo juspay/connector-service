@@ -8,7 +8,7 @@ use common_utils::{
     types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
-    connector_flow::{self, Authorize, PaymentMethodToken, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
+    connector_flow::{self, Authorize, PaymentMethodToken, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture, Refund},
     connector_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, 
@@ -83,6 +83,7 @@ pub struct PlacetopayAuth {
 impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Starting auth generation");
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
         let nonce_bytes: [u8; 16] = common_utils::crypto::generate_cryptographically_secure_random_bytes();
         let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
@@ -96,6 +97,7 @@ impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
         let encoded_digest = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, hasher.finish());
         let nonce = Secret::new(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &nonce_bytes));
         
+        println!("PlaceToPay: Auth generation completed successfully");
         Ok(Self {
             login: placetopay_auth.login,
             tran_key: encoded_digest.into(),
@@ -197,18 +199,34 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let browser_info = item.router_data.request.get_browser_info()?;
-        let ip_address = browser_info.get_ip_address()?;
-        let user_agent = browser_info.get_user_agent()?;
+        println!("PlaceToPay: Starting request transformation");
+        let browser_info = item.router_data.request.get_browser_info()
+            .unwrap_or_else(|_| {
+                println!("PlaceToPay: Browser info not available, using defaults");
+                domain_types::router_request_types::BrowserInformation::default()
+            });
+        let ip_address = browser_info.get_ip_address()
+            .unwrap_or_else(|_| {
+                println!("PlaceToPay: IP address not available, using default");
+                Secret::new("127.0.0.1".to_string())
+            });
+        let user_agent = browser_info.get_user_agent()
+            .unwrap_or_else(|_| {
+                println!("PlaceToPay: User agent not available, using default");
+                "PlaceToPay-Connector/1.0".to_string()
+            });
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let description = item.router_data.resource_common_data.get_description()
+            .unwrap_or_else(|_| "Payment transaction".to_string());
         let payment = PlacetopayPayment {
             reference: item.router_data.resource_common_data.connector_request_reference_id.clone(),
-            description: item.router_data.resource_common_data.get_description()?,
+            description,
             amount: PlacetopayAmount {
                 currency: item.router_data.request.currency,
                 total: item.amount,
             },
         };
+        println!("PlaceToPay: Payment object created successfully");
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Card(req_card) => {
                 let card = PlacetopayCard {
@@ -216,6 +234,7 @@ impl<
                     expiration: format!("{}/{}", req_card.card_exp_month.peek(), req_card.card_exp_year.peek()).into(),
                     cvv: req_card.card_cvc.clone(),
                 };
+                println!("PlaceToPay: Request transformation completed successfully");
                 Ok(Self {
                     ip_address,
                     user_agent,
@@ -286,6 +305,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting macro-generated RouterData to PlacetopayPaymentsRequest");
         // Convert macro type to our transformers type
         let amount = MinorUnit::new(item.router_data.request.amount);
         let transformers_item = PlacetopayRouterData {
@@ -293,8 +313,14 @@ impl<
             router_data: item.router_data,
             payment_method_data: std::marker::PhantomData,
         };
+        println!("PlaceToPay: Calling transformers implementation");
         // Use existing implementation
-        Self::try_from(transformers_item)
+        let result = Self::try_from(transformers_item);
+        match &result {
+            Ok(_) => println!("PlaceToPay: Request transformation successful"),
+            Err(e) => println!("PlaceToPay: Request transformation failed: {:?}", e),
+        }
+        result
     }
 }
 
@@ -313,7 +339,7 @@ pub enum PlacetopayTransactionStatus {
 
 impl From<PlacetopayTransactionStatus> for common_enums::AttemptStatus {
     fn from(item: PlacetopayTransactionStatus) -> Self {
-        match item {
+        let status = match item {
             PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
                 Self::Charged
             }
@@ -323,7 +349,9 @@ impl From<PlacetopayTransactionStatus> for common_enums::AttemptStatus {
             PlacetopayTransactionStatus::Pending
             | PlacetopayTransactionStatus::PendingValidation
             | PlacetopayTransactionStatus::PendingProcess => Self::Pending,
-        }
+        };
+        println!("PlaceToPay: Status mapping - {:?} -> {:?}", item, status);
+        status
     }
 }
 
@@ -376,7 +404,28 @@ impl<
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let status = common_enums::AttemptStatus::from(item.response.status.status);
+        println!("PlaceToPay: Processing response - raw status: {:?}", item.response.status.status);
+        
+        // Check capture method to determine correct status
+        let capture_method = item.router_data.request.capture_method.unwrap_or(common_enums::CaptureMethod::Automatic);
+        println!("PlaceToPay: Capture method: {:?}", capture_method);
+        
+        let status = match (item.response.status.status, capture_method) {
+            (PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok, common_enums::CaptureMethod::Manual) => {
+                println!("PlaceToPay: Manual capture - mapping to Authorized");
+                common_enums::AttemptStatus::Authorized
+            },
+            (PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok, _) => {
+                println!("PlaceToPay: Auto capture - mapping to Charged");
+                common_enums::AttemptStatus::Charged
+            },
+            (other_status, _) => {
+                println!("PlaceToPay: Other status - using default mapping");
+                common_enums::AttemptStatus::from(other_status)
+            }
+        };
+        
+        println!("PlaceToPay: Final mapped status: {:?}", status);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -418,12 +467,14 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting PSync request");
         let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
         let internal_reference = item
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        println!("PlaceToPay: PSync request created with internal_reference: {}", internal_reference);
         Ok(Self {
             auth,
             internal_reference,
@@ -488,6 +539,7 @@ impl TryFrom<PlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, Payment
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: PlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, ()>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting capture request");
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
             .router_data
@@ -496,6 +548,29 @@ impl TryFrom<PlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, Payment
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Checkout;
+        println!("PlaceToPay: Capture request created with internal_reference: {}", internal_reference);
+        Ok(Self {
+            auth,
+            internal_reference,
+            action,
+        })
+    }
+}
+
+// Add TryFrom for macro-generated RouterData
+impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>> for PlacetopayNextActionRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting macro capture request");
+        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
+        let internal_reference = item
+            .request
+            .get_connector_transaction_id()?
+            .parse::<u64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let action = PlacetopayNextAction::Checkout;
+        println!("PlaceToPay: Macro capture request created with internal_reference: {}", internal_reference);
         Ok(Self {
             auth,
             internal_reference,
@@ -508,6 +583,7 @@ impl TryFrom<PlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoi
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: PlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, ()>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting void request");
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
             .router_data
@@ -516,6 +592,29 @@ impl TryFrom<PlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoi
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Void;
+        println!("PlaceToPay: Void request created with internal_reference: {}", internal_reference);
+        Ok(Self {
+            auth,
+            internal_reference,
+            action,
+        })
+    }
+}
+
+// Add TryFrom for macro-generated RouterData
+impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>> for PlacetopayNextActionRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting macro void request");
+        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
+        let internal_reference = item
+            .request
+            .connector_transaction_id
+            .parse::<u64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let action = PlacetopayNextAction::Void;
+        println!("PlaceToPay: Macro void request created with internal_reference: {}", internal_reference);
         Ok(Self {
             auth,
             internal_reference,
@@ -537,6 +636,7 @@ pub struct PlacetopayRefundRequest {
 impl<F> TryFrom<PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, ()>> for PlacetopayRefundRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, ()>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting refund request");
         if item.router_data.request.minor_refund_amount == item.router_data.request.minor_payment_amount {
             let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
 
@@ -551,6 +651,42 @@ impl<F> TryFrom<PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData
                 Some(metadata) => metadata.as_str().map(|auth| auth.to_string()),
                 None => None,
             };
+            println!("PlaceToPay: Refund request created with internal_reference: {}", internal_reference);
+            Ok(Self {
+                auth,
+                internal_reference,
+                action,
+                authorization,
+            })
+        } else {
+            Err(errors::ConnectorError::NotSupported {
+                message: "Partial Refund".to_string(),
+                connector: "placetopay",
+            }
+            .into())
+        }
+    }
+}
+
+// Add TryFrom for macro-generated RouterData
+impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for PlacetopayRefundRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting macro refund request");
+        if item.request.minor_refund_amount == item.request.minor_payment_amount {
+            let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
+
+            let internal_reference = item
+                .request
+                .connector_transaction_id
+                .parse::<u64>()
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            let action = PlacetopayNextAction::Reverse;
+            let authorization = match item.request.connector_metadata.clone() {
+                Some(metadata) => metadata.as_str().map(|auth| auth.to_string()),
+                None => None,
+            };
+            println!("PlaceToPay: Macro refund request created with internal_reference: {}", internal_reference);
             Ok(Self {
                 auth,
                 internal_reference,
@@ -638,6 +774,7 @@ pub struct PlacetopayRsyncRequest {
 impl TryFrom<PlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, ()>> for PlacetopayRsyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: PlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, ()>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting RSync request");
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
             .router_data
@@ -645,6 +782,26 @@ impl TryFrom<PlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSync
             .connector_transaction_id
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        println!("PlaceToPay: RSync request created with internal_reference: {}", internal_reference);
+        Ok(Self {
+            auth,
+            internal_reference,
+        })
+    }
+}
+
+// Add TryFrom for macro-generated RouterData
+impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>> for PlacetopayRsyncRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting macro RSync request");
+        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
+        let internal_reference = item
+            .request
+            .connector_transaction_id
+            .parse::<u64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        println!("PlaceToPay: Macro RSync request created with internal_reference: {}", internal_reference);
         Ok(Self {
             auth,
             internal_reference,
