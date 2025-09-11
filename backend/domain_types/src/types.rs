@@ -122,6 +122,7 @@ pub struct Connectors {
     pub aci: ConnectorParams,
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
+    pub worldpayvantiv: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
