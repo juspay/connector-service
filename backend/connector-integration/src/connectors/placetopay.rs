@@ -8,15 +8,16 @@ use common_utils::{
     };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PaymentMethodToken, PSync, RSync, Refund,
         RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, 
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, 
+        RefundsResponseData, RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData, 
+        SessionTokenRequestData, SessionTokenResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -36,7 +37,7 @@ use transformers::{
     self as placetopay,
     PlacetopayPaymentsRequest, PlacetopayPaymentsResponse, PlacetopayPsyncRequest,
     PlacetopayRefundRequest, PlacetopayRefundResponse, PlacetopayRsyncRequest,
-    PlacetopayNextActionRequest,
+    PlacetopayNextActionRequest, PlacetopayTokenRequest, PlacetopayTokenResponse,
 };
 
 use super::macros;
@@ -114,6 +115,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Placetopay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Placetopay<T>
 {
 }
 
@@ -412,6 +417,34 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Placetopay,
+    curl_request: Json(PlacetopayTokenRequest),
+    curl_response: PlacetopayTokenResponse,
+    flow_name: PaymentMethodToken,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentMethodTokenizationData<T>,
+    flow_response: PaymentMethodTokenResponse,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}tokenize", self.connector_base_url_payments(req)))
+        }
+    }
+);
+
 // Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
@@ -642,4 +675,122 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         SessionTokenResponseData,
     > for Placetopay<T>
 {
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Placetopay<T>
+{
+}
+
+// Connector Specifications
+use std::sync::LazyLock;
+use common_enums::{CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType};
+use domain_types::types::{
+    ConnectorInfo, FeatureStatus, PaymentMethodDetails, PaymentMethodSpecificFeatures,
+    SupportedPaymentMethods, CardSpecificFeatures, PaymentConnectorCategory,
+};
+use domain_types::payment_method_data::DefaultPCIHolder;
+use domain_types::connector_types::ConnectorSpecifications;
+use interfaces::connector_types::ConnectorValidation;
+use common_enums::AttemptStatus;
+use common_utils::pii::SecretSerdeValue;
+
+static PLACETOPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> = LazyLock::new(|| {
+    let placetopay_supported_capture_methods = vec![
+        CaptureMethod::Automatic,
+        CaptureMethod::Manual,
+    ];
+
+    let placetopay_supported_card_network = vec![
+        CardNetwork::AmericanExpress,
+        CardNetwork::DinersClub,
+        CardNetwork::Discover,
+        CardNetwork::JCB,
+        CardNetwork::Maestro,
+        CardNetwork::Mastercard,
+        CardNetwork::Visa,
+    ];
+
+    let mut placetopay_supported_payment_methods = SupportedPaymentMethods::new();
+
+    placetopay_supported_payment_methods.add(
+        PaymentMethod::Card,
+        PaymentMethodType::Credit,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: placetopay_supported_capture_methods.clone(),
+            specific_features: Some(PaymentMethodSpecificFeatures::Card(CardSpecificFeatures {
+                three_ds: FeatureStatus::NotSupported,
+                no_three_ds: FeatureStatus::Supported,
+                supported_card_networks: placetopay_supported_card_network.clone(),
+            })),
+        },
+    );
+
+    placetopay_supported_payment_methods.add(
+        PaymentMethod::Card,
+        PaymentMethodType::Debit,
+        PaymentMethodDetails {
+            mandates: FeatureStatus::NotSupported,
+            refunds: FeatureStatus::Supported,
+            supported_capture_methods: placetopay_supported_capture_methods.clone(),
+            specific_features: Some(PaymentMethodSpecificFeatures::Card(CardSpecificFeatures {
+                three_ds: FeatureStatus::NotSupported,
+                no_three_ds: FeatureStatus::Supported,
+                supported_card_networks: placetopay_supported_card_network.clone(),
+            })),
+        },
+    );
+
+    placetopay_supported_payment_methods
+});
+
+static PLACETOPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
+    display_name: "PlaceToPay",
+    description: "PlaceToPay is a Latin American payment gateway that provides secure online payment processing services for businesses across the region.",
+    connector_type: PaymentConnectorCategory::PaymentGateway,
+};
+
+static PLACETOPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] = &[EventClass::Payments, EventClass::Refunds];
+
+impl ConnectorSpecifications for Placetopay<DefaultPCIHolder> {
+    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
+        Some(&PLACETOPAY_CONNECTOR_INFO)
+    }
+
+    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
+        Some(&PLACETOPAY_SUPPORTED_PAYMENT_METHODS)
+    }
+
+    fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
+        Some(PLACETOPAY_SUPPORTED_WEBHOOK_FLOWS)
+    }
+}
+
+impl ConnectorValidation for Placetopay<DefaultPCIHolder> {
+    fn validate_psync_reference_id(
+        &self,
+        data: &PaymentsSyncData,
+        _is_three_ds: bool,
+        _status: AttemptStatus,
+        _connector_meta_data: Option<SecretSerdeValue>,
+    ) -> CustomResult<(), errors::ConnectorError> {
+        if data.connector_transaction_id.is_some() {
+            return Ok(());
+        }
+        Err(errors::ConnectorError::MissingRequiredField {
+            field_name: "connector_transaction_id",
+        }
+        .into())
+    }
+    
+    fn is_webhook_source_verification_mandatory(&self) -> bool {
+        false
+    }
 }

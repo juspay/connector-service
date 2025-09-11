@@ -8,12 +8,12 @@ use common_utils::{
     types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
-    connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
+    connector_flow::{self, Authorize, PaymentMethodToken, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, 
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, 
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -30,7 +30,7 @@ use hyperswitch_masking::{ExposeInterface, Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-use crate::{connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
 
 #[derive(Debug, Serialize)]
 pub struct PlacetopayRouterData<T, U> {
@@ -639,4 +639,132 @@ pub struct PlacetopayError {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PlacetopayErrorStatus {
     Failed,
+}
+
+// TOKEN TYPES
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayTokenRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    auth: PlacetopayAuth,
+    instrument: PlacetopayInstrument<T>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayTokenResponse {
+    status: PlacetopayStatusResponse,
+    token: Option<String>,
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        PlacetopayRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    > for PlacetopayTokenRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: PlacetopayRouterData<
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        match item.router_data.request.payment_method_data.clone() {
+            PaymentMethodData::Card(req_card) => {
+                let card = PlacetopayCard {
+                    number: req_card.card_number.clone(),
+                    expiration: req_card
+                        .clone()
+                        .get_card_expiry_month_year_2_digit_with_delimiter("/".to_owned())?,
+                    cvv: req_card.card_cvc.clone(),
+                };
+                Ok(Self {
+                    auth,
+                    instrument: PlacetopayInstrument {
+                        card: card.to_owned(),
+                    },
+                })
+            }
+            _ => Err(errors::ConnectorError::NotImplemented(
+                utils::get_unimplemented_payment_method_error_message("Placetopay"),
+            )
+            .into()),
+        }
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        ResponseRouterData<
+            PlacetopayTokenResponse,
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+        >,
+    > for RouterDataV2<PaymentMethodToken, PaymentFlowData, PaymentMethodTokenizationData<T>, PaymentMethodTokenResponse>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            PlacetopayTokenResponse,
+            RouterDataV2<
+                PaymentMethodToken,
+                PaymentFlowData,
+                PaymentMethodTokenizationData<T>,
+                PaymentMethodTokenResponse,
+            >,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let status = common_enums::AttemptStatus::from(item.response.status.status);
+        
+        Ok(Self {
+            response: Ok(PaymentMethodTokenResponse {
+                payment_method_token: item.response.token.unwrap_or_default(),
+                payment_method_token_type: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
 }
