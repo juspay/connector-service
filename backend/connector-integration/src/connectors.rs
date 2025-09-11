@@ -52,3 +52,6 @@ pub use self::noon::Noon;
 
 pub mod braintree;
 pub use self::braintree::Braintree;
+
+pub mod dlocal;
+pub use self::dlocal::Dlocal;
