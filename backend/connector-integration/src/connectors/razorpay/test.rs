@@ -94,6 +94,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -261,6 +262,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -380,6 +382,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -521,6 +524,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -829,6 +833,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1003,6 +1008,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1179,6 +1185,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -1195,6 +1202,7 @@ mod tests {
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
+                    payment_method_type: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -1276,6 +1284,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -1292,6 +1301,7 @@ mod tests {
                     integrity_object: None,
                     metadata: None,
                     webhook_url: None,
+                    payment_method_type: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -1378,6 +1388,7 @@ mod tests {
                         razorpay: ConnectorParams {
                             base_url: "https://api.razorpay.com/".to_string(),
                             dispute_base_url: None,
+                            base_url_bank_redirects: None,
                         },
                         ..Default::default()
                     },
@@ -1518,6 +1529,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1534,6 +1546,7 @@ mod tests {
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
+                payment_method_type: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1638,6 +1651,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1654,6 +1668,7 @@ mod tests {
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
+                payment_method_type: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1747,6 +1762,7 @@ mod tests {
                     razorpay: ConnectorParams {
                         base_url: "https://api.razorpay.com/".to_string(),
                         dispute_base_url: None,
+                        base_url_bank_redirects: None,
                     },
                     ..Default::default()
                 },
@@ -1763,6 +1779,7 @@ mod tests {
                 integrity_object: None,
                 metadata: None,
                 webhook_url: None,
+                payment_method_type: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),

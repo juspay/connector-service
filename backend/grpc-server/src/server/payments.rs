@@ -518,6 +518,13 @@ impl Payments {
                 Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
             },
             webhook_url: payload.webhook_url.clone(),
+            payment_method_type: payload
+                .payment_method
+                .clone()
+                .map(<Option<common_enums::PaymentMethodType>>::foreign_try_from)
+                .transpose()
+                .unwrap_or(None)
+                .flatten(),
         };
 
         let order_router_data = RouterDataV2::<
@@ -623,6 +630,7 @@ impl Payments {
                 Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
             },
             webhook_url: payload.webhook_url.clone(),
+            payment_method_type: None,
         };
 
         let order_router_data = RouterDataV2::<

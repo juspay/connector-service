@@ -109,6 +109,7 @@ pub struct Connectors {
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
+    pub trustpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -116,6 +117,7 @@ pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
+    pub base_url_bank_redirects: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
