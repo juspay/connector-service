@@ -211,7 +211,14 @@ impl Payments {
             if cached_access_token.is_some() {
                 // If provided cached token - use it, don't generate new one
                 tracing::info!("Using cached access token from Hyperswitch");
-                let updated_flow_data = payment_flow_data.set_access_token(cached_access_token);
+                let access_token_data = cached_access_token.map(|token| {
+                    AccessTokenResponseData {
+                        access_token: token,
+                        token_type: None,
+                        expires_in: None,
+                    }
+                });
+                let updated_flow_data = payment_flow_data.set_access_token(access_token_data);
                 updated_flow_data 
             } else {
                 // No cached token - generate fresh one
@@ -239,7 +246,7 @@ impl Payments {
                 
                 // Store in flow data for connector API calls
                 let updated_flow_data = payment_flow_data.set_access_token(
-                    Some(access_token_data.access_token.clone())
+                    Some(access_token_data.clone())
                 );
                 
                 updated_flow_data
