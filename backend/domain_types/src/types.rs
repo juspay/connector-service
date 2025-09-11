@@ -116,6 +116,7 @@ pub struct Connectors {
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
+    pub worldpayvantiv: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

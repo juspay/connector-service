@@ -58,3 +58,6 @@ pub use self::volt::Volt;
 
 pub mod bluecode;
 pub use self::bluecode::Bluecode;
+
+pub mod worldpayvantiv;
+pub use self::worldpayvantiv::Worldpayvantiv;
