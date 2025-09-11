@@ -599,7 +599,7 @@ impl<
         let default_browser_info = BrowserInformation {
             color_depth: Some(browser_info.color_depth.unwrap_or(24)),
             java_enabled: Some(browser_info.java_enabled.unwrap_or(false)),
-            java_script_enabled: Some(browser_info.java_enabled.unwrap_or(true)),
+            java_script_enabled: Some(browser_info.java_script_enabled.unwrap_or(true)),
             language: Some(browser_info.language.unwrap_or("en-US".to_string())),
             screen_height: Some(browser_info.screen_height.unwrap_or(1080)),
             screen_width: Some(browser_info.screen_width.unwrap_or(1920)),
@@ -1830,8 +1830,13 @@ impl<
         let payment_method = refund_metadata
             .clone()
             .expose()
-            .get("payment_method")
-            .and_then(|pm| pm.as_str())
+            .as_str()
+            .and_then(|json_str| serde_json::from_str::<serde_json::Value>(json_str).ok())
+            .and_then(|json_obj| {
+                json_obj.get("payment_method")
+                    .and_then(|pm| pm.as_str())
+                    .map(|pm_str| pm_str.to_string())
+            })
             .and_then(|pm_str| pm_str.parse::<enums::PaymentMethod>().ok())
             .ok_or_else(|| errors::ConnectorError::MissingRequiredField {
                 field_name: "payment_method in refund_connector_metadata",

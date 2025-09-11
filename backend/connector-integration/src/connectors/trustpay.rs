@@ -342,7 +342,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Trustpay,
-    curl_request: Json(TrustpayPaymentsRequest),
+    curl_request: FormUrlEncoded(TrustpayPaymentsRequest),
     curl_response: TrustpayPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
@@ -457,7 +457,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Trustpay,
-    curl_request: Json(TrustpayRefundRequest),
+    curl_request: FormUrlEncoded(TrustpayRefundRequest),
     curl_response: RefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
@@ -484,14 +484,18 @@ macros::macro_connector_implementation!(
                     field_name: "refund_connector_metadata",
                 })?
                 .peek()
-                .get("payment_method")
-                .and_then(|pm| pm.as_str())
-                .and_then(|pm_str| match pm_str {
-                    "bank_redirect" => Some(common_enums::PaymentMethod::BankRedirect),
-                    "bank_transfer" => Some(common_enums::PaymentMethod::BankTransfer),
-                    "card" => Some(common_enums::PaymentMethod::Card),
-                    "wallet" => Some(common_enums::PaymentMethod::Wallet),
-                    _ => None,
+                .as_str()
+                .and_then(|json_str| serde_json::from_str::<serde_json::Value>(json_str).ok())
+                .and_then(|json_obj| {
+                    json_obj.get("payment_method")
+                        .and_then(|pm| pm.as_str())
+                        .and_then(|pm_str| match pm_str {
+                            "bank_redirect" => Some(common_enums::PaymentMethod::BankRedirect),
+                            "bank_transfer" => Some(common_enums::PaymentMethod::BankTransfer),
+                            "card" => Some(common_enums::PaymentMethod::Card),
+                            "wallet" => Some(common_enums::PaymentMethod::Wallet),
+                            _ => None,
+                        })
                 })
                 .ok_or(errors::ConnectorError::MissingRequiredField {
                     field_name: "payment_method in refund_connector_metadata",
@@ -544,14 +548,18 @@ macros::macro_connector_implementation!(
                 field_name: "refund_connector_metadata",
             })?
             .peek()
-            .get("payment_method")
-            .and_then(|pm| pm.as_str())
-            .and_then(|pm_str| match pm_str {
-                "bank_redirect" => Some(common_enums::PaymentMethod::BankRedirect),
-                "bank_transfer" => Some(common_enums::PaymentMethod::BankTransfer),
-                "card" => Some(common_enums::PaymentMethod::Card),
-                "wallet" => Some(common_enums::PaymentMethod::Wallet),
-                _ => None,
+            .as_str()
+            .and_then(|json_str| serde_json::from_str::<serde_json::Value>(json_str).ok())
+            .and_then(|json_obj| {
+                json_obj.get("payment_method")
+                    .and_then(|pm| pm.as_str())
+                    .and_then(|pm_str| match pm_str {
+                        "bank_redirect" => Some(common_enums::PaymentMethod::BankRedirect),
+                        "bank_transfer" => Some(common_enums::PaymentMethod::BankTransfer),
+                        "card" => Some(common_enums::PaymentMethod::Card),
+                        "wallet" => Some(common_enums::PaymentMethod::Wallet),
+                        _ => None,
+                    })
             })
             .ok_or(errors::ConnectorError::MissingRequiredField {
                 field_name: "payment_method in refund_connector_metadata",
