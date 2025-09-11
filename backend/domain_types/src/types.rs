@@ -107,6 +107,7 @@ pub struct Connectors {
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
+    pub placetopay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
