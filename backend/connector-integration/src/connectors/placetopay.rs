@@ -37,7 +37,7 @@ use interfaces::{
 use transformers::{
     PlacetopayPaymentsRequest, PlacetopayPaymentsResponse, PlacetopayPSyncResponse, PlacetopayPsyncRequest,
     PlacetopayRefundRequest, PlacetopayRefundResponse, PlacetopayRSyncResponse, PlacetopayRsyncRequest,
-    PlacetopayNextActionRequest, PlacetopayTokenRequest, PlacetopayTokenResponse,
+    PlacetopayNextActionRequest, PlacetopayCaptureRequest, PlacetopayTokenRequest, PlacetopayTokenResponse,
 };
 use transformers as placetopay;
 
@@ -177,8 +177,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
-        let full_url = format!("{}/process", base_url);
-        println!("PlaceToPay: Capture API URL constructed: {}", full_url);
+        // Use the correct PlaceToPay capture endpoint
+        let full_url = format!("{}/transaction", base_url);
+        println!("PlaceToPay: Capture API URL constructed (transaction endpoint): {}", full_url);
         Ok(full_url)
     }
 
@@ -186,7 +187,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = PlacetopayNextActionRequest::try_from(req)?;
+        println!("PlaceToPay: Creating capture request for transaction endpoint");
+        let connector_req = PlacetopayCaptureRequest::try_from(req)?;
+        println!("PlaceToPay: Capture request created successfully");
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
@@ -289,8 +292,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
-        let full_url = format!("{}/process", base_url);
-        println!("PlaceToPay: Refund API URL constructed: {}", full_url);
+        // Try using the transaction endpoint for refunds like capture
+        let full_url = format!("{}/transaction", base_url);
+        println!("PlaceToPay: Refund API URL constructed (transaction endpoint): {}", full_url);
         Ok(full_url)
     }
 

@@ -625,6 +625,16 @@ pub struct PlacetopayNextActionRequest {
     action: PlacetopayNextAction,
 }
 
+// PlaceToPay transaction endpoint capture request
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlacetopayCaptureRequest {
+    auth: PlacetopayAuth,
+    internal_reference: u64,
+    action: PlacetopayNextAction,
+    amount: PlacetopayAmount,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum PlacetopayNextAction {
@@ -657,12 +667,45 @@ impl TryFrom<PlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, Payment
     }
 }
 
-// Add TryFrom for macro-generated RouterData
+// PlaceToPay transaction endpoint TryFrom for capture request
+impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>> for PlacetopayCaptureRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Converting capture request for transaction endpoint");
+        
+        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
+        
+        let internal_reference = item
+            .request
+            .get_connector_transaction_id()?
+            .parse::<u64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        
+        // Use Checkout action for capture operations
+        let action = PlacetopayNextAction::Checkout;
+        
+        let amount = PlacetopayAmount {
+            currency: item.request.currency,
+            total: item.request.minor_amount_to_capture,
+        };
+        
+        println!("PlaceToPay: Transaction endpoint capture request created with internal_reference: {} and amount: {:?}", internal_reference, amount);
+        Ok(Self {
+            auth,
+            internal_reference,
+            action,
+            amount,
+        })
+    }
+}
+
+// Keep the old implementation for backward compatibility
 impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>> for PlacetopayNextActionRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
     fn try_from(item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>) -> Result<Self, Self::Error> {
-        println!("PlaceToPay: Converting macro capture request");
+        println!("PlaceToPay: Converting macro capture request (legacy format)");
         let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
         let internal_reference = item
             .request
@@ -670,7 +713,7 @@ impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, Paymen
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Checkout;
-        println!("PlaceToPay: Macro capture request created with internal_reference: {}", internal_reference);
+        println!("PlaceToPay: Legacy capture request created with internal_reference: {}", internal_reference);
         Ok(Self {
             auth,
             internal_reference,
