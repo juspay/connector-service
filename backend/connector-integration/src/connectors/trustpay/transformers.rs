@@ -1,3 +1,4 @@
+use crate::utils;
 use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
 use common_enums::enums;
 use common_utils::{
@@ -24,7 +25,6 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_request_types::BrowserInformation,
     router_response_types::RedirectForm,
-    utils,
 };
 use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
@@ -1077,7 +1077,7 @@ fn handle_bank_redirects_sync_response(
     errors::ConnectorError,
 > {
     let status = enums::AttemptStatus::from(response.payment_information.status);
-    let error = if utils::is_payment_failure(status) {
+    let error = if domain_types::utils::is_payment_failure(status) {
         let reason_info = response
             .payment_information
             .status_reason_information
@@ -1141,7 +1141,7 @@ pub fn handle_webhook_response(
     errors::ConnectorError,
 > {
     let status = enums::AttemptStatus::try_from(payment_information.status)?;
-    let error = if utils::is_payment_failure(status) {
+    let error = if domain_types::utils::is_payment_failure(status) {
         let reason_info = payment_information
             .status_reason_information
             .unwrap_or_default();

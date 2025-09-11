@@ -394,14 +394,3 @@ pub fn extract_merchant_id_from_metadata(
             })
         })?)
 }
-
-pub fn is_refund_failure(status: common_enums::RefundStatus) -> bool {
-    match status {
-        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
-            true
-        }
-        common_enums::RefundStatus::ManualReview
-        | common_enums::RefundStatus::Pending
-        | common_enums::RefundStatus::Success => false,
-    }
-}
