@@ -149,6 +149,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -276,6 +277,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

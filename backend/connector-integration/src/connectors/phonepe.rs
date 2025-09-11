@@ -5,12 +5,14 @@ use common_enums as enums;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::MinorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
-        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
+        ConnectorSpecifications, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
@@ -34,6 +36,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers as phonepe;
 
 use self::transformers::{
@@ -61,6 +64,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Phonepe<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Phonepe<T>
 {
 }
 impl<
@@ -695,12 +702,35 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Phonepe<T>
+{
+}
+
 // Apply to all flows
 impl_source_verification_stub!(
     CreateSessionToken,
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData
 );
 impl_source_verification_stub!(
     Authorize,
