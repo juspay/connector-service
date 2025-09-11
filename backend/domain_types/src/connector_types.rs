@@ -706,14 +706,12 @@ impl PaymentFlowData {
     }
 
     pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
-        if let Some(token_id) = access_token_id {
-            if self.access_token.is_none() {
-                self.access_token = Some(AccessTokenResponseData {
-                    access_token: token_id,
-                    token_type: None,
-                    expires_in: None,
-                });
-            }
+        if let (Some(token_id), None) = (access_token_id, &self.access_token) {
+            self.access_token = Some(AccessTokenResponseData {
+                access_token: token_id,
+                token_type: None,
+                expires_in: None,
+            });
         }
         self
     }

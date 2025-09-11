@@ -267,46 +267,50 @@ impl Payments {
 
         // Conditional token generation - ONLY if not provided in request
         let payment_flow_data = if should_do_access_token {
-            if cached_access_token.is_some() {
-                // If provided cached token - use it, don't generate new one
-                tracing::info!("Using cached access token from Hyperswitch");
-                let access_token_data = cached_access_token.map(|token| AccessTokenResponseData {
-                    access_token: token,
-                    token_type: None,
-                    expires_in: None,
-                });
-                payment_flow_data.set_access_token(access_token_data)
-            } else {
-                // No cached token - generate fresh one
-                tracing::info!("No cached access token found, generating new token");
-                let event_params = EventParams {
-                    _connector_name: &connector.to_string(),
-                    _service_name: service_name,
-                    request_id,
-                    lineage_ids,
-                    reference_id,
-                };
+            let access_token_data = match cached_access_token {
+                Some(token) => {
+                    // If provided cached token - use it, don't generate new one
+                    tracing::info!("Using cached access token from Hyperswitch");
+                    Some(AccessTokenResponseData {
+                        access_token: token,
+                        token_type: None,
+                        expires_in: None,
+                    })
+                }
+                None => {
+                    // No cached token - generate fresh one
+                    tracing::info!("No cached access token found, generating new token");
+                    let event_params = EventParams {
+                        _connector_name: &connector.to_string(),
+                        _service_name: service_name,
+                        request_id,
+                        lineage_ids,
+                        reference_id,
+                    };
 
-                let access_token_data = self
-                    .handle_access_token(
-                        connector_data.clone(),
-                        &payment_flow_data,
-                        connector_auth_details.clone(),
-                        &connector.to_string(),
-                        service_name,
-                        event_params,
-                        &payload,
-                    )
-                    .await?;
+                    let access_token_data = self
+                        .handle_access_token(
+                            connector_data.clone(),
+                            &payment_flow_data,
+                            connector_auth_details.clone(),
+                            &connector.to_string(),
+                            service_name,
+                            event_params,
+                            &payload,
+                        )
+                        .await?;
 
-                tracing::info!(
-                    "Access token created successfully with expiry: {:?}",
-                    access_token_data.expires_in
-                );
+                    tracing::info!(
+                        "Access token created successfully with expiry: {:?}",
+                        access_token_data.expires_in
+                    );
 
-                // Store in flow data for connector API calls
-                payment_flow_data.set_access_token(Some(access_token_data.clone()))
-            }
+                    Some(access_token_data)
+                }
+            };
+
+            // Store in flow data for connector API calls
+            payment_flow_data.set_access_token(access_token_data)
         } else {
             // Connector doesn't support access tokens
             payment_flow_data
