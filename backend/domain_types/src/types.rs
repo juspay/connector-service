@@ -256,7 +256,7 @@ impl<
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Reward(_) => {
                     Ok(PaymentMethodData::Reward)
-                },
+                }
                 grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
                     match wallet_type.wallet_type {
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
@@ -448,6 +448,224 @@ impl<
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Bnpl(bnpl_type) => {
+                    match bnpl_type.bnpl_type {
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Affirm(_)) => {
+                            Ok(PaymentMethodData::PayLater(payment_method_data::PayLaterData::AffirmRedirect {  }))
+                        }
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::AfterpayClearpay(_)) => {
+                            Ok(PaymentMethodData::PayLater(payment_method_data::PayLaterData::AfterpayClearpayRedirect {  }))
+                        }
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Klarna(_)) => {
+                            Ok(PaymentMethodData::PayLater(payment_method_data::PayLaterData::KlarnaRedirect {  }))
+                        }
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Walley(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Alma(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Atome(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::PayBright(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This BNPL type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
+                    match online_banking_type.online_banking_type {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Giropay(giropay)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Giropay {
+                                country: Some(common_enums::CountryAlpha2::foreign_try_from(
+                                    giropay.country(),
+                                )?),
+                                bank_account_bic: giropay.bank_account_bic.map(Secret::new),
+                                bank_account_iban: giropay.bank_account_iban.map(Secret::new),
+                            }))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Ideal(ideal)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Ideal {
+                                bank_name: Some(common_enums::BankNames::foreign_try_from(
+                                    ideal.bank_name(),
+                                )?),
+                            }))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Sofort(sofort)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Sofort {
+                                country: Some(common_enums::CountryAlpha2::foreign_try_from(
+                                    sofort.country(),
+                                )?),
+                                preferred_language: sofort.preferred_language
+                            }))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Przelewy24(przelewy24)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Przelewy24 {
+                                bank_name: Some(common_enums::BankNames::foreign_try_from(
+                                    przelewy24.bank_name(),
+                                )?),
+                            }))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Eps(eps)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Eps {
+                                bank_name: Some(common_enums::BankNames::foreign_try_from(
+                                    eps.bank_name(),
+                                )?),
+                                country: Some(common_enums::CountryAlpha2::foreign_try_from(
+                                    eps.country(),
+                                )?),
+                            }))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingThailand(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingCzechRepublic(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFinland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingPoland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingSlovakia(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFpx(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Trustly(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingPis(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::LocalBankRedirect(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Pse(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This online banking type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::DirectDebit(direct_debit_type) => {
+                    match direct_debit_type.direct_debit_type {
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BancontactCard(bancontact_card)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::BancontactCard {
+                                card_number: Some(cards::CardNumber::from_str(&bancontact_card.card_number)
+                                    .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                                        sub_code: "INVALID_CARD_NUMBER".to_owned(),
+                                        error_identifier: 400,
+                                        error_message: "Invalid card number".to_owned(),
+                                        error_object: None,
+                                    }))?),
+                                card_exp_month: Some(bancontact_card.card_exp_month.into()),
+                                card_exp_year: Some(bancontact_card.card_exp_year.into()),
+                                card_holder_name: Some(bancontact_card.card_holder_name.into())
+                            }))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Ach(ach)) => {
+                            Ok(PaymentMethodData::BankDebit(payment_method_data::BankDebitData::AchBankDebit {
+                                bank_name: Some(common_enums::BankNames::foreign_try_from(
+                                    ach.bank_name(),
+                                )?),
+                                bank_type: Some(common_enums::BankType::foreign_try_from(
+                                    ach.bank_type(),
+                                )?),
+                                bank_holder_type: Some(common_enums::BankHolderType::foreign_try_from(
+                                    ach.bank_holder_type(),
+                                )?),
+                                account_number: ach.account_number.into(),
+                                routing_number: ach.routing_number.into(),
+                                card_holder_name: Some(ach.card_holder_name.into()),
+                                bank_account_holder_name: Some(ach.bank_account_holder_name.into()),
+                            }))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Sepa(sepa)) => {
+                            Ok(PaymentMethodData::BankDebit(payment_method_data::BankDebitData::SepaBankDebit {
+                                iban: sepa.iban.into(),
+                                bank_account_holder_name: Some(sepa.bank_account_holder_name.into())
+                            }))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Becs(becs)) => {
+                            Ok(PaymentMethodData::BankDebit(payment_method_data::BankDebitData::BecsBankDebit {
+                                account_number: becs.account_number.into(),
+                                bsb_number: becs.bsb_number.into(),
+                                bank_account_holder_name: becs.bank_account_holder_name.map(Secret::new),
+                            }))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Bacs(bacs)) => {
+                            Ok(PaymentMethodData::BankDebit(payment_method_data::BankDebitData::BacsBankDebit {
+                                account_number: bacs.account_number.into(),
+                                sort_code: bacs.sort_code.into(),
+                                bank_account_holder_name: Some(bacs.bank_account_holder_name.into())
+                            }))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Benefit(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BniVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::CimbVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::DanamonVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::MandiriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Knet(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This direct debit type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(bank_transfer_type) => {
+                    match bank_transfer_type.bank_transfer_type {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::AchBankTransfer(_)) => {
+                            Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::AchBankTransfer {  })))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::SepaBankTransfer(_)) => {
+                            Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::SepaBankTransfer {  })))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::BacsBankTransfer(_)) => {
+                            Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::BacsBankTransfer {  })))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::MultibancoBankTransfer(_)) => {
+                            Ok(PaymentMethodData::BankTransfer(Box::new(payment_method_data::BankTransferData::MultibancoBankTransfer {  })))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Eft(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Fps(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::LocalBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::PermataBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::BcaBankTransfer(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This bank transfer type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MobilePayment(mobile_payment_type) => {
+                    match mobile_payment_type.mobile_payment_type {
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Blik(blik)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::Blik { blik_code: blik.blik_code }))
+                        }
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Bizum(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Dana(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::GoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Gcash(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::KakaoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MbWay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MobilePay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Momo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MomoAtm(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Swish(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::TouchNGo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Twint(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Vipps(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This mobile payment type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -572,7 +790,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                     match reward.reward_type() {
                         grpc_api_types::payments::RewardType::Classicreward => Ok(Some(PaymentMethodType::ClassicReward)),
                         grpc_api_types::payments::RewardType::EVoucher => Ok(Some(PaymentMethodType::Evoucher)),
-                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                        grpc_api_types::payments::RewardType::Unspecified => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "UNSUPPORTED_REWARD_TYPE".to_owned(),
                             error_identifier: 400,
                             error_message: "Unsupported reward type".to_owned(),
@@ -615,6 +833,161 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
                                 error_message: "This Wallet type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::Bnpl(bnpl_type) => {
+                    match bnpl_type.bnpl_type {
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Affirm(_)) => {
+                            Ok(Some(PaymentMethodType::Affirm))
+                        }
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::AfterpayClearpay(_)) => {
+                            Ok(Some(PaymentMethodType::AfterpayClearpay))
+                        }
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Klarna(_)) => {
+                            Ok(Some(PaymentMethodType::Klarna))
+                        }
+                        Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Walley(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Alma(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::Atome(_))
+                        | Some(grpc_api_types::payments::bnpl_payment_method_type::BnplType::PayBright(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This BNPL type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
+                    match online_banking_type.online_banking_type {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Giropay(_)) => {
+                            Ok(Some(PaymentMethodType::Giropay))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Ideal(_)) => {
+                            Ok(Some(PaymentMethodType::Ideal))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Sofort(_)) => {
+                            Ok(Some(PaymentMethodType::Sofort))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Przelewy24(_)) => {
+                            Ok(Some(PaymentMethodType::Przelewy24))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Eps(_)) => {
+                            Ok(Some(PaymentMethodType::Eps))
+                        }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingThailand(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingCzechRepublic(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFinland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingPoland(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingSlovakia(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFpx(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Trustly(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingPis(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::LocalBankRedirect(_))
+                        | Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::Pse(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This online banking type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::DirectDebit(direct_debit_type) => {
+                    match direct_debit_type.direct_debit_type {
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BancontactCard(_)) => {
+                            Ok(Some(PaymentMethodType::BancontactCard))                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Ach(_)) => {
+                            Ok(Some(PaymentMethodType::Ach))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Sepa(_)) => {
+                            Ok(Some(PaymentMethodType::Sepa))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Becs(_)) => {
+                            Ok(Some(PaymentMethodType::Becs))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Bacs(_)) => {
+                            Ok(Some(PaymentMethodType::Bacs))
+                        }
+                        Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Benefit(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BniVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::BriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::CimbVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::DanamonVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::MandiriVa(_))
+                        | Some(grpc_api_types::payments::direct_debit_payment_method_type::DirectDebitType::Knet(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This direct debit type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::BankTransfer(bank_transfer_type) => {
+                    match bank_transfer_type.bank_transfer_type {
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::AchBankTransfer(_)) => {
+                            Ok(Some(PaymentMethodType::Ach))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::SepaBankTransfer(_)) => {
+                            Ok(Some(PaymentMethodType::SepaBankTransfer))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::BacsBankTransfer(_)) => {
+                            Ok(Some(PaymentMethodType::Bacs))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::MultibancoBankTransfer(_)) => {
+                            Ok(Some(PaymentMethodType::Multibanco))
+                        }
+                        Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Eft(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::Fps(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::LocalBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::PermataBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::InstantBankTransfer(_))
+                        | Some(grpc_api_types::payments::bank_transfer_payment_method_type::BankTransferType::BcaBankTransfer(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This bank transfer type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MobilePayment(mobile_payment_type) => {
+                    match mobile_payment_type.mobile_payment_type {
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Blik(_)) => {
+                            Ok(Some(PaymentMethodType::Blik))
+                        }
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Bizum(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Dana(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::GoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Gcash(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::KakaoPay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MbWay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MobilePay(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Momo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::MomoAtm(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Swish(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::TouchNGo(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Twint(_))
+                        | Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::Vipps(_))
+                        | None => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This mobile payment type is not yet supported".to_owned(),
                                 error_object: None,
                             })))
                         },
@@ -1374,6 +1747,265 @@ impl ForeignTryFrom<grpc_api_types::payments::CountryAlpha2> for common_enums::C
             grpc_api_types::payments::CountryAlpha2::Zm => Ok(Self::ZM),
             grpc_api_types::payments::CountryAlpha2::Zw => Ok(Self::ZW),
             grpc_api_types::payments::CountryAlpha2::Unspecified => Ok(Self::US), // Default to US if unspecified
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::BankNames> for common_enums::BankNames {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::BankNames,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::BankNames::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_BANK_NAME".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Bank name must be specified".to_owned(),
+                    error_object: None,
+                })))
+            }
+            grpc_api_types::payments::BankNames::AmericanExpress => Ok(Self::AmericanExpress),
+            grpc_api_types::payments::BankNames::AffinBank => Ok(Self::AffinBank),
+            grpc_api_types::payments::BankNames::AgroBank => Ok(Self::AgroBank),
+            grpc_api_types::payments::BankNames::AllianceBank => Ok(Self::AllianceBank),
+            grpc_api_types::payments::BankNames::AmBank => Ok(Self::AmBank),
+            grpc_api_types::payments::BankNames::BankOfAmerica => Ok(Self::BankOfAmerica),
+            grpc_api_types::payments::BankNames::BankOfChina => Ok(Self::BankOfChina),
+            grpc_api_types::payments::BankNames::BankIslam => Ok(Self::BankIslam),
+            grpc_api_types::payments::BankNames::BankMuamalat => Ok(Self::BankMuamalat),
+            grpc_api_types::payments::BankNames::BankRakyat => Ok(Self::BankRakyat),
+            grpc_api_types::payments::BankNames::BankSimpananNasional => {
+                Ok(Self::BankSimpananNasional)
+            }
+            grpc_api_types::payments::BankNames::Barclays => Ok(Self::Barclays),
+            grpc_api_types::payments::BankNames::BlikPsp => Ok(Self::BlikPSP),
+            grpc_api_types::payments::BankNames::CapitalOne => Ok(Self::CapitalOne),
+            grpc_api_types::payments::BankNames::Chase => Ok(Self::Chase),
+            grpc_api_types::payments::BankNames::Citi => Ok(Self::Citi),
+            grpc_api_types::payments::BankNames::CimbBank => Ok(Self::CimbBank),
+            grpc_api_types::payments::BankNames::Discover => Ok(Self::Discover),
+            grpc_api_types::payments::BankNames::NavyFederalCreditUnion => {
+                Ok(Self::NavyFederalCreditUnion)
+            }
+            grpc_api_types::payments::BankNames::PentagonFederalCreditUnion => {
+                Ok(Self::PentagonFederalCreditUnion)
+            }
+            grpc_api_types::payments::BankNames::SynchronyBank => Ok(Self::SynchronyBank),
+            grpc_api_types::payments::BankNames::WellsFargo => Ok(Self::WellsFargo),
+            grpc_api_types::payments::BankNames::AbnAmro => Ok(Self::AbnAmro),
+            grpc_api_types::payments::BankNames::AsnBank => Ok(Self::AsnBank),
+            grpc_api_types::payments::BankNames::Bunq => Ok(Self::Bunq),
+            grpc_api_types::payments::BankNames::Handelsbanken => Ok(Self::Handelsbanken),
+            grpc_api_types::payments::BankNames::HongLeongBank => Ok(Self::HongLeongBank),
+            grpc_api_types::payments::BankNames::HsbcBank => Ok(Self::HsbcBank),
+            grpc_api_types::payments::BankNames::Ing => Ok(Self::Ing),
+            grpc_api_types::payments::BankNames::Knab => Ok(Self::Knab),
+            grpc_api_types::payments::BankNames::KuwaitFinanceHouse => Ok(Self::KuwaitFinanceHouse),
+            grpc_api_types::payments::BankNames::Moneyou => Ok(Self::Moneyou),
+            grpc_api_types::payments::BankNames::Rabobank => Ok(Self::Rabobank),
+            grpc_api_types::payments::BankNames::Regiobank => Ok(Self::Regiobank),
+            grpc_api_types::payments::BankNames::Revolut => Ok(Self::Revolut),
+            grpc_api_types::payments::BankNames::SnsBank => Ok(Self::SnsBank),
+            grpc_api_types::payments::BankNames::TriodosBank => Ok(Self::TriodosBank),
+            grpc_api_types::payments::BankNames::VanLanschot => Ok(Self::VanLanschot),
+            grpc_api_types::payments::BankNames::ArzteUndApothekerBank => {
+                Ok(Self::ArzteUndApothekerBank)
+            }
+            grpc_api_types::payments::BankNames::AustrianAnadiBankAg => {
+                Ok(Self::AustrianAnadiBankAg)
+            }
+            grpc_api_types::payments::BankNames::BankAustria => Ok(Self::BankAustria),
+            grpc_api_types::payments::BankNames::Bank99Ag => Ok(Self::Bank99Ag),
+            grpc_api_types::payments::BankNames::BankhausCarlSpangler => {
+                Ok(Self::BankhausCarlSpangler)
+            }
+            grpc_api_types::payments::BankNames::BankhausSchelhammerUndSchatteraAg => {
+                Ok(Self::BankhausSchelhammerUndSchatteraAg)
+            }
+            grpc_api_types::payments::BankNames::BankMillennium => Ok(Self::BankMillennium),
+            grpc_api_types::payments::BankNames::BawagPskAg => Ok(Self::BawagPskAg),
+            grpc_api_types::payments::BankNames::BksBankAg => Ok(Self::BksBankAg),
+            grpc_api_types::payments::BankNames::BrullKallmusBankAg => Ok(Self::BrullKallmusBankAg),
+            grpc_api_types::payments::BankNames::BtvVierLanderBank => Ok(Self::BtvVierLanderBank),
+            grpc_api_types::payments::BankNames::CapitalBankGraweGruppeAg => {
+                Ok(Self::CapitalBankGraweGruppeAg)
+            }
+            grpc_api_types::payments::BankNames::CeskaSporitelna => Ok(Self::CeskaSporitelna),
+            grpc_api_types::payments::BankNames::Dolomitenbank => Ok(Self::Dolomitenbank),
+            grpc_api_types::payments::BankNames::EasybankAg => Ok(Self::EasybankAg),
+            grpc_api_types::payments::BankNames::EPlatbyVub => Ok(Self::EPlatbyVUB),
+            grpc_api_types::payments::BankNames::ErsteBankUndSparkassen => {
+                Ok(Self::ErsteBankUndSparkassen)
+            }
+            grpc_api_types::payments::BankNames::FrieslandBank => Ok(Self::FrieslandBank),
+            grpc_api_types::payments::BankNames::HypoAlpeadriabankInternationalAg => {
+                Ok(Self::HypoAlpeadriabankInternationalAg)
+            }
+            grpc_api_types::payments::BankNames::HypoNoeLbFurNiederosterreichUWien => {
+                Ok(Self::HypoNoeLbFurNiederosterreichUWien)
+            }
+            grpc_api_types::payments::BankNames::HypoOberosterreichSalzburgSteiermark => {
+                Ok(Self::HypoOberosterreichSalzburgSteiermark)
+            }
+            grpc_api_types::payments::BankNames::HypoTirolBankAg => Ok(Self::HypoTirolBankAg),
+            grpc_api_types::payments::BankNames::HypoVorarlbergBankAg => {
+                Ok(Self::HypoVorarlbergBankAg)
+            }
+            grpc_api_types::payments::BankNames::HypoBankBurgenlandAktiengesellschaft => {
+                Ok(Self::HypoBankBurgenlandAktiengesellschaft)
+            }
+            grpc_api_types::payments::BankNames::KomercniBanka => Ok(Self::KomercniBanka),
+            grpc_api_types::payments::BankNames::MBank => Ok(Self::MBank),
+            grpc_api_types::payments::BankNames::MarchfelderBank => Ok(Self::MarchfelderBank),
+            grpc_api_types::payments::BankNames::Maybank => Ok(Self::Maybank),
+            grpc_api_types::payments::BankNames::OberbankAg => Ok(Self::OberbankAg),
+            grpc_api_types::payments::BankNames::OsterreichischeArzteUndApothekerbank => {
+                Ok(Self::OsterreichischeArzteUndApothekerbank)
+            }
+            grpc_api_types::payments::BankNames::OcbcBank => Ok(Self::OcbcBank),
+            grpc_api_types::payments::BankNames::PayWithIng => Ok(Self::PayWithING),
+            grpc_api_types::payments::BankNames::PlaceZipko => Ok(Self::PlaceZIPKO),
+            grpc_api_types::payments::BankNames::PlatnoscOnlineKartaPlatnicza => {
+                Ok(Self::PlatnoscOnlineKartaPlatnicza)
+            }
+            grpc_api_types::payments::BankNames::PosojilnicaBankEGen => {
+                Ok(Self::PosojilnicaBankEGen)
+            }
+            grpc_api_types::payments::BankNames::PostovaBanka => Ok(Self::PostovaBanka),
+            grpc_api_types::payments::BankNames::PublicBank => Ok(Self::PublicBank),
+            grpc_api_types::payments::BankNames::RaiffeisenBankengruppeOsterreich => {
+                Ok(Self::RaiffeisenBankengruppeOsterreich)
+            }
+            grpc_api_types::payments::BankNames::RhbBank => Ok(Self::RhbBank),
+            grpc_api_types::payments::BankNames::SchelhammerCapitalBankAg => {
+                Ok(Self::SchelhammerCapitalBankAg)
+            }
+            grpc_api_types::payments::BankNames::StandardCharteredBank => {
+                Ok(Self::StandardCharteredBank)
+            }
+            grpc_api_types::payments::BankNames::SchoellerbankAg => Ok(Self::SchoellerbankAg),
+            grpc_api_types::payments::BankNames::SpardaBankWien => Ok(Self::SpardaBankWien),
+            grpc_api_types::payments::BankNames::SporoPay => Ok(Self::SporoPay),
+            grpc_api_types::payments::BankNames::SantanderPrzelew24 => Ok(Self::SantanderPrzelew24),
+            grpc_api_types::payments::BankNames::TatraPay => Ok(Self::TatraPay),
+            grpc_api_types::payments::BankNames::Viamo => Ok(Self::Viamo),
+            grpc_api_types::payments::BankNames::VolksbankGruppe => Ok(Self::VolksbankGruppe),
+            grpc_api_types::payments::BankNames::VolkskreditbankAg => Ok(Self::VolkskreditbankAg),
+            grpc_api_types::payments::BankNames::VrBankBraunau => Ok(Self::VrBankBraunau),
+            grpc_api_types::payments::BankNames::UobBank => Ok(Self::UobBank),
+            grpc_api_types::payments::BankNames::PayWithAliorBank => Ok(Self::PayWithAliorBank),
+            grpc_api_types::payments::BankNames::BankiSpoldzielcze => Ok(Self::BankiSpoldzielcze),
+            grpc_api_types::payments::BankNames::PayWithInteligo => Ok(Self::PayWithInteligo),
+            grpc_api_types::payments::BankNames::BnpParibasPoland => Ok(Self::BNPParibasPoland),
+            grpc_api_types::payments::BankNames::BankNowySa => Ok(Self::BankNowySA),
+            grpc_api_types::payments::BankNames::CreditAgricole => Ok(Self::CreditAgricole),
+            grpc_api_types::payments::BankNames::PayWithBos => Ok(Self::PayWithBOS),
+            grpc_api_types::payments::BankNames::PayWithCitiHandlowy => {
+                Ok(Self::PayWithCitiHandlowy)
+            }
+            grpc_api_types::payments::BankNames::PayWithPlusBank => Ok(Self::PayWithPlusBank),
+            grpc_api_types::payments::BankNames::ToyotaBank => Ok(Self::ToyotaBank),
+            grpc_api_types::payments::BankNames::VeloBank => Ok(Self::VeloBank),
+            grpc_api_types::payments::BankNames::ETransferPocztowy24 => {
+                Ok(Self::ETransferPocztowy24)
+            }
+            grpc_api_types::payments::BankNames::PlusBank => Ok(Self::PlusBank),
+            grpc_api_types::payments::BankNames::BankiSpbdzielcze => Ok(Self::BankiSpbdzielcze),
+            grpc_api_types::payments::BankNames::BankNowyBfgSa => Ok(Self::BankNowyBfgSa),
+            grpc_api_types::payments::BankNames::GetinBank => Ok(Self::GetinBank),
+            grpc_api_types::payments::BankNames::BlikPoland => Ok(Self::Blik),
+            grpc_api_types::payments::BankNames::NoblePay => Ok(Self::NoblePay),
+            grpc_api_types::payments::BankNames::IdeaBank => Ok(Self::IdeaBank),
+            grpc_api_types::payments::BankNames::EnveloBank => Ok(Self::EnveloBank),
+            grpc_api_types::payments::BankNames::NestPrzelew => Ok(Self::NestPrzelew),
+            grpc_api_types::payments::BankNames::MbankMtransfer => Ok(Self::MbankMtransfer),
+            grpc_api_types::payments::BankNames::Inteligo => Ok(Self::Inteligo),
+            grpc_api_types::payments::BankNames::PbacZIpko => Ok(Self::PbacZIpko),
+            grpc_api_types::payments::BankNames::BnpParibas => Ok(Self::BnpParibas),
+            grpc_api_types::payments::BankNames::BankPekaoSa => Ok(Self::BankPekaoSa),
+            grpc_api_types::payments::BankNames::VolkswagenBank => Ok(Self::VolkswagenBank),
+            grpc_api_types::payments::BankNames::AliorBank => Ok(Self::AliorBank),
+            grpc_api_types::payments::BankNames::Boz => Ok(Self::Boz),
+            grpc_api_types::payments::BankNames::BangkokBank => Ok(Self::BangkokBank),
+            grpc_api_types::payments::BankNames::KrungsriBank => Ok(Self::KrungsriBank),
+            grpc_api_types::payments::BankNames::KrungThaiBank => Ok(Self::KrungThaiBank),
+            grpc_api_types::payments::BankNames::TheSiamCommercialBank => {
+                Ok(Self::TheSiamCommercialBank)
+            }
+            grpc_api_types::payments::BankNames::KasikornBank => Ok(Self::KasikornBank),
+            grpc_api_types::payments::BankNames::OpenBankSuccess => Ok(Self::OpenBankSuccess),
+            grpc_api_types::payments::BankNames::OpenBankFailure => Ok(Self::OpenBankFailure),
+            grpc_api_types::payments::BankNames::OpenBankCancelled => Ok(Self::OpenBankCancelled),
+            grpc_api_types::payments::BankNames::Aib => Ok(Self::Aib),
+            grpc_api_types::payments::BankNames::BankOfScotland => Ok(Self::BankOfScotland),
+            grpc_api_types::payments::BankNames::DanskeBank => Ok(Self::DanskeBank),
+            grpc_api_types::payments::BankNames::FirstDirect => Ok(Self::FirstDirect),
+            grpc_api_types::payments::BankNames::FirstTrust => Ok(Self::FirstTrust),
+            grpc_api_types::payments::BankNames::Halifax => Ok(Self::Halifax),
+            grpc_api_types::payments::BankNames::Lloyds => Ok(Self::Lloyds),
+            grpc_api_types::payments::BankNames::Monzo => Ok(Self::Monzo),
+            grpc_api_types::payments::BankNames::NatWest => Ok(Self::NatWest),
+            grpc_api_types::payments::BankNames::NationwideBank => Ok(Self::NationwideBank),
+            grpc_api_types::payments::BankNames::RoyalBankOfScotland => {
+                Ok(Self::RoyalBankOfScotland)
+            }
+            grpc_api_types::payments::BankNames::Starling => Ok(Self::Starling),
+            grpc_api_types::payments::BankNames::TsbBank => Ok(Self::TsbBank),
+            grpc_api_types::payments::BankNames::TescoBank => Ok(Self::TescoBank),
+            grpc_api_types::payments::BankNames::UlsterBank => Ok(Self::UlsterBank),
+            grpc_api_types::payments::BankNames::Yoursafe => Ok(Self::Yoursafe),
+            grpc_api_types::payments::BankNames::N26 => Ok(Self::N26),
+            grpc_api_types::payments::BankNames::NationaleNederlanden => {
+                Ok(Self::NationaleNederlanden)
+            }
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::BankType> for common_enums::BankType {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::BankType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::BankType::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_BANK_TYPE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Bank type must be specified".to_owned(),
+                    error_object: None,
+                })))
+            }
+            grpc_api_types::payments::BankType::Checking => Ok(common_enums::BankType::Checking),
+            grpc_api_types::payments::BankType::Savings => Ok(common_enums::BankType::Savings),
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::BankHolderType> for common_enums::BankHolderType {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::BankHolderType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::BankHolderType::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_BANK_HOLDER_TYPE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Bank holder type must be specified".to_owned(),
+                    error_object: None,
+                })))
+            }
+            grpc_api_types::payments::BankHolderType::Personal => {
+                Ok(common_enums::BankHolderType::Personal)
+            }
+            grpc_api_types::payments::BankHolderType::Business => {
+                Ok(common_enums::BankHolderType::Business)
+            }
         }
     }
 }
