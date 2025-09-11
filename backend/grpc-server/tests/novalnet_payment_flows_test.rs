@@ -113,8 +113,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
     });
     let address = PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some("John".to_string()),
-            last_name: Some("Doe".to_string()),
+            first_name: Some("John".to_string().into()),
+            last_name: Some("Doe".to_string().into()),
             email: Some("test@test.com".to_string().into()),
             ..Default::default()
         }),
