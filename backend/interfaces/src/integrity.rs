@@ -6,16 +6,16 @@
 use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData, PaymentMethodTokenizationData,
-    PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData,
-    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
-    SubmitEvidenceData,
+    AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
+    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
+    SetupMandateRequestData, SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
-        AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
-        CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthoriseIntegrityObject,
+        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SessionTokenIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
@@ -345,7 +345,7 @@ impl GetIntegrityObject<SessionTokenIntegrityObject> for SessionTokenRequestData
 
 impl GetIntegrityObject<AccessTokenIntegrityObject> for AccessTokenRequestData {
     fn get_response_integrity_object(&self) -> Option<AccessTokenIntegrityObject> {
-        None 
+        None
     }
 
     fn get_request_integrity_object(&self) -> AccessTokenIntegrityObject {
