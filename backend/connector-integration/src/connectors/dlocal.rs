@@ -26,6 +26,7 @@ use domain_types::{
 use serde::Serialize;
 use std::fmt::Debug;
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
+use error_stack::ResultExt;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
@@ -119,7 +120,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-use error_stack::ResultExt;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -243,19 +243,21 @@ macros::create_all_prerequisites!(
     ],
     amount_converters: [],
     member_functions: {
-        pub fn build_headers<F, FCD, Req, Res>(
+        pub fn build_headers_with_body<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
+            request_body: &str,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let date = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
             let auth = dlocal::DlocalAuthType::try_from(&req.connector_auth_type)?;
             
-            // For DLocal, we'll use a simplified signature without request body for now
+            // DLocal signature includes x_login + date + request_body
             let sign_req: String = format!(
-                "{}{}",
+                "{}{}{}",
                 auth.x_login.peek(),
-                date
+                date,
+                request_body
             );
             
             let authz = crypto::HmacSha256.sign_message(
@@ -285,6 +287,8 @@ macros::create_all_prerequisites!(
             ];
             Ok(headers)
         }
+
+
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
@@ -356,6 +360,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
+// Use the macro implementation but override get_headers for proper signature generation
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Dlocal,
@@ -369,11 +374,29 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
-        fn get_headers(
+        fn build_request_v2(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+        ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+            // Create the request body first
+            let router_data = transformers::DlocalRouterData::try_from((common_utils::types::MinorUnit::new(req.request.amount), req.clone()))?;
+            let connector_req = DlocalPaymentsRequest::try_from(router_data)?;
+            let request_body_str = serde_json::to_string(&connector_req)
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            
+            // Generate headers with the request body for signature
+            let headers = self.build_headers_with_body(req, &request_body_str)?;
+            
+            // Build the request
+            Ok(Some(
+                common_utils::request::RequestBuilder::new()
+                    .method(common_utils::request::Method::Post)
+                    .url(&format!("{}secure_payments", self.connector_base_url_payments(req)))
+                    .attach_default_headers()
+                    .headers(headers)
+                    .set_body(common_utils::request::RequestContent::Json(Box::new(connector_req)))
+                    .build(),
+            ))
         }
         fn get_url(
             &self,
@@ -401,7 +424,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            // For GET requests, use empty request body
+            self.build_headers_with_body(req, "")
         }
         fn get_url(
             &self,
@@ -435,7 +459,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            // For now, use empty string - we'll fix signature generation later
+            self.build_headers_with_body(req, "")
         }
         fn get_url(
             &self,
@@ -463,7 +488,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            // For GET requests, use empty request body
+            self.build_headers_with_body(req, "")
         }
         fn get_url(
             &self,
@@ -497,7 +523,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            // For now, use empty string - we'll fix signature generation later
+            self.build_headers_with_body(req, "")
         }
         fn get_url(
             &self,
@@ -525,7 +552,8 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            // For void/cancel, typically no request body is sent, so use empty string
+            self.build_headers_with_body(req, "")
         }
         fn get_url(
             &self,
