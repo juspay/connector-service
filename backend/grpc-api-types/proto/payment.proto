@@ -1622,6 +1622,9 @@ message RefundServiceGetRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
+// Metadata
+  map<string, string> refund_metadata = 6; // Metadata specific to the refund sync  
+
   // Session and Token Information
   optional string access_token = 6; // Access token for secure communication
 }

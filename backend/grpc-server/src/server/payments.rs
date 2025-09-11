@@ -10,12 +10,13 @@ use common_utils::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken, PSync, Refund,
-        RepeatPayment, SetupMandate, Void,
+        Authorize, Capture, CreateOrder, CreateSessionToken, PSync, PaymentMethodToken, Refund,
+        RepeatPayment, SetupMandate, Void, CreateAccessToken,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData,
@@ -254,6 +255,34 @@ impl Payments {
                 payment_session_data.session_token
             );
             payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
+        } else {
+            payment_flow_data
+        };
+
+        let should_do_payment_method_token =
+            connector_data.connector.should_do_payment_method_token();
+
+        let payment_flow_data = if should_do_payment_method_token {
+            let event_params = EventParams {
+                _connector_name: &connector.to_string(),
+                _service_name: service_name,
+                request_id,
+                lineage_ids,
+                reference_id,
+            };
+            let payment_method_token_data = self
+                .handle_payment_session_token(
+                    connector_data.clone(),
+                    &payment_flow_data,
+                    connector_auth_details.clone(),
+                    event_params,
+                    &payload,
+                    &connector.to_string(),
+                    service_name,
+                )
+                .await?;
+            tracing::info!("Payment Method Token created successfully");
+            payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
         } else {
             payment_flow_data
         };
@@ -756,6 +785,139 @@ impl Payments {
                 Some(format!("Session Token creation failed: {message}")),
                 Some("SESSION_TOKEN_CREATION_ERROR".to_string()),
                 Some(status_code.into()), // Use actual status code from ErrorResponse
+            )),
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn handle_payment_session_token<
+        T: PaymentMethodDataTypes
+            + Default
+            + Eq
+            + Debug
+            + Send
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + Sync
+            + domain_types::types::CardConversionHelper<T>,
+    >(
+        &self,
+        connector_data: ConnectorData<T>,
+        payment_flow_data: &PaymentFlowData,
+        connector_auth_details: ConnectorAuthType,
+        event_params: EventParams<'_>,
+        payload: &PaymentServiceAuthorizeRequest,
+        connector_name: &str,
+        service_name: &str,
+    ) -> Result<PaymentMethodTokenResponse, PaymentAuthorizationError> {
+        // Get connector integration
+        let connector_integration: BoxedConnectorIntegrationV2<
+            '_,
+            PaymentMethodToken,
+            PaymentFlowData,
+            PaymentMethodTokenizationData<T>,
+            PaymentMethodTokenResponse,
+        > = connector_data.connector.get_connector_integration_v2();
+
+        let currency =
+            common_enums::Currency::foreign_try_from(payload.currency()).map_err(|e| {
+                PaymentAuthorizationError::new(
+                    grpc_api_types::payments::PaymentStatus::Pending,
+                    Some(format!("Currency conversion failed: {e}")),
+                    Some("CURRENCY_ERROR".to_string()),
+                    None,
+                )
+            })?;
+        let payment_method_tokenization_data = PaymentMethodTokenizationData {
+            amount: common_utils::types::MinorUnit::new(payload.amount),
+            currency,
+            integrity_object: None,
+            browser_info: None,
+            customer_acceptance: None,
+            mandate_id: None,
+            setup_future_usage: None,
+            setup_mandate_details: None,
+            payment_method_data:
+                domain_types::payment_method_data::PaymentMethodData::foreign_try_from(
+                    payload.payment_method.clone().ok_or_else(|| {
+                        PaymentAuthorizationError::new(
+                            grpc_api_types::payments::PaymentStatus::Pending,
+                            Some("Payment method is required".to_string()),
+                            Some("PAYMENT_METHOD_MISSING".to_string()),
+                            None,
+                        )
+                    })?,
+                )
+                .map_err(|e| {
+                    PaymentAuthorizationError::new(
+                        grpc_api_types::payments::PaymentStatus::Pending,
+                        Some(format!("Payment method data conversion failed: {e}")),
+                        Some("PAYMENT_METHOD_DATA_ERROR".to_string()),
+                        None,
+                    )
+                })?,
+        };
+
+        let payment_method_token_router_data = RouterDataV2::<
+            PaymentMethodToken,
+            PaymentFlowData,
+            PaymentMethodTokenizationData<T>,
+            PaymentMethodTokenResponse,
+        > {
+            flow: std::marker::PhantomData,
+            resource_common_data: payment_flow_data.clone(),
+            connector_auth_type: connector_auth_details,
+            request: payment_method_tokenization_data,
+            response: Err(ErrorResponse::default()),
+        };
+
+        // Execute connector processing
+        let external_event_params = EventProcessingParams {
+            connector_name,
+            service_name,
+            flow_name: FlowName::PaymentMethodToken,
+            event_config: &self.config.events,
+            raw_request_data: Some(SecretSerdeValue::new(
+                serde_json::to_value(payload).unwrap_or_default(),
+            )),
+            request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids,
+            reference_id: event_params.reference_id,
+        };
+        let response = external_services::service::execute_connector_processing_step(
+            &self.config.proxy,
+            connector_integration,
+            payment_method_token_router_data,
+            None,
+            external_event_params,
+            None,
+        )
+        .await
+        .switch()
+        .map_err(|e: error_stack::Report<ApplicationErrorResponse>| {
+            PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Payment Method Token creation failed: {e}")),
+                Some("PAYMENT_METHOD_TOKEN_CREATION_ERROR".to_string()),
+                Some(500),
+            )
+        })?;
+
+        match response.response {
+            Ok(payment_method_token_data) => {
+                tracing::info!("Payment method token created successfully");
+                Ok(payment_method_token_data)
+            }
+            Err(ErrorResponse {
+                message,
+                status_code,
+                ..
+            }) => Err(PaymentAuthorizationError::new(
+                grpc_api_types::payments::PaymentStatus::Pending,
+                Some(format!("Payment Method Token creation failed: {message}")),
+                Some("PAYMENT_METHOD_TOKEN_CREATION_ERROR".to_string()),
+                Some(status_code.into()),
             )),
         }
     }

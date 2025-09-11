@@ -38,6 +38,9 @@ pub struct DefendDispute;
 pub struct CreateSessionToken;
 
 #[derive(Debug, Clone)]
+pub struct PaymentMethodToken;
+
+#[derive(Debug, Clone)]
 pub struct CreateAccessToken;
 
 #[derive(strum::Display)]
@@ -58,5 +61,6 @@ pub enum FlowName {
     IncomingWebhook,
     Dsync,
     CreateSessionToken,
+    PaymentMethodToken,
     CreateAccessToken,
 }

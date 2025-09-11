@@ -213,6 +213,7 @@ pub enum FlowName {
     RepeatPayment,
     CreateOrder,
     CreateSessionToken,
+    PaymentMethodToken,
     CreateAccessToken,
     Unknown,
 }
@@ -234,6 +235,7 @@ impl FlowName {
             Self::SetupMandate => "SetupMandate",
             Self::RepeatPayment => "RepeatPayment",
             Self::CreateOrder => "CreateOrder",
+            Self::PaymentMethodToken => "PaymentMethodToken",
             Self::CreateSessionToken => "CreateSessionToken",
             Self::CreateAccessToken => "CreateAccessToken",
             Self::Unknown => "Unknown",

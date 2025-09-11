@@ -206,6 +206,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        refund_metadata: std::collections::HashMap::new(),
         access_token: None,
     }
 }

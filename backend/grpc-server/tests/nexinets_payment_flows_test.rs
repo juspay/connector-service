@@ -244,6 +244,7 @@ fn create_refund_sync_request(
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
         browser_info: None,
+        refund_metadata: HashMap::new(),
         access_token: None,
     }
 }
