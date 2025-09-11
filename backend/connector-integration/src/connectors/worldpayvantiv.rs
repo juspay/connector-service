@@ -3,7 +3,7 @@ pub mod transformers;
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{ 
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
+    errors::CustomResult, ext_traits::ByteSliceExt, types::{StringMinorUnit, AmountConvertor, MinorUnit},
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     };
 use domain_types::{
@@ -34,6 +34,11 @@ use interfaces::{
 };
 use transformers::{
     self as worldpayvantiv, CnpOnlineRequest, CnpOnlineResponse, VantivSyncResponse,
+    WorldpayvantivPaymentsRequest, WorldpayvantivRefundRequest, WorldpayvantivCaptureRequest,
+    WorldpayvantivVoidRequest, WorldpayvantivSetupMandateRequest,
+    WorldpayvantivPaymentsResponse, WorldpayvantivRefundResponse, WorldpayvantivCaptureResponse,
+    WorldpayvantivVoidResponse, WorldpayvantivSetupMandateResponse, WorldpayvantivSyncResponse,
+    WorldpayvantivRefundSyncResponse,
 };
 
 use super::macros;
@@ -42,6 +47,22 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 use error_stack::ResultExt;
+
+#[derive(Clone)]
+pub struct Worldpayvantiv<T> {
+    pub(crate) amount_converter: &'static (dyn AmountConvertor<Output = MinorUnit> + Sync),
+    #[allow(dead_code)]
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T> Worldpayvantiv<T> {
+    pub fn new() -> Self {
+        Self {
+            amount_converter: &StringMinorUnit,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -152,42 +173,42 @@ macros::create_all_prerequisites!(
     api: [
         (
             flow: Authorize,
-            request_body: CnpOnlineRequest<T>,
-            response_body: CnpOnlineResponse,
+            request_body: WorldpayvantivPaymentsRequest<T>,
+            response_body: WorldpayvantivPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            response_body: VantivSyncResponse,
+            response_body: WorldpayvantivSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: CnpOnlineRequest,
-            response_body: CnpOnlineResponse,
+            request_body: WorldpayvantivRefundRequest<T>,
+            response_body: WorldpayvantivRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            response_body: VantivSyncResponse,
+            response_body: WorldpayvantivRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: CnpOnlineRequest,
-            response_body: CnpOnlineResponse,
+            request_body: WorldpayvantivCaptureRequest<T>,
+            response_body: WorldpayvantivCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
-            request_body: CnpOnlineRequest,
-            response_body: CnpOnlineResponse,
+            request_body: WorldpayvantivVoidRequest<T>,
+            response_body: WorldpayvantivVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: SetupMandate,
-            request_body: CnpOnlineRequest,
-            response_body: CnpOnlineResponse,
+            request_body: WorldpayvantivSetupMandateRequest<T>,
+            response_body: WorldpayvantivSetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
     ],
@@ -288,8 +309,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: Format(CnpOnlineRequest),
-    curl_response: CnpOnlineResponse,
+    curl_request: Format(WorldpayvantivPaymentsRequest<T>),
+    curl_response: WorldpayvantivPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -316,8 +337,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: ,
-    curl_response: ,
+    curl_response: WorldpayvantivSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -344,8 +364,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: Format(CnpOnlineRequest),
-    curl_response: CnpOnlineResponse,
+    curl_request: Format(WorldpayvantivRefundRequest<T>),
+    curl_response: WorldpayvantivRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -372,7 +392,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_response: VantivSyncResponse,
+    curl_response: WorldpayvantivRefundSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
@@ -403,8 +423,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: Format(CnpOnlineRequest),
-    curl_response: CnpOnlineResponse,
+    curl_request: Format(WorldpayvantivCaptureRequest<T>),
+    curl_response: WorldpayvantivCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
@@ -431,8 +451,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: Format(CnpOnlineRequest),
-    curl_response: CnpOnlineResponse,
+    curl_request: Format(WorldpayvantivVoidRequest<T>),
+    curl_response: WorldpayvantivVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
@@ -459,8 +479,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
-    curl_request: Format(CnpOnlineRequest),
-    curl_response: CnpOnlineResponse,
+    curl_request: Format(WorldpayvantivSetupMandateRequest<T>),
+    curl_response: WorldpayvantivSetupMandateResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
     flow_request: SetupMandateRequestData<T>,

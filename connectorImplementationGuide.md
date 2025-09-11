@@ -3,7 +3,7 @@
 This guide provides step-by-step instructions for adding support for a new connector in the connector service.
 
 ## Adding a NewConnectorName (NewConnectorName=the connector name which is needed to be integrated)
-## Steps with [x] are done 
+## Steps with [X] are done 
 ### File: backend/domain_types/src/connector_types.rs
 
 [X] 1. Locate the ConnectorEnum definition and add the new connector variant
