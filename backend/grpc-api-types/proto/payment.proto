@@ -446,6 +446,7 @@ enum Connector {
   WISE = 82;
   WORLDLINE = 83;
   WORLDPAY = 84;
+  WORLDPAYVANTIV = 94;
   SIGNIFYD = 85;
   PLAID = 86;
   RISKIFIED = 87;
