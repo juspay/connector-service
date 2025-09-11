@@ -8,8 +8,8 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
+        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -55,6 +55,8 @@ where
         FlowName::DefendDispute
     } else if type_id == std::any::TypeId::of::<SubmitEvidence>() {
         FlowName::SubmitEvidence
+    } else if type_id == std::any::TypeId::of::<PaymentMethodToken>() {
+        FlowName::PaymentMethodToken
     } else {
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown
