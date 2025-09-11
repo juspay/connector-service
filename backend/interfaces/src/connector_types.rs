@@ -13,7 +13,8 @@ use domain_types::{
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        WebhookDetailsResponse, PaymentsAuthenticateData, PaymentsPreAuthenticateData, 
+        PaymentsPostAuthenticateData,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -41,6 +42,9 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + RefundSyncV2
     + DisputeDefend
     + SubmitEvidenceV2
+    + PaymentPreAuthenticateV2<T>
+    + PaymentAuthenticateV2<T>
+    + PaymentPostAuthenticateV2<T>
 {
 }
 
@@ -181,6 +185,36 @@ pub trait DisputeDefend:
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData,
+>
+{
+}
+
+pub trait PaymentPreAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait PaymentAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait PaymentPostAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData,
 >
 {
 }

@@ -214,6 +214,9 @@ pub enum FlowName {
     CreateOrder,
     CreateSessionToken,
     PaymentMethodToken,
+    PreAuthenticate,
+    Authenticate,
+    PostAuthenticate,
     Unknown,
 }
 
@@ -236,6 +239,9 @@ impl FlowName {
             Self::CreateOrder => "CreateOrder",
             Self::PaymentMethodToken => "PaymentMethodToken",
             Self::CreateSessionToken => "CreateSessionToken",
+            Self::PreAuthenticate=> "PreAuthenticate",
+            Self::Authenticate=> "Authenticate",
+            Self::PostAuthenticate=> "PostAuthenticate",
             Self::Unknown => "Unknown",
         }
     }
