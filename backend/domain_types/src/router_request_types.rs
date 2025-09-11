@@ -217,12 +217,12 @@ pub struct SessionTokenIntegrityObject {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct PaymentMethodTokenIntegrityObject {
-    pub amount: MinorUnit,
-    pub currency: Currency,
+pub struct AccessTokenIntegrityObject {
+    pub grant_type: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct AccessTokenIntegrityObject {
-    pub grant_type: String,
+pub struct PaymentMethodTokenIntegrityObject {
+    pub amount: MinorUnit,
+    pub currency: Currency,
 }

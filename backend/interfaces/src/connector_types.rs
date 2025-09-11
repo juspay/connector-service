@@ -30,6 +30,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentSyncV2
     + PaymentOrderCreate
     + PaymentSessionToken
+    + PaymentAccessToken
     + PaymentTokenV2<T>
     + PaymentAccessToken
     + PaymentVoidV2
@@ -61,10 +62,11 @@ pub trait ValidationTrait {
         false
     }
 
-    fn should_do_payment_method_token(&self) -> bool {
+    fn should_do_access_token(&self) -> bool {
         false
     }
-    fn should_do_access_token(&self) -> bool {
+
+    fn should_do_payment_method_token(&self) -> bool {
         false
     }
 }
@@ -89,22 +91,22 @@ pub trait PaymentSessionToken:
 {
 }
 
-pub trait PaymentTokenV2<T: PaymentMethodDataTypes>:
-    ConnectorIntegrationV2<
-    connector_flow::PaymentMethodToken,
-    PaymentFlowData,
-    PaymentMethodTokenizationData<T>,
-    PaymentMethodTokenResponse,
->
-{
-}
-
 pub trait PaymentAccessToken:
     ConnectorIntegrationV2<
     connector_flow::CreateAccessToken,
     PaymentFlowData,
     AccessTokenRequestData,
     AccessTokenResponseData,
+>
+{
+}
+
+pub trait PaymentTokenV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PaymentMethodToken,
+    PaymentFlowData,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse,
 >
 {
 }

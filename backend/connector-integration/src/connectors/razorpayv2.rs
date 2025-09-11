@@ -619,6 +619,23 @@ impl<
     > for RazorpayV2<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for RazorpayV2<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -648,6 +665,17 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    > interfaces::connector_types::PaymentAccessToken for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > interfaces::connector_types::PaymentTokenV2<T> for RazorpayV2<T>
 {
 }
@@ -660,34 +688,6 @@ impl<
             + 'static
             + Serialize,
     > interfaces::connector_types::RepeatPaymentV2 for RazorpayV2<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > interfaces::connector_types::PaymentAccessToken for RazorpayV2<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for RazorpayV2<T>
 {
 }
 
@@ -1157,22 +1157,6 @@ impl<
     > for RazorpayV2<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for RazorpayV2<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -1190,6 +1174,23 @@ impl<
     > for RazorpayV2<T>
 {
 }
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for RazorpayV2<T>
+{
+}
+
 // SourceVerification implementations for all flows
 impl<
         T: PaymentMethodDataTypes

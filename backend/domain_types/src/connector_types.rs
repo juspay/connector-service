@@ -268,7 +268,7 @@ pub struct PaymentFlowData {
     pub amount_captured: Option<i64>,
     // minor amount for amount frameworka
     pub minor_amount_captured: Option<MinorUnit>,
-    pub access_token: Option<String>,
+    pub access_token: Option<AccessTokenResponseData>,
     pub session_token: Option<String>,
     pub reference_id: Option<String>,
     pub payment_method_token: Option<PaymentMethodToken>,
@@ -434,11 +434,18 @@ impl PaymentFlowData {
 
     pub fn get_access_token(&self) -> Result<String, Error> {
         self.access_token
+            .as_ref()
+            .map(|token_data| token_data.access_token.clone())
+            .ok_or_else(missing_field_err("access_token"))
+    }
+
+    pub fn get_access_token_data(&self) -> Result<AccessTokenResponseData, Error> {
+        self.access_token
             .clone()
             .ok_or_else(missing_field_err("access_token"))
     }
 
-    pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
+    pub fn set_access_token(mut self, access_token: Option<AccessTokenResponseData>) -> Self {
         self.access_token = access_token;
         self
     }
@@ -699,12 +706,18 @@ impl PaymentFlowData {
         }
         self
     }
+
     pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
-        if access_token_id.is_some() && self.access_token.is_none() {
-            self.access_token = access_token_id;
+        if let (Some(token_id), None) = (access_token_id, &self.access_token) {
+            self.access_token = Some(AccessTokenResponseData {
+                access_token: token_id,
+                token_type: None,
+                expires_in: None,
+            });
         }
         self
     }
+
     pub fn get_return_url(&self) -> Option<String> {
         self.return_url.clone()
     }
@@ -1002,6 +1015,7 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
         self.session_token = session_token;
         self
     }
+
     pub fn set_access_token(mut self, access_token: Option<String>) -> Self {
         self.access_token = access_token;
         self

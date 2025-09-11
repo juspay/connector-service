@@ -164,8 +164,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         request_ref_id: None,
-        // all_keys_required: None,
         access_token: None,
+        // all_keys_required: None,
     }
 }
 

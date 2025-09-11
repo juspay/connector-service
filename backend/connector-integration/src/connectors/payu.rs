@@ -32,6 +32,7 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
+use std::fmt::Debug;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -82,6 +83,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Payu<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Payu<T>
 {
 }
 impl<
@@ -212,16 +217,6 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentTokenV2<T> for Payu<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAccessToken for Payu<T>
 {
 }
 
@@ -643,12 +638,6 @@ impl_source_verification_stub!(
     RepeatPaymentData,
     PaymentsResponseData
 );
-impl_source_verification_stub!(
-    CreateAccessToken,
-    PaymentFlowData,
-    AccessTokenRequestData,
-    AccessTokenResponseData
-);
 
 // Connector integration implementations for unsupported flows (stubs)
 impl<
@@ -799,24 +788,6 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Payu<T>
-{
-}
-
 // Add stub implementation for CreateSessionToken
 impl<
         T: PaymentMethodDataTypes
@@ -836,12 +807,37 @@ impl<
 {
 }
 
+// Add stub implementation for CreateAccessToken
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Payu<T>
+{
+}
+
 // Add source verification stub for CreateSessionToken
 impl_source_verification_stub!(
     CreateSessionToken,
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData
 );
 
 // Add source verification stub for PaymentMethodToken

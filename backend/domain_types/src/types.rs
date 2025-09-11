@@ -1601,7 +1601,13 @@ impl
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: value.access_token,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -1796,13 +1802,14 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .access_token
         .as_ref()
-        .map(|token| ConnectorState {
+        .map(|token_data| ConnectorState {
             access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token.clone(),
-                expires_in_seconds: None,
-                token_type: None,
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
             }),
         });
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -2191,13 +2198,14 @@ pub fn generate_payment_void_response(
         .resource_common_data
         .access_token
         .as_ref()
-        .map(|token| ConnectorState {
+        .map(|token_data| ConnectorState {
             access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token.clone(),
-                expires_in_seconds: None,
-                token_type: None,
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
             }),
         });
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -2294,14 +2302,12 @@ pub fn generate_payment_sync_response(
         .resource_common_data
         .access_token
         .as_ref()
-        .map(|token| {
-            ConnectorState {
-                access_token: Some(grpc_api_types::payments::AccessToken {
-                    token: token.clone(),
-                    expires_in_seconds: None, // Will be populated when token is generated
-                    token_type: None,
-                }),
-            }
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
         });
 
     match transaction_response {
@@ -3314,6 +3320,7 @@ pub fn generate_refund_response(
 
     // RefundFlowData doesn't have access_token field, so no state to return
     let state = None;
+
     match refund_response {
         Ok(response) => {
             let status = response.refund_status;
@@ -3566,13 +3573,14 @@ pub fn generate_payment_capture_response(
         .resource_common_data
         .access_token
         .as_ref()
-        .map(|token| ConnectorState {
+        .map(|token_data| ConnectorState {
             access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token.clone(),
-                expires_in_seconds: None,
-                token_type: None,
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
             }),
         });
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -3891,11 +3899,11 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .access_token
         .as_ref()
-        .map(|token| ConnectorState {
+        .map(|token_data| ConnectorState {
             access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token.clone(),
-                expires_in_seconds: None,
-                token_type: None,
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
             }),
         });
     let response = match transaction_response {
@@ -3966,7 +3974,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
-                    state: None,
+                    state,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4416,6 +4424,35 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for AccessTokenRequestData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        _value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            grant_type: "client_credentials".to_string(),
+        })
+    }
+}
+
+// Generic implementation for access token request from connector auth
+impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        _auth_type: &ConnectorAuthType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Default to client_credentials grant type for OAuth
+        // Connectors can override this with their own specific implementations
+        Ok(Self {
+            grant_type: "client_credentials".to_string(),
+        })
+    }
+}
+
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -4462,35 +4499,6 @@ impl<
             mandate_id: None,
             setup_mandate_details: None,
             integrity_object: None,
-        })
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
-    for AccessTokenRequestData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        _value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(Self {
-            grant_type: "client_credentials".to_string(),
-        })
-    }
-}
-
-// Generic implementation for access token request from connector auth
-impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        _auth_type: &ConnectorAuthType,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Default to client_credentials grant type for OAuth
-        // Connectors can override this with their own specific implementations
-        Ok(Self {
-            grant_type: "client_credentials".to_string(),
         })
     }
 }
@@ -4647,21 +4655,22 @@ pub fn generate_repeat_payment_response(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-    let raw_connector_response = router_data_v2
-        .resource_common_data
-        .get_raw_connector_response();
+
     // Create state with access token if available in payment flow data
     let state = router_data_v2
         .resource_common_data
         .access_token
         .as_ref()
-        .map(|token| ConnectorState {
+        .map(|token_data| ConnectorState {
             access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token.clone(),
-                expires_in_seconds: None,
-                token_type: None,
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
             }),
         });
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {

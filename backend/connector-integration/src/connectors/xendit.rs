@@ -36,6 +36,7 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers::{
     self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
     XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
@@ -73,6 +74,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Xendit<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Xendit<T>
 {
 }
 
@@ -196,17 +201,6 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentTokenV2<T> for Xendit<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAccessToken for Xendit<T>
 {
 }
 
@@ -623,10 +617,10 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        SetupMandate,
+        CreateAccessToken,
         PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
     > for Xendit<T>
 {
 }
@@ -640,10 +634,10 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        CreateAccessToken,
+        SetupMandate,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
     > for Xendit<T>
 {
 }
@@ -910,19 +904,12 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
-        PaymentMethodToken,
+        CreateAccessToken,
         PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
     > for Xendit<T>
 {
 }
@@ -936,10 +923,10 @@ impl<
             + Serialize,
     >
     interfaces::verification::SourceVerification<
-        CreateAccessToken,
+        PaymentMethodToken,
         PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
     > for Xendit<T>
 {
 }

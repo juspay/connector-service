@@ -200,13 +200,13 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         minor_amount: REPEAT_AMOUNT,
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
+        access_token: None,
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
         email: None,
         browser_info: None,
         test_mode: None,
         payment_method_type: None,
-        access_token: None,
     }
 }
 

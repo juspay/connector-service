@@ -35,10 +35,10 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
-        PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2, PaymentTokenV2,
-        PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,
-        ValidationTrait,
+        AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAccessToken,
+        PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2,
+        PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2,
+        SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
@@ -80,6 +80,17 @@ impl<
             + 'static
             + Serialize,
     > PaymentSessionToken for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > PaymentAccessToken for Authorizedotnet<T>
 {
 }
 
@@ -424,17 +435,6 @@ impl<
             + 'static
             + Serialize,
     > PaymentTokenV2<T> for Authorizedotnet<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > interfaces::connector_types::PaymentAccessToken for Authorizedotnet<T>
 {
 }
 
@@ -902,6 +902,7 @@ impl<
     > for Authorizedotnet<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

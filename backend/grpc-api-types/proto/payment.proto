@@ -853,7 +853,7 @@ message AccessToken {
   
   // Expiration timestamp of the token (seconds since epoch).
   optional int64 expires_in_seconds = 2;
-
+  
   // Token type (e.g., "Bearer", "Basic").
   optional string token_type = 3;
 }
@@ -1170,10 +1170,9 @@ message PaymentServiceAuthorizeResponse {
   
   // Metadata
   map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
-
+  
   // State Information
   optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
-
   
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
@@ -1189,7 +1188,6 @@ message PaymentServiceGetRequest {
 
   // Session and Token Information
   optional string access_token = 3; // Access token for secure communication
-
 }
 
 // Response message for a payment status synchronization.
@@ -1231,11 +1229,10 @@ message PaymentServiceGetResponse {
   optional string connector_customer_id = 22; // Customer ID as recognized by the connector
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
-
+  
   // State Information
   optional ConnectorState state = 28; // State data for access token storage and other connector-specific state
 
-  
   // Raw Response
   optional string raw_connector_response = 25; // Raw response from the connector for debugging
 }
@@ -1272,7 +1269,7 @@ message PaymentServiceVoidResponse {
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
 
-   // State Information
+  // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
 }
 
@@ -1384,10 +1381,10 @@ message RefundResponse {
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
-
+  
   // State Information
   optional ConnectorState state = 24; // State data for access token storage and other connector-specific state
-  
+
   // Raw Response
   optional string raw_connector_response = 21; // Raw response from the connector for debugging
 }
@@ -1512,7 +1509,7 @@ message PaymentServiceRegisterResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
-
+  
   // State Information
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
 }
@@ -1566,10 +1563,9 @@ message PaymentServiceRepeatEverythingResponse {
   // Transaction Details
   optional string network_txn_id = 5; // Transaction ID from the payment network
   optional Identifier response_ref_id = 6; // Reference ID from the connector response
-
+  
   // State Information
   optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
-
   
   // Raw Response
   optional string raw_connector_response = 7; // Raw response from the connector for debugging
@@ -1622,11 +1618,11 @@ message RefundServiceGetRequest {
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
 
-  // Metadata
-  map<string, string> refund_metadata = 6; // Metadata specific to the refund sync  
-
   // Session and Token Information
-  optional string access_token = 7; // Access token for secure communication
+  optional string access_token = 6; // Access token for secure communication
+
+// Metadata
+  map<string, string> refund_metadata = 7; // Metadata specific to the refund sync  
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead

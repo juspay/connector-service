@@ -36,6 +36,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers as phonepe;
 
 use self::transformers::{
@@ -63,6 +64,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Phonepe<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Phonepe<T>
 {
 }
 impl<
@@ -203,16 +208,6 @@ impl<
             + 'static
             + Serialize,
     > connector_types::RepeatPaymentV2 for Phonepe<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAccessToken for Phonepe<T>
 {
 }
 impl<
@@ -642,22 +637,6 @@ impl<
     > for Phonepe<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Phonepe<T>
-{
-}
 
 // SourceVerification implementations for all flows - using macro to generate stubs
 macro_rules! impl_source_verification_stub {
@@ -723,12 +702,35 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Phonepe<T>
+{
+}
+
 // Apply to all flows
 impl_source_verification_stub!(
     CreateSessionToken,
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData
 );
 impl_source_verification_stub!(
     Authorize,
@@ -792,10 +794,4 @@ impl_source_verification_stub!(
     PaymentFlowData,
     PaymentMethodTokenizationData<T>,
     PaymentMethodTokenResponse
-);
-impl_source_verification_stub!(
-    CreateAccessToken,
-    PaymentFlowData,
-    AccessTokenRequestData,
-    AccessTokenResponseData
 );

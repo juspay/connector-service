@@ -186,9 +186,10 @@ macros::create_all_prerequisites!(
             common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => {
                 let token = req
                     .resource_common_data
-                    .access_token
-                    .clone()
-                    .ok_or(errors::ConnectorError::FailedToObtainAuthType)?;
+                    .get_access_token()
+                    .change_context(errors::ConnectorError::MissingRequiredField {
+                        field_name: "access_token",
+                    })?;
                 Ok(vec![
                     (
                         headers::CONTENT_TYPE.to_string(),
@@ -547,7 +548,7 @@ macros::macro_connector_implementation!(
         let id = req
             .request
             .connector_refund_id.clone();
-        
+
         let payment_method = req.request.refund_connector_metadata
             .as_ref()
             .and_then(|metadata| {

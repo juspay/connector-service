@@ -36,6 +36,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaymentsResponse};
 
 use super::macros;
@@ -86,6 +87,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Cashtocode<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Cashtocode<T>
 {
 }
 
@@ -247,17 +252,6 @@ impl<
             response_headers: None,
         })
     }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAccessToken for Cashtocode<T>
-{
 }
 
 impl<
@@ -612,22 +606,6 @@ impl<
     > for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    > for Cashtocode<T>
-{
-}
 
 impl<
         T: PaymentMethodDataTypes
@@ -642,6 +620,22 @@ impl<
         PaymentFlowData,
         AccessTokenRequestData,
         AccessTokenResponseData,
+    > for Cashtocode<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
     > for Cashtocode<T>
 {
 }
@@ -777,6 +771,23 @@ impl<
             + Serialize,
     >
     interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Cashtocode<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
         PaymentMethodToken,
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
@@ -784,13 +795,6 @@ impl<
     > for Cashtocode<T>
 {
 }
-
-impl_source_verification_stub!(
-    CreateAccessToken,
-    PaymentFlowData,
-    AccessTokenRequestData,
-    AccessTokenResponseData
-);
 
 fn get_b64_auth_cashtocode(
     payment_method_type: Option<common_enums::PaymentMethodType>,

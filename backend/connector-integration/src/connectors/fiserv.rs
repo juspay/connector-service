@@ -37,6 +37,7 @@ use interfaces::{
 };
 use ring::hmac;
 use serde::Serialize;
+use std::fmt::Debug;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -91,6 +92,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Fiserv<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Fiserv<T>
 {
 }
 
@@ -234,16 +239,6 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentTokenV2<T> for Fiserv<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAccessToken for Fiserv<T>
 {
 }
 
@@ -931,6 +926,23 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Fiserv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
     > ConnectorSpecifications for Fiserv<T>
 {
 }
@@ -1010,23 +1022,6 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Fiserv<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    interfaces::verification::SourceVerification<
         CreateAccessToken,
         PaymentFlowData,
         AccessTokenRequestData,

@@ -213,8 +213,8 @@ pub enum FlowName {
     RepeatPayment,
     CreateOrder,
     CreateSessionToken,
-    PaymentMethodToken,
     CreateAccessToken,
+    PaymentMethodToken,
     Unknown,
 }
 
