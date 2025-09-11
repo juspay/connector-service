@@ -283,8 +283,10 @@ impl Payments {
                 tracing::info!("No cached access token found, generating new token");
                 let event_params = EventParams {
                     _connector_name: &connector.to_string(),
-                    _service_name,
+                    _service_name: service_name,
                     request_id,
+                    lineage_ids,
+                    reference_id,
                 };
                 
                 let access_token_data = self
@@ -292,6 +294,8 @@ impl Payments {
                         connector_data.clone(),
                         &payment_flow_data,
                         connector_auth_details.clone(),
+                        &connector.to_string(),
+                        service_name,
                         event_params,
                         &payload,
                     )
@@ -806,6 +810,8 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
+        connector_name: &str,
+        service_name: &str,
         event_params: EventParams<'_>,
         payload: &P,
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
@@ -850,14 +856,16 @@ impl Payments {
 
         // Execute connector processing
         let external_event_params = EventProcessingParams {
-            connector_name: event_params.connector_name,
-            service_name: event_params.service_name,
+            connector_name,
+            service_name,
             flow_name: FlowName::CreateAccessToken,
             event_config: &self.config.events,
             raw_request_data: Some(SecretSerdeValue::new(
                 payload.masked_serialize().unwrap_or_default(),
             )),
             request_id: event_params.request_id,
+            lineage_ids: event_params.lineage_ids,
+            reference_id: event_params.reference_id,
         };
 
         let response = external_services::service::execute_connector_processing_step(
@@ -866,6 +874,7 @@ impl Payments {
             access_token_router_data,
             None,
             external_event_params,
+            None,
         )
         .await
         .switch()
@@ -1267,14 +1276,10 @@ impl PaymentService for Payments {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
         
-        grpc_logging_wrapper(request, &service_name, |request| {
-            Box::pin(async {
-                let (connector, _merchant_id, _tenant_id, request_id) =
-                    utils::get_metadata_payload(
-                        request.metadata(),
-                        
-                    )
-                    .map_err(|e| e.into_grpc_status())?;
+        grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
+            let service_name = service_name.clone();
+            Box::pin(async move {
+                let utils::MetadataPayload {connector, ref request_id, ..} = metadata_payload;
                 let connector_auth_details =
                     auth_from_metadata(request.metadata()).map_err(|e| e.into_grpc_status())?;
                 let metadata = request.metadata().clone();
@@ -1312,6 +1317,8 @@ impl PaymentService for Payments {
                             _connector_name: &connector.to_string(),
                             _service_name: &service_name,
                             request_id: &request_id,
+                            lineage_ids: &metadata_payload.lineage_ids,
+                            reference_id: &metadata_payload.reference_id,
                         };
                         
                         let access_token_data = self
@@ -1319,6 +1326,8 @@ impl PaymentService for Payments {
                                 connector_data.clone(),
                                 &initial_payment_flow_data,
                                 connector_auth_details.clone(),
+                                &connector.to_string(),
+                                &service_name,
                                 event_params,
                                 &payload,
                             )
