@@ -9,7 +9,7 @@ use domain_types::connector_types::{
     AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentMethodTokenizationData,
     PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData,
     RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
-    SubmitEvidenceData,
+    SubmitEvidenceData, PaymentsAuthenticateData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
@@ -19,6 +19,7 @@ use domain_types::{
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SessionTokenIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        PreAuthenticateIntegrityObject, AuthenticateIntegrityObject, PostAuthenticateIntegrityObject,
     },
 };
 
@@ -153,6 +154,9 @@ impl_check_integrity!(SessionTokenRequestData);
 impl_check_integrity!(PaymentMethodTokenizationData<S>);
 impl_check_integrity!(SubmitEvidenceData);
 impl_check_integrity!(RepeatPaymentData);
+impl_check_integrity!(PaymentsAuthenticateData<S>);
+impl_check_integrity!(PaymentsPostAuthenticateData<S>);
+impl_check_integrity!(PaymentsPreAuthenticateData<S>);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -353,6 +357,51 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PaymentMethodTokenIntegrityOb
         PaymentMethodTokenIntegrityObject {
             amount: self.amount,
             currency: self.currency,
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObject>
+    for PaymentsPreAuthenticateData<T>
+{
+    fn get_response_integrity_object(&self) -> Option<PreAuthenticateIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> PreAuthenticateIntegrityObject {
+        PreAuthenticateIntegrityObject {
+            amount: self.amount,
+            currency: self.currency.unwrap(),
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthenticateIntegrityObject>
+    for PaymentsAuthenticateData<T>
+{
+    fn get_response_integrity_object(&self) -> Option<AuthenticateIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> AuthenticateIntegrityObject {
+        AuthenticateIntegrityObject {
+            amount: self.amount,
+            currency: self.currency.unwrap(),
+        }
+    }
+}
+
+impl<T: PaymentMethodDataTypes> GetIntegrityObject<PostAuthenticateIntegrityObject>
+    for PaymentsPostAuthenticateData<T>
+{
+    fn get_response_integrity_object(&self) -> Option<PostAuthenticateIntegrityObject> {
+        None
+    }
+
+    fn get_request_integrity_object(&self) -> PostAuthenticateIntegrityObject {
+        PostAuthenticateIntegrityObject {
+            amount: self.amount,
+            currency: self.currency.unwrap(),
         }
     }
 }
@@ -747,6 +796,96 @@ impl FlowIntegrity for SessionTokenIntegrityObject {
 }
 
 impl FlowIntegrity for PaymentMethodTokenIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for PreAuthenticateIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for AuthenticateIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.amount != res_integrity_object.amount {
+            mismatched_fields.push(format_mismatch(
+                "amount",
+                &req_integrity_object.amount.to_string(),
+                &res_integrity_object.amount.to_string(),
+            ));
+        }
+
+        if req_integrity_object.currency != res_integrity_object.currency {
+            mismatched_fields.push(format_mismatch(
+                "currency",
+                &req_integrity_object.currency.to_string(),
+                &res_integrity_object.currency.to_string(),
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for PostAuthenticateIntegrityObject {
     type IntegrityObject = Self;
 
     fn compare(
