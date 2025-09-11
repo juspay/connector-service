@@ -1,34 +1,26 @@
-use std::collections::HashMap;
-
-use cards::CardNumber;
 use common_utils::{
-    ext_traits::OptionExt,
     pii,
     request::Method,
-    types::{MinorUnit, StringMinorUnit},
+    types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
+    connector_flow::{Authorize, PSync, RSync, Void, Capture},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData as WalletDataPaymentMethod,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
-use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret, PeekInterface};
+use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
-use strum::Display;
 
 use crate::types::ResponseRouterData;
 
@@ -514,12 +506,10 @@ pub struct DlocalRefundsSyncRequest {
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<DlocalRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>> for DlocalRefundsSyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(item: DlocalRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
-        let refund_id = match item.router_data.request.connector_refund_id.clone() {
-            Some(val) => val,
-            None => item.router_data.request.refund_id.clone(),
-        };
+        let refund_id = item.router_data.request.connector_refund_id.clone()
+            .unwrap_or_else(|| item.router_data.request.refund_id.clone());
         Ok(Self {
-            refund_id: (refund_id),
+            refund_id,
         })
     }
 }

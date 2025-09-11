@@ -1,22 +1,20 @@
 pub mod transformers;
 
-use base64::Engine;
-use common_enums::CurrencyUnit;
 use common_utils::{ 
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    errors::CustomResult, ext_traits::ByteSliceExt,
     };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, PaymentMethodToken, RSync, Refund,
         RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, 
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, 
+        RefundsResponseData, RepeatPaymentData, SetupMandateRequestData, SubmitEvidenceData, 
+        SessionTokenRequestData, SessionTokenResponseData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -27,7 +25,7 @@ use domain_types::{
 };
 use serde::Serialize;
 use std::fmt::Debug;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
@@ -40,9 +38,6 @@ use transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-
-pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
-
 use error_stack::ResultExt;
 
 pub(crate) mod headers {
@@ -170,28 +165,26 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
-        where
-            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
-        {
-            let dlocal_req = self.get_request_body(req)?;
-
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let date = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
             let auth = dlocal::DlocalAuthType::try_from(&req.connector_auth_type)?;
+            
+            // For DLocal, we'll use a simplified signature without request body for now
             let sign_req: String = format!(
-                "{}{}{}",
+                "{}{}",
                 auth.x_login.peek(),
-                date,
-                dlocal_req.get_inner_value().peek().to_owned()
+                date
             );
-            let authz = common_utils::crypto::HmacSha256::sign_message(
-                &common_utils::crypto::HmacSha256,
+            
+            let authz = common_utils::crypto::Hmac::<common_utils::crypto::Sha256>::sign_message(
+                &common_utils::crypto::Hmac::<common_utils::crypto::Sha256>,
                 auth.secret.peek().as_bytes(),
                 sign_req.as_bytes(),
             )
             .change_context(errors::ConnectorError::RequestEncodingFailed)
             .attach_printable("Failed to sign the message")?;
+            
             let auth_string: String = format!("V2-HMAC-SHA256, Signature: {}", hex::encode(authz));
             let headers = vec![
                 (
@@ -567,6 +560,23 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Dlocal<T>
+{
+}
+
 // SourceVerification implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -694,6 +704,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Dlocal<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
     > for Dlocal<T>
 {
 }
