@@ -1567,6 +1567,9 @@ message RefundServiceGetRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
+
+// Metadata
+  map<string, string> refund_metadata = 6; // Metadata specific to the refund sync  
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
