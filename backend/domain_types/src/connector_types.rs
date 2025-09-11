@@ -1088,19 +1088,6 @@ pub struct PaymentCreateOrderResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct AuthenticateRequestData {
-    pub authentication_id: String,
-    pub challenge_response: Option<String>,
-    pub browser_info: Option<BrowserInformation>,
-}
-
-#[derive(Debug, Clone)]
-pub struct PostAuthenticateRequestData {
-    pub authentication_id: String,
-    pub authentication_value: Option<String>,
-}
-
-#[derive(Debug, Clone)]
 pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
     pub payment_method_data: payment_method_data::PaymentMethodData<T>,
     pub browser_info: Option<BrowserInformation>,

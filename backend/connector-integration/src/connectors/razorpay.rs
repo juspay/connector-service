@@ -235,7 +235,6 @@ impl<
     > connector_types::RepeatPaymentV2 for Razorpay<T>
 {
 }
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
