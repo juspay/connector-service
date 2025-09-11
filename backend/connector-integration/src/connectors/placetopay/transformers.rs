@@ -341,9 +341,6 @@ pub struct PlacetopayPaymentsResponse {
     authorization: Option<String>,
 }
 
-// Type alias for PSync to avoid macro conflicts
-pub type PlacetopayPSyncResponse = PlacetopayPaymentsResponse;
-
 // Type alias for RSync to avoid macro conflicts
 pub type PlacetopayRSyncResponse = PlacetopayRefundResponse;
 
@@ -413,6 +410,9 @@ pub struct PlacetopayPsyncRequest {
     auth: PlacetopayAuth,
     internal_reference: u64,
 }
+
+// Type alias for PSync to avoid macro conflicts
+pub type PlacetopayPSyncResponse = PlacetopayPaymentsResponse;
 
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for PlacetopayPsyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;

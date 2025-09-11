@@ -50,7 +50,7 @@ nexinets.base_url = "https://apitest.payengine.de/v1"
 noon.base_url = "https://api-test.noonpayments.com/"
 mifinity.base_url = "https://demo.mifinity.com/"
 braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
-placetopay.base_url = "https://test.placetopay.com/redirection/"
+placetopay.base_url = "https://test.placetopay.com/gateway/"
 
 # Generic Events Configuration
 [events]
