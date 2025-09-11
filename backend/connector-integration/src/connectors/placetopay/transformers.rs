@@ -517,6 +517,106 @@ impl<F> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
     }
 }
 
+// Add TryFrom for Capture flow
+impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Processing capture response - raw status: {:?}", item.response.status.status);
+        
+        // For capture, we always expect it to be charged since it's completing the payment
+        let status = match item.response.status.status {
+            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
+                println!("PlaceToPay: Capture successful - mapping to Charged");
+                common_enums::AttemptStatus::Charged
+            },
+            other_status => {
+                println!("PlaceToPay: Capture failed - using default mapping");
+                common_enums::AttemptStatus::from(other_status)
+            }
+        };
+        
+        println!("PlaceToPay: Final capture status: {:?}", status);
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.internal_reference.to_string(),
+                ),
+                redirection_data: None,
+                connector_metadata: item
+                    .response
+                    .authorization
+                    .clone()
+                    .map(|authorization| serde_json::json!(authorization)),
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                mandate_reference: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// Add TryFrom for Void flow
+impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
+    for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        println!("PlaceToPay: Processing void response - raw status: {:?}", item.response.status.status);
+        
+        // For void, we expect it to be voided if successful
+        let status = match item.response.status.status {
+            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
+                println!("PlaceToPay: Void successful - mapping to Voided");
+                common_enums::AttemptStatus::Voided
+            },
+            other_status => {
+                println!("PlaceToPay: Void failed - using default mapping");
+                common_enums::AttemptStatus::from(other_status)
+            }
+        };
+        
+        println!("PlaceToPay: Final void status: {:?}", status);
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    item.response.internal_reference.to_string(),
+                ),
+                redirection_data: None,
+                connector_metadata: item
+                    .response
+                    .authorization
+                    .clone()
+                    .map(|authorization| serde_json::json!(authorization)),
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                mandate_reference: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlacetopayNextActionRequest {
