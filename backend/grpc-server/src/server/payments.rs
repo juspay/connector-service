@@ -10,14 +10,16 @@ use common_utils::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, PostAuthenticate, PreAuthenticate, PSync, PaymentMethodToken, Refund,
-        RepeatPayment, SetupMandate, Void,
+        Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, PSync,
+        PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment, SetupMandate,
+        Void,
     },
     connector_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
@@ -25,9 +27,11 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
-        generate_authenticate_response, generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_post_authenticate_response, generate_pre_authenticate_response,
-        generate_refund_response, generate_repeat_payment_response, generate_setup_mandate_response,
+        generate_authenticate_response, generate_payment_capture_response,
+        generate_payment_sync_response, generate_payment_void_response,
+        generate_post_authenticate_response, generate_pre_authenticate_response,
+        generate_refund_response, generate_repeat_payment_response,
+        generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };

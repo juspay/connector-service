@@ -7,19 +7,20 @@ use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, DisputeDefendData, PaymentCreateOrderData, PaymentMethodTokenizationData,
-    PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsSyncData, RefundSyncData,
+    PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData,
     RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
-    SubmitEvidenceData, PaymentsAuthenticateData, PaymentsPostAuthenticateData, PaymentsPreAuthenticateData,
+    SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
-        AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, CaptureIntegrityObject,
-        CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
+        AcceptDisputeIntegrityObject, AuthenticateIntegrityObject, AuthoriseIntegrityObject,
+        CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
-        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
-        SessionTokenIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
-        PreAuthenticateIntegrityObject, AuthenticateIntegrityObject, PostAuthenticateIntegrityObject,
+        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
     },
 };
 
@@ -371,7 +372,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PreAuthenticateIntegrityObjec
     fn get_request_integrity_object(&self) -> PreAuthenticateIntegrityObject {
         PreAuthenticateIntegrityObject {
             amount: self.amount,
-            currency: self.currency.unwrap(),
+            currency: self.currency.unwrap_or_default(),
         }
     }
 }
@@ -386,7 +387,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<AuthenticateIntegrityObject>
     fn get_request_integrity_object(&self) -> AuthenticateIntegrityObject {
         AuthenticateIntegrityObject {
             amount: self.amount,
-            currency: self.currency.unwrap(),
+            currency: self.currency.unwrap_or_default(),
         }
     }
 }
@@ -401,7 +402,7 @@ impl<T: PaymentMethodDataTypes> GetIntegrityObject<PostAuthenticateIntegrityObje
     fn get_request_integrity_object(&self) -> PostAuthenticateIntegrityObject {
         PostAuthenticateIntegrityObject {
             amount: self.amount,
-            currency: self.currency.unwrap(),
+            currency: self.currency.unwrap_or_default(),
         }
     }
 }

@@ -1081,7 +1081,9 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>> for PaymentsPreAuthenticateData<T> {
+impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>>
+    for PaymentsPreAuthenticateData<T>
+{
     type Error = ApplicationErrorResponse;
 
     fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
@@ -1159,7 +1161,9 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>> for PaymentsPostAuthenticateData <T>{
+impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>>
+    for PaymentsPostAuthenticateData<T>
+{
     type Error = ApplicationErrorResponse;
 
     fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {

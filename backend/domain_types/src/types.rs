@@ -55,21 +55,22 @@ fn extract_headers_from_metadata(
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
-        PreAuthenticate, Authenticate, PostAuthenticate,
+        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RawConnectorResponse, RefundFlowData,
-        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
-        PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -3427,14 +3428,14 @@ impl<
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
         let return_url = value.return_url;
         let enrolled_for_3ds = value.enrolled_for_3ds;
-        
+
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
         Ok(Self {
             payment_method_data: value
                 .payment_method
-                .map(|pm| PaymentMethodData::<T>::foreign_try_from(pm))
+                .map(PaymentMethodData::<T>::foreign_try_from)
                 .transpose()
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -3498,14 +3499,14 @@ impl<
         let minor_amount = common_utils::types::MinorUnit::new(value.minor_amount);
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
         let return_url = value.return_url;
-        
+
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
         Ok(Self {
             payment_method_data: value
                 .payment_method
-                .map(|pm| PaymentMethodData::<T>::foreign_try_from(pm))
+                .map(PaymentMethodData::<T>::foreign_try_from)
                 .transpose()
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -3569,14 +3570,14 @@ impl<
         let minor_amount = common_utils::types::MinorUnit::new(value.minor_amount);
         let currency = common_enums::Currency::foreign_try_from(value.currency())?;
         let return_url = value.return_url;
-        
+
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
         Ok(Self {
             payment_method_data: value
                 .payment_method
-                .map(|pm| PaymentMethodData::<T>::foreign_try_from(pm))
+                .map(PaymentMethodData::<T>::foreign_try_from)
                 .transpose()
                 .change_context(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -4308,96 +4309,113 @@ pub fn generate_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 incremental_authorization_allowed,
                 mandate_reference: _,
                 status_code,
-            } => {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                                            grpc_api_types::payments::FormData {
-                                                endpoint,
-                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
-                                                form_fields,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Uri { uri } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri,
-                                            }
-                                        ))
-                                    })
-                                },
-                                crate::router_response_types::RedirectForm::Mifinity { initialization_token } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri: initialization_token,
-                                            }
-                                        ))
-                                    })
-                                },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                            }
+            } => PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
+                    resource_id,
+                )?),
+                redirection_data: redirection_data
+                    .map(|form| match *form {
+                        crate::router_response_types::RedirectForm::Form {
+                            endpoint,
+                            method,
+                            form_fields,
+                        } => Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(
+                            grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Form(
+                                        grpc_api_types::payments::FormData {
+                                            endpoint,
+                                            method:
+                                                grpc_api_types::payments::HttpMethod::foreign_from(
+                                                    method,
+                                                )
+                                                    as i32,
+                                            form_fields,
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        router_response_types::RedirectForm::Html { html_data } => {
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Html(
+                                        grpc_api_types::payments::HtmlData { html_data },
+                                    ),
+                                ),
+                            })
                         }
-                    ).transpose()?,
-                    connector_metadata: connector_metadata
-                        .and_then(|value| value.as_object().cloned())
-                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
-                            .map(|s| (k, s.to_string())))
-                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
-                    network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
+                        router_response_types::RedirectForm::Uri { uri } => {
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Uri(
+                                        grpc_api_types::payments::UriData { uri },
+                                    ),
+                                ),
+                            })
+                        }
+                        crate::router_response_types::RedirectForm::Mifinity {
+                            initialization_token,
+                        } => Ok(grpc_api_types::payments::RedirectForm {
+                            form_type: Some(
+                                grpc_api_types::payments::redirect_form::FormType::Uri(
+                                    grpc_api_types::payments::UriData {
+                                        uri: initialization_token,
+                                    },
+                                ),
+                            ),
+                        }),
+                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_RESPONSE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid response from connector".to_owned(),
+                            error_object: None,
+                        }))?,
+                    })
+                    .transpose()?,
+                connector_metadata: connector_metadata
+                    .and_then(|value| value.as_object().cloned())
+                    .map(|map| {
+                        map.into_iter()
+                            .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+                            .collect::<HashMap<_, _>>()
+                    })
+                    .unwrap_or_default(),
+                network_txn_id,
+                response_ref_id: connector_response_reference_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                    }),
-                    incremental_authorization_allowed,
-                    status: grpc_status as i32,
-                    error_message: None,
-                    error_code: None,
-                    raw_connector_response,
-                    status_code: status_code as u32,
-                    response_headers,
-                }
-            }
-            PaymentsResponseData::SessionResponse { session_token: _, status_code } => {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id("session_created".to_string())),
-                    }),
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_status as i32,
-                    error_message: None,
-                    error_code: None,
-                    status_code: status_code as u32,
-                    raw_connector_response,
-                    response_headers,
-                    connector_metadata: std::collections::HashMap::new(),
-                }
-            }
+                    }
+                }),
+                incremental_authorization_allowed,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                raw_connector_response,
+                status_code: status_code as u32,
+                response_headers,
+            },
+            PaymentsResponseData::SessionResponse {
+                session_token: _,
+                status_code,
+            } => PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        "session_created".to_string(),
+                    )),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                incremental_authorization_allowed: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                status_code: status_code as u32,
+                raw_connector_response,
+                response_headers,
+                connector_metadata: std::collections::HashMap::new(),
+            },
         },
         Err(err) => {
             let status = err
@@ -4456,96 +4474,113 @@ pub fn generate_authenticate_response<T: PaymentMethodDataTypes>(
                 incremental_authorization_allowed,
                 mandate_reference: _,
                 status_code,
-            } => {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                                            grpc_api_types::payments::FormData {
-                                                endpoint,
-                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
-                                                form_fields,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Uri { uri } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri,
-                                            }
-                                        ))
-                                    })
-                                },
-                                crate::router_response_types::RedirectForm::Mifinity { initialization_token } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri: initialization_token,
-                                            }
-                                        ))
-                                    })
-                                },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                            }
+            } => PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
+                    resource_id,
+                )?),
+                redirection_data: redirection_data
+                    .map(|form| match *form {
+                        crate::router_response_types::RedirectForm::Form {
+                            endpoint,
+                            method,
+                            form_fields,
+                        } => Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(
+                            grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Form(
+                                        grpc_api_types::payments::FormData {
+                                            endpoint,
+                                            method:
+                                                grpc_api_types::payments::HttpMethod::foreign_from(
+                                                    method,
+                                                )
+                                                    as i32,
+                                            form_fields,
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        router_response_types::RedirectForm::Html { html_data } => {
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Html(
+                                        grpc_api_types::payments::HtmlData { html_data },
+                                    ),
+                                ),
+                            })
                         }
-                    ).transpose()?,
-                    connector_metadata: connector_metadata
-                        .and_then(|value| value.as_object().cloned())
-                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
-                            .map(|s| (k, s.to_string())))
-                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
-                    network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
+                        router_response_types::RedirectForm::Uri { uri } => {
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Uri(
+                                        grpc_api_types::payments::UriData { uri },
+                                    ),
+                                ),
+                            })
+                        }
+                        crate::router_response_types::RedirectForm::Mifinity {
+                            initialization_token,
+                        } => Ok(grpc_api_types::payments::RedirectForm {
+                            form_type: Some(
+                                grpc_api_types::payments::redirect_form::FormType::Uri(
+                                    grpc_api_types::payments::UriData {
+                                        uri: initialization_token,
+                                    },
+                                ),
+                            ),
+                        }),
+                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_RESPONSE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid response from connector".to_owned(),
+                            error_object: None,
+                        }))?,
+                    })
+                    .transpose()?,
+                connector_metadata: connector_metadata
+                    .and_then(|value| value.as_object().cloned())
+                    .map(|map| {
+                        map.into_iter()
+                            .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+                            .collect::<HashMap<_, _>>()
+                    })
+                    .unwrap_or_default(),
+                network_txn_id,
+                response_ref_id: connector_response_reference_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                    }),
-                    incremental_authorization_allowed,
-                    status: grpc_status as i32,
-                    error_message: None,
-                    error_code: None,
-                    raw_connector_response,
-                    status_code: status_code as u32,
-                    response_headers,
-                }
-            }
-            PaymentsResponseData::SessionResponse { session_token: _, status_code } => {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id("session_created".to_string())),
-                    }),
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_status as i32,
-                    error_message: None,
-                    error_code: None,
-                    status_code: status_code as u32,
-                    raw_connector_response,
-                    response_headers,
-                    connector_metadata: std::collections::HashMap::new(),
-                }
-            }
+                    }
+                }),
+                incremental_authorization_allowed,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                raw_connector_response,
+                status_code: status_code as u32,
+                response_headers,
+            },
+            PaymentsResponseData::SessionResponse {
+                session_token: _,
+                status_code,
+            } => PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        "session_created".to_string(),
+                    )),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                incremental_authorization_allowed: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                status_code: status_code as u32,
+                raw_connector_response,
+                response_headers,
+                connector_metadata: std::collections::HashMap::new(),
+            },
         },
         Err(err) => {
             let status = err
@@ -4604,96 +4639,113 @@ pub fn generate_post_authenticate_response<T: PaymentMethodDataTypes>(
                 incremental_authorization_allowed,
                 mandate_reference: _,
                 status_code,
-            } => {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?),
-                    redirection_data: redirection_data.map(
-                        |form| {
-                            match *form {
-                                crate::router_response_types::RedirectForm::Form { endpoint, method, form_fields } => {
-                                    Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Form(
-                                            grpc_api_types::payments::FormData {
-                                                endpoint,
-                                                method: grpc_api_types::payments::HttpMethod::foreign_from(method) as i32,
-                                                form_fields,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Html { html_data } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Html(
-                                            grpc_api_types::payments::HtmlData {
-                                                html_data,
-                                            }
-                                        ))
-                                    })
-                                },
-                                router_response_types::RedirectForm::Uri { uri } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri,
-                                            }
-                                        ))
-                                    })
-                                },
-                                crate::router_response_types::RedirectForm::Mifinity { initialization_token } => {
-                                    Ok(grpc_api_types::payments::RedirectForm {
-                                        form_type: Some(grpc_api_types::payments::redirect_form::FormType::Uri(
-                                            grpc_api_types::payments::UriData {
-                                                uri: initialization_token,
-                                            }
-                                        ))
-                                    })
-                                },
-                                _ => Err(
-                                    ApplicationErrorResponse::BadRequest(ApiError {
-                                        sub_code: "INVALID_RESPONSE".to_owned(),
-                                        error_identifier: 400,
-                                        error_message: "Invalid response from connector".to_owned(),
-                                        error_object: None,
-                                    }))?,
-                            }
+            } => PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
+                    resource_id,
+                )?),
+                redirection_data: redirection_data
+                    .map(|form| match *form {
+                        crate::router_response_types::RedirectForm::Form {
+                            endpoint,
+                            method,
+                            form_fields,
+                        } => Ok::<grpc_api_types::payments::RedirectForm, ApplicationErrorResponse>(
+                            grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Form(
+                                        grpc_api_types::payments::FormData {
+                                            endpoint,
+                                            method:
+                                                grpc_api_types::payments::HttpMethod::foreign_from(
+                                                    method,
+                                                )
+                                                    as i32,
+                                            form_fields,
+                                        },
+                                    ),
+                                ),
+                            },
+                        ),
+                        router_response_types::RedirectForm::Html { html_data } => {
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Html(
+                                        grpc_api_types::payments::HtmlData { html_data },
+                                    ),
+                                ),
+                            })
                         }
-                    ).transpose()?,
-                    connector_metadata: connector_metadata
-                        .and_then(|value| value.as_object().cloned())
-                        .map(|map| {map.into_iter().filter_map(|(k, v)| v.as_str()
-                            .map(|s| (k, s.to_string())))
-                            .collect::<HashMap<_, _>>()}).unwrap_or_default(),
-                    network_txn_id,
-                    response_ref_id: connector_response_reference_id.map(|id| grpc_api_types::payments::Identifier {
+                        router_response_types::RedirectForm::Uri { uri } => {
+                            Ok(grpc_api_types::payments::RedirectForm {
+                                form_type: Some(
+                                    grpc_api_types::payments::redirect_form::FormType::Uri(
+                                        grpc_api_types::payments::UriData { uri },
+                                    ),
+                                ),
+                            })
+                        }
+                        crate::router_response_types::RedirectForm::Mifinity {
+                            initialization_token,
+                        } => Ok(grpc_api_types::payments::RedirectForm {
+                            form_type: Some(
+                                grpc_api_types::payments::redirect_form::FormType::Uri(
+                                    grpc_api_types::payments::UriData {
+                                        uri: initialization_token,
+                                    },
+                                ),
+                            ),
+                        }),
+                        _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_RESPONSE".to_owned(),
+                            error_identifier: 400,
+                            error_message: "Invalid response from connector".to_owned(),
+                            error_object: None,
+                        }))?,
+                    })
+                    .transpose()?,
+                connector_metadata: connector_metadata
+                    .and_then(|value| value.as_object().cloned())
+                    .map(|map| {
+                        map.into_iter()
+                            .filter_map(|(k, v)| v.as_str().map(|s| (k, s.to_string())))
+                            .collect::<HashMap<_, _>>()
+                    })
+                    .unwrap_or_default(),
+                network_txn_id,
+                response_ref_id: connector_response_reference_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
-                    }),
-                    incremental_authorization_allowed,
-                    status: grpc_status as i32,
-                    error_message: None,
-                    error_code: None,
-                    raw_connector_response,
-                    status_code: status_code as u32,
-                    response_headers,
-                }
-            }
-            PaymentsResponseData::SessionResponse { session_token: _, status_code } => {
-                PaymentServiceAuthorizeResponse {
-                    transaction_id: Some(grpc_api_types::payments::Identifier {
-                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id("session_created".to_string())),
-                    }),
-                    redirection_data: None,
-                    network_txn_id: None,
-                    response_ref_id: None,
-                    incremental_authorization_allowed: None,
-                    status: grpc_status as i32,
-                    error_message: None,
-                    error_code: None,
-                    status_code: status_code as u32,
-                    raw_connector_response,
-                    response_headers,
-                    connector_metadata: std::collections::HashMap::new(),
-                }
-            }
+                    }
+                }),
+                incremental_authorization_allowed,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                raw_connector_response,
+                status_code: status_code as u32,
+                response_headers,
+            },
+            PaymentsResponseData::SessionResponse {
+                session_token: _,
+                status_code,
+            } => PaymentServiceAuthorizeResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        "session_created".to_string(),
+                    )),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                incremental_authorization_allowed: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                status_code: status_code as u32,
+                raw_connector_response,
+                response_headers,
+                connector_metadata: std::collections::HashMap::new(),
+            },
         },
         Err(err) => {
             let status = err
@@ -4722,7 +4774,6 @@ pub fn generate_post_authenticate_response<T: PaymentMethodDataTypes>(
     };
     Ok(response)
 }
-
 
 #[derive(Debug, Clone, ToSchema, Serialize)]
 pub struct CardSpecificFeatures {
