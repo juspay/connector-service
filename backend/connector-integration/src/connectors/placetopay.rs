@@ -37,7 +37,7 @@ use interfaces::{
 use transformers::{
     PlacetopayPaymentsRequest, PlacetopayPaymentsResponse, PlacetopayPSyncResponse, PlacetopayPsyncRequest,
     PlacetopayRefundRequest, PlacetopayRefundResponse, PlacetopayRSyncResponse, PlacetopayRsyncRequest,
-    PlacetopayNextActionRequest, PlacetopayCaptureRequest, PlacetopayTokenRequest, PlacetopayTokenResponse,
+    PlacetopayNextActionRequest, PlacetopayCaptureRequest, PlacetopayVoidRequest, PlacetopayTokenRequest, PlacetopayTokenResponse,
 };
 use transformers as placetopay;
 
@@ -122,7 +122,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
         let full_url = format!("{}/query", base_url);
-        println!("PlaceToPay: PSync API URL constructed: {}", full_url);
         Ok(full_url)
     }
 
@@ -179,7 +178,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
         // Use the correct PlaceToPay capture endpoint
         let full_url = format!("{}/transaction", base_url);
-        println!("PlaceToPay: Capture API URL constructed (transaction endpoint): {}", full_url);
         Ok(full_url)
     }
 
@@ -187,9 +185,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        println!("PlaceToPay: Creating capture request for transaction endpoint");
         let connector_req = PlacetopayCaptureRequest::try_from(req)?;
-        println!("PlaceToPay: Capture request created successfully");
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
@@ -236,8 +232,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
-        let full_url = format!("{}/process", base_url);
-        println!("PlaceToPay: Void API URL constructed: {}", full_url);
+        let full_url = format!("{}/transaction", base_url);
         Ok(full_url)
     }
 
@@ -245,7 +240,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let connector_req = PlacetopayNextActionRequest::try_from(req)?;
+        let connector_req = PlacetopayVoidRequest::try_from(req)?;
         Ok(Some(RequestContent::Json(Box::new(connector_req))))
     }
 
@@ -294,7 +289,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
         // Try using the transaction endpoint for refunds like capture
         let full_url = format!("{}/transaction", base_url);
-        println!("PlaceToPay: Refund API URL constructed (transaction endpoint): {}", full_url);
         Ok(full_url)
     }
 
@@ -350,7 +344,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
         let full_url = format!("{}/query", base_url);
-        println!("PlaceToPay: RSync API URL constructed: {}", full_url);
         Ok(full_url)
     }
 
@@ -501,7 +494,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
         let url = connectors.placetopay.base_url.as_ref();
-        println!("PlaceToPay: Base URL from config: {}", url);
         url
     }
 
@@ -510,8 +502,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        println!("PlaceToPay: Building error response for status code: {}", res.status_code);
-        println!("PlaceToPay: Raw error response: {:?}", String::from_utf8_lossy(&res.response));
+
         let response: placetopay::PlacetopayErrorResponse = res
             .response
             .parse_struct("PlacetopayErrorResponse")
@@ -558,7 +549,6 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
             let full_url = format!("{}/process", base_url);
-            println!("PlaceToPay: API URL constructed: {}", full_url);
             Ok(full_url)
         }
     }
