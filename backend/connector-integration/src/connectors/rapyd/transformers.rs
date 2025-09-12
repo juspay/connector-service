@@ -744,6 +744,7 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
 // Capture Request
 #[derive(Debug, Serialize, Clone)]
 pub struct CaptureRequest {
+    #[serde(serialize_with = "serialize_optional_amount_as_string")]
     amount: Option<MinorUnit>,
     receipt_email: Option<Secret<String>>,
     statement_descriptor: Option<String>,
@@ -783,8 +784,20 @@ impl<
 #[derive(Default, Debug, Serialize)]
 pub struct RapydRefundRequest {
     pub payment: String,
+    #[serde(serialize_with = "serialize_optional_amount_as_string")]
     pub amount: Option<MinorUnit>,
     pub currency: Option<common_enums::Currency>,
+}
+
+// Custom serializer for optional amount to ensure it's a string
+fn serialize_optional_amount_as_string<S>(amount: &Option<MinorUnit>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match amount {
+        Some(amt) => serializer.serialize_str(&amt.to_string()),
+        None => serializer.serialize_none(),
+    }
 }
 
 impl<
