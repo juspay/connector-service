@@ -30,7 +30,10 @@ use hyperswitch_masking::{ExposeInterface, Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-use crate::{connectors::rapyd::RapydRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
+
+#[derive(Debug, Serialize)]
+pub struct EmptyRequest;
 
 #[derive(Debug, Serialize)]
 pub struct RapydRouterData<T, U> {

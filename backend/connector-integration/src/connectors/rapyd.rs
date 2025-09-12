@@ -4,8 +4,10 @@ use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
+    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, date_time, request,
 };
+use rand::distributions::{Alphanumeric, DistString};
+use serde_json;
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
@@ -127,7 +129,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: (),
+            request_body: rapyd::EmptyRequest,
             response_body: RapydPaymentsResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
@@ -139,7 +141,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Void,
-            request_body: (),
+            request_body: rapyd::EmptyRequest,
             response_body: RapydPaymentsResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
@@ -151,7 +153,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: (),
+            request_body: rapyd::EmptyRequest,
             response_body: RefundResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ),
@@ -165,10 +167,9 @@ macros::create_all_prerequisites!(
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
+            let mut header = vec![
+                (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+            ];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
             Ok(header)
@@ -234,7 +235,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let auth = rapyd::RapydAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
         
-        Ok(vec![])
+        // Return basic auth headers - signature will be added in get_headers method
+        Ok(vec![(
+            "access_key".to_string(),
+            auth.access_key.into_masked(),
+        )])
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -255,7 +260,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.status.error_code.unwrap_or_else(|| NO_ERROR_CODE.to_string()),
+            code: response.status.error_code,
             message: response.status.status.unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
             reason: response.status.message,
             attempt_status: None,
@@ -298,7 +303,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: (),
+    curl_request: Json(rapyd::EmptyRequest),
     curl_response: RapydPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -356,7 +361,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: (),
+    curl_request: Json(rapyd::EmptyRequest),
     curl_response: RapydPaymentsResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
@@ -412,7 +417,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: (),
+    curl_request: Json(rapyd::EmptyRequest),
     curl_response: RefundResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
