@@ -283,7 +283,7 @@ macros::create_all_prerequisites!(
         {
             let auth = RapydAuthType::try_from(&req.connector_auth_type)?;
             let timestamp = common_utils::date_time::now_unix_timestamp();
-            let salt = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
+            let salt = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
             
             let signature = self.generate_signature(
                 &auth,
@@ -385,17 +385,11 @@ macros::macro_connector_implementation!(
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
                 .unwrap_or(&url);
+            // Get the exact request body that will be sent
             let body = self.get_request_body(req)?
-                .map(|content| {
-                    let raw_body = content.get_inner_value().expose();
-                    // Ensure compact JSON with no whitespace
-                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
-                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(_) => raw_body,
-                    }
-                })
+                .map(|content| content.get_inner_value().expose())
                 .unwrap_or_default();
-            self.build_headers(req, "POST", url_path, &body)
+            self.build_headers(req, "post", url_path, &body)
         }
         fn get_url(
             &self,
@@ -427,7 +421,7 @@ macros::macro_connector_implementation!(
             let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             let body = "";
-            self.build_headers(req, "GET", url_path, body)
+            self.build_headers(req, "get", url_path, body)
         }
         fn get_url(
             &self,
@@ -469,7 +463,7 @@ macros::macro_connector_implementation!(
                     }
                 })
                 .unwrap_or_default();
-            self.build_headers(req, "POST", url_path, &body)
+            self.build_headers(req, "post", url_path, &body)
         }
         fn get_url(
             &self,
@@ -502,7 +496,7 @@ macros::macro_connector_implementation!(
             let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             let body = "";
-            self.build_headers(req, "DELETE", url_path, body)
+            self.build_headers(req, "delete", url_path, body)
         }
         fn get_url(
             &self,
@@ -543,7 +537,7 @@ macros::macro_connector_implementation!(
                     }
                 })
                 .unwrap_or_default();
-            self.build_headers(req, "POST", url_path, &body)
+            self.build_headers(req, "post", url_path, &body)
         }
         fn get_url(
             &self,
@@ -575,7 +569,7 @@ macros::macro_connector_implementation!(
             let url_path = url.strip_prefix(&self.connector_base_url_refunds(req))
                 .unwrap_or(&url);
             let body = "";
-            self.build_headers(req, "GET", url_path, body)
+            self.build_headers(req, "get", url_path, body)
         }
         fn get_url(
             &self,

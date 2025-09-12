@@ -230,7 +230,7 @@ impl<
         let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
                 Some(PaymentMethod {
-                    pm_type: "in_visa_card".to_owned(), // Use Visa for test card 4242...
+                    pm_type: "in_amex_card".to_owned(), // Use Amex card type as per hyperswitch implementation
                     fields: Some(PaymentFields {
                         number: ccard.card_number.to_owned(),
                         expiration_month: ccard.card_exp_month.to_owned(),
