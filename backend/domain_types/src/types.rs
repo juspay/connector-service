@@ -104,6 +104,8 @@ pub struct Connectors {
     pub nexinets: ConnectorParams,
     #[serde(default)]
     pub noon: ConnectorParams,
+    #[serde(default)]
+    pub iciciupi: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
