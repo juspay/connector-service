@@ -52,3 +52,6 @@ pub use self::noon::Noon;
 
 pub mod braintree;
 pub use self::braintree::Braintree;
+
+pub mod rapyd;
+pub use self::rapyd::Rapyd;
