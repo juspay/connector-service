@@ -6,6 +6,7 @@ use common_utils::{
     errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, date_time, request,
 };
+use crate::types;
 use rand::distributions::{Alphanumeric, DistString};
 use serde_json;
 use domain_types::{
@@ -273,16 +274,39 @@ macros::create_all_prerequisites!(
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
+            http_method: &str,
+            url_path: &str,
+            body: &str,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
             Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
-            let mut header = vec![
+            let auth = RapydAuthType::try_from(&req.connector_auth_type)?;
+            let timestamp = common_utils::date_time::now_unix_timestamp();
+            let salt = Alphanumeric.sample_string(&mut rand::thread_rng(), 8);
+            
+            let signature = self.generate_signature(
+                &auth,
+                http_method,
+                url_path,
+                body,
+                timestamp,
+                &salt,
+            )?;
+            
+            let headers = vec![
                 (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
+                ("access_key".to_string(), auth.access_key.into_masked()),
+                ("salt".to_string(), salt.into()),
+                ("timestamp".to_string(), timestamp.to_string().into()),
+                ("signature".to_string(), signature.into()),
             ];
-            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            header.append(&mut api_key);
-            Ok(header)
+            
+            println!("Rapyd Headers being sent:");
+            for (name, _value) in &headers {
+                println!("  {}: [VALUE_PRESENT]", name);
+            }
+            Ok(headers)
         }
 
         pub fn connector_base_url_payments<'a, F, Req, Res>(
@@ -318,10 +342,24 @@ macros::create_all_prerequisites!(
                 secret_key.peek(),
                 body
             );
+            
+            // Debug logging
+            println!("Rapyd Signature Debug:");
+            println!("  Method: {}", http_method);
+            println!("  URL Path: {}", url_path);
+            println!("  Salt: {}", salt);
+            println!("  Timestamp: {}", timestamp);
+            println!("  Access Key: {}", access_key.peek());
+            println!("  Body: {}", body);
+            println!("  To Sign: {}", to_sign);
+            
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
             let tag = ring::hmac::sign(&key, to_sign.as_bytes());
             let hmac_sign = hex::encode(tag);
             let signature_value = BASE64_ENGINE.encode(hmac_sign);
+            
+            println!("  Signature: {}", signature_value);
+            
             Ok(signature_value)
         }
     }
@@ -344,7 +382,20 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let url = self.get_url(req)?;
+            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+                .unwrap_or(&url);
+            let body = self.get_request_body(req)?
+                .map(|content| {
+                    let raw_body = content.get_inner_value().expose();
+                    // Ensure compact JSON with no whitespace
+                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
+                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
+                        Err(_) => raw_body,
+                    }
+                })
+                .unwrap_or_default();
+            self.build_headers(req, "POST", url_path, &body)
         }
         fn get_url(
             &self,
@@ -372,7 +423,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let url = self.get_url(req)?;
+            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+                .unwrap_or(&url);
+            let body = "";
+            self.build_headers(req, "GET", url_path, body)
         }
         fn get_url(
             &self,
@@ -401,7 +456,20 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let url = self.get_url(req)?;
+            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+                .unwrap_or(&url);
+            let body = self.get_request_body(req)?
+                .map(|content| {
+                    let raw_body = content.get_inner_value().expose();
+                    // Ensure compact JSON with no whitespace
+                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
+                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
+                        Err(_) => raw_body,
+                    }
+                })
+                .unwrap_or_default();
+            self.build_headers(req, "POST", url_path, &body)
         }
         fn get_url(
             &self,
@@ -430,7 +498,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let url = self.get_url(req)?;
+            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+                .unwrap_or(&url);
+            let body = "";
+            self.build_headers(req, "DELETE", url_path, body)
         }
         fn get_url(
             &self,
@@ -458,7 +530,20 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let url = self.get_url(req)?;
+            let url_path = url.strip_prefix(&self.connector_base_url_refunds(req))
+                .unwrap_or(&url);
+            let body = self.get_request_body(req)?
+                .map(|content| {
+                    let raw_body = content.get_inner_value().expose();
+                    // Ensure compact JSON with no whitespace
+                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
+                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
+                        Err(_) => raw_body,
+                    }
+                })
+                .unwrap_or_default();
+            self.build_headers(req, "POST", url_path, &body)
         }
         fn get_url(
             &self,
@@ -486,7 +571,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            let url = self.get_url(req)?;
+            let url_path = url.strip_prefix(&self.connector_base_url_refunds(req))
+                .unwrap_or(&url);
+            let body = "";
+            self.build_headers(req, "GET", url_path, body)
         }
         fn get_url(
             &self,

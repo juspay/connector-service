@@ -36,6 +36,15 @@ use strum::Display;
 use crate::types::ResponseRouterData;
 use super::RapydRouterData;
 
+// Custom serializer for amount to ensure it's a string
+fn serialize_amount_as_string<S>(amount: &MinorUnit, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    // Convert amount to string without decimal points for minor units
+    serializer.serialize_str(&amount.to_string())
+}
+
 // Response type conversions
 impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>> for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> {
     type Error = error_stack::Report<ConnectorError>;
@@ -84,14 +93,21 @@ pub struct RapydPaymentsRequest<
         + 'static
         + Serialize,
 > {
+    #[serde(serialize_with = "serialize_amount_as_string")]
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_method_options: Option<PaymentMethodOptions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_reference_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub capture: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub complete_payment_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_payment_url: Option<String>,
 }
 
@@ -112,8 +128,11 @@ pub struct PaymentMethod<
 > {
     #[serde(rename = "type")]
     pub pm_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<PaymentFields<T>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub address: Option<Address>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub digital_wallet: Option<RapydWallet>,
 }
 
@@ -211,7 +230,7 @@ impl<
         let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
                 Some(PaymentMethod {
-                    pm_type: "in_amex_card".to_owned(), // Map payment method type based on country
+                    pm_type: "in_visa_card".to_owned(), // Use Visa for test card 4242...
                     fields: Some(PaymentFields {
                         number: ccard.card_number.to_owned(),
                         expiration_month: ccard.card_exp_month.to_owned(),
@@ -220,7 +239,7 @@ impl<
                             .router_data
                             .resource_common_data
                             .get_optional_billing_full_name()
-                            .unwrap_or(Secret::new("".to_string())),
+                            .unwrap_or(Secret::new("Test User".to_string())),
                         cvv: ccard.card_cvc.to_owned(),
                     }),
                     address: None,
