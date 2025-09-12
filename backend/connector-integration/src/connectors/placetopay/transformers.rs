@@ -1,6 +1,7 @@
 use common_utils::{
     types::MinorUnit,
 };
+use std::fmt::Debug;
 use domain_types::{
     connector_flow::{Authorize, PaymentMethodToken, PSync, RSync, Void, Capture, Refund},
     connector_types::{
@@ -301,6 +302,61 @@ impl<
     }
 }
 
+// Add TryFrom for macro-generated RouterData - PSync
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<MacroPlacetopayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>> for PlacetopayPsyncRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: MacroPlacetopayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Use existing implementation that takes &RouterDataV2
+        PlacetopayPsyncRequest::try_from(&item.router_data)
+    }
+}
+
+// Add TryFrom for macro-generated RouterData - Capture
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<MacroPlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>> for PlacetopayCaptureRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: MacroPlacetopayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Use existing implementation that takes &RouterDataV2
+        PlacetopayCaptureRequest::try_from(&item.router_data)
+    }
+}
+
+// Add TryFrom for macro-generated RouterData - Void
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<MacroPlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>> for PlacetopayVoidRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: MacroPlacetopayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Use existing implementation that takes &RouterDataV2
+        PlacetopayVoidRequest::try_from(&item.router_data)
+    }
+}
+
+// Add TryFrom for macro-generated RouterData - Refund
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<MacroPlacetopayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>> for PlacetopayRefundRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: MacroPlacetopayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Use existing implementation that takes &RouterDataV2
+        PlacetopayRefundRequest::try_from(&item.router_data)
+    }
+}
+
+// Add TryFrom for macro-generated RouterData - RSync
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<MacroPlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>> for PlacetopayRsyncRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    fn try_from(
+        item: MacroPlacetopayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Use existing implementation that takes &RouterDataV2
+        PlacetopayRsyncRequest::try_from(&item.router_data)
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PlacetopayTransactionStatus {
@@ -344,9 +400,13 @@ pub struct PlacetopayPaymentsResponse {
     authorization: Option<String>,
 }
 
-// Type alias for RSync to avoid macro conflicts
+// Type aliases for different flows - all using the same underlying response types
+pub type PlacetopayPSyncResponse = PlacetopayPaymentsResponse;
+pub type PlacetopayCaptureResponse = PlacetopayPaymentsResponse;
+pub type PlacetopayVoidResponse = PlacetopayPaymentsResponse;
 pub type PlacetopayRSyncResponse = PlacetopayRefundResponse;
 
+// Authorize flow uses the unified payment response handling with capture method consideration
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -379,7 +439,7 @@ impl<
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // Check capture method to determine correct status
+        // For authorize, consider capture method to determine correct status
         let capture_method = item.router_data.request.capture_method.unwrap_or(common_enums::CaptureMethod::Automatic);
         
         let status = match (item.response.status.status, capture_method) {
@@ -427,9 +487,6 @@ pub struct PlacetopayPsyncRequest {
     internal_reference: u64,
 }
 
-// Type alias for PSync to avoid macro conflicts
-pub type PlacetopayPSyncResponse = PlacetopayPaymentsResponse;
-
 impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for PlacetopayPsyncRequest {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -447,31 +504,18 @@ impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsRes
     }
 }
 
-impl<F> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+// PSync flow response handling
+impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<PlacetopayPaymentsResponse, Self>,
+        item: ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        // For PSync, we need to map the status appropriately
+        // Use consistent status mapping for PSync flow
         let status = match item.response.status.status {
             PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
-                // For PlaceToPay, "Approved" status means different things based on context:
-                // - For auto-capture: Approved = Charged (payment complete)
-                // - For manual capture: Approved = Authorized (awaiting capture)
-                // Since we can't reliably determine the capture method from PSync context,
-                // and the test expects manual capture payments to remain Authorized,
-                // we'll check if this looks like a manual capture scenario
-                let is_manual_capture_scenario = 
-                    item.router_data.resource_common_data.status == common_enums::AttemptStatus::Authorized ||
-                    item.router_data.resource_common_data.status == common_enums::AttemptStatus::Pending;
-                
-                if is_manual_capture_scenario {
-                    common_enums::AttemptStatus::Authorized
-                } else {
-                    common_enums::AttemptStatus::Charged
-                }
+                common_enums::AttemptStatus::Charged
             },
             PlacetopayTransactionStatus::Pending | PlacetopayTransactionStatus::PendingValidation | PlacetopayTransactionStatus::PendingProcess => {
                 common_enums::AttemptStatus::Pending
@@ -507,7 +551,7 @@ impl<F> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
     }
 }
 
-// Add TryFrom for Capture flow
+// Capture flow response handling
 impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
     for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
@@ -515,10 +559,13 @@ impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Capture
     fn try_from(
         item: ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        // For capture, we always expect it to be charged since it's completing the payment
+        // Use consistent status mapping for Capture flow
         let status = match item.response.status.status {
             PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
                 common_enums::AttemptStatus::Charged
+            },
+            PlacetopayTransactionStatus::Pending | PlacetopayTransactionStatus::PendingValidation | PlacetopayTransactionStatus::PendingProcess => {
+                common_enums::AttemptStatus::Pending
             },
             other_status => {
                 common_enums::AttemptStatus::from(other_status)
@@ -551,7 +598,10 @@ impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Capture
     }
 }
 
-// Add TryFrom for Void flow
+// Capture flow uses the unified payment response handling
+// Note: The specific status adjustment for capture (if needed) should be done at the flow level
+
+// Void flow uses the unified payment response handling with status override
 impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
     for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
@@ -559,7 +609,7 @@ impl TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Void, P
     fn try_from(
         item: ResponseRouterData<PlacetopayPaymentsResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        // For void, we expect it to be voided if successful
+        // For void, successful operations should result in Voided status
         let status = match item.response.status.status {
             PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
                 common_enums::AttemptStatus::Voided
