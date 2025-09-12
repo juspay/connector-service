@@ -1,34 +1,25 @@
-use std::collections::HashMap;
-
-use cards::CardNumber;
 use common_utils::{
-    ext_traits::OptionExt,
-    pii,
-    request::Method,
-    types::{MinorUnit, StringMinorUnit},
+    types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{self, Authorize, PaymentMethodToken, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture, Refund},
+    connector_flow::{Authorize, PaymentMethodToken, PSync, RSync, Void, Capture, Refund},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentFlowData, PaymentMethodTokenResponse,
         PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, 
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, 
-        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
         PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-        WalletData as WalletDataPaymentMethod,
     },
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    router_response_types::RedirectForm,
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret, PeekInterface};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
-use strum::Display;
 
 use crate::types::ResponseRouterData;
 use crate::connectors::placetopay::PlacetopayRouterData as MacroPlacetopayRouterData;

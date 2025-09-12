@@ -1,9 +1,7 @@
 pub mod transformers;
 
-use base64::Engine;
-use common_enums::CurrencyUnit;
 use common_utils::{ 
-    errors::CustomResult, ext_traits::ByteSliceExt, types::{StringMinorUnit, MinorUnit},
+    errors::CustomResult, ext_traits::ByteSliceExt,
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     request::RequestContent,
     };
@@ -29,15 +27,15 @@ use domain_types::{
 };
 use serde::Serialize;
 use std::fmt::Debug;
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
+use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
-    PlacetopayPaymentsRequest, PlacetopayPaymentsResponse, PlacetopayPSyncResponse, PlacetopayPsyncRequest,
-    PlacetopayRefundRequest, PlacetopayRefundResponse, PlacetopayRSyncResponse, PlacetopayRsyncRequest,
-    PlacetopayNextActionRequest, PlacetopayCaptureRequest, PlacetopayVoidRequest, PlacetopayTokenRequest, PlacetopayTokenResponse,
+    PlacetopayPaymentsRequest, PlacetopayPaymentsResponse, PlacetopayPsyncRequest,
+    PlacetopayRefundRequest, PlacetopayRefundResponse, PlacetopayRsyncRequest,
+    PlacetopayCaptureRequest, PlacetopayVoidRequest,
 };
 use transformers as placetopay;
 
@@ -50,7 +48,6 @@ use error_stack::ResultExt;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
 macros::create_all_prerequisites!(
