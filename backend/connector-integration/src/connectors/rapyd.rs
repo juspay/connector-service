@@ -10,12 +10,12 @@ use rand::distributions::{Alphanumeric, DistString};
 use serde_json;
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
+        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, DefendDispute, PaymentMethodToken, PSync, RSync, Refund,
         RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
@@ -35,8 +35,11 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
-    self as rapyd,
     RapydPaymentsRequest, RapydPaymentsResponse, RapydRefundRequest, RefundResponse,
+    EmptyRequest, CaptureRequest, RapydAuthType,
+    RapydAuthorizeResponse, RapydPSyncResponse, RapydCaptureResponse, RapydVoidResponse,
+    RapydPSyncRequest, RapydVoidRequest, RapydRSyncRequest,
+    RapydRefundResponse, RapydRSyncResponse,
 };
 
 use super::macros;
@@ -117,6 +120,113 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
+    for Rapyd<T>
+{
+    fn id(&self) -> &'static str {
+        "rapyd"
+    }
+
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Base
+    }
+
+    fn get_auth_header(
+        &self,
+        auth_type: &ConnectorAuthType,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+        let auth = RapydAuthType::try_from(auth_type)
+            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+        
+        // Return basic auth headers - signature will be added in get_headers method
+        Ok(vec![(
+            "access_key".to_string(),
+            auth.access_key.into_masked(),
+        )])
+    }
+
+    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
+        connectors.rapyd.base_url.as_ref()
+    }
+
+    fn build_error_response(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        let response: RapydPaymentsResponse = res
+            .response
+            .parse_struct("ErrorResponse")
+            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+
+        with_error_response_body!(event_builder, response);
+
+        Ok(ErrorResponse {
+            status_code: res.status_code,
+            code: response.status.error_code,
+            message: response.status.status.unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            reason: response.status.message,
+            attempt_status: None,
+            connector_transaction_id: None,
+            network_decline_code: None,
+            network_advice_code: None,
+            network_error_message: None,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Rapyd<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Rapyd<T>
+{
+}
+
 macros::create_all_prerequisites!(
     connector_name: Rapyd,
     generic_type: T,
@@ -124,39 +234,39 @@ macros::create_all_prerequisites!(
         (
             flow: Authorize,
             request_body: RapydPaymentsRequest<T>,
-            response_body: RapydPaymentsResponse,
+            response_body: RapydAuthorizeResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            request_body: rapyd::EmptyRequest,
-            response_body: RapydPaymentsResponse,
+            request_body: RapydPSyncRequest,
+            response_body: RapydPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: rapyd::CaptureRequest,
-            response_body: RapydPaymentsResponse,
+            request_body: CaptureRequest,
+            response_body: RapydCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: Void,
-            request_body: rapyd::EmptyRequest,
-            response_body: RapydPaymentsResponse,
+            request_body: RapydVoidRequest,
+            response_body: RapydVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
             request_body: RapydRefundRequest,
-            response_body: RefundResponse,
+            response_body: RapydRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: rapyd::EmptyRequest,
-            response_body: RefundResponse,
+            request_body: RapydRSyncRequest,
+            response_body: RapydRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
+        )
     ],
     amount_converters: [],
     member_functions: {
@@ -191,14 +301,14 @@ macros::create_all_prerequisites!(
 
         pub fn generate_signature(
             &self,
-            auth: &rapyd::RapydAuthType,
+            auth: &RapydAuthType,
             http_method: &str,
             url_path: &str,
             body: &str,
             timestamp: i64,
             salt: &str,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let rapyd::RapydAuthType {
+            let RapydAuthType {
                 access_key,
                 secret_key,
             } = auth;
@@ -216,61 +326,6 @@ macros::create_all_prerequisites!(
         }
     }
 );
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Rapyd<T>
-{
-    fn id(&self) -> &'static str {
-        "rapyd"
-    }
-
-    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        common_enums::CurrencyUnit::Base
-    }
-
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let auth = rapyd::RapydAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-        
-        // Return basic auth headers - signature will be added in get_headers method
-        Ok(vec![(
-            "access_key".to_string(),
-            auth.access_key.into_masked(),
-        )])
-    }
-
-    fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        connectors.rapyd.base_url.as_ref()
-    }
-
-    fn build_error_response(
-        &self,
-        res: Response,
-        event_builder: Option<&mut ConnectorEvent>,
-    ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: rapyd::RapydPaymentsResponse = res
-            .response
-            .parse_struct("ErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
-
-        with_error_response_body!(event_builder, response);
-
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response.status.error_code,
-            message: response.status.status.unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: response.status.message,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
-    }
-}
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -303,8 +358,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(rapyd::EmptyRequest),
-    curl_response: RapydPaymentsResponse,
+    curl_request: Json(RapydPSyncRequest),
+    curl_response: RapydPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -332,7 +387,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(rapyd::CaptureRequest),
+    curl_request: Json(CaptureRequest),
     curl_response: RapydPaymentsResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
@@ -361,8 +416,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(rapyd::EmptyRequest),
-    curl_response: RapydPaymentsResponse,
+    curl_request: Json(RapydVoidRequest),
+    curl_response: RapydVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
@@ -390,7 +445,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
     curl_request: Json(RapydRefundRequest),
-    curl_response: RefundResponse,
+    curl_response: RapydRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -417,8 +472,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(rapyd::EmptyRequest),
-    curl_response: RefundResponse,
+    curl_request: Json(RapydRSyncRequest),
+    curl_response: RapydRSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
