@@ -1,17 +1,14 @@
+use error_stack::report;
 use common_enums;
 use domain_types::{
-    connector_flow::{Authorize, CreateOrder},
-    connector_types::{
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentsAuthorizeData,
-        PaymentsResponseData, ResponseId,
-    },
+    connector_flow::{Authorize, PSync},
+    connector_types::{PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId},
     errors::ConnectorError,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
-use error_stack::report;
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use hyperswitch_masking::PeekInterface;
 use serde::{Deserialize, Serialize};
 
 use crate::types::ResponseRouterData;
@@ -22,8 +19,8 @@ use crate::types::ResponseRouterData;
 
 #[derive(Debug, Clone)]
 pub struct CashfreeAuthType {
-    pub app_id: Secret<String>,     // X-Client-Id
-    pub secret_key: Secret<String>, // X-Client-Secret
+    pub app_id: hyperswitch_masking::Secret<String>,     // X-Client-Id
+    pub secret_key: hyperswitch_masking::Secret<String>, // X-Client-Secret
 }
 
 impl TryFrom<&ConnectorAuthType> for CashfreeAuthType {
@@ -61,92 +58,11 @@ pub struct CashfreeErrorResponse {
 }
 
 // ============================================================================
-// Order Creation (Phase 1)
+// Payment Authorization (UPI Only)
 // ============================================================================
 
 #[derive(Debug, Serialize)]
-pub struct CashfreeOrderCreateRequest {
-    pub order_id: String,
-    pub order_amount: f64,
-    pub order_currency: String,
-    pub customer_details: CashfreeCustomerDetails,
-    pub order_meta: CashfreeOrderMeta,
-    pub order_note: Option<String>,
-    pub order_expiry_time: Option<String>,
-}
-
-// Supporting types for Order Response (missing from original implementation)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreeOrderCreateUrlResponse {
-    pub url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreeOrderTagsType {
-    pub metadata1: Option<String>,
-    pub metadata2: Option<String>,
-    pub metadata3: Option<String>,
-    pub metadata4: Option<String>,
-    pub metadata5: Option<String>,
-    pub metadata6: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreeOrderSplitsType {
-    pub vendor_id: String,
-    pub amount: f64,
-    pub percentage: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreeCustomerDetails {
-    pub customer_id: String,
-    pub customer_email: Option<String>,
-    pub customer_phone: String,
-    pub customer_name: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreeOrderMeta {
-    pub return_url: String,
-    pub notify_url: String,
-    pub payment_methods: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreeOrderCreateResponse {
-    pub payment_session_id: String, // KEY: Used in Authorize flow
-    pub cf_order_id: i64,
-    pub order_id: String,
-    pub entity: String, // ADDED: Missing field from Haskell
-    pub order_amount: f64,
-    pub order_currency: String,
-    pub order_status: String,
-    pub order_expiry_time: String,  // ADDED: Missing field from Haskell
-    pub order_note: Option<String>, // ADDED: Missing optional field from Haskell
-    pub customer_details: CashfreeCustomerDetails,
-    pub order_meta: CashfreeOrderMeta,
-    pub payments: CashfreeOrderCreateUrlResponse, // ADDED: Missing field from Haskell
-    pub settlements: CashfreeOrderCreateUrlResponse, // ADDED: Missing field from Haskell
-    pub refunds: CashfreeOrderCreateUrlResponse,  // ADDED: Missing field from Haskell
-    pub order_tags: Option<CashfreeOrderTagsType>, // ADDED: Missing optional field from Haskell
-    pub order_splits: Option<Vec<CashfreeOrderSplitsType>>, // ADDED: Missing optional field from Haskell
-}
-
-// ADDED: Union type for handling success/failure responses (matches Haskell pattern)
-// #[derive(Debug, Deserialize)]
-// #[serde(untagged)]
-// pub enum CashfreeOrderCreateResponseWrapper {
-//     Success(CashfreeOrderCreateResponse),
-//     Error(CashfreeErrorResponse),
-// }
-
-// ============================================================================
-// Payment Authorization (Phase 2)
-// ============================================================================
-
-#[derive(Debug, Serialize)]
-pub struct CashfreePaymentRequest {
+pub struct CashfreePaymentsRequest {
     pub payment_session_id: String, // From order creation response
     pub payment_method: CashfreePaymentMethod,
     pub payment_surcharge: Option<CashfreePaymentSurcharge>,
@@ -155,8 +71,7 @@ pub struct CashfreePaymentRequest {
 #[derive(Debug, Serialize)]
 pub struct CashfreePaymentMethod {
     pub upi: Option<CashfreeUpiDetails>,
-    // ADDED: All other payment methods (set to None for UPI-only implementation)
-    // This matches Haskell CashfreePaymentMethodType structure exactly
+    // All other payment methods set to None for UPI-only implementation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub app: Option<()>, // CashFreeAPPType - None for UPI-only
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -187,7 +102,7 @@ pub struct CashfreePaymentSurcharge {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CashfreePaymentResponse {
+pub struct CashfreePaymentsResponse {
     pub payment_method: String,
     pub channel: String,
     pub action: String,
@@ -214,18 +129,132 @@ pub struct CashfreePayloadData {
 }
 
 // ============================================================================
+// Payment Sync (PSync)
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct CashfreePaymentsSyncRequest {
+    // Empty request for GET /pg/orders/{order_id}
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreePaymentsSyncResponse {
+    pub order_id: String,
+    pub order_amount: f64,
+    pub order_currency: String,
+    pub order_status: String,
+    pub payment_status: Option<String>,
+    pub cf_payment_id: Option<serde_json::Value>,
+    pub payment_time: Option<String>,
+    pub payment_method: Option<String>,
+    pub error_message: Option<String>,
+}
+
+// ============================================================================
+// Order Creation (Phase 1) - For compatibility
+// ============================================================================
+
+#[derive(Debug, Serialize)]
+pub struct CashfreeOrderCreateRequest {
+    pub order_id: String,
+    pub order_amount: String, // String from StringMinorUnit converter
+    pub order_currency: String,
+    pub customer_details: CashfreeCustomerDetails,
+    pub order_meta: CashfreeOrderMeta,
+    pub order_note: Option<String>,
+    pub order_expiry_time: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeCustomerDetails {
+    pub customer_id: String,
+    pub customer_email: Option<String>,
+    pub customer_phone: String,
+    pub customer_name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeOrderMeta {
+    pub return_url: String,
+    pub notify_url: String,
+    pub payment_methods: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CashfreeOrderCreateResponse {
+    pub payment_session_id: String, // KEY: Used in Authorize flow
+    pub cf_order_id: i64,
+    pub order_id: String,
+    pub entity: String,
+    pub order_amount: f64,
+    pub order_currency: String,
+    pub order_status: String,
+    pub order_expiry_time: String,
+    pub order_note: Option<String>,
+    pub customer_details: CashfreeCustomerDetails,
+    pub order_meta: CashfreeOrderMeta,
+}
+
+// ============================================================================
+// Stub Types for Unsupported Flows
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeVoidRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeRefundRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeRefundSyncRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeRefundSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeSessionTokenRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeSessionTokenResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeRepeatPaymentRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeSubmitEvidenceResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CashfreeDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct CashfreeDefendDisputeResponse;
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
-fn get_cashfree_payment_method_data<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
->(
-    payment_method_data: &PaymentMethodData<T>,
+fn get_cashfree_payment_method_data(
+    payment_method_data: &PaymentMethodData<impl PaymentMethodDataTypes>,
 ) -> Result<CashfreePaymentMethod, ConnectorError> {
     match payment_method_data {
         PaymentMethodData::Upi(upi_data) => {
@@ -287,193 +316,19 @@ fn get_cashfree_payment_method_data<
 // Request Transformations
 // ============================================================================
 
-// TryFrom implementation for macro-generated CashfreeRouterData wrapper
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         crate::connectors::cashfree::CashfreeRouterData<
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
-    > for CashfreeOrderCreateRequest
+    > for CashfreePaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
         wrapper: crate::connectors::cashfree::CashfreeRouterData<
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Convert MinorUnit to FloatMajorUnit properly
-        let amount_i64 = wrapper.router_data.request.amount.get_amount_as_i64();
-        let converted_amount = common_utils::types::FloatMajorUnit(amount_i64 as f64 / 100.0);
-        Self::try_from((converted_amount, &wrapper.router_data))
-    }
-}
-
-// Keep the original TryFrom for backward compatibility
-impl
-    TryFrom<
-        &RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    > for CashfreeOrderCreateRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Convert MinorUnit to FloatMajorUnit properly
-        let amount_i64 = item.request.amount.get_amount_as_i64();
-        let converted_amount = common_utils::types::FloatMajorUnit(amount_i64 as f64 / 100.0);
-        Self::try_from((converted_amount, item))
-    }
-}
-
-impl
-    TryFrom<(
-        common_utils::types::FloatMajorUnit,
-        &RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    )> for CashfreeOrderCreateRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        (converted_amount, item): (
-            common_utils::types::FloatMajorUnit,
-            &RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
-        ),
-    ) -> Result<Self, Self::Error> {
-        let billing = item
-            .resource_common_data
-            .address
-            .get_payment_method_billing()
-            .ok_or(ConnectorError::MissingRequiredField {
-                field_name: "billing_address",
-            })?;
-
-        // Build customer details
-        let customer_details = CashfreeCustomerDetails {
-            customer_id: item
-                .resource_common_data
-                .customer_id
-                .as_ref()
-                .map(|id| id.get_string_repr().to_string())
-                .unwrap_or_else(|| "guest".to_string()),
-            customer_email: billing.email.as_ref().map(|e| e.peek().to_string()),
-            customer_phone: billing
-                .phone
-                .as_ref()
-                .and_then(|phone| phone.number.as_ref())
-                .map(|number| number.peek().to_string())
-                .unwrap_or_else(|| "9999999999".to_string()),
-            customer_name: billing.get_optional_full_name().map(|name| name.expose()),
-        };
-
-        // Build order meta with return and notify URLs
-        let return_url = item.resource_common_data.return_url.clone().ok_or(
-            ConnectorError::MissingRequiredField {
-                field_name: "return_url",
-            },
-        )?;
-
-        // Get webhook URL from request - required for Cashfree V3
-        let notify_url =
-            item.request
-                .webhook_url
-                .clone()
-                .ok_or(ConnectorError::MissingRequiredField {
-                    field_name: "webhook_url",
-                })?;
-
-        let order_meta = CashfreeOrderMeta {
-            return_url,
-            notify_url,
-            payment_methods: Some("upi".to_string()),
-        };
-
-        Ok(Self {
-            order_id: item
-                .resource_common_data
-                .connector_request_reference_id
-                .clone(), // FIXED: Use payment_id not connector_request_reference_id
-            order_amount: converted_amount.0,
-            order_currency: item.request.currency.to_string(),
-            customer_details,
-            order_meta,
-            order_note: item.resource_common_data.description.clone(),
-            order_expiry_time: None,
-        })
-    }
-}
-
-// TryFrom implementation for macro-generated CashfreeRouterData wrapper
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        crate::connectors::cashfree::CashfreeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    > for CashfreePaymentRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        wrapper: crate::connectors::cashfree::CashfreeRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
@@ -481,28 +336,14 @@ impl<
     }
 }
 
-// Keep original TryFrom implementation for backward compatibility
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-    > for CashfreePaymentRequest
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
+    TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>
+    for CashfreePaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
+        item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> Result<Self, Self::Error> {
         // Extract payment_session_id from reference_id (set by CreateOrder response)
         let payment_session_id = item.resource_common_data.reference_id.clone().ok_or(
@@ -522,90 +363,50 @@ impl<
     }
 }
 
-// ============================================================================
-// Response Transformations
-// ============================================================================
-
-impl TryFrom<CashfreeOrderCreateResponse> for PaymentCreateOrderResponse {
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
-        Ok(Self {
-            order_id: response.payment_session_id,
-        })
-    }
-}
-
-// Add the missing TryFrom implementation for macro compatibility
-impl
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
-        ResponseRouterData<
-            CashfreeOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
+        crate::connectors::cashfree::CashfreeRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
-    >
-    for RouterDataV2<
-        CreateOrder,
-        PaymentFlowData,
-        PaymentCreateOrderData,
-        PaymentCreateOrderResponse,
-    >
+    > for CashfreePaymentsSyncRequest
 {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(
-        item: ResponseRouterData<
-            CashfreeOrderCreateResponse,
-            RouterDataV2<
-                CreateOrder,
-                PaymentFlowData,
-                PaymentCreateOrderData,
-                PaymentCreateOrderResponse,
-            >,
+        _wrapper: crate::connectors::cashfree::CashfreeRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
-        let response = item.response;
-        let order_response = PaymentCreateOrderResponse::try_from(response)?;
-
-        // Extract order_id before moving order_response
-        let order_id = order_response.order_id.clone();
-
-        Ok(Self {
-            response: Ok(order_response),
-            resource_common_data: PaymentFlowData {
-                // Update status to indicate successful order creation
-                status: common_enums::AttemptStatus::Pending,
-                // Set reference_id to the payment_session_id for use in authorize flow
-                reference_id: Some(order_id),
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+        // Empty request for PSync
+        Ok(Self {})
     }
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
+impl
+    TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
+    for CashfreePaymentsSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        _item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        // Empty request for PSync
+        Ok(Self {})
+    }
+}
+
+// ============================================================================
+// Response Transformations
+// ============================================================================
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
     TryFrom<
         ResponseRouterData<
-            CashfreePaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            CashfreePaymentsResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
@@ -613,13 +414,8 @@ impl<
 
     fn try_from(
         item: ResponseRouterData<
-            CashfreePaymentResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+            CashfreePaymentsResponse,
+            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
         let response = item.response;
@@ -681,6 +477,69 @@ impl<
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
+        })
+    }
+}
+
+impl
+    TryFrom<
+        ResponseRouterData<
+            CashfreePaymentsSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(
+        item: ResponseRouterData<
+            CashfreePaymentsSyncResponse,
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let response = item.response;
+
+        // Map Cashfree order status to AttemptStatus
+        let status = match response.order_status.as_str() {
+            "PAID" | "SUCCESS" => common_enums::AttemptStatus::Charged,
+            "PENDING" | "ACTIVE" => common_enums::AttemptStatus::Pending,
+            "FAILED" | "CANCELLED" => common_enums::AttemptStatus::Failure,
+            _ => common_enums::AttemptStatus::Pending,
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    response
+                        .cf_payment_id
+                        .as_ref()
+                        .map(|id| id.to_string())
+                        .unwrap_or_default(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: response.cf_payment_id.map(|id| id.to_string()),
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
+        })
+    }
+}
+
+// Order creation response transformation (for compatibility)
+impl TryFrom<CashfreeOrderCreateResponse> for domain_types::connector_types::PaymentCreateOrderResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(response: CashfreeOrderCreateResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            order_id: response.payment_session_id,
         })
     }
 }

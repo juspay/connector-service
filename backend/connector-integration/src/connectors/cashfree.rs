@@ -1,11 +1,7 @@
 pub mod test;
 pub mod transformers;
 
-use cashfree::{
-    CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreePaymentRequest,
-    CashfreePaymentResponse,
-};
-use common_enums::AttemptStatus;
+use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
@@ -17,8 +13,7 @@ use domain_types::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -32,12 +27,22 @@ use hyperswitch_masking::{Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
-    connector_types::{self},
+    connector_types,
     events::connector_api_logs::ConnectorEvent,
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
 use transformers as cashfree;
+use cashfree::{
+    CashfreePaymentsRequest, CashfreePaymentsResponse, CashfreePaymentsSyncRequest, CashfreePaymentsSyncResponse,
+    CashfreeVoidRequest, CashfreeVoidResponse, CashfreeCaptureRequest, CashfreeCaptureResponse,
+    CashfreeRefundRequest, CashfreeRefundResponse, CashfreeRefundSyncRequest, CashfreeRefundSyncResponse,
+    CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreeSessionTokenRequest, CashfreeSessionTokenResponse,
+    CashfreeSetupMandateRequest, CashfreeSetupMandateResponse, CashfreeRepeatPaymentRequest, CashfreeRepeatPaymentResponse,
+    CashfreeAcceptDisputeRequest, CashfreeAcceptDisputeResponse, CashfreeSubmitEvidenceRequest, CashfreeSubmitEvidenceResponse,
+    CashfreeDefendDisputeRequest, CashfreeDefendDisputeResponse
+};
+use common_utils::types::StringMinorUnit;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
@@ -49,7 +54,7 @@ pub(crate) mod headers {
     pub(crate) const X_API_VERSION: &str = "x-api-version";
 }
 
-// Trait implementations will be added after the macro creates the struct
+// Trait implementations with generic type parameters
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -70,30 +75,6 @@ impl<
     > connector_types::PaymentAuthorizeV2<T> for Cashfree<T>
 {
 }
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentSessionToken for Cashfree<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentOrderCreate for Cashfree<T>
-{
-}
-
-// Trait implementations for all flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -102,6 +83,16 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSyncV2 for Cashfree<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentSessionToken for Cashfree<T>
 {
 }
 impl<
@@ -161,16 +152,6 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::RepeatPaymentV2 for Cashfree<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
     > connector_types::AcceptDispute for Cashfree<T>
 {
 }
@@ -204,8 +185,16 @@ impl<
     > connector_types::IncomingWebhook for Cashfree<T>
 {
 }
-
-// Trait implementations after the macro creates the struct
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentOrderCreate for Cashfree<T>
+{
+}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -215,9 +204,16 @@ impl<
             + Serialize,
     > connector_types::ValidationTrait for Cashfree<T>
 {
-    fn should_do_order_create(&self) -> bool {
-        true // Cashfree V3 requires order creation
-    }
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::RepeatPaymentV2 for Cashfree<T>
+{
 }
 
 // Define connector prerequisites
@@ -226,19 +222,88 @@ macros::create_all_prerequisites!(
     generic_type: T,
     api: [
         (
+            flow: Authorize,
+            request_body: CashfreePaymentsRequest,
+            response_body: CashfreePaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: CashfreePaymentsSyncRequest,
+            response_body: CashfreePaymentsSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // Stub types for unsupported flows
+        (
+            flow: Void,
+            request_body: CashfreeVoidRequest,
+            response_body: CashfreeVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: CashfreeCaptureRequest,
+            response_body: CashfreeCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: CashfreeRefundRequest,
+            response_body: CashfreeRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: CashfreeRefundSyncRequest,
+            response_body: CashfreeRefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
             flow: CreateOrder,
             request_body: CashfreeOrderCreateRequest,
             response_body: CashfreeOrderCreateResponse,
             router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
         (
-            flow: Authorize,
-            request_body: CashfreePaymentRequest,
-            response_body: CashfreePaymentResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+            flow: CreateSessionToken,
+            request_body: CashfreeSessionTokenRequest,
+            response_body: CashfreeSessionTokenResponse,
+            router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: CashfreeSetupMandateRequest,
+            response_body: CashfreeSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: CashfreeRepeatPaymentRequest,
+            response_body: CashfreeRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: CashfreeAcceptDisputeRequest,
+            response_body: CashfreeAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: CashfreeSubmitEvidenceRequest,
+            response_body: CashfreeSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: CashfreeDefendDisputeRequest,
+            response_body: CashfreeDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: StringMinorUnit  // Cashfree expects amount as string in minor units
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -253,42 +318,18 @@ macros::create_all_prerequisites!(
             Ok(headers)
         }
 
-        pub fn connector_base_url<F, Req, Res>(
+        pub fn connector_base_url<'a, F, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.cashfree.base_url.to_string()
-        }
-    }
-);
-
-// CreateOrder flow implementation using macros
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Cashfree,
-    curl_request: Json(CashfreeOrderCreateRequest),
-    curl_response: CashfreeOrderCreateResponse,
-    flow_name: CreateOrder,
-    resource_common_data: PaymentFlowData,
-    flow_request: PaymentCreateOrderData,
-    flow_response: PaymentCreateOrderResponse,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.cashfree.base_url
         }
 
-        fn get_url(
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
-            req: &RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}pg/orders"))
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.cashfree.base_url
         }
     }
 );
@@ -297,8 +338,8 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Cashfree,
-    curl_request: Json(CashfreePaymentRequest),
-    curl_response: CashfreePaymentResponse,
+    curl_request: Json(CashfreePaymentsRequest),
+    curl_response: CashfreePaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -324,7 +365,37 @@ macros::macro_connector_implementation!(
     }
 );
 
-// Type alias for non-generic trait implementations
+// PSync flow implementation using macros
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Cashfree,
+    curl_request: Json(CashfreePaymentsSyncRequest),
+    curl_response: CashfreePaymentsSyncResponse,
+    flow_name: PSync,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsSyncData,
+    flow_response: PaymentsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let base_url = self.connector_base_url(req);
+            let order_id = req.resource_common_data.connector_request_reference_id.clone();
+            Ok(format!("{base_url}pg/orders/{order_id}"))
+        }
+    }
+);
 
 impl<
         T: PaymentMethodDataTypes
@@ -339,8 +410,8 @@ impl<
         "cashfree"
     }
 
-    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
-        common_enums::CurrencyUnit::Base // For major units
+    fn get_currency_unit(&self) -> CurrencyUnit {
+        CurrencyUnit::Base // For major units
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
@@ -382,12 +453,12 @@ impl<
         with_response_body!(event_builder, response);
 
         let attempt_status = match response.code.as_str() {
-            "AUTHENTICATION_ERROR" => AttemptStatus::AuthenticationFailed,
-            "AUTHORIZATION_ERROR" => AttemptStatus::AuthorizationFailed,
-            "INVALID_REQUEST_ERROR" => AttemptStatus::Failure,
-            "GATEWAY_ERROR" => AttemptStatus::Failure,
-            "SERVER_ERROR" => AttemptStatus::Pending,
-            _ => AttemptStatus::Failure,
+            "AUTHENTICATION_ERROR" => common_enums::AttemptStatus::AuthenticationFailed,
+            "AUTHORIZATION_ERROR" => common_enums::AttemptStatus::AuthorizationFailed,
+            "INVALID_REQUEST_ERROR" => common_enums::AttemptStatus::Failure,
+            "GATEWAY_ERROR" => common_enums::AttemptStatus::Failure,
+            "SERVER_ERROR" => common_enums::AttemptStatus::Pending,
+            _ => common_enums::AttemptStatus::Failure,
         };
 
         Ok(ErrorResponse {
@@ -412,10 +483,11 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
     for Cashfree<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -427,17 +499,7 @@ impl<
     for Cashfree<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Cashfree<T>
-{
-}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -449,6 +511,7 @@ impl<
     for Cashfree<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -460,6 +523,7 @@ impl<
     for Cashfree<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -476,6 +540,7 @@ impl<
     > for Cashfree<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -487,6 +552,7 @@ impl<
     for Cashfree<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -496,6 +562,18 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Cashfree<T>
 {
 }
@@ -518,7 +596,6 @@ impl<
 {
 }
 
-// Trait implementations for all flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -526,12 +603,16 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Cashfree<T>
+    >
+    ConnectorIntegrationV2<
+        CreateOrder,
+        PaymentFlowData,
+        PaymentCreateOrderData,
+        PaymentCreateOrderResponse,
+    > for Cashfree<T>
 {
 }
 
-// Default ConnectorIntegrationV2 implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -609,12 +690,6 @@ impl_source_verification_stub!(
     PaymentsResponseData
 );
 impl_source_verification_stub!(
-    CreateOrder,
-    PaymentFlowData,
-    PaymentCreateOrderData,
-    PaymentCreateOrderResponse
-);
-impl_source_verification_stub!(
     PSync,
     PaymentFlowData,
     PaymentsSyncData,
@@ -658,6 +733,12 @@ impl_source_verification_stub!(
     DisputeFlowData,
     DisputeDefendData,
     DisputeResponseData
+);
+impl_source_verification_stub!(
+    CreateOrder,
+    PaymentFlowData,
+    PaymentCreateOrderData,
+    PaymentCreateOrderResponse
 );
 impl_source_verification_stub!(
     CreateSessionToken,
