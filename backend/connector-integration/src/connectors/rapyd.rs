@@ -157,6 +157,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
+        println!("Rapyd build_error_response called:");
+        println!("  Status Code: {}", res.status_code);
+        println!("  Response Body: {}", String::from_utf8_lossy(&res.response));
+        
         let response: RapydPaymentsResponse = res
             .response
             .parse_struct("ErrorResponse")
@@ -484,7 +488,7 @@ macros::macro_connector_implementation!(
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
-    http_method: Delete,
+    http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -495,14 +499,27 @@ macros::macro_connector_implementation!(
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
                 .unwrap_or(&url);
-            let body = "";
-            self.build_headers(req, "delete", url_path, body)
+            println!("Void URL debug:");
+            println!("  Full URL: {}", url);
+            println!("  Base URL: {}", self.connector_base_url_payments(req));
+            println!("  URL Path: {}", url_path);
+            let body = self.get_request_body(req)?
+                .map(|content| {
+                    let raw_body = content.get_inner_value().expose();
+                    // Ensure compact JSON with no whitespace
+                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
+                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
+                        Err(_) => raw_body,
+                    }
+                })
+                .unwrap_or_default();
+            self.build_headers(req, "post", url_path, &body)
         }
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/v1/payments/{}", self.connector_base_url_payments(req), req.request.connector_transaction_id))
+            Ok(format!("{}/v1/payments/{}/cancel", self.connector_base_url_payments(req), req.request.connector_transaction_id))
         }
     }
 );

@@ -46,17 +46,178 @@ where
 }
 
 // Response type conversions
+// Capture Response - should set status to CHARGED when successful
 impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>> for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
-        Ok(item.router_data)
+        let (status, response) = match &item.response.data {
+            Some(data) => {
+                let attempt_status = get_status(data.status.to_owned(), data.next_action.to_owned());
+                match attempt_status {
+                    common_enums::AttemptStatus::Failure => (
+                        common_enums::AttemptStatus::Failure,
+                        Err(ErrorResponse {
+                            code: data
+                                .failure_code
+                                .to_owned()
+                                .unwrap_or(item.response.status.error_code.clone()),
+                            status_code: item.http_code,
+                            message: item.response.status.status.clone().unwrap_or_default(),
+                            reason: data.failure_message.to_owned(),
+                            attempt_status: None,
+                            connector_transaction_id: None,
+                            network_advice_code: None,
+                            network_decline_code: None,
+                            network_error_message: None,
+                        }),
+                    ),
+                    _ => {
+                        // For capture, if status is Closed or Active with NotApplicable, treat as Charged
+                        let final_status = match (data.status.to_owned(), data.next_action.to_owned()) {
+                            (RapydPaymentStatus::Closed, _) => common_enums::AttemptStatus::Charged,
+                            (RapydPaymentStatus::Active, NextAction::NotApplicable) => common_enums::AttemptStatus::Charged,
+                            _ => attempt_status,
+                        };
+                        (
+                            final_status,
+                            Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(data.id.to_owned()),
+                                redirection_data: None,
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: data.merchant_reference_id.to_owned(),
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            }),
+                        )
+                    }
+                }
+            }
+            None => (
+                common_enums::AttemptStatus::Failure,
+                Err(ErrorResponse {
+                    code: item.response.status.error_code.clone(),
+                    status_code: item.http_code,
+                    message: item.response.status.status.clone().unwrap_or_default(),
+                    reason: item.response.status.message.clone(),
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                }),
+            ),
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response,
+            ..item.router_data
+        })
     }
 }
 
+// Void Response - should set status to VOIDED when successful
 impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>> for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
-        Ok(item.router_data)
+        println!("Rapyd Void Response Debug:");
+        println!("  HTTP Code: {}", item.http_code);
+        println!("  Response Status: {:?}", item.response.status);
+        println!("  Response Data: {:?}", item.response.data);
+        
+        let (status, response) = match &item.response.data {
+            Some(data) => {
+                let attempt_status = get_status(data.status.to_owned(), data.next_action.to_owned());
+                match attempt_status {
+                    common_enums::AttemptStatus::Failure => (
+                        common_enums::AttemptStatus::Failure,
+                        Err(ErrorResponse {
+                            code: data
+                                .failure_code
+                                .to_owned()
+                                .unwrap_or(item.response.status.error_code.clone()),
+                            status_code: item.http_code,
+                            message: item.response.status.status.clone().unwrap_or_default(),
+                            reason: data.failure_message.to_owned(),
+                            attempt_status: None,
+                            connector_transaction_id: None,
+                            network_advice_code: None,
+                            network_decline_code: None,
+                            network_error_message: None,
+                        }),
+                    ),
+                    _ => {
+                        // For void, set status to Voided regardless of Rapyd status if operation was successful
+                        let final_status = common_enums::AttemptStatus::Voided;
+                        (
+                            final_status,
+                            Ok(PaymentsResponseData::TransactionResponse {
+                                resource_id: ResponseId::ConnectorTransactionId(data.id.to_owned()),
+                                redirection_data: None,
+                                mandate_reference: None,
+                                connector_metadata: None,
+                                network_txn_id: None,
+                                connector_response_reference_id: data.merchant_reference_id.to_owned(),
+                                incremental_authorization_allowed: None,
+                                status_code: item.http_code,
+                            }),
+                        )
+                    }
+                }
+            }
+            None => {
+                // For void operations, if HTTP status indicates success, treat as voided
+                // Rapyd DELETE operations might not return data field but still be successful
+                if item.http_code >= 200 && item.http_code < 300 {
+                    println!("  Void operation successful based on HTTP status");
+                    (
+                        common_enums::AttemptStatus::Voided,
+                        Ok(PaymentsResponseData::TransactionResponse {
+                            resource_id: ResponseId::ConnectorTransactionId(
+                                item.router_data.request.connector_transaction_id.clone()
+                            ),
+                            redirection_data: None,
+                            mandate_reference: None,
+                            connector_metadata: None,
+                            network_txn_id: None,
+                            connector_response_reference_id: None,
+                            incremental_authorization_allowed: None,
+                            status_code: item.http_code,
+                        }),
+                    )
+                } else {
+                    println!("  Void operation failed based on HTTP status");
+                    (
+                        common_enums::AttemptStatus::Failure,
+                        Err(ErrorResponse {
+                            code: item.response.status.error_code.clone(),
+                            status_code: item.http_code,
+                            message: item.response.status.status.clone().unwrap_or_default(),
+                            reason: item.response.status.message.clone(),
+                            attempt_status: None,
+                            connector_transaction_id: None,
+                            network_advice_code: None,
+                            network_decline_code: None,
+                            network_error_message: None,
+                        }),
+                    )
+                }
+            },
+        };
+
+        Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            response,
+            ..item.router_data
+        })
     }
 }
 
@@ -703,19 +864,41 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     fn try_from(
         item: ResponseRouterData<RefundResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let (connector_refund_id, refund_status) = match item.response.data {
-            Some(data) => (data.id, common_enums::RefundStatus::from(data.status)),
-            None => (
-                item.response.status.error_code,
-                common_enums::RefundStatus::Failure,
+        let (connector_refund_id, refund_status, response_result) = match &item.response.data {
+            Some(data) => (
+                data.id.clone(),
+                common_enums::RefundStatus::from(data.status.clone()),
+                Ok(RefundsResponseData {
+                    connector_refund_id: data.id.clone(),
+                    refund_status: common_enums::RefundStatus::from(data.status.clone()),
+                    status_code: item.http_code,
+                })
             ),
+            None => {
+                // If no data, still provide a proper refund ID from the response
+                let refund_id = item.response.status.operation_id
+                    .clone()
+                    .unwrap_or_else(|| format!("refund_error_{}", item.response.status.error_code));
+                (
+                    refund_id.clone(),
+                    common_enums::RefundStatus::Failure,
+                    Err(ErrorResponse {
+                        code: item.response.status.error_code.clone(),
+                        status_code: item.http_code,
+                        message: item.response.status.status.clone().unwrap_or_default(),
+                        reason: item.response.status.message.clone(),
+                        attempt_status: None,
+                        connector_transaction_id: None,
+                        network_advice_code: None,
+                        network_decline_code: None,
+                        network_error_message: None,
+                    }),
+                )
+            },
         };
+        
         Ok(Self {
-            response: Ok(RefundsResponseData {
-                connector_refund_id,
-                refund_status,
-                status_code: item.http_code,
-            }),
+            response: response_result,
             ..item.router_data
         })
     }
@@ -758,9 +941,16 @@ pub type RapydPSyncResponse = RapydPaymentsResponse;
 pub type RapydCaptureResponse = RapydPaymentsResponse;
 pub type RapydVoidResponse = RapydPaymentsResponse;
 
+// Void Request - for payment cancellation
+#[derive(Debug, Serialize, Clone)]
+pub struct VoidRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
 // Request type aliases to avoid macro conflicts
 pub type RapydPSyncRequest = EmptyRequest;
-pub type RapydVoidRequest = EmptyRequest;
+pub type RapydVoidRequest = VoidRequest;
 pub type RapydRSyncRequest = EmptyRequest;
 
 // Response type aliases for refund flows
@@ -775,10 +965,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryF
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<RapydRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>> for EmptyRequest {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<RapydRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>> for VoidRequest {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(_item: RapydRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
-        Ok(EmptyRequest)
+    fn try_from(item: RapydRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+        Ok(VoidRequest {
+            description: item.router_data.request.cancellation_reason.clone(),
+        })
     }
 }
 
