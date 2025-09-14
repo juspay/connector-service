@@ -204,7 +204,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
 
 // Helper function to create a refund request
 fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
-    let metadata = format!("{{\"payment_method\": \"card\"}}");
+    let metadata = "{\"payment_method\": \"card\"}".to_string();
     PaymentServiceRefundRequest {
         refund_id: format!("refund_{}", get_timestamp()),
         transaction_id: Some(Identifier {
@@ -299,7 +299,6 @@ async fn test_payment_authorization_auto_capture() {
 #[tokio::test]
 async fn test_payment_sync_auto_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-
         // Create the payment authorization request
         let request = create_payment_authorize_request(CaptureMethod::Automatic);
 
@@ -343,7 +342,6 @@ async fn test_payment_sync_auto_capture() {
 #[tokio::test]
 async fn test_refund() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
-
         // Create the payment authorization request
         let request = create_payment_authorize_request(CaptureMethod::Automatic);
 
@@ -366,8 +364,8 @@ async fn test_refund() {
             "Payment should be in Charged state"
         );
 
-        // Add delay of 16 seconds
-        tokio::time::sleep(std::time::Duration::from_secs(16)).await;
+        // Add delay of 12 seconds
+        tokio::time::sleep(std::time::Duration::from_secs(12)).await;
         // Create refund request
         let refund_request = create_refund_request(&transaction_id);
 
@@ -395,7 +393,6 @@ async fn test_refund() {
 async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
-
             // Create the payment authorization request
             let request = create_payment_authorize_request(CaptureMethod::Automatic);
 
