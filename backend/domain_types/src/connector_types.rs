@@ -53,6 +53,7 @@ pub enum ConnectorEnum {
     Phonepe,
     Cashfree,
     Paytm,
+    Paytmv2,
     Fiuu,
     Payu,
     Cashtocode,

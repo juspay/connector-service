@@ -32,6 +32,9 @@ pub use self::cashfree::Cashfree;
 pub mod paytm;
 pub use self::paytm::Paytm;
 
+pub mod paytmv2;
+pub use self::paytmv2::Paytmv2;
+
 pub mod fiuu;
 pub use self::fiuu::Fiuu;
 
