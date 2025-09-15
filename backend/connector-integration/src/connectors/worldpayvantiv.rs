@@ -3,7 +3,7 @@ pub mod transformers;
 use base64::Engine;
 use common_enums;
 use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, request::RequestContent,
+    errors::CustomResult, ext_traits::{ByteSliceExt, deserialize_xml_to_struct}, request::RequestContent,
     types::MinorUnit,
 };
 use domain_types::{
@@ -50,8 +50,6 @@ use self::transformers::{
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
-
-// Define WorldpayvantivRouterData structure for TryFrom implementations
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -296,10 +294,17 @@ impl<
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: transformers::CnpOnlineResponse = res
-            .response
-            .parse_struct("CnpOnlineResponse")
+        // Debug log the raw response
+        println!("DEBUG: WorldpayVantiv Raw Response: {:?}", std::str::from_utf8(&res.response));
+        println!("DEBUG: WorldpayVantiv Status Code: {}", res.status_code);
+        
+        let response_str = std::str::from_utf8(&res.response)
             .map_err(|_| ConnectorError::ResponseDeserializationFailed)?;
+        let response: transformers::CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+            .map_err(|parse_error| {
+                println!("DEBUG: XML Parse Error: {:?}", parse_error);
+                ConnectorError::ResponseDeserializationFailed
+            })?;
 
         with_response_body!(event_builder, response);
 
@@ -349,7 +354,24 @@ macros::create_all_prerequisites!(
             _req: &RouterDataV2<F, FCD, Req, Res>,
             bytes: bytes::Bytes,
         ) -> CustomResult<bytes::Bytes, errors::ConnectorError> {
-            Ok(bytes)
+            // Convert XML responses to JSON format for the macro's JSON parser
+            let response_str = std::str::from_utf8(&bytes)
+                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+            
+            // Parse XML to struct, then serialize back to JSON
+            if response_str.trim().starts_with("<?xml") || response_str.trim().starts_with("<") {
+                // This is an XML response - convert to JSON
+                let xml_response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                
+                let json_bytes = serde_json::to_vec(&xml_response)
+                    .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+                
+                Ok(bytes::Bytes::from(json_bytes))
+            } else {
+                // This is already JSON or another format
+                Ok(bytes)
+            }
         }
         
         pub fn build_headers<F, FCD, Req, Res>(
@@ -394,6 +416,7 @@ macros::create_all_prerequisites!(
         }
     }
 );
+
 
 // Implement the specific flows
 macros::macro_connector_implementation!(
@@ -508,7 +531,9 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, ConnectorError> {
-        let response: CnpOnlineResponse = res.response.parse_struct("CnpOnlineResponse")
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         event_builder.map(|i| i.set_response_body(&response));
         RouterDataV2::try_from(ResponseRouterData {
@@ -576,7 +601,9 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, ConnectorError> {
-        let response: CnpOnlineResponse = res.response.parse_struct("CnpOnlineResponse")
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         event_builder.map(|i| i.set_response_body(&response));
         RouterDataV2::try_from(ResponseRouterData {
@@ -644,7 +671,9 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, ConnectorError> {
-        let response: CnpOnlineResponse = res.response.parse_struct("CnpOnlineResponse")
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         event_builder.map(|i| i.set_response_body(&response));
         RouterDataV2::try_from(ResponseRouterData {
@@ -714,7 +743,9 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, ConnectorError> {
-        let response: VantivSyncResponse = res.response.parse_struct("VantivSyncResponse")
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: VantivSyncResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         event_builder.map(|i| i.set_response_body(&response));
         RouterDataV2::try_from(ResponseRouterData {
@@ -779,7 +810,9 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>, ConnectorError> {
-        let response: CnpOnlineResponse = res.response.parse_struct("CnpOnlineResponse")
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         event_builder.map(|i| i.set_response_body(&response));
         RouterDataV2::try_from(ResponseRouterData {

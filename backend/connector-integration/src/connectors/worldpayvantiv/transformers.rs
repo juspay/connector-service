@@ -27,6 +27,38 @@ use crate::{
     types::ResponseRouterData,
 };
 
+// Helper function to extract report group from connector metadata
+fn extract_report_group(connector_meta_data: &Option<hyperswitch_masking::Secret<serde_json::Value>>) -> Option<String> {
+    connector_meta_data
+        .as_ref()
+        .and_then(|metadata| {
+            let metadata_value = metadata.peek();
+            if let serde_json::Value::String(metadata_str) = metadata_value {
+                // Try to parse the metadata string as JSON
+                serde_json::from_str::<WorldpayvantivMetadataObject>(metadata_str)
+                    .ok()
+                    .map(|obj| obj.report_group)
+            } else {
+                // Try to parse metadata directly as object
+                serde_json::from_value::<WorldpayvantivMetadataObject>(metadata_value.clone())
+                    .ok()
+                    .map(|obj| obj.report_group)
+            }
+        })
+}
+
+// Metadata structures for WorldpayVantiv
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct WorldpayvantivMetadataObject {
+    pub report_group: String,
+    pub merchant_config_currency: common_enums::Currency,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct WorldpayvantivPaymentMetadata {
+    pub report_group: Option<String>,
+}
+
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 // WorldpayVantiv Payments Request - wrapper for all payment flows
@@ -106,14 +138,18 @@ impl<
         )?;
         let amount = MinorUnit::from(item.router_data.request.minor_amount);
         
+        // Extract report group from metadata or use default
+        let report_group = extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+            .unwrap_or_else(|| "rtpGrp".to_string());
+        
         let bill_to_address = get_billing_address(&item.router_data.resource_common_data.address.get_payment_method_billing().cloned());
         let ship_to_address = get_shipping_address(&item.router_data.resource_common_data.address.get_shipping().cloned());
         
         let (authorization, sale) = if item.router_data.request.is_auto_capture()? && amount != MinorUnit::zero() {
             let sale = Sale {
                 id: format!("sale_{}", merchant_txn_id),
-                report_group: "Default".to_string(),
-                customer_id: None,
+                report_group: report_group.clone(),
+                customer_id: Some("12345".to_string()),
                 order_id: merchant_txn_id.clone(),
                 amount,
                 order_source,
@@ -128,8 +164,8 @@ impl<
         } else {
             let authorization = Authorization {
                 id: format!("auth_{}", merchant_txn_id),
-                report_group: "Default".to_string(),
-                customer_id: None,
+                report_group: report_group.clone(),
+                customer_id: Some("12345".to_string()),
                 order_id: merchant_txn_id.clone(),
                 amount,
                 order_source,
