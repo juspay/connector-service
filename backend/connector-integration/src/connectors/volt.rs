@@ -163,13 +163,14 @@ macros::create_all_prerequisites!(
             )];
 
             // Add Bearer token for access token authentication
-            if let Ok(access_token) = req.resource_common_data.get_access_token() {
-                let auth_header = (
-                    headers::AUTHORIZATION.to_string(),
-                    format!("Bearer {access_token}").into_masked(),
-                );
-                header.push(auth_header);
-            }
+            let access_token = req.resource_common_data
+                .get_access_token()
+                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
+            let auth_header = (
+                headers::AUTHORIZATION.to_string(),
+                format!("Bearer {access_token}").into_masked(),
+            );
+            header.push(auth_header);
 
             Ok(header)
         }

@@ -192,10 +192,6 @@ impl<
         value: grpc_api_types::payments::PaymentMethod,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         tracing::info!("PaymentMethod data received: {:?}", value);
-        tracing::info!(
-            "PaymentMethod.payment_method field: {:?}",
-            value.payment_method
-        );
         match value.payment_method {
             Some(data) => match data {
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
@@ -456,7 +452,7 @@ impl<
                 grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
                     match online_banking_type.online_banking_type {
                         Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(open_banking_uk)) => {
-                            Ok(PaymentMethodData::BankRedirect(crate::payment_method_data::BankRedirectData::OpenBankingUk {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::OpenBankingUk {
                                 issuer: open_banking_uk.issuer.and_then(|i| common_enums::BankNames::from_str(&i).ok()),
                                 country: open_banking_uk.country.and_then(|c| CountryAlpha2::from_str(&c).ok()),
                             }))
