@@ -172,6 +172,9 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        if item.router_data.request.capture_method == Some(enums::CaptureMethod::Manual) {
+            return Err(errors::ConnectorError::CaptureMethodNotSupported.into());
+        }
         match item.router_data.request.payment_method_data.clone() {
             PaymentMethodData::Wallet(WalletData::BluecodeRedirect {}) => {
                 let amount = item
