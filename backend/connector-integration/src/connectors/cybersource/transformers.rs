@@ -1708,8 +1708,7 @@ impl<
                 // In such cases, we default to "2", which represents the CVV with Authentication Transaction Number (ATN) algorithm.
                 // This is the most commonly used value for 3DS 2.0 transactions (e.g., Visa, Mastercard).
                 let cavv_algorithm = Some("2".to_string());
-                let transformed_cavv: Option<Secret<String, WithType>> =
-                    cavv.map(Secret::new);
+                let transformed_cavv: Option<Secret<String, WithType>> = cavv.map(Secret::new);
                 let transformed_ucaf: Option<Secret<String>> =
                     ucaf_authentication_data.map(Secret::new);
                 let specification_version: Option<SemanticVersion> = authn_data
@@ -1869,8 +1868,7 @@ impl<
                 });
 
                 let cavv_algorithm = Some("2".to_string());
-                let transformed_cavv: Option<Secret<String, WithType>> =
-                    cavv.map(Secret::new);
+                let transformed_cavv: Option<Secret<String, WithType>> = cavv.map(Secret::new);
                 let transformed_ucaf: Option<Secret<String>> =
                     ucaf_authentication_data.map(Secret::new);
                 let specification_version: Option<SemanticVersion> = authn_data
@@ -2027,8 +2025,7 @@ impl<
                 });
 
                 let cavv_algorithm = Some("2".to_string());
-                let transformed_cavv: Option<Secret<String, WithType>> =
-                    cavv.map(Secret::new);
+                let transformed_cavv: Option<Secret<String, WithType>> = cavv.map(Secret::new);
                 let transformed_ucaf: Option<Secret<String>> =
                     ucaf_authentication_data.map(Secret::new);
                 let specification_version: Option<SemanticVersion> = authn_data

@@ -35,19 +35,21 @@ fn extract_connector_request_reference_id(
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, PreAuthenticate, Authenticate, PostAuthenticate,
+        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
+        PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
-        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
         RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
         RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse, PaymentsPreAuthenticateData, PaymentsAuthenticateData, PaymentsPostAuthenticateData,
+        WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -4016,16 +4018,15 @@ pub fn generate_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 status_code: _,
-            } => {
-                match resource_id {
-                    ResponseId::ConnectorTransactionId(id) => Ok(id),
-                    ResponseId::EncodedData(data) => Ok(data),
-                    ResponseId::NoResponseId => Ok("".to_string()),
-                }
-            }
-            PaymentsResponseData::SessionResponse { session_token, status_code: _ } => {
-                Ok(session_token)
-            }
+            } => match resource_id {
+                ResponseId::ConnectorTransactionId(id) => Ok(id),
+                ResponseId::EncodedData(data) => Ok(data),
+                ResponseId::NoResponseId => Ok("".to_string()),
+            },
+            PaymentsResponseData::SessionResponse {
+                session_token,
+                status_code: _,
+            } => Ok(session_token),
         },
         Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
             ApiError {
@@ -4059,16 +4060,15 @@ pub fn generate_authenticate_response<T: PaymentMethodDataTypes>(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 status_code: _,
-            } => {
-                match resource_id {
-                    ResponseId::ConnectorTransactionId(id) => Ok(id),
-                    ResponseId::EncodedData(data) => Ok(data),
-                    ResponseId::NoResponseId => Ok("".to_string()),
-                }
-            }
-            PaymentsResponseData::SessionResponse { session_token, status_code: _ } => {
-                Ok(session_token)
-            }
+            } => match resource_id {
+                ResponseId::ConnectorTransactionId(id) => Ok(id),
+                ResponseId::EncodedData(data) => Ok(data),
+                ResponseId::NoResponseId => Ok("".to_string()),
+            },
+            PaymentsResponseData::SessionResponse {
+                session_token,
+                status_code: _,
+            } => Ok(session_token),
         },
         Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
             ApiError {
@@ -4102,16 +4102,15 @@ pub fn generate_post_authenticate_response<T: PaymentMethodDataTypes>(
                 incremental_authorization_allowed: _,
                 mandate_reference: _,
                 status_code: _,
-            } => {
-                match resource_id {
-                    ResponseId::ConnectorTransactionId(id) => Ok(id),
-                    ResponseId::EncodedData(data) => Ok(data),
-                    ResponseId::NoResponseId => Ok("".to_string()),
-                }
-            }
-            PaymentsResponseData::SessionResponse { session_token, status_code: _ } => {
-                Ok(session_token)
-            }
+            } => match resource_id {
+                ResponseId::ConnectorTransactionId(id) => Ok(id),
+                ResponseId::EncodedData(data) => Ok(data),
+                ResponseId::NoResponseId => Ok("".to_string()),
+            },
+            PaymentsResponseData::SessionResponse {
+                session_token,
+                status_code: _,
+            } => Ok(session_token),
         },
         Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
             ApiError {

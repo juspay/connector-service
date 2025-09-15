@@ -501,7 +501,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                 })
             }
             Err(_) => {
-                if let Some(event) = event_builder { event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code})) }
+                if let Some(event) = event_builder {
+                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+                }
                 utils::handle_json_response_deserialization_failure(res, "cybersource")
             }
         }
