@@ -370,7 +370,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let mut header = vec![(
                 headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
+                self.common_get_content_type().to_string().into(),
             )];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
@@ -542,7 +542,7 @@ macros::macro_connector_implementation!(
             Ok(vec![
                 (
                     headers::CONTENT_TYPE.to_string(),
-                    "application/json".to_owned().into(),
+                    self.common_get_content_type().to_string().into(),
                 ),
                 (headers::AUTHORIZATION.to_string(), auth_value.into_masked()),
             ])
