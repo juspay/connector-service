@@ -5,16 +5,16 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
-        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -31,6 +31,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentSyncV2
     + PaymentOrderCreate
     + PaymentSessionToken
+    + PaymentAccessToken
     + PaymentTokenV2<T>
     + PaymentVoidV2
     + IncomingWebhook
@@ -64,6 +65,10 @@ pub trait ValidationTrait {
         false
     }
 
+    fn should_do_access_token(&self) -> bool {
+        false
+    }
+
     fn should_do_payment_method_token(&self) -> bool {
         false
     }
@@ -85,6 +90,16 @@ pub trait PaymentSessionToken:
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData,
+>
+{
+}
+
+pub trait PaymentAccessToken:
+    ConnectorIntegrationV2<
+    connector_flow::CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
 >
 {
 }

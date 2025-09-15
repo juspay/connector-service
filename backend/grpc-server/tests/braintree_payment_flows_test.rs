@@ -164,6 +164,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
         request_ref_id: None,
+        access_token: None,
         // all_keys_required: None,
     }
 }
@@ -194,6 +195,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -237,6 +239,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         }),
         browser_info: None,
         refund_metadata,
+        access_token: None,
     }
 }
 

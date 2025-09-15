@@ -9,15 +9,15 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SetupMandate, SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
@@ -40,6 +40,7 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers as cashfree;
 
 use super::macros;
@@ -115,6 +116,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Cashfree<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Cashfree<T>
 {
 }
 
@@ -580,6 +585,24 @@ impl<
 {
 }
 
+// CreateAccessToken stub implementation
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Cashfree<T>
+{
+}
+
 // Trait implementations for all flows
 impl<
         T: PaymentMethodDataTypes
@@ -726,6 +749,12 @@ impl_source_verification_stub!(
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData
+);
+impl_source_verification_stub!(
+    CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData
 );
 impl_source_verification_stub!(
     PaymentMethodToken,
