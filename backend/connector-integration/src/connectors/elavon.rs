@@ -1,6 +1,5 @@
 pub mod transformers;
 
-use std::fmt::Debug;
 use bytes::Bytes;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{

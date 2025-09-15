@@ -1,7 +1,6 @@
 pub mod test;
 pub mod transformers;
 
-use std::fmt::Debug;
 use cashfree::{
     CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreePaymentRequest,
     CashfreePaymentResponse,

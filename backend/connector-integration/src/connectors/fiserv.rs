@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},

@@ -192,7 +192,10 @@ impl<
         value: grpc_api_types::payments::PaymentMethod,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         tracing::info!("PaymentMethod data received: {:?}", value);
-        tracing::info!("PaymentMethod.payment_method field: {:?}", value.payment_method);
+        tracing::info!(
+            "PaymentMethod.payment_method field: {:?}",
+            value.payment_method
+        );
         match value.payment_method {
             Some(data) => match data {
                 grpc_api_types::payments::payment_method::PaymentMethod::Card(card_type) => {
@@ -2227,7 +2230,7 @@ pub fn generate_payment_void_response(
     let transaction_response = router_data_v2.response;
 
     // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
-    let state = router_data_v2
+    let _state = router_data_v2
         .resource_common_data
         .access_token
         .as_ref()
@@ -2344,7 +2347,7 @@ pub fn generate_payment_sync_response(
         .get_raw_connector_response();
 
     // Extract access token from PaymentFlowData
-    let state = router_data_v2
+    let _state = router_data_v2
         .resource_common_data
         .access_token
         .as_ref()
@@ -3628,7 +3631,7 @@ pub fn generate_payment_capture_response(
     let transaction_response = router_data_v2.response;
 
     // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
-    let state = router_data_v2
+    let _state = router_data_v2
         .resource_common_data
         .access_token
         .as_ref()

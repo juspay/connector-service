@@ -1,6 +1,5 @@
 pub mod transformers;
 
-use std::fmt::Debug;
 use common_utils::{consts, errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
