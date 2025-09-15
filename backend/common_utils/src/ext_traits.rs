@@ -278,6 +278,20 @@ impl XmlExt for &str {
     }
 }
 
+/// Helper function to deserialize XML response to struct with proper error handling
+pub fn deserialize_xml_to_struct<T>(response: &str) -> CustomResult<T, errors::ParsingError>
+where
+    T: serde::de::DeserializeOwned,
+{
+    response
+        .parse_xml()
+        .change_context(errors::ParsingError::StructParseFailure("XML Response"))
+        .attach_printable_lazy(|| {
+            let variable_type = std::any::type_name::<T>();
+            format!("Unable to parse {variable_type} from XML response: {response}")
+        })
+}
+
 /// Extending functionalities of `serde_json::Value` for performing parsing
 pub trait ValueExt {
     /// Convert `serde_json::Value` into type `<T>` by using `serde::Deserialize`
