@@ -8,6 +8,7 @@ FO = "FO" # Faroe Islands (the) country code
 JOD = "JOD" # Jordan
 Jod = "Jod" # Jordan
 iin = "iin" # iin
+ND = "ND" # North Dakota state abbreviation
 PN = "PN" # Pitcairn Islands
 jus = "jus" # Juspay
 FPR = "FPR" # Fraud Prevention Rules
