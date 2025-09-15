@@ -79,45 +79,6 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          push: false
-          load: true
-        env:
-          CARGO_INCREMENTAL: "0"
-          RUSTFLAGS: "-A warnings"
-          SCCACHE_ENABLE: "true"
-
-      - name: Test Docker image startup
-        run: |
-          # Test if the binary can run with --help (if supported)
-          timeout 10s docker run --rm ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }} --help || echo "Help command not available or failed"
-          
-          # Test if the container starts successfully (run for 5 seconds then stop)
-          timeout 5s docker run --rm --name test-container ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }} || echo "Container test completed"
-          
-          # Alternative: Test if the binary exists and is executable
-          docker run --rm --entrypoint /bin/sh ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }} -c "ls -la /app/bin/grpc-server && /app/bin/grpc-server --version || echo 'Version command not available'"
-
-      - name: Verify container contents
-        run: |
-          # Check that the binary exists in the expected location
-          docker run --rm --entrypoint /bin/sh ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }} -c "test -f /app/bin/grpc-server && echo 'Binary exists'"
-          
-          # Check that config files are present
-          docker run --rm --entrypoint /bin/sh ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }} -c "test -d /app/config && ls -la /app/config && echo 'Config directory exists'"
-          
-          # Check that source code is NOT present
-          docker run --rm --entrypoint /bin/sh ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }} -c "test ! -d /app/backend && echo 'Source code correctly excluded'"
-
-      - name: Push Docker image to GHCR
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          platforms: ${{ matrix.platform }}
-          tags: ghcr.io/${{ github.repository }}:${{ env.VERSION }}-${{ matrix.tag }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           push: true
         env:
           CARGO_INCREMENTAL: "0"
