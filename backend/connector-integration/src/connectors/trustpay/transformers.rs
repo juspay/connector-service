@@ -6,8 +6,8 @@ use common_utils::{
     errors::CustomResult,
     pii,
     request::Method,
-    types::StringMajorUnit,
-    Email, FloatMajorUnit,
+    types::{FloatMajorUnit, StringMajorUnit},
+    Email,
 };
 use domain_types::{
     connector_flow::{Authorize, CreateAccessToken, CreateOrder},

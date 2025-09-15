@@ -84,11 +84,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Trustpay<T>
 {
-    fn should_do_order_create(&self) -> bool {
-        true
-    }
     fn should_do_access_token(&self) -> bool {
         true
+    }
+
+    fn should_do_order_create_for_payment_method(
+        &self,
+        payment_method: common_enums::PaymentMethod,
+    ) -> bool {
+        // For TrustPay, enable order creation only for wallet payment methods
+        matches!(payment_method, common_enums::PaymentMethod::Wallet)
     }
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -418,10 +423,6 @@ impl<
             PaymentsResponseData,
         >,
     ) -> CustomResult<String, errors::ConnectorError> {
-        println!(
-            "The method is {:?}",
-            req.resource_common_data.payment_method
-        );
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::BankRedirect
             | common_enums::PaymentMethod::BankTransfer => Ok(format!(
@@ -585,7 +586,6 @@ macros::macro_connector_implementation!(
                 .connector_transaction_id
                 .get_connector_transaction_id()
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            println!("The method is {:?} ",req.resource_common_data.payment_method);
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
                 "{}{}/{}",

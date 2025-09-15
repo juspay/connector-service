@@ -199,8 +199,19 @@ impl Payments {
 
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
-        let should_do_order_create = connector_data.connector.should_do_order_create();
 
+        // Check if order creation should be done - either globally or for specific payment method
+        let payment_method = payload
+            .payment_method
+            .as_ref()
+            .and_then(|pm| common_enums::PaymentMethod::foreign_try_from(pm.clone()).ok());
+
+        let should_do_order_create = connector_data.connector.should_do_order_create()
+            || payment_method.is_some_and(|pm| {
+                connector_data
+                    .connector
+                    .should_do_order_create_for_payment_method(pm)
+            });
         let payment_flow_data = if should_do_order_create {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),

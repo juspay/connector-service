@@ -415,8 +415,8 @@ async fn test_refund_sync() {
                 "Payment should be in Charged state"
             );
 
-            // Add delay of 16 seconds
-            tokio::time::sleep(std::time::Duration::from_secs(16)).await;
+            // Add delay of 14 seconds
+            tokio::time::sleep(std::time::Duration::from_secs(14)).await;
 
             // Create refund request
             let refund_request = create_refund_request(&transaction_id);
@@ -439,6 +439,9 @@ async fn test_refund_sync() {
             );
 
             let refund_id = extract_refund_id(&refund_response);
+
+            // Add delay of 4 seconds
+            tokio::time::sleep(std::time::Duration::from_secs(4)).await;
 
             // Create refund sync request
             let refund_sync_request = create_refund_sync_request(&transaction_id, refund_id);
