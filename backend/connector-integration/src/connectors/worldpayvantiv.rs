@@ -8,15 +8,15 @@ use common_utils::{
     };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        /* Accept, */ Authorize, Capture, /* CreateOrder, DefendDispute, */ PSync, RSync, Refund,
+        /* RepeatPayment, SetupMandate, SubmitEvidence, */ Void, /* CreateSessionToken, */
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        /* AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, */ PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, /* RepeatPaymentData,
+        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData, */
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -35,9 +35,9 @@ use interfaces::{
 use transformers::{
     self as worldpayvantiv, CnpOnlineRequest, CnpOnlineResponse, VantivSyncResponse,
     WorldpayvantivPaymentsRequest, WorldpayvantivRefundRequest, WorldpayvantivCaptureRequest,
-    WorldpayvantivVoidRequest, WorldpayvantivSetupMandateRequest,
+    WorldpayvantivVoidRequest, /* WorldpayvantivSetupMandateRequest, */
     WorldpayvantivPaymentsResponse, WorldpayvantivRefundResponse, WorldpayvantivCaptureResponse,
-    WorldpayvantivVoidResponse, WorldpayvantivSetupMandateResponse, WorldpayvantivSyncResponse,
+    WorldpayvantivVoidResponse, /* WorldpayvantivSetupMandateResponse, */ WorldpayvantivSyncResponse,
     WorldpayvantivRefundSyncResponse,
 };
 
@@ -97,6 +97,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Worldpayvantiv<T>
 {
 }
+// Unsupported flow trait implementations - COMMENTED OUT
+/*
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Worldpayvantiv<T>
 {
@@ -129,6 +131,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Worldpayvantiv<T>
 {
 }
+*/
 
 pub(crate) mod headers {
     pub(crate) const ACCEPT: &str = "Accept";
@@ -205,12 +208,15 @@ macros::create_all_prerequisites!(
             response_body: WorldpayvantivVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
+        // SetupMandate flow commented out as not needed for core flows
+        /*
         (
             flow: SetupMandate,
             request_body: WorldpayvantivSetupMandateRequest<T>,
             response_body: WorldpayvantivSetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         )
+        */
     ],
     amount_converters: [],
     member_functions: {
@@ -476,6 +482,8 @@ macros::macro_connector_implementation!(
     }
 );
 
+// SetupMandate flow implementation - COMMENTED OUT as not needed for core flows
+/*
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Worldpayvantiv,
@@ -503,12 +511,10 @@ macros::macro_connector_implementation!(
         }
     }
 );
+*/
 
-// Stub implementations for unsupported flows
-
-
-
-
+// Stub implementations for unsupported flows - COMMENTED OUT as not needed for core flows
+/*
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -563,7 +569,6 @@ impl<
 {
 }
 
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -593,6 +598,7 @@ impl<
     > for Worldpayvantiv<T>
 {
 }
+*/
 
 // SourceVerification implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -655,6 +661,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// SourceVerification implementations for unsupported flows - COMMENTED OUT as not needed for core flows
+/*
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         SetupMandate,
@@ -724,3 +732,4 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Worldpayvantiv<T>
 {
 }
+*/
