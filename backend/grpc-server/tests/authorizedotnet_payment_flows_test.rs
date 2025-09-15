@@ -200,6 +200,7 @@ fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEveryt
         minor_amount: REPEAT_AMOUNT,
         merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
         metadata,
+        access_token: None,
         webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
         capture_method: None,
         email: None,
@@ -317,8 +318,8 @@ fn create_payment_authorize_request(
     // Minimal address structure matching working grpcurl
     request.address = Some(PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some(billing_first_name),
-            last_name: Some(billing_last_name),
+            first_name: Some(billing_first_name.into()),
+            last_name: Some(billing_last_name.into()),
             line1: Some("14 Main Street".to_string().into()),
             line2: None,
             line3: None,
@@ -390,6 +391,7 @@ fn create_payment_get_request(transaction_id: &str) -> PaymentServiceGetRequest 
     PaymentServiceGetRequest {
         transaction_id: Some(transaction_id_obj),
         request_ref_id: Some(request_ref_id),
+        access_token: None,
     }
 }
 
@@ -411,6 +413,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         multiple_capture_data: None,
         metadata: HashMap::new(),
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -430,6 +433,7 @@ fn create_void_request(transaction_id: &str) -> PaymentServiceVoidRequest {
         cancellation_reason: None,
         all_keys_required: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -473,6 +477,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         metadata: HashMap::new(),
         refund_metadata,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -492,6 +497,8 @@ fn create_refund_get_request(transaction_id: &str, refund_id: &str) -> RefundSer
         refund_id: refund_id.to_string(),
         browser_info: None,
         refund_reason: None,
+        refund_metadata: HashMap::new(),
+        access_token: None,
     }
 }
 
@@ -539,8 +546,8 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
     // Add billing address matching your JSON format
     request.address = Some(PaymentAddress {
         billing_address: Some(Address {
-            first_name: Some("Test".to_string()),
-            last_name: Some("Customer001".to_string()),
+            first_name: Some("Test".to_string().into()),
+            last_name: Some("Customer001".to_string().into()),
             line1: Some("123 Test St".to_string().into()),
             line2: None,
             line3: None,

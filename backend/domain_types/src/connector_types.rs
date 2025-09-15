@@ -8,7 +8,7 @@ use common_utils::{
     errors,
     ext_traits::{OptionExt, ValueExt},
     pii::IpAddress,
-    types::MinorUnit,
+    types::{MinorUnit, StringMinorUnit},
     CustomResult, CustomerId, Email, SecretSerdeValue,
 };
 use error_stack::ResultExt;
@@ -25,9 +25,9 @@ use crate::{
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -38,7 +38,7 @@ use crate::{
 };
 
 // snake case for enum variants
-#[derive(Clone, Debug, Display, EnumString)]
+#[derive(Clone, Copy, Debug, Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum ConnectorEnum {
     Adyen,
@@ -59,6 +59,7 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
+    Braintree,
     Volt,
 }
 
@@ -86,6 +87,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
+            grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
             grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -281,6 +283,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
 }
 
 impl PaymentFlowData {
@@ -696,22 +699,32 @@ impl PaymentFlowData {
         }
         self
     }
+    pub fn set_payment_method_token(mut self, payment_method_token: Option<String>) -> Self {
+        if payment_method_token.is_some() && self.payment_method_token.is_none() {
+            self.payment_method_token =
+                payment_method_token.map(|token| PaymentMethodToken::Token(Secret::new(token)));
+        }
+        self
+    }
 
     pub fn set_access_token_id(mut self, access_token_id: Option<String>) -> Self {
-        if let Some(token_id) = access_token_id {
-            if self.access_token.is_none() {
-                self.access_token = Some(AccessTokenResponseData {
-                    access_token: token_id,
-                    token_type: None,
-                    expires_in: None,
-                });
-            }
+        if let (Some(token_id), None) = (access_token_id, &self.access_token) {
+            self.access_token = Some(AccessTokenResponseData {
+                access_token: token_id,
+                token_type: None,
+                expires_in: None,
+            });
         }
         self
     }
 
     pub fn get_return_url(&self) -> Option<String> {
         self.return_url.clone()
+    }
+
+    // Helper methods for additional headers
+    pub fn get_header(&self, key: &str) -> Option<&Secret<String>> {
+        self.vault_headers.as_ref().and_then(|h| h.get(key))
     }
 }
 
@@ -1073,6 +1086,25 @@ pub struct PaymentCreateOrderResponse {
 }
 
 #[derive(Debug, Clone)]
+pub struct PaymentMethodTokenizationData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: payment_method_data::PaymentMethodData<T>,
+    pub browser_info: Option<BrowserInformation>,
+    pub currency: Currency,
+    pub amount: MinorUnit,
+    pub customer_acceptance: Option<CustomerAcceptance>,
+    pub setup_future_usage: Option<common_enums::FutureUsage>,
+    pub setup_mandate_details: Option<MandateData>,
+    pub mandate_id: Option<MandateIds>,
+    pub integrity_object: Option<PaymentMethodTokenIntegrityObject>,
+    // pub split_payments: Option<SplitPaymentsRequest>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentMethodTokenResponse {
+    pub token: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
@@ -1157,6 +1189,7 @@ pub struct WebhookDetailsResponse {
     pub resource_id: Option<ResponseId>,
     pub status: common_enums::AttemptStatus,
     pub connector_response_reference_id: Option<String>,
+    pub mandate_reference: Option<Box<MandateReference>>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
     pub raw_connector_response: Option<String>,
@@ -1178,6 +1211,8 @@ pub struct RefundWebhookDetailsResponse {
 
 #[derive(Debug, Clone)]
 pub struct DisputeWebhookDetailsResponse {
+    pub amount: StringMinorUnit,
+    pub currency: common_enums::enums::Currency,
     pub dispute_id: String,
     pub status: common_enums::DisputeStatus,
     pub stage: common_enums::DisputeStage,
@@ -1186,6 +1221,8 @@ pub struct DisputeWebhookDetailsResponse {
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
+    /// connector_reason
+    pub connector_reason_code: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

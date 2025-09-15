@@ -828,8 +828,8 @@ enum CountryAlpha2 {
 // Represents a physical address with contact information.
 message Address {
   // Personal Information
-  optional string first_name = 1;
-  optional string last_name = 2;
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
   
   // Address Details
   optional SecretString line1 = 3;
@@ -1620,6 +1620,9 @@ message RefundServiceGetRequest {
 
   // Session and Token Information
   optional string access_token = 6; // Access token for secure communication
+
+// Metadata
+  map<string, string> refund_metadata = 7; // Metadata specific to the refund sync  
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
