@@ -38,7 +38,6 @@ type Error = error_stack::Report<errors::ConnectorError>;
 pub struct TrustpayAuthType {
     pub(super) api_key: Secret<String>,
     pub(super) project_id: Secret<String>,
-    #[allow(dead_code)]
     pub(super) secret_key: Secret<String>,
 }
 
