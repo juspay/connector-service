@@ -2230,19 +2230,6 @@ pub fn generate_payment_void_response(
     let transaction_response = router_data_v2.response;
 
     // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
-    let _state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
-
-    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
     let state = router_data_v2
         .resource_common_data
         .access_token
@@ -2345,19 +2332,6 @@ pub fn generate_payment_sync_response(
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
-
-    // Extract access token from PaymentFlowData
-    let _state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
 
     // Extract access token from PaymentFlowData (following session token pattern)
     let state = router_data_v2
@@ -3629,19 +3603,6 @@ pub fn generate_payment_capture_response(
     >,
 ) -> Result<PaymentServiceCaptureResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
-
-    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
-    let _state = router_data_v2
-        .resource_common_data
-        .access_token
-        .as_ref()
-        .map(|token_data| ConnectorState {
-            access_token: Some(grpc_api_types::payments::AccessToken {
-                token: token_data.access_token.clone(),
-                expires_in_seconds: token_data.expires_in,
-                token_type: token_data.token_type.clone(),
-            }),
-        });
 
     // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
     let state = router_data_v2
