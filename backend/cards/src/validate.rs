@@ -457,6 +457,12 @@ impl<'de> Deserialize<'de> for CardExpirationMonth {
 #[derive(Clone, Debug, Serialize)]
 pub struct CardExpirationYear(StrongSecret<u16>);
 
+impl CardExpirationYear {
+    pub fn get_year(&self) -> u16 {
+        *self.0.peek()
+    }
+}
+
 impl TryFrom<u16> for CardExpirationYear {
     type Error = error_stack::Report<ValidationError>;
     fn try_from(year: u16) -> Result<Self, Self::Error> {
