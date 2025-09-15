@@ -10,24 +10,28 @@ use common_utils::{
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken, PSync,
-        PaymentMethodToken, Refund, RepeatPayment, SetupMandate, Void,
+        Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundsData, RefundsResponseData, RepeatPaymentData, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
-        generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
+        generate_authenticate_response, generate_payment_capture_response,
+        generate_payment_sync_response, generate_payment_void_response,
+        generate_post_authenticate_response, generate_pre_authenticate_response,
+        generate_refund_response, generate_repeat_payment_response,
         generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
@@ -137,6 +141,21 @@ trait PaymentOperationsInternal {
         &self,
         request: tonic::Request<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status>;
+
+    async fn internal_pre_authenticate(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status>;
+
+    async fn internal_authenticate(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status>;
+
+    async fn internal_post_authenticate(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status>;
 }
 
 #[derive(Clone)]
@@ -1103,6 +1122,51 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_capture_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_pre_authenticate,
+        log_prefix: "PRE_AUTHENTICATE",
+        request_type: PaymentServiceAuthorizeRequest,
+        response_type: PaymentServiceAuthorizeResponse,
+        flow_marker: PreAuthenticate,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsPreAuthenticateData<DefaultPCIHolder>,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsPreAuthenticateData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_pre_authenticate_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_authenticate,
+        log_prefix: "AUTHENTICATE",
+        request_type: PaymentServiceAuthorizeRequest,
+        response_type: PaymentServiceAuthorizeResponse,
+        flow_marker: Authenticate,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsAuthenticateData<DefaultPCIHolder>,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsAuthenticateData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_authenticate_response,
+        all_keys_required: None
+    );
+
+    implement_connector_operation!(
+        fn_name: internal_post_authenticate,
+        log_prefix: "POST_AUTHENTICATE",
+        request_type: PaymentServiceAuthorizeRequest,
+        response_type: PaymentServiceAuthorizeResponse,
+        flow_marker: PostAuthenticate,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsPostAuthenticateData<DefaultPCIHolder>,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsPostAuthenticateData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_post_authenticate_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -1902,6 +1966,89 @@ impl PaymentService for Payments {
             },
         )
         .await
+    }
+    #[tracing::instrument(
+        name = "pre_authenticate",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "PreAuthenticate",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = "PreAuthenticate",
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn pre_authenticate(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        self.internal_pre_authenticate(request).await
+    }
+
+    #[tracing::instrument(
+        name = "authenticate",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "Authenticate",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = "Authenticate",
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn authenticate(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        self.internal_authenticate(request).await
+    }
+
+    #[tracing::instrument(
+        name = "post_authenticate",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = "PostAuthenticate",
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = "PostAuthenticate",
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn post_authenticate(
+        &self,
+        request: tonic::Request<PaymentServiceAuthorizeRequest>,
+    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        self.internal_post_authenticate(request).await
     }
 }
 

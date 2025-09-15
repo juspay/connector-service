@@ -1160,10 +1160,27 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
-#[derive(Debug, Clone)]
-pub struct CompleteAuthorizeRedirectResponse {
-    pub params: Option<Secret<String>>,
-    pub payload: Option<SecretSerdeValue>,
+impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>>
+    for PaymentsPreAuthenticateData<T>
+{
+    type Error = ApplicationErrorResponse;
+
+    fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_method_data: Some(data.payment_method_data),
+            amount: data.minor_amount,
+            minor_amount: Some(data.minor_amount),
+            email: data.email,
+            currency: Some(data.currency),
+            payment_method_type: data.payment_method_type,
+            router_return_url: data.router_return_url,
+            complete_authorize_url: data.complete_authorize_url,
+            browser_info: data.browser_info,
+            connector_transaction_id: None,
+            redirect_response: None,
+            enrolled_for_3ds: data.enrolled_for_3ds,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -1184,6 +1201,27 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
+impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>> for PaymentsAuthenticateData<T> {
+    type Error = ApplicationErrorResponse;
+
+    fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_method_data: Some(data.payment_method_data),
+            amount: data.minor_amount,
+            minor_amount: Some(data.minor_amount),
+            email: data.email,
+            currency: Some(data.currency),
+            payment_method_type: data.payment_method_type,
+            router_return_url: data.router_return_url,
+            complete_authorize_url: data.complete_authorize_url,
+            browser_info: data.browser_info,
+            connector_transaction_id: None,
+            redirect_response: None,
+            enrolled_for_3ds: data.enrolled_for_3ds,
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
@@ -1202,44 +1240,33 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
-#[derive(Debug, Clone)]
-pub struct AuthenticationResponseData {
-    pub authentication_value: Option<Secret<String>>,
-    pub trans_status: TransactionStatus,
-    pub eci: Option<String>,
-    pub threeds_server_transaction_id: Option<String>,
-    pub acs_url: Option<String>,
-    pub challenge_request: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-    pub authentication_status: AuthenticationStatus,
-    pub message_version: Option<String>,
-    pub ds_trans_id: Option<String>,
-}
+impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>>
+    for PaymentsPostAuthenticateData<T>
+{
+    type Error = ApplicationErrorResponse;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PreAuthenticationData {
-    pub threeds_server_transaction_id: String,
-    pub message_version: String,
-    pub acquirer_bin: Option<String>,
-    pub acquirer_merchant_id: Option<String>,
-    pub acquirer_country_code: Option<String>,
-    pub connector_metadata: Option<serde_json::Value>,
-}
-
-#[derive(Debug, Clone)]
-pub enum TransactionStatus {
-    Success,
-    Failed,
-    ChallengeRequired,
-    Pending,
+    fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            payment_method_data: Some(data.payment_method_data),
+            amount: data.minor_amount,
+            minor_amount: Some(data.minor_amount),
+            email: data.email,
+            currency: Some(data.currency),
+            payment_method_type: data.payment_method_type,
+            router_return_url: data.router_return_url,
+            complete_authorize_url: data.complete_authorize_url,
+            browser_info: data.browser_info,
+            connector_transaction_id: None,
+            redirect_response: None,
+            enrolled_for_3ds: data.enrolled_for_3ds,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
-pub enum AuthenticationStatus {
-    Started,
-    Pending,
-    Success,
-    Failed,
+pub struct CompleteAuthorizeRedirectResponse {
+    pub params: Option<Secret<String>>,
+    pub payload: Option<SecretSerdeValue>,
 }
 #[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {

@@ -4,7 +4,6 @@
 //! It ensures that request and response data remain consistent across connector interactions
 //! by comparing critical fields like amounts, currencies, and transaction identifiers.
 use common_utils::errors::IntegrityCheckError;
-use domain_types::connector_flow::{Authenticate, PostAuthenticate, PreAuthenticate};
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
@@ -158,9 +157,9 @@ impl_check_integrity!(AccessTokenRequestData);
 impl_check_integrity!(PaymentMethodTokenizationData<S>);
 impl_check_integrity!(SubmitEvidenceData);
 impl_check_integrity!(RepeatPaymentData);
-impl_check_integrity!(PreAuthenticate);
-impl_check_integrity!(Authenticate);
-impl_check_integrity!(PostAuthenticate);
+impl_check_integrity!(PaymentsAuthenticateData<S>);
+impl_check_integrity!(PaymentsPostAuthenticateData<S>);
+impl_check_integrity!(PaymentsPreAuthenticateData<S>);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS

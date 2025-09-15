@@ -1,15 +1,9 @@
 use std::collections::HashSet;
 
 use crate::{
-    connector_types::AuthenticationStatus,
     payment_method_data::{DefaultPCIHolder, PaymentMethodData},
     router_response_types::RedirectForm,
-    types::Connectors,
 };
-
-pub trait HasConnectors {
-    fn connectors(&self) -> &Connectors;
-}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RedirectionFormData {
@@ -75,20 +69,4 @@ pub struct GenericLinkFormData {
 pub struct GenericLinkStatusData {
     pub js_data: String,
     pub css_data: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct AuthenticationFlowData {
-    pub connectors: Connectors,
-    pub authentication_id: Option<String>,
-    pub payment_id: String,
-    pub merchant_id: String,
-    pub authentication_status: AuthenticationStatus,
-    pub three_ds_version: Option<String>,
-}
-
-impl HasConnectors for AuthenticationFlowData {
-    fn connectors(&self) -> &Connectors {
-        &self.connectors
-    }
 }
