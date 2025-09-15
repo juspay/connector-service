@@ -446,15 +446,16 @@ enum Connector {
   WISE = 82;
   WORLDLINE = 83;
   WORLDPAY = 84;
-  SIGNIFYD = 85;
-  PLAID = 86;
-  RISKIFIED = 87;
-  XENDIT = 88;
-  ZEN = 89;
-  ZSL = 90;
-  PHONEPE = 91;
-  CASHFREE = 92;
-  PAYTM = 93;
+  WORLDPAYVANTIV = 85;
+  SIGNIFYD = 86;
+  PLAID = 87;
+  RISKIFIED = 88;
+  XENDIT = 89;
+  ZEN = 90;
+  ZSL = 91;
+  PHONEPE = 92;
+  CASHFREE = 93;
+  PAYTM = 94;
 }
 
 // Payment method types.
