@@ -38,6 +38,12 @@ pub struct DefendDispute;
 pub struct CreateSessionToken;
 
 #[derive(Debug, Clone)]
+pub struct CreateAccessToken;
+
+#[derive(Debug, Clone)]
+pub struct PaymentMethodToken;
+
+#[derive(Debug, Clone)]
 pub struct PreAuthenticate;
 
 #[derive(Debug, Clone)]
@@ -64,6 +70,8 @@ pub enum FlowName {
     IncomingWebhook,
     Dsync,
     CreateSessionToken,
+    CreateAccessToken,
+    PaymentMethodToken,
     PreAuthenticate,
     Authenticate,
     PostAuthenticate,

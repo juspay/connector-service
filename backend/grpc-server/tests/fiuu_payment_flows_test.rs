@@ -168,6 +168,7 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(generate_unique_id("fiuu_sync"))),
         }),
+        access_token: None,
     }
 }
 
@@ -197,6 +198,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         all_keys_required: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -234,6 +236,8 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         request_ref_id: None,
         browser_info: None,
+        refund_metadata: std::collections::HashMap::new(),
+        access_token: None,
     }
 }
 

@@ -1,15 +1,16 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
     events::FlowName,
+    lineage::LineageIds,
 };
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-        PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -20,7 +21,7 @@ use http::request::Request;
 use hyperswitch_masking;
 use tonic::metadata;
 
-use crate::error::ResultExtGrpc;
+use crate::{configs, error::ResultExtGrpc};
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
@@ -55,6 +56,8 @@ where
         FlowName::DefendDispute
     } else if type_id == std::any::TypeId::of::<SubmitEvidence>() {
         FlowName::SubmitEvidence
+    } else if type_id == std::any::TypeId::of::<PaymentMethodToken>() {
+        FlowName::PaymentMethodToken
     } else if type_id == std::any::TypeId::of::<PreAuthenticate>() {
         FlowName::PreAuthenticate
     } else if type_id == std::any::TypeId::of::<Authenticate>() {
@@ -65,6 +68,37 @@ where
         tracing::warn!("Unknown flow marker type: {}", std::any::type_name::<F>());
         FlowName::Unknown
     }
+}
+
+/// Extract lineage fields from header
+pub fn extract_lineage_fields_from_metadata(
+    metadata: &metadata::MetadataMap,
+    config: &configs::LineageConfig,
+) -> LineageIds<'static> {
+    if !config.enabled {
+        return LineageIds::empty(&config.field_prefix).to_owned();
+    }
+    metadata
+        .get(&config.header_name)
+        .and_then(|value| value.to_str().ok())
+        .map(|header_value| LineageIds::new(&config.field_prefix, header_value))
+        .transpose()
+        .inspect(|value| {
+            tracing::info!(
+                parsed_fields = ?value,
+                "Successfully parsed lineage header"
+            )
+        })
+        .inspect_err(|err| {
+            tracing::warn!(
+                error = %err,
+                "Failed to parse lineage header, continuing without lineage fields"
+            )
+        })
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| LineageIds::empty(&config.field_prefix))
+        .to_owned()
 }
 
 /// Record the header's fields in request's trace
@@ -93,15 +127,37 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
     span
 }
 
-pub fn connector_merchant_id_tenant_id_request_id_from_metadata(
+/// Struct to hold extracted metadata payload
+pub struct MetadataPayload {
+    pub tenant_id: String,
+    pub request_id: String,
+    pub merchant_id: String,
+    pub connector: connector_types::ConnectorEnum,
+    pub lineage_ids: LineageIds<'static>,
+    pub connector_auth_type: ConnectorAuthType,
+    pub reference_id: Option<String>,
+}
+
+pub fn get_metadata_payload(
     metadata: &metadata::MetadataMap,
-) -> CustomResult<(connector_types::ConnectorEnum, String, String, String), ApplicationErrorResponse>
-{
+    server_config: Arc<configs::Config>,
+) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
     let connector = connector_from_metadata(metadata)?;
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
     let request_id = request_id_from_metadata(metadata)?;
-    Ok((connector, merchant_id, tenant_id, request_id))
+    let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
+    let connector_auth_type = auth_from_metadata(metadata)?;
+    let reference_id = reference_id_from_metadata(metadata)?;
+    Ok(MetadataPayload {
+        tenant_id,
+        request_id,
+        merchant_id,
+        connector,
+        lineage_ids,
+        connector_auth_type,
+        reference_id,
+    })
 }
 
 pub fn connector_from_metadata(
@@ -155,6 +211,12 @@ pub fn tenant_id_from_metadata(
     parse_metadata(metadata, consts::X_TENANT_ID)
         .map(|s| s.to_string())
         .or_else(|_| Ok("DefaultTenantId".to_string()))
+}
+
+pub fn reference_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<Option<String>, ApplicationErrorResponse> {
+    parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
 }
 
 pub fn auth_from_metadata(
@@ -236,26 +298,39 @@ fn parse_metadata<'a>(
         })
 }
 
+fn parse_optional_metadata<'a>(
+    metadata: &'a metadata::MetadataMap,
+    key: &str,
+) -> CustomResult<Option<&'a str>, ApplicationErrorResponse> {
+    metadata
+        .get(key)
+        .map(|value| value.to_str())
+        .transpose()
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_METADATA".to_string(),
+                error_identifier: 400,
+                error_message: format!("Invalid {key} in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
+}
+
 pub fn log_before_initialization<T>(
     request: &tonic::Request<T>,
     service_name: &str,
+    metadata_payload: &MetadataPayload,
 ) -> CustomResult<(), ApplicationErrorResponse>
 where
     T: serde::Serialize,
 {
-    let (connector, merchant_id, tenant_id, request_id) =
-        connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).map_err(
-            |e| {
-                Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "MISSING_FIELD".to_string(),
-                    error_identifier: 400,
-                    error_message: format!(
-                        "Missing/Incorrect Field x-merchant-id or x-connector{e}"
-                    ),
-                    error_object: None,
-                }))
-            },
-        )?;
+    let MetadataPayload {
+        connector,
+        merchant_id,
+        tenant_id,
+        request_id,
+        ..
+    } = metadata_payload;
     let current_span = tracing::Span::current();
     let req_body = request.get_ref();
     let req_body_json = match hyperswitch_masking::masked_serialize(req_body) {
@@ -320,18 +395,21 @@ where
 pub async fn grpc_logging_wrapper<T, F, Fut, R>(
     request: tonic::Request<T>,
     service_name: &str,
+    config: Arc<configs::Config>,
     handler: F,
 ) -> Result<tonic::Response<R>, tonic::Status>
 where
     T: serde::Serialize + std::fmt::Debug + Send + 'static,
-    F: FnOnce(tonic::Request<T>) -> Fut + Send,
+    F: FnOnce(tonic::Request<T>, MetadataPayload) -> Fut + Send,
     Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
     R: serde::Serialize + std::fmt::Debug,
 {
     let current_span = tracing::Span::current();
-    log_before_initialization(&request, service_name).into_grpc_status()?;
+    let header_payload =
+        get_metadata_payload(request.metadata(), config.clone()).into_grpc_status()?;
+    log_before_initialization(&request, service_name, &header_payload).into_grpc_status()?;
     let start_time = tokio::time::Instant::now();
-    let result = handler(request).await;
+    let result = handler(request, header_payload).await;
     let duration = start_time.elapsed().as_millis();
     current_span.record("response_time", duration);
     log_after_initialization(&result);
@@ -365,11 +443,11 @@ macro_rules! implement_connector_operation {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
             let current_span = tracing::Span::current();
-            $crate::utils::log_before_initialization(&request, service_name.as_str()).into_grpc_status()?;
+            let metadata_payload = $crate::utils::get_metadata_payload(request.metadata(), self.config.clone()).into_grpc_status()?;
+            $crate::utils::log_before_initialization(&request, service_name.as_str(), &metadata_payload).into_grpc_status()?;
             let start_time = tokio::time::Instant::now();
             let result = Box::pin(async{
-            let (connector, _merchant_id, _tenant_id, request_id) = $crate::utils::connector_merchant_id_tenant_id_request_id_from_metadata(request.metadata()).into_grpc_status()?;
-            let connector_auth_details = $crate::utils::auth_from_metadata(request.metadata()).into_grpc_status()?;
+            let (connector, request_id, connector_auth_details) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_auth_type);
             let metadata = request.metadata().clone();
             let payload = request.into_inner();
 
@@ -416,6 +494,8 @@ macro_rules! implement_connector_operation {
                 event_config: &self.config.events,
                 raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
                 request_id: &request_id,
+                lineage_ids: &metadata_payload.lineage_ids,
+                reference_id: &metadata_payload.reference_id,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,
@@ -423,6 +503,7 @@ macro_rules! implement_connector_operation {
                 router_data,
                 $all_keys_required,
                 event_params,
+                None,
             )
             .await
             .switch()

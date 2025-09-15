@@ -177,6 +177,7 @@ async fn process_webhook_request(
             body: request_body_bytes,
         }),
         webhook_secrets,
+        access_token: None,
     });
 
     // Use the same metadata pattern as the payment flows test
@@ -729,6 +730,7 @@ async fn test_webhook_malformed_body() {
                 body: request_body_bytes,
             }),
             webhook_secrets: None,
+            access_token: None,
         });
 
         let api_key =
@@ -983,6 +985,7 @@ async fn test_webhook_source_verification_invalid_signature() {
                 body: request_body_bytes,
             }),
             webhook_secrets,
+            access_token: None,
         });
 
         let api_key =
@@ -1079,6 +1082,7 @@ async fn test_webhook_source_verification_missing_signature() {
                 body: request_body_bytes,
             }),
             webhook_secrets,
+            access_token: None,
         });
 
         let api_key =
@@ -1173,6 +1177,7 @@ async fn test_webhook_source_verification_no_secret_provided() {
                 body: request_body_bytes,
             }),
             webhook_secrets,
+            access_token: None,
         });
 
         let api_key =

@@ -5,19 +5,17 @@ use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType}
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
-    AcceptDisputeResponse, DisputeDefendRequest, DisputeDefendResponse, DisputeResponse,
-    DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
+    AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
+    DisputeResponse, DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
-use serde_json::json;
 use tonic;
 use tracing::info;
 use utoipa::ToSchema;
-
 // Helper function for extracting connector request reference ID
 fn extract_connector_request_reference_id(
     identifier: &Option<grpc_api_types::payments::Identifier>,
@@ -32,24 +30,47 @@ fn extract_connector_request_reference_id(
         .unwrap_or_default()
 }
 
+/// Extract vault-related headers from gRPC metadata
+fn extract_headers_from_metadata(
+    metadata: &tonic::metadata::MetadataMap,
+) -> Option<HashMap<String, Secret<String>>> {
+    let mut vault_headers = HashMap::new();
+
+    if let Some(vault_creds) = metadata.get("x-external-vault-metadata") {
+        if let Ok(value_str) = vault_creds.to_str() {
+            vault_headers.insert(
+                "x-external-vault-metadata".to_string(),
+                Secret::new(value_str.to_string()),
+            );
+        }
+    }
+
+    if vault_headers.is_empty() {
+        None
+    } else {
+        Some(vault_headers)
+    }
+}
+
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-        PSync, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
+        SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorMandateReferenceId, ConnectorResponseHeaders,
-        DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
-        MandateReferenceId, MultipleCaptureRequestData, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData, PaymentsAuthenticateData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RawConnectorResponse,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, ConnectorMandateReferenceId,
+        ConnectorResponseHeaders, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        DisputeWebhookDetailsResponse, MandateReferenceId, MultipleCaptureRequestData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RawConnectorResponse, RefundFlowData, RefundSyncData,
+        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -60,6 +81,7 @@ use crate::{
         DefaultPCIHolder, PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
         VaultTokenHolder,
     },
+    router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
     router_request_types,
     router_request_types::BrowserInformation,
@@ -88,6 +110,7 @@ pub struct Connectors {
     pub novalnet: ConnectorParams,
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
+    pub braintree: ConnectorParams,
     pub cybersource: ConnectorParams,
 }
 
@@ -945,6 +968,10 @@ impl<
             }
             None => None,
         };
+        let merchant_config_currency = common_enums::Currency::foreign_try_from(value.currency())?;
+
+        // Extract merchant_account_id from metadata before moving it
+        let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
 
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
@@ -997,6 +1024,7 @@ impl<
             off_session: None,
             order_category: value.order_category,
             session_token: None,
+            access_token: value.access_token,
             enrolled_for_3ds: false,
             related_transaction_id: None,
             payment_experience: None,
@@ -1026,9 +1054,9 @@ impl<
             merchant_order_reference_id: None,
             order_tax_amount: None,
             shipping_cost: None,
-            merchant_account_id: None,
+            merchant_account_id,
             integrity_object: None,
-            merchant_config_currency: None,
+            merchant_config_currency: Some(merchant_config_currency),
             all_keys_required: None, // Field not available in new proto structure
             authentication_data: value.authentication_data,
         })
@@ -1369,8 +1397,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
             line3: value.line3,
             zip: value.zip_code,
             state: value.state,
-            first_name: value.first_name.map(|val| val.into()),
-            last_name: value.last_name.map(|val| val.into()),
+            first_name: value.first_name,
+            last_name: value.last_name,
         })
     }
 }
@@ -1412,6 +1440,9 @@ impl
         };
 
         let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        // Extract specific headers for vault and other integrations
+        let vault_headers = extract_headers_from_metadata(metadata);
 
         Ok(Self {
             merchant_id: merchant_id_from_header,
@@ -1462,6 +1493,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers,
         })
     }
 }
@@ -1522,6 +1554,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -1570,7 +1603,13 @@ impl
             connector_meta_data: None,
             amount_captured: None,
             minor_amount_captured: None,
-            access_token: None,
+            access_token: value.access_token.map(|token| {
+                crate::connector_types::AccessTokenResponseData {
+                    access_token: token,
+                    token_type: None,
+                    expires_in: None,
+                }
+            }),
             session_token: None,
             reference_id: None,
             payment_method_token: None,
@@ -1582,6 +1621,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -1643,6 +1683,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -1702,6 +1743,7 @@ pub fn generate_create_order_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 connector_metadata: std::collections::HashMap::new(),
+                state: None,
             }
         }
         Err(err) => {
@@ -1732,6 +1774,7 @@ pub fn generate_create_order_response(
                     .get_connector_response_headers_as_map(),
                 connector_metadata: std::collections::HashMap::new(),
                 raw_connector_response,
+                state: None,
             }
         }
     };
@@ -1755,6 +1798,20 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
     let raw_connector_response = router_data_v2.resource_common_data.raw_connector_response;
+
+    // Create state with access token if available in payment flow data
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -1836,6 +1893,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     raw_connector_response,
                     status_code: status_code as u32,
                     response_headers,
+                    state,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -1869,6 +1927,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 raw_connector_response,
                 connector_metadata: std::collections::HashMap::new(),
+                state,
             }
         }
     };
@@ -2025,6 +2084,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -2135,6 +2195,19 @@ pub fn generate_payment_void_response(
 ) -> Result<PaymentServiceVoidResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
 
+    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -2167,6 +2240,7 @@ pub fn generate_payment_void_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
+                    state,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2201,6 +2275,7 @@ pub fn generate_payment_void_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                state: None,
             })
         }
     }
@@ -2223,6 +2298,19 @@ pub fn generate_payment_sync_response(
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
+
+    // Extract access token from PaymentFlowData (following session token pattern)
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
 
     match transaction_response {
         Ok(response) => match response {
@@ -2277,6 +2365,7 @@ pub fn generate_payment_sync_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
+                    state,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2327,6 +2416,7 @@ pub fn generate_payment_sync_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                state,
             })
         }
     }
@@ -2357,10 +2447,15 @@ impl ForeignTryFrom<grpc_api_types::payments::RefundServiceGetRequest> for Refun
             connector_refund_id: value.refund_id.clone(),
             reason: value.refund_reason.clone(),
             refund_status: common_enums::RefundStatus::Pending,
-            refund_connector_metadata: value
-                .request_ref_id
-                .as_ref()
-                .map(|id| Secret::new(json!({ "request_ref_id": id.clone() }))),
+            refund_connector_metadata: (!value.refund_metadata.is_empty()).then(|| {
+                Secret::new(serde_json::Value::Object(
+                    value
+                        .refund_metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            }),
             all_keys_required: None, // Field not available in new proto structure
             integrity_object: None,
         })
@@ -2755,6 +2850,7 @@ pub fn generate_refund_sync_response(
                 raw_connector_response,
                 status_code: response.status_code as u32,
                 response_headers,
+                state: None,
             })
         }
         Err(e) => {
@@ -2803,6 +2899,7 @@ pub fn generate_refund_sync_response(
                 refund_metadata: std::collections::HashMap::new(),
                 status_code: e.status_code as u32,
                 response_headers,
+                state: None,
             })
         }
     }
@@ -2828,6 +2925,12 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                     .collect()
             })
             .unwrap_or_default();
+        let mandate_reference_grpc =
+            value
+                .mandate_reference
+                .map(|m| grpc_api_types::payments::MandateReference {
+                    mandate_id: m.connector_mandate_id,
+                });
         Ok(Self {
             transaction_id: value
                 .resource_id
@@ -2836,7 +2939,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
                 })
                 .transpose()?,
             status: status as i32,
-            mandate_reference: None,
+            mandate_reference: mandate_reference_grpc,
             error_code: value.error_code,
             error_message: value.error_message,
             network_txn_id: None,
@@ -2861,6 +2964,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             status_code: value.status_code as u32,
             raw_connector_response: None,
             response_headers,
+            state: None,
         })
     }
 }
@@ -2941,6 +3045,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             refund_metadata: std::collections::HashMap::new(),
             status_code: value.status_code as u32,
             response_headers,
+            state: None,
         })
     }
 }
@@ -3215,6 +3320,9 @@ pub fn generate_refund_response(
         .resource_common_data
         .get_raw_connector_response();
 
+    // RefundFlowData doesn't have access_token field, so no state to return
+    let state = None;
+
     match refund_response {
         Ok(response) => {
             let status = response.refund_status;
@@ -3246,6 +3354,7 @@ pub fn generate_refund_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                state,
             })
         }
         Err(e) => {
@@ -3286,6 +3395,7 @@ pub fn generate_refund_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                state,
             })
         }
     }
@@ -3392,6 +3502,7 @@ impl
             external_latency: None,
             connectors,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -3444,6 +3555,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -3457,6 +3569,19 @@ pub fn generate_payment_capture_response(
     >,
 ) -> Result<PaymentServiceCaptureResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
+
+    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
 
     match transaction_response {
         Ok(response) => match response {
@@ -3489,6 +3614,7 @@ pub fn generate_payment_capture_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
+                    state,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -3523,6 +3649,7 @@ pub fn generate_payment_capture_response(
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
+                state,
             })
         }
     }
@@ -3595,6 +3722,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -3767,6 +3895,19 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+
+    // Create state with access token if available in payment flow data
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -3834,7 +3975,8 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                     status_code: status_code as u32,
                     response_headers: router_data_v2
                         .resource_common_data
-                        .get_connector_response_headers_as_map()
+                        .get_connector_response_headers_as_map(),
+                    state,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -3864,6 +4006,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
             response_headers: router_data_v2
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
+            state,
         },
     };
     Ok(response)
@@ -3991,6 +4134,29 @@ pub fn generate_session_token_response(
                 sub_code: "SESSION_TOKEN_ERROR".to_string(),
                 error_identifier: 500,
                 error_message: format!("Session token creation failed: {}", e.message),
+                error_object: None,
+            }
+        ))),
+    }
+}
+
+pub fn generate_payment_method_token_response<T: PaymentMethodDataTypes>(
+    router_data_v2: RouterDataV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    >,
+) -> Result<String, error_stack::Report<ApplicationErrorResponse>> {
+    let payment_method_token_response = router_data_v2.response;
+
+    match payment_method_token_response {
+        Ok(response) => Ok(response.token),
+        Err(e) => Err(report!(ApplicationErrorResponse::InternalServerError(
+            ApiError {
+                sub_code: "PAYMENT_METHOD_TOKEN_ERROR".to_string(),
+                error_identifier: 500,
+                error_message: format!("Payment method token creation failed: {}", e.message),
                 error_object: None,
             }
         ))),
@@ -4386,6 +4552,85 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for AccessTokenRequestData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        _value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            grant_type: "client_credentials".to_string(),
+        })
+    }
+}
+
+// Generic implementation for access token request from connector auth
+impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        _auth_type: &ConnectorAuthType,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        // Default to client_credentials grant type for OAuth
+        // Connectors can override this with their own specific implementations
+        Ok(Self {
+            grant_type: "client_credentials".to_string(),
+        })
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + Default
+            + Debug
+            + Send
+            + Eq
+            + PartialEq
+            + serde::Serialize
+            + serde::de::DeserializeOwned
+            + Clone
+            + CardConversionHelper<T>,
+    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
+    for PaymentMethodTokenizationData<T>
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
+        let customer_acceptance = value.customer_acceptance.clone();
+
+        Ok(Self {
+            amount: common_utils::types::MinorUnit::new(value.amount),
+            currency,
+            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
+                value.payment_method.ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Payment method data is required".to_owned(),
+                        error_object: None,
+                    })
+                })?,
+            )?,
+            browser_info: value
+                .browser_info
+                .map(BrowserInformation::foreign_try_from)
+                .transpose()?,
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
+            setup_future_usage: None,
+            mandate_id: None,
+            setup_mandate_details: None,
+            integrity_object: None,
+        })
+    }
+}
+
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
     for RepeatPaymentData
 {
@@ -4519,6 +4764,7 @@ impl
             connectors,
             raw_connector_response: None,
             connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }
@@ -4537,6 +4783,19 @@ pub fn generate_repeat_payment_response(
     let transaction_response = router_data_v2.response;
     let status = router_data_v2.resource_common_data.status;
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+
+    // Create state with access token if available in payment flow data
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
@@ -4567,6 +4826,7 @@ pub fn generate_repeat_payment_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
+                    state,
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4602,6 +4862,7 @@ pub fn generate_repeat_payment_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
+                    state,
                 },
             )
         }

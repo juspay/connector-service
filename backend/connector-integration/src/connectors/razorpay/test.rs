@@ -97,6 +97,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -172,6 +173,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                     authentication_data: None,
                 },
                 response: Err(ErrorResponse {
@@ -263,6 +265,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -316,6 +319,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                     authentication_data: None,
                 },
                 response: Err(ErrorResponse {
@@ -381,6 +385,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -434,6 +439,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                     authentication_data: None,
                 },
                 response: Err(ErrorResponse {
@@ -521,6 +527,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -596,6 +603,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                     authentication_data: None,
                 },
                 response: Err(ErrorResponse {
@@ -828,6 +836,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -899,6 +908,7 @@ mod tests {
                 merchant_account_id: None,
                 merchant_config_currency: None,
                 all_keys_required: None,
+                access_token: None,
                 authentication_data: None,
             },
             response: Err(ErrorResponse {
@@ -1001,6 +1011,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1072,6 +1083,7 @@ mod tests {
                 merchant_account_id: None,
                 merchant_config_currency: None,
                 all_keys_required: None,
+                access_token: None,
                 authentication_data: None,
             },
             response: Err(ErrorResponse {
@@ -1176,6 +1188,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1272,6 +1285,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1373,6 +1387,7 @@ mod tests {
                         },
                         ..Default::default()
                     },
+                    vault_headers: None,
                     connector_response_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1426,6 +1441,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                     authentication_data: None,
                 },
                 response: Err(ErrorResponse {
@@ -1512,6 +1528,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1631,6 +1648,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
@@ -1739,6 +1757,7 @@ mod tests {
                     },
                     ..Default::default()
                 },
+                vault_headers: None,
                 connector_response_headers: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
