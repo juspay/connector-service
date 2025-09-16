@@ -61,12 +61,30 @@ pub struct WorldpayvantivPaymentMetadata {
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-// WorldpayVantiv Payments Request - wrapper for all payment flows
-#[derive(Debug, Serialize)]
+// WorldpayVantiv Payments Request - wrapper for all payment flows with custom XML serialization
+#[derive(Debug)]
 pub struct WorldpayvantivPaymentsRequest<T: PaymentMethodDataTypes> {
-    #[serde(flatten)]
     pub cnp_request: CnpOnlineRequest<T>,
 }
+
+// Custom Serialize implementation that generates proper XML using quick_xml
+impl<T: PaymentMethodDataTypes + Serialize> Serialize for WorldpayvantivPaymentsRequest<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Generate XML using quick_xml like Elavon does
+        let xml_content = quick_xml::se::to_string_with_root("cnpOnlineRequest", &self.cnp_request)
+            .map_err(serde::ser::Error::custom)?;
+        
+        // Add XML declaration as WorldpayVantiv expects it
+        let full_xml = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>{}", xml_content);
+        
+        // Serialize the complete XML string - the external service will handle unescaping
+        full_xml.serialize(serializer)
+    }
+}
+
 
 // TryFrom implementations for macro integration
 impl<
@@ -215,6 +233,7 @@ impl<
         Ok(Self {})
     }
 }
+
 
 pub(super) mod worldpayvantiv_constants {
     pub const WORLDPAYVANTIV_VERSION: &str = "12.23";
@@ -439,8 +458,8 @@ pub enum VantivProcessingType {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "UPPERCASE")]
 pub enum WorldpayvativCardType {
+    #[serde(rename = "VI")]
     Visa,
     #[serde(rename = "MC")]
     MasterCard,
