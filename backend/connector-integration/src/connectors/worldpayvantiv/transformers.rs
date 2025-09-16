@@ -648,6 +648,10 @@ pub struct PaymentResponse {
     pub message: String,
     pub response_time: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auth_code: Option<Secret<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fraud_result: Option<FraudResult>,
@@ -659,6 +663,8 @@ pub struct PaymentResponse {
     pub approved_amount: Option<MinorUnit>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enhanced_auth_response: Option<EnhancedAuthResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub card_suffix: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -724,6 +730,15 @@ pub struct FraudResult {
     pub authentication_result: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub advanced_a_v_s_result: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub advanced_fraud_results: Option<AdvancedFraudResults>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AdvancedFraudResults {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_review_status: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -741,21 +756,51 @@ pub struct TokenResponse {
 #[serde(rename_all = "camelCase")]
 pub struct EnhancedAuthResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub funding_source: Option<FundingSource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub virtual_account_number: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub network_response: Option<NetworkResponse>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkResponse {
-    pub network_fields: Vec<NetworkField>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(rename = "networkField", default, skip_serializing_if = "Vec::is_empty")]
+    pub network_field: Vec<NetworkField>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct NetworkField {
+    #[serde(rename = "@fieldNumber")]
     pub field_number: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "@fieldName", skip_serializing_if = "Option::is_none")]
+    pub field_name: Option<String>,
+    #[serde(rename = "fieldValue", skip_serializing_if = "Option::is_none")]
     pub field_value: Option<String>,
+    #[serde(rename = "networkSubField", default, skip_serializing_if = "Vec::is_empty")]
+    pub network_sub_field: Vec<NetworkSubField>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct NetworkSubField {
+    #[serde(rename = "@fieldNumber")]
+    pub field_number: String,
+    #[serde(rename = "fieldValue", skip_serializing_if = "Option::is_none")]
+    pub field_value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FundingSource {
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub funding_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub available_balance: Option<String>,
 }
 
 // Response codes (comprehensive list)
@@ -990,8 +1035,10 @@ pub struct VantivSyncRequest {}
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VantivSyncResponse {
-    pub transaction_id: String,
-    pub merchant_txn_id: Option<String>,
+    #[serde(rename = "paymentId")]
+    pub payment_id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_uuid: Option<String>,
     pub payment_status: PaymentStatus,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payment_detail: Option<PaymentDetail>,
@@ -1010,11 +1057,46 @@ pub enum PaymentStatus {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PaymentDetail {
+    #[serde(rename = "paymentId")]
+    pub payment_id: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub batch_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_reason_code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_reason_message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reject_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dupe_txn_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub amount: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub purchase_currency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_day: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reported_timestamp: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payment_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_order_number: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub merchant_txn_id: Option<String>,
-    pub payment_amount: Option<MinorUnit>,
-    pub payment_currency: Option<Currency>,
-    pub processing_date: Option<String>,
-    pub settlement_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reporting_group: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub txn_type: Option<String>,
+    #[serde(rename = "eCommMerchantId", skip_serializing_if = "Option::is_none")]
+    pub e_comm_merchant_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merchant_category_code: Option<String>,
 }
 
 // Sync error response
@@ -1509,12 +1591,14 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, RouterDataV2<PSync, PaymentF
         };
 
         let payments_response = PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(item.response.transaction_id.clone()),
+            resource_id: ResponseId::ConnectorTransactionId(item.response.payment_id.to_string()),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: item.response.merchant_txn_id.clone(),
+            connector_response_reference_id: item.response.payment_detail
+                .as_ref()
+                .and_then(|detail| detail.merchant_txn_id.clone()),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         };
@@ -1831,7 +1915,7 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, RouterDataV2<RSync, RefundFl
         };
 
         let refunds_response = RefundsResponseData {
-            connector_refund_id: item.response.transaction_id.clone(),
+            connector_refund_id: item.response.payment_id.to_string(),
             refund_status: status,
             status_code: item.http_code,
         };

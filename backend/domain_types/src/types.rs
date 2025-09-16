@@ -115,6 +115,7 @@ pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
+    pub secondary_base_url: Option<String>,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
