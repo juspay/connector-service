@@ -4,7 +4,7 @@ pub mod transformers;
 use base64::Engine;
 use common_enums;
 use common_utils::{
-    errors::CustomResult, ext_traits::deserialize_xml_to_struct, request::RequestContent,
+    errors::CustomResult, ext_traits::{deserialize_xml_to_struct, BytesExt}, request::RequestContent,
     types::MinorUnit,
 };
 use domain_types::{
@@ -465,7 +465,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            self.build_headers(req)
+            self.get_auth_header(&req.connector_auth_type)
         }
 
         fn get_url(
@@ -474,9 +474,12 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorError> {
             let txn_id = req.request.get_connector_transaction_id()
                 .change_context(ConnectorError::MissingConnectorTransactionID)?;
+            let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
+                .as_ref()
+                .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
             Ok(format!(
                 "{}/reports/dtrPaymentStatus/{}",
-                self.connector_base_url_payments(req),
+                secondary_base_url,
                 txn_id
             ))
         }
@@ -708,7 +711,7 @@ impl<
         &self,
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-        self.build_headers(req)
+        self.get_auth_header(&req.connector_auth_type)
     }
 
     fn get_content_type(&self) -> &'static str {
@@ -720,9 +723,12 @@ impl<
         req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
     ) -> CustomResult<String, ConnectorError> {
         let txn_id = req.request.connector_refund_id.clone();
+        let secondary_base_url = req.resource_common_data.connectors.worldpayvantiv.secondary_base_url
+            .as_ref()
+            .unwrap_or(&req.resource_common_data.connectors.worldpayvantiv.base_url);
         Ok(format!(
             "{}/reports/dtrPaymentStatus/{}",
-            self.connector_base_url_refunds(req),
+            secondary_base_url,
             txn_id
         ))
     }
@@ -741,9 +747,9 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, ConnectorError> {
-        let response_str = std::str::from_utf8(&res.response)
-            .change_context(ConnectorError::ResponseDeserializationFailed)?;
-        let response: VantivSyncResponse = deserialize_xml_to_struct(response_str)
+        let response: VantivSyncResponse = res
+            .response
+            .parse_struct("VantivSyncResponse")
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         event_builder.map(|i| i.set_response_body(&response));
         RouterDataV2::try_from(ResponseRouterData {
