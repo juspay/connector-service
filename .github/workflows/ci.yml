@@ -90,5 +90,20 @@ jobs:
 
       - name: Test Docker image startup
         run: |
-          # Test if the container starts successfully (run for 5 seconds then stop)
-          timeout 5s docker run --rm --name test-container connector-service:test || echo "Container test completed"
+          # Test that the binary exists and is executable
+          docker run --rm --entrypoint /bin/sh connector-service:test -c "test -f /app/bin/grpc-server && echo 'Binary exists'"
+          
+          # Test that config directory exists
+          docker run --rm --entrypoint /bin/sh connector-service:test -c "test -d /app/config && echo 'Config directory exists'"
+          
+          # Test that source code is NOT present (multi-stage build working)
+          docker run --rm --entrypoint /bin/sh connector-service:test -c "test ! -d /app/backend && echo 'Source code correctly excluded'"
+          
+          # Test binary can show help (with proper config)
+          docker run --rm -e RUN_ENV=development connector-service:test --help
+
+      - name: Verify container contents
+        run: |
+          # List contents to verify structure
+          docker run --rm --entrypoint /bin/sh connector-service:test -c "ls -la /app/"
+          docker run --rm --entrypoint /bin/sh connector-service:test -c "ls -la /app/config/"
