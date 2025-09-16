@@ -57,8 +57,7 @@ impl serde::Serialize for LineageIds<'_> {
     where
         S: serde::Serializer,
     {
-        let prefixed_map = self
-            .inner();
+        let prefixed_map = self.inner();
         prefixed_map.serialize(serializer)
     }
 }
