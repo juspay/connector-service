@@ -1,9 +1,10 @@
+
 pub mod transformers;
 
 use base64::Engine;
 use common_enums;
 use common_utils::{
-    errors::CustomResult, ext_traits::{ByteSliceExt, deserialize_xml_to_struct}, request::RequestContent,
+    errors::CustomResult, ext_traits::deserialize_xml_to_struct, request::RequestContent,
     types::MinorUnit,
 };
 use domain_types::{
@@ -378,10 +379,7 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "text/xml".to_string().into(),
-            )];
+            let mut header = vec![];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
             header.append(&mut api_key);
             Ok(header)
