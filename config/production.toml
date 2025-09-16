@@ -7,12 +7,12 @@ level = "TRACE"
 log_format = "default"
 
 [server]
-host = "0.0.0.0"
+host = "127.0.0.1"
 port = 8000
 type = "grpc"
 
 [metrics]
-host = "0.0.0.0"
+host = "127.0.0.1"
 port = 8080
 
 [proxy]
@@ -41,46 +41,9 @@ noon.base_url = "https://api.noonpayments.com/"
 mifinity.base_url = "https://secure.mifinity.com/"
 braintree.base_url = "https://payments.braintree-api.com/graphql"
 
-[log.kafka]
-enabled = false
-level = "info"
-filtering_directive = "info"
-brokers = ["localhost:9092"]
-topic = "connector-service-logs"
-buffer_limit = 100000
-
 # Generic Events Configuration
 [events]
 enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
-
-[lineage]
-enabled = false
-header_name = "x-lineage-ids"
-field_prefix = "lineage_"
-
-# Euler-compatible configuration
-[events.transformations]
-"gateway" = "connector"
-"action" = "flow_type"
-"entity" = "flow_type"
-"message.latency" = "latency"
-"message.request_time" = "timestamp"
-"message.res_code" = "status_code"
-"message.url" = "url"
-"message.stage" = "stage"
-"message.req_body" = "connector_request_data"
-"message.res_body" = "connector_response_data"
-
-[events.static_values]
-"hostname" = "connector-service"
-"schema_version" = "V2"
-"category" = "OUTGOING_API"
-"message.req_type" = "EXTERNAL"
-"message.log_type" = "API_CALL"
-
-[events.extractions]
-"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"x-request-id" = "req.metadata.x-request-id"

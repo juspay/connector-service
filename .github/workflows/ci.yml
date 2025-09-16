@@ -99,8 +99,11 @@ jobs:
           # Test that source code is NOT present (multi-stage build working)
           docker run --rm --entrypoint /bin/sh connector-service:test -c "test ! -d /app/backend && echo 'Source code correctly excluded'"
           
-          # Test binary can show help (with proper config)
+          # Test binary can show help (this will fail if binary panics on startup)
           docker run --rm -e RUN_ENV=development connector-service:test --help
+          
+          # Test that the application can start and initialize properly (run for 3 seconds)
+          timeout 3s docker run --rm -e RUN_ENV=development --name test-startup connector-service:test
 
       - name: Verify container contents
         run: |
