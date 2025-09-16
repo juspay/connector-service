@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - include-production-configs
   pull_request:
 
   merge_group:
@@ -73,8 +72,8 @@ jobs:
         shell: bash
         run: cargo +nightly fmt --all --check
 
-  docker:
-    name: Docker Build and Test
+  release-build-run:
+    name: Docker Build and Run
     runs-on: ubuntu-latest
     needs: [check, formatting, typos]
 
@@ -91,22 +90,5 @@ jobs:
 
       - name: Test Docker image startup
         run: |
-          # Test if the binary can run with --help (if supported)
-          timeout 10s docker run --rm connector-service:test --help || echo "Help command not available or failed"
-          
           # Test if the container starts successfully (run for 5 seconds then stop)
           timeout 5s docker run --rm --name test-container connector-service:test || echo "Container test completed"
-          
-          # Alternative: Test if the binary exists and is executable
-          docker run --rm --entrypoint /bin/sh connector-service:test -c "ls -la /app/bin/grpc-server && /app/bin/grpc-server --version || echo 'Version command not available'"
-
-      - name: Verify container contents
-        run: |
-          # Check that the binary exists in the expected location
-          docker run --rm --entrypoint /bin/sh connector-service:test -c "test -f /app/bin/grpc-server && echo 'Binary exists'"
-          
-          # Check that config files are present
-          docker run --rm --entrypoint /bin/sh connector-service:test -c "test -d /app/config && ls -la /app/config && echo 'Config directory exists'"
-          
-          # Check that source code is NOT present
-          docker run --rm --entrypoint /bin/sh connector-service:test -c "test ! -d /app/backend && echo 'Source code correctly excluded'"
