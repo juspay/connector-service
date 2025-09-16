@@ -112,6 +112,7 @@ jobs:
             docker logs test-startup
             # Clean up failed container
             docker rm test-startup 2>/dev/null || true
+            echo "Update config/production.toml"
             exit 1
           fi
 
