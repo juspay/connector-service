@@ -75,7 +75,7 @@ jobs:
   release-build-run:
     name: Docker Build and Run
     runs-on: ubuntu-latest
-    needs: [check, formatting, typos]
+    # needs: [check, formatting, typos]
 
     steps:
       - name: Checkout repository
