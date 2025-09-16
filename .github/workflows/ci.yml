@@ -103,9 +103,17 @@ jobs:
           docker run -d -e RUN_ENV=development --name test-startup -p 8001:8000 connector-service:test
           sleep 3
           # Check if container is still running (started successfully)
-          docker ps | grep test-startup
-          # Stop the container
-          docker stop test-startup && docker rm test-startup
+          if docker ps | grep -q test-startup; then
+            echo "Application started successfully"
+            # Stop the container
+            docker stop test-startup && docker rm test-startup
+          else
+            echo "Application failed to start. Container logs:"
+            docker logs test-startup
+            # Clean up failed container
+            docker rm test-startup 2>/dev/null || true
+            exit 1
+          fi
 
       - name: Verify container contents
         run: |
