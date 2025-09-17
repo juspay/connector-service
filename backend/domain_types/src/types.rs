@@ -5449,6 +5449,13 @@ impl<
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
 
+        // Create redirect response from authentication data if present
+        let redirect_response = value.authentication_data.map(|auth_data| {
+            crate::connector_types::CompleteAuthorizeRedirectResponse {
+                params: auth_data.ds_transaction_id.clone().map(Secret::new),
+                payload: None,
+            }
+        });
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5475,7 +5482,7 @@ impl<
                 .transpose()?,
             connector_transaction_id: None,
             enrolled_for_3ds: false,
-            redirect_response: None,
+            redirect_response,
         })
     }
 }
@@ -5519,7 +5526,14 @@ impl<
 
         // Clone payment_method to avoid ownership issues
         let payment_method_clone = value.payment_method.clone();
-
+        
+        // Create redirect response from authentication data if present
+        let redirect_response = value.authentication_data.map(|auth_data| {
+            crate::connector_types::CompleteAuthorizeRedirectResponse {
+                params: auth_data.ds_transaction_id.clone().map(Secret::new),
+                payload: None,
+            }
+        });
         Ok(Self {
             payment_method_data: value
                 .payment_method
@@ -5546,7 +5560,7 @@ impl<
                 .transpose()?,
             connector_transaction_id: None,
             enrolled_for_3ds: false,
-            redirect_response: None,
+            redirect_response,
         })
     }
 }
