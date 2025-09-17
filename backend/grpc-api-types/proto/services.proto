@@ -42,13 +42,13 @@ service PaymentService {
 
   // 3DS Authentication flows
   // Pre-authentication step - always used when 3DS is possible
-  rpc PreAuthenticate(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+  rpc PreAuthenticate(PaymentServicePreAuthenticateRequest) returns (PaymentServicePreAuthenticateResponse);
 
   // Authentication step - used for any challenge/verification step
-  rpc Authenticate(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+  rpc Authenticate(PaymentServiceAuthenticateRequest) returns (PaymentServiceAuthenticateResponse);
 
   // Post-authentication step - used when authentication results need validation
-  rpc PostAuthenticate(PaymentServiceAuthorizeRequest) returns (PaymentServiceAuthorizeResponse);
+  rpc PostAuthenticate(PaymentServicePostAuthenticateRequest) returns (PaymentServicePostAuthenticateResponse);
 }
 
 // Service for refund-specific operations.
