@@ -1,5 +1,5 @@
 [common]
-environment = "production"
+environment = "sandbox"
 
 [log.console]
 enabled = true
@@ -40,7 +40,7 @@ nexinets.base_url = "https://api.payengine.de/v1"
 noon.base_url = "https://api.noonpayments.com/"
 mifinity.base_url = "https://secure.mifinity.com/"
 braintree.base_url = "https://payments.braintree-api.com/graphql"
-volt.base_url = "https://api.volt.io/"
+volt.base_url = "https://api.sandbox.volt.io/"
 
 # Generic Events Configuration
 [events]
