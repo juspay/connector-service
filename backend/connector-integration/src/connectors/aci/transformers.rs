@@ -8,7 +8,7 @@ use common_utils::{
     types::{MinorUnit, StringMinorUnit},
 };
 use domain_types::{
-    connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
+    connector_flow::{self, Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate, Void, Capture},
     connector_types::{
         MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
@@ -28,9 +28,11 @@ use domain_types::{
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
+use serde_json;
 use strum::Display;
 
-use crate::{connectors::aci::AciRouterData, types::ResponseRouterData};
+use crate::types::ResponseRouterData;
+use super::AciRouterData;
 
 pub struct AciAuthType {
     pub api_key: Secret<String>,
@@ -51,20 +53,19 @@ impl TryFrom<&ConnectorAuthType> for AciAuthType {
     }
 }
 
+// Helper struct for amount data
 #[derive(Debug, Serialize)]
-pub struct AciRouterData<T, U> {
+pub struct AciRouterData1<T> {
     pub amount: StringMinorUnit,
     pub router_data: T,
-    pub payment_method_data: std::marker::PhantomData<U>,
 }
 
-impl<T, U> TryFrom<(StringMinorUnit, T)> for AciRouterData<T, U> {
+impl<T> TryFrom<(StringMinorUnit, T)> for AciRouterData1<T> {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from((amount, item): (StringMinorUnit, T)) -> Result<Self, Self::Error> {
         Ok(Self {
             amount,
             router_data: item,
-            payment_method_data: std::marker::PhantomData,
         })
     }
 }
@@ -111,6 +112,25 @@ pub struct AciRefundRequest {
 #[derive(Debug, Serialize)]
 pub struct AciSyncRequest;
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        AciRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for AciSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        _item: AciRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciVoidRequest {
@@ -120,6 +140,25 @@ pub struct AciVoidRequest {
 
 #[derive(Debug, Serialize)]
 pub struct AciRefundSyncRequest;
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        AciRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for AciRefundSyncRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        _item: AciRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
@@ -324,6 +363,11 @@ pub struct AciRefundResponse {
     pub result: ResultCode,
 }
 
+// Response type aliases for unique macro handling
+pub type AciPSyncResponse = AciPaymentsResponse;
+pub type AciVoidResponse = AciPaymentsResponse;
+pub type AciRefundSyncResponse = AciRefundResponse;
+
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciErrorResponse {
@@ -401,13 +445,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                         field_name: "card_holder_name",
                     })?;
 
-                let payment_brand = get_aci_payment_brand(card.card_network, false)?;
+                let payment_brand = get_aci_payment_brand(card.card_network.clone(), false)?;
 
                 PaymentDetails::AciCard(Box::new(CardDetails {
                     card_number: card.card_number.clone(),
                     card_holder: card_holder_name,
                     card_expiry_month: card.card_exp_month.clone(),
-                    card_expiry_year: card.get_expiry_year_4_digit(),
+                    card_expiry_year: card.card_exp_year.clone(),
                     card_cvv: card.card_cvc.clone(),
                     payment_brand,
                 }))
@@ -415,10 +459,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             _ => return Err(ConnectorError::NotImplemented("payment method".into()).into()),
         };
 
+        let amount: StringMinorUnit = serde_json::from_str(&item.router_data.request.amount.to_string())
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+        
         Ok(Self {
             txn_details: TransactionDetails {
                 entity_id: auth.entity_id,
-                amount: item.amount,
+                amount,
                 currency: item.router_data.request.currency.to_string(),
                 payment_type,
             },
@@ -445,10 +492,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         >,
     ) -> Result<Self, Self::Error> {
         let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let amount: StringMinorUnit = serde_json::from_str(&item.router_data.request.amount_to_capture.to_string())
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+        
         Ok(Self {
             txn_details: TransactionDetails {
                 entity_id: auth.entity_id,
-                amount: item.amount,
+                amount,
                 currency: item.router_data.request.currency.to_string(),
                 payment_type: AciPaymentType::Capture,
             },
@@ -472,8 +522,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         >,
     ) -> Result<Self, Self::Error> {
         let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let amount: StringMinorUnit = serde_json::from_str(&item.router_data.request.refund_amount.to_string())
+            .change_context(errors::ConnectorError::ParsingFailed)?;
+        
         Ok(Self {
-            amount: item.amount,
+            amount,
             currency: item.router_data.request.currency.to_string(),
             payment_type: AciPaymentType::Refund,
             entity_id: auth.entity_id,
@@ -483,17 +536,52 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     TryFrom<
-        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        AciRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     > for AciVoidRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        item: AciRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth = AciAuthType::try_from(&item.connector_auth_type)?;
+        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
         Ok(Self {
             payment_type: AciPaymentType::Reversal,
             entity_id: auth.entity_id,
+        })
+    }
+}
+
+impl<F> TryFrom<ResponseRouterData<AciPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<AciPaymentsResponse, Self>,
+    ) -> Result<Self, Self::Error> {
+        let status = map_aci_attempt_status(&item.response.result.code, true)?;
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(item.response.id.clone()),
+                redirection_data: None,
+                connector_metadata: None,
+                mandate_reference: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            resource_common_data: PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
+            ..item.router_data
         })
     }
 }
@@ -597,7 +685,7 @@ impl<F> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
     fn try_from(
         item: ResponseRouterData<AciCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_aci_capture_status(&item.response.result.code)?;
+        let status = map_aci_capture_status(&Some(item.response.result.code.clone()))?;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -750,3 +838,4 @@ fn map_aci_refund_status(
         Ok(common_enums::RefundStatus::Failure)
     }
 }
+
