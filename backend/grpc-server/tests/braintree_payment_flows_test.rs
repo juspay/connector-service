@@ -166,6 +166,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: None,
         access_token: None,
         // all_keys_required: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

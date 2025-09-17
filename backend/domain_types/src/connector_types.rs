@@ -1193,6 +1193,7 @@ pub struct WebhookDetailsResponse {
     pub raw_connector_response: Option<String>,
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
+    pub transformation_status: common_enums::WebhookTransformationStatus,
 }
 
 #[derive(Debug, Clone)]

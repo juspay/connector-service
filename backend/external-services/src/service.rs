@@ -112,6 +112,75 @@ pub struct EventProcessingParams<'a> {
 }
 
 #[tracing::instrument(
+    name = "execute_connector_processing_step_for_handle_response",
+    skip_all,
+    fields(
+        request.headers = Empty,
+        request.body = Empty,
+        request.url = Empty,
+        request.method = Empty,
+        response.body = Empty,
+        response.headers = Empty,
+        response.error_message = Empty,
+        response.status_code = Empty,
+        message_ = "Golden Log Line (outgoing)",
+        latency = Empty,
+    )
+)]
+pub async fn execute_connector_processing_step_for_handle_response<
+    T,
+    F,
+    ResourceCommonData,
+    Req,
+    Resp,
+>(
+    connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
+    router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    res: Vec<u8>,
+) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
+where
+    F: Clone + 'static,
+    T: FlowIntegrity,
+    Req: Clone + 'static + std::fmt::Debug + GetIntegrityObject<T> + CheckIntegrity<Req, T>,
+    Resp: Clone + 'static + std::fmt::Debug,
+    ResourceCommonData: Clone
+        + 'static
+        + RawConnectorResponse
+        + ConnectorResponseHeaders
+        + ConnectorRequestReference
+        + AdditionalHeaders,
+{
+    let start = tokio::time::Instant::now();
+    let response = Response {
+        headers: None,
+        response: res.into(),
+        status_code: 200,
+    };
+
+    let handle_response_result = connector.handle_response_v2(&router_data, None, response);
+
+    let response = match handle_response_result {
+        Ok(data) => {
+            tracing::info!("Transformer completed successfully");
+            Ok(data)
+        }
+        Err(err) => Err(err),
+    }?;
+
+    response
+        .request
+        .check_integrity(&response.request.clone(), None)
+        .map_err(|err| ConnectorError::IntegrityCheckFailed {
+            field_names: err.field_names,
+            connector_transaction_id: err.connector_transaction_id,
+        })?;
+    let elapsed = start.elapsed().as_millis();
+    tracing::Span::current().record("latency", elapsed);
+    tracing::info!(tag = ?Tag::OutgoingApi, log_type = "api", "Outgoing Request completed");
+    Ok(response)
+}
+
+#[tracing::instrument(
     name = "execute_connector_processing_step",
     skip_all,
     fields(
