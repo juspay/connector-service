@@ -228,7 +228,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         
         Ok(vec![(
             headers::AUTHORIZATION.to_string(),
-            format!("Bearer {}", auth.api_key.peek()).into_masked(),
+            auth.api_key.peek().to_string().into_masked(),
         )])
     }
 

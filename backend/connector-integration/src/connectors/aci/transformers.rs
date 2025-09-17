@@ -484,7 +484,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         };
 
         println!("aci: Converting amount: {}", item.router_data.request.amount);
-        let amount: StringMinorUnit = serde_json::from_str(&format!("{}", item.router_data.request.amount))
+        let amount_str = format!("\"{}\"", item.router_data.request.amount);
+        println!("aci: Amount as JSON string: {}", amount_str);
+        let amount: StringMinorUnit = serde_json::from_str(&amount_str)
             .change_context(errors::ConnectorError::ParsingFailed)?;
         
         println!("aci: Payment object created successfully");
