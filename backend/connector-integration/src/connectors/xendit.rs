@@ -205,17 +205,6 @@ impl<
 }
 
 macros::create_amount_converter_wrapper!(connector_name: Xendit, amount_type: FloatMajorUnit);
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentTokenV2<T> for Xendit<T>
-{
-}
-
 macros::create_all_prerequisites!(
     connector_name:  Xendit,
     generic_type: T,
