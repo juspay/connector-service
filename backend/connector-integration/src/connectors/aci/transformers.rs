@@ -108,6 +108,19 @@ pub struct AciRefundRequest {
     pub entity_id: Secret<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct AciSyncRequest;
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AciVoidRequest {
+    pub payment_type: AciPaymentType,
+    pub entity_id: Secret<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AciRefundSyncRequest;
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 pub enum PaymentDetails<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> {
@@ -463,6 +476,23 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             amount: item.amount,
             currency: item.router_data.request.currency.to_string(),
             payment_type: AciPaymentType::Refund,
+            entity_id: auth.entity_id,
+        })
+    }
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    TryFrom<
+        RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    > for AciVoidRequest
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+    ) -> Result<Self, Self::Error> {
+        let auth = AciAuthType::try_from(&item.connector_auth_type)?;
+        Ok(Self {
+            payment_type: AciPaymentType::Reversal,
             entity_id: auth.entity_id,
         })
     }

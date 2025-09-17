@@ -35,7 +35,8 @@ use interfaces::{
 use transformers::{
     self as aci,
     AciPaymentsRequest, AciPaymentsResponse, AciCaptureRequest, AciCaptureResponse,
-    AciRefundRequest, AciRefundResponse, AciErrorResponse,
+    AciRefundRequest, AciRefundResponse, AciErrorResponse, AciSyncRequest,
+    AciVoidRequest, AciRefundSyncRequest,
 };
 
 use super::macros;
@@ -298,7 +299,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Aci,
-    curl_request: (),
+    curl_request: Json(AciSyncRequest),
     curl_response: AciPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -364,7 +365,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Aci,
-    curl_request: (),
+    curl_request: FormUrlEncoded(AciVoidRequest),
     curl_response: AciPaymentsResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
@@ -428,7 +429,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Aci,
-    curl_request: (),
+    curl_request: Json(AciRefundSyncRequest),
     curl_response: AciRefundResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
