@@ -29,6 +29,7 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+
 use serde::Serialize;
 use std::fmt::Debug;
 pub mod transformers;
@@ -243,6 +244,20 @@ macros::create_all_prerequisites!(
             &req.resource_common_data.connectors.trustpay.base_url
         }
 
+        pub fn connector_base_url_bank_redirects_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap()
+        }
+
+         pub fn connector_base_url_bank_redirects_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap()
+        }
+
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
@@ -427,12 +442,7 @@ impl<
             common_enums::PaymentMethod::BankRedirect
             | common_enums::PaymentMethod::BankTransfer => Ok(format!(
                 "{}{}",
-                req.resource_common_data
-                    .connectors
-                    .trustpay
-                    .base_url_bank_redirects
-                    .as_deref()
-                    .unwrap_or(&req.resource_common_data.connectors.trustpay.base_url),
+                self.connector_base_url_bank_redirects_payments(req),
                 "api/Payments/Payment"
             )),
             _ => Ok(format!(
@@ -553,7 +563,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             Ok(format!(
             "{}{}",
-            req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap_or(&req.resource_common_data.connectors.trustpay.base_url), "api/oauth2/token"
+            self.connector_base_url_bank_redirects_payments(req), "api/oauth2/token"
         ))
         }
     }
@@ -589,7 +599,7 @@ macros::macro_connector_implementation!(
         match req.resource_common_data.payment_method {
             common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
                 "{}{}/{}",
-                req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap_or(&req.resource_common_data.connectors.trustpay.base_url),
+                self.connector_base_url_bank_redirects_payments(req),
                 "api/Payments/Payment",
                 transaction_id,
             )),
@@ -640,12 +650,7 @@ impl<
             common_enums::PaymentMethod::BankRedirect
             | common_enums::PaymentMethod::BankTransfer => Ok(format!(
                 "{}{}{}{}",
-                req.resource_common_data
-                    .connectors
-                    .trustpay
-                    .base_url_bank_redirects
-                    .as_deref()
-                    .unwrap_or(&req.resource_common_data.connectors.trustpay.base_url),
+                self.connector_base_url_bank_redirects_refunds(req),
                 "api/Payments/Payment/",
                 req.request.connector_transaction_id,
                 "/Refund"
@@ -764,7 +769,7 @@ macros::macro_connector_implementation!(
         match payment_method {
             common_enums::PaymentMethod::BankRedirect | common_enums::PaymentMethod::BankTransfer => Ok(format!(
                 "{}{}/{}",
-                req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap_or(&req.resource_common_data.connectors.trustpay.base_url), "api/Payments/Payment", id
+                self.connector_base_url_bank_redirects_refunds(req), "api/Payments/Payment", id
             )),
             _ => Ok(format!(
                 "{}{}/{}",
