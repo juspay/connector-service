@@ -39,9 +39,9 @@ use interfaces::{
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
-    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
-    XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
-    XenditPaymentsCaptureRequest, XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
+    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditCaptureResponse,
+    XenditErrorResponse, XenditPaymentResponse, XenditPaymentsCaptureRequest,
+    XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
 };
 
 use super::macros;
@@ -238,6 +238,7 @@ impl<
 {
 }
 
+macros::create_amount_converter_wrapper!(connector_name: Xendit, amount_type: FloatMajorUnit);
 macros::create_all_prerequisites!(
     connector_name:  Xendit,
     generic_type: T,

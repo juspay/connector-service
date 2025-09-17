@@ -60,6 +60,7 @@ pub enum ConnectorEnum {
     Nexinets,
     Noon,
     Braintree,
+    Volt,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -87,6 +88,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
             grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
+            grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
