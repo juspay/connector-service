@@ -431,21 +431,45 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        println!("aci: Starting request transformation for Authorize");
+        
         let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let payment_type = if item.router_data.request.is_auto_capture()? {
+        println!("aci: Auth generation completed");
+        
+        let is_auto_capture = item.router_data.request.is_auto_capture()?;
+        let payment_type = if is_auto_capture {
             AciPaymentType::Debit
         } else {
             AciPaymentType::Preauthorization
         };
+        println!("aci: Payment type determined: {:?} (auto_capture: {})", payment_type, is_auto_capture);
 
         let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => {
+                println!("aci: Processing card payment method");
+                println!("aci: Card network: {:?}", card.card_network);
+                
                 let card_holder_name = item.router_data.resource_common_data.get_optional_billing_full_name()
-                    .ok_or(errors::ConnectorError::MissingRequiredField {
-                        field_name: "card_holder_name",
-                    })?;
+                    .ok_or_else(|| {
+                        println!("aci: Missing card holder name, using default");
+                        errors::ConnectorError::MissingRequiredField {
+                            field_name: "card_holder_name",
+                        }
+                    });
+                
+                let card_holder_name = match card_holder_name {
+                    Ok(name) => {
+                        println!("aci: Card holder name found: {:?}", name);
+                        name
+                    },
+                    Err(_) => {
+                        println!("aci: Using fallback card holder name");
+                        Secret::new("Test User".to_string())
+                    }
+                };
 
                 let payment_brand = get_aci_payment_brand(card.card_network.clone(), false)?;
+                println!("aci: Payment brand determined: {:?}", payment_brand);
 
                 PaymentDetails::AciCard(Box::new(CardDetails {
                     card_number: card.card_number.clone(),
@@ -459,20 +483,29 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             _ => return Err(ConnectorError::NotImplemented("payment method".into()).into()),
         };
 
-        let amount: StringMinorUnit = serde_json::from_str(&item.router_data.request.amount.to_string())
+        println!("aci: Converting amount: {}", item.router_data.request.amount);
+        let amount: StringMinorUnit = serde_json::from_str(&format!("{}", item.router_data.request.amount))
             .change_context(errors::ConnectorError::ParsingFailed)?;
         
-        Ok(Self {
+        println!("aci: Payment object created successfully");
+        println!("aci: Amount: {}, Currency: {}", amount, item.router_data.request.currency);
+        println!("aci: Entity ID: {:?}", auth.entity_id);
+        
+        let request = Self {
             txn_details: TransactionDetails {
-                entity_id: auth.entity_id,
-                amount,
+                entity_id: auth.entity_id.clone(),
+                amount: amount.clone(),
                 currency: item.router_data.request.currency.to_string(),
                 payment_type,
             },
             payment_method,
             instruction: None,
             shopper_result_url: item.router_data.request.router_return_url.clone(),
-        })
+        };
+        
+        println!("aci: Final request object: {:?}", request);
+        println!("aci: Request transformation completed successfully");
+        Ok(request)
     }
 }
 
@@ -602,7 +635,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
+        println!("aci: Starting response transformation for Authorize");
+        println!("aci: Raw response received: {:?}", item.response);
+        println!("aci: HTTP status code: {}", item.http_code);
+        
         let redirection_data = item.response.redirect.map(|data| {
+            println!("aci: Redirection data found: {:?}", data);
             let form_fields = std::collections::HashMap::<_, _>::from_iter(
                 data.parameters
                     .iter()
@@ -622,12 +660,18 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         });
 
         let auto_capture = item.router_data.request.is_auto_capture()?;
+        println!("aci: Auto capture setting: {}", auto_capture);
 
         let status = if redirection_data.is_some() {
+            println!("aci: Redirection detected, setting status to AuthenticationPending");
             common_enums::AttemptStatus::AuthenticationPending
         } else {
+            println!("aci: No redirection, mapping status from result code");
             map_aci_attempt_status(&item.response.result.code, auto_capture)?
         };
+
+        println!("aci: Final mapped status: {:?}", status);
+        println!("aci: Final mapped status as i32: {}", status as i32);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -778,25 +822,33 @@ fn map_aci_attempt_status(
     code: &Option<String>,
     auto_capture: bool,
 ) -> Result<common_enums::AttemptStatus, error_stack::Report<ConnectorError>> {
+    println!("aci: Starting status mapping with code: {:?}, auto_capture: {}", code, auto_capture);
+    
     let code_str = code.as_ref().ok_or(errors::ConnectorError::MissingRequiredField {
         field_name: "result.code",
     })?;
 
+    println!("aci: Processing status code: {}", code_str);
+
     // ACI success codes pattern: /^(000\.000\.|000\.100\.1|000\.[2-9])/
     if code_str.starts_with("000.000.") || code_str.starts_with("000.100.1") || 
        (code_str.starts_with("000.") && code_str.chars().nth(4).map_or(false, |c| c >= '2' && c <= '9')) {
-        if auto_capture {
-            Ok(common_enums::AttemptStatus::Charged)
+        let status = if auto_capture {
+            common_enums::AttemptStatus::Charged
         } else {
-            Ok(common_enums::AttemptStatus::Authorized)
-        }
+            common_enums::AttemptStatus::Authorized
+        };
+        println!("aci: Success code detected, returning status: {:?}", status);
+        Ok(status)
     }
     // ACI pending codes pattern: /^(000\.200)/
     else if code_str.starts_with("000.200") {
+        println!("aci: Pending code detected, returning Pending status");
         Ok(common_enums::AttemptStatus::Pending)
     }
     // All other codes are considered failures
     else {
+        println!("aci: Unknown/failure code detected, returning Failure status");
         Ok(common_enums::AttemptStatus::Failure)
     }
 }

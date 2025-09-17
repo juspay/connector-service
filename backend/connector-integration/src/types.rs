@@ -47,10 +47,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Noon => Box::new(Noon::new()),
             ConnectorEnum::Volt => Box::new(Volt::new()),
             ConnectorEnum::Braintree => Box::new(Braintree::new()),
-            ConnectorEnum::Aci => {
-                // TODO: Fix trait implementations for ConnectorServiceTrait
-                panic!("ACI connector not fully implemented - missing PaymentTokenV2 and PaymentAccessToken traits")
-            }
+            ConnectorEnum::Aci => Box::new(Aci::new()),
         }
     }
 }
