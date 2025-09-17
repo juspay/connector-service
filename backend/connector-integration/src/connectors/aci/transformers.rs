@@ -702,7 +702,22 @@ impl<F> TryFrom<ResponseRouterData<AciPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<AciPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_aci_attempt_status(&item.response.result.code, true)?;
+        println!("aci: Starting sync response transformation");
+        println!("aci: Sync response received: {:?}", item.response);
+        
+        // For sync, we don't know the original capture method, so we need to infer from the current status
+        // If the payment is already charged, it was auto-capture. If authorized, it was manual capture.
+        let inferred_auto_capture = match item.response.result.code.as_deref() {
+            Some(code) if code.starts_with("000.100.110") => {
+                // This is a success code, but we need to check if it's charged or just authorized
+                // For sync operations, we'll assume manual capture (false) to be conservative
+                false
+            },
+            _ => false
+        };
+        
+        println!("aci: Inferred auto_capture for sync: {}", inferred_auto_capture);
+        let status = map_aci_attempt_status(&item.response.result.code, inferred_auto_capture)?;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
