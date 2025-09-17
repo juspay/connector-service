@@ -3725,6 +3725,163 @@ impl
     }
 }
 
+impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<DefaultPCIHolder> {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: PaymentServiceRegisterRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let email: Option<Email> = match value.email {
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
+
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
+            None => None,
+        };
+        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
+            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
+                error_identifier: 400,
+                error_message: "Customer acceptance is missing".to_owned(),
+                error_object: None,
+            }))
+        })?;
+
+        let setup_future_usage = value.setup_future_usage();
+
+        let setup_mandate_details = MandateData {
+            update_mandate_id: None,
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
+            mandate_type: None,
+        };
+
+        Ok(Self {
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            payment_method_data: PaymentMethodData::foreign_try_from(
+                value.payment_method.ok_or_else(|| {
+                    ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Payment method data is required".to_owned(),
+                        error_object: None,
+                    })
+                })?,
+            )?,
+            amount: Some(0),
+            confirm: true,
+            statement_descriptor_suffix: None,
+            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
+                customer_acceptance.clone(),
+            )?),
+            mandate_id: None,
+            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
+                setup_future_usage,
+            )?),
+            off_session: Some(false),
+            setup_mandate_details: Some(setup_mandate_details),
+            router_return_url: value.return_url.clone(),
+            webhook_url: value.webhook_url,
+            browser_info: value.browser_info.map(|info| BrowserInformation {
+                color_depth: None,
+                java_enabled: info.java_enabled,
+                java_script_enabled: info.java_script_enabled,
+                language: info.language,
+                screen_height: info.screen_height,
+                screen_width: info.screen_width,
+                time_zone: None,
+                ip_address: None,
+                accept_header: info.accept_header,
+                user_agent: info.user_agent,
+                os_type: info.os_type,
+                os_version: info.os_version,
+                device_model: info.device_model,
+                accept_language: info.accept_language,
+            }),
+            email,
+            customer_name: None,
+            return_url: value.return_url.clone(),
+            payment_method_type: None,
+            request_incremental_authorization: false,
+            metadata: if value.metadata.is_empty() {
+                None
+            } else {
+                Some(serde_json::Value::Object(
+                    value
+                        .metadata
+                        .into_iter()
+                        .map(|(k, v)| (k, serde_json::Value::String(v)))
+                        .collect(),
+                ))
+            },
+            complete_authorize_url: None,
+            capture_method: None,
+            integrity_object: None,
+            minor_amount: Some(common_utils::types::MinorUnit::new(0)),
+            shipping_cost: None,
+            customer_id: value
+                .connector_customer_id
+                .clone()
+                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
+                .transpose()
+                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Failed to parse Customer Id".to_owned(),
+                    error_object: None,
+                }))?,
+            statement_descriptor: None,
+            merchant_order_reference_id: None,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::CustomerAcceptance {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        _value: grpc_api_types::payments::CustomerAcceptance,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(mandates::CustomerAcceptance {
+            acceptance_type: mandates::AcceptanceType::Offline,
+            accepted_at: None,
+            online: None,
+        })
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
+    type Error = ApplicationErrorResponse;
+    fn foreign_try_from(
+        value: grpc_api_types::payments::FutureUsage,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::FutureUsage::OffSession => {
+                Ok(common_enums::FutureUsage::OffSession)
+            }
+            grpc_api_types::payments::FutureUsage::OnSession => {
+                Ok(common_enums::FutureUsage::OnSession)
+            }
+            grpc_api_types::payments::FutureUsage::Unspecified => {
+                Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_FUTURE_USAGE".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Future usage must be specified".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
+        }
+    }
+}
+
 // New ForeignTryFrom implementations for individual 3DS authentication flow proto definitions
 
 impl<
@@ -4162,163 +4319,6 @@ impl
             connector_response_headers: None,
             vault_headers,
         })
-    }
-}
-
-impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<DefaultPCIHolder> {
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: PaymentServiceRegisterRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let email: Option<Email> = match value.email {
-            Some(ref email_str) => {
-                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
-                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
-                        error_identifier: 400,
-
-                        error_message: "Invalid email".to_owned(),
-                        error_object: None,
-                    }))
-                })?)
-            }
-            None => None,
-        };
-        let customer_acceptance = value.customer_acceptance.clone().ok_or_else(|| {
-            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "MISSING_CUSTOMER_ACCEPTANCE".to_owned(),
-                error_identifier: 400,
-                error_message: "Customer acceptance is missing".to_owned(),
-                error_object: None,
-            }))
-        })?;
-
-        let setup_future_usage = value.setup_future_usage();
-
-        let setup_mandate_details = MandateData {
-            update_mandate_id: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
-            mandate_type: None,
-        };
-
-        Ok(Self {
-            currency: common_enums::Currency::foreign_try_from(value.currency())?,
-            payment_method_data: PaymentMethodData::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
-                })?,
-            )?,
-            amount: Some(0),
-            confirm: true,
-            statement_descriptor_suffix: None,
-            customer_acceptance: Some(mandates::CustomerAcceptance::foreign_try_from(
-                customer_acceptance.clone(),
-            )?),
-            mandate_id: None,
-            setup_future_usage: Some(common_enums::FutureUsage::foreign_try_from(
-                setup_future_usage,
-            )?),
-            off_session: Some(false),
-            setup_mandate_details: Some(setup_mandate_details),
-            router_return_url: value.return_url.clone(),
-            webhook_url: value.webhook_url,
-            browser_info: value.browser_info.map(|info| BrowserInformation {
-                color_depth: None,
-                java_enabled: info.java_enabled,
-                java_script_enabled: info.java_script_enabled,
-                language: info.language,
-                screen_height: info.screen_height,
-                screen_width: info.screen_width,
-                time_zone: None,
-                ip_address: None,
-                accept_header: info.accept_header,
-                user_agent: info.user_agent,
-                os_type: info.os_type,
-                os_version: info.os_version,
-                device_model: info.device_model,
-                accept_language: info.accept_language,
-            }),
-            email,
-            customer_name: None,
-            return_url: value.return_url.clone(),
-            payment_method_type: None,
-            request_incremental_authorization: false,
-            metadata: if value.metadata.is_empty() {
-                None
-            } else {
-                Some(serde_json::Value::Object(
-                    value
-                        .metadata
-                        .into_iter()
-                        .map(|(k, v)| (k, serde_json::Value::String(v)))
-                        .collect(),
-                ))
-            },
-            complete_authorize_url: None,
-            capture_method: None,
-            integrity_object: None,
-            minor_amount: Some(common_utils::types::MinorUnit::new(0)),
-            shipping_cost: None,
-            customer_id: value
-                .connector_customer_id
-                .clone()
-                .map(|customer_id| CustomerId::try_from(Cow::from(customer_id)))
-                .transpose()
-                .change_context(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "INVALID_CUSTOMER_ID".to_owned(),
-                    error_identifier: 400,
-                    error_message: "Failed to parse Customer Id".to_owned(),
-                    error_object: None,
-                }))?,
-            statement_descriptor: None,
-            merchant_order_reference_id: None,
-        })
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::CustomerAcceptance> for mandates::CustomerAcceptance {
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        _value: grpc_api_types::payments::CustomerAcceptance,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(mandates::CustomerAcceptance {
-            acceptance_type: mandates::AcceptanceType::Offline,
-            accepted_at: None,
-            online: None,
-        })
-    }
-}
-
-impl ForeignTryFrom<grpc_api_types::payments::FutureUsage> for common_enums::FutureUsage {
-    type Error = ApplicationErrorResponse;
-    fn foreign_try_from(
-        value: grpc_api_types::payments::FutureUsage,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        match value {
-            grpc_api_types::payments::FutureUsage::OffSession => {
-                Ok(common_enums::FutureUsage::OffSession)
-            }
-            grpc_api_types::payments::FutureUsage::OnSession => {
-                Ok(common_enums::FutureUsage::OnSession)
-            }
-            grpc_api_types::payments::FutureUsage::Unspecified => {
-                Err(ApplicationErrorResponse::BadRequest(ApiError {
-                    sub_code: "UNSPECIFIED_FUTURE_USAGE".to_owned(),
-                    error_identifier: 401,
-                    error_message: "Future usage must be specified".to_owned(),
-                    error_object: None,
-                })
-                .into())
-            }
-        }
     }
 }
 
