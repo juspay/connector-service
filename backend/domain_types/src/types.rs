@@ -1,7 +1,7 @@
 use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
-use common_enums::{CaptureMethod, CardNetwork, PaymentMethod, PaymentMethodType};
+use common_enums::{CaptureMethod, CardNetwork, CountryAlpha2, PaymentMethod, PaymentMethodType};
 use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
@@ -109,6 +109,7 @@ pub struct Connectors {
     pub nexinets: ConnectorParams,
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
+    pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
 }
 
@@ -451,6 +452,24 @@ impl<
                             })))
                         },
                     }
+                },
+                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking_type) => {
+                    match online_banking_type.online_banking_type {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(open_banking_uk)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::OpenBankingUk {
+                                issuer: open_banking_uk.issuer.and_then(|i| common_enums::BankNames::from_str(&i).ok()),
+                                country: open_banking_uk.country.and_then(|c| CountryAlpha2::from_str(&c).ok()),
+                            }))
+                        }
+                        _ => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This online banking type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -622,6 +641,21 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
                                 error_identifier: 400,
                                 error_message: "This Wallet type is not yet supported".to_owned(),
+                                error_object: None,
+                            })))
+                        },
+                    }
+                },
+                grpc_api_types::payments::payment_method::PaymentMethod::OnlineBanking(online_banking) => {
+                    match online_banking.online_banking_type {
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_)) => {
+                            Ok(Some(PaymentMethodType::OpenBankingUk))
+                        },
+                        _ => {
+                            Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                                error_identifier: 400,
+                                error_message: "This online banking type is not yet supported".to_owned(),
                                 error_object: None,
                             })))
                         },
