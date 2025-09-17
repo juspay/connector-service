@@ -110,6 +110,7 @@ pub struct Connectors {
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
+    pub aci: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
