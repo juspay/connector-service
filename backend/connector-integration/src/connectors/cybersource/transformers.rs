@@ -86,20 +86,6 @@ fn card_issuer_to_string(card_issuer: CardIssuer) -> String {
     card_type.to_string()
 }
 
-fn get_card_network_from_additional_payment_method_data<T: PaymentMethodDataTypes>(
-    request: &PaymentsAuthorizeData<T>,
-) -> Result<common_enums::CardNetwork, errors::ConnectorError> {
-    request
-        .metadata
-        .as_ref()
-        .and_then(|metadata| metadata.as_object())
-        .and_then(|obj| obj.get("card_network"))
-        .and_then(|val| val.as_str())
-        .and_then(|s| common_enums::CardNetwork::from_str(s).ok())
-        .ok_or(errors::ConnectorError::MissingRequiredFields {
-            field_names: vec!["card_network"],
-        })
-}
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct CybersourceConnectorMetadataObject {
     pub disable_avs: Option<bool>,
@@ -984,6 +970,13 @@ impl<
             .request
             .setup_future_usage
             == Some(common_enums::FutureUsage::OffSession)
+        // && (item.router_data.resource_common_data.customer_acceptance.is_some()
+        // || item
+        //     .router_data
+        //     .request
+        //     .setup_mandate_details
+        //     .clone()
+        //     .is_some_and(|mandate_details| mandate_details.customer_acceptance.is_some()))
         {
             (
                 Some(vec![CybersourceActionsList::TokenCreate]),
@@ -1518,17 +1511,7 @@ impl<
         )?;
         let order_information = OrderInformationWithBill::from((item, Some(bill_to)));
 
-        let additional_card_network =
-            get_card_network_from_additional_payment_method_data(&item.router_data.request)
-                .map_err(|err| {
-                    tracing::info!(
-                        "Error while getting card network from additional payment method data: {}",
-                        err
-                    );
-                })
-                .ok();
-
-        let raw_card_type = ccard.card_network.clone().or(additional_card_network);
+        let raw_card_type = ccard.card_network.clone();
 
         let card_type = match raw_card_type.clone().and_then(get_cybersource_card_type) {
             Some(card_network) => Some(card_network.to_string()),
@@ -1592,8 +1575,15 @@ impl<
                         (None, Some(authn_data.cavv.clone()), None)
                     };
                 let authentication_date = authn_data.created_at.clone();
-                // let effective_authentication_type = authn_data.authentication_type.map(Into::into);
-                let effective_authentication_type = None;
+                let effective_authentication_type =
+                    authn_data.authentication_type.map(|auth_type_i32| {
+                        match auth_type_i32 {
+                            0 => EffectiveAuthenticationType::CH, // Challenge
+                            1 => EffectiveAuthenticationType::FR, // Frictionless
+                            _ => EffectiveAuthenticationType::CH, // Default to Challenge for unknown values
+                        }
+                    });
+                // let effective_authentication_type = None;
                 let network_score = (ccard.card_network
                     == Some(common_enums::CardNetwork::CartesBancaires))
                 .then_some(authn_data.message_version.as_ref())
@@ -1637,11 +1627,11 @@ impl<
                     eci_raw: authn_data.eci.clone(),
                     authentication_date,
                     effective_authentication_type,
-                    challenge_code: None,
-                    signed_pares_status_reason: None,
-                    challenge_cancel_code: None,
+                    challenge_code: authn_data.challenge_code.clone(),
+                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
+                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
                     network_score,
-                    acs_transaction_id: authn_data.ds_transaction_id.clone(),
+                    acs_transaction_id: authn_data.acs_trans_id.clone(),
                     cavv_algorithm,
                 }
             });
@@ -1747,8 +1737,15 @@ impl<
             .authentication_data
             .as_ref()
             .map(|authn_data| {
-                // let effective_authentication_type = authn_data.authentication_type.map(Into::into);
-                let effective_authentication_type = None;
+                let effective_authentication_type =
+                    authn_data.authentication_type.map(|auth_type_i32| {
+                        match auth_type_i32 {
+                            0 => EffectiveAuthenticationType::CH, // Challenge
+                            1 => EffectiveAuthenticationType::FR, // Frictionless
+                            _ => EffectiveAuthenticationType::CH, // Default to Challenge for unknown values
+                        }
+                    });
+                // let effective_authentication_type = None;
                 let (ucaf_authentication_data, cavv, ucaf_collection_indicator) =
                     if ccard.card_network == Some(common_enums::CardNetwork::Mastercard) {
                         (Some(authn_data.cavv.clone()), None, Some("2".to_string()))
@@ -1797,11 +1794,11 @@ impl<
                     eci_raw: authn_data.eci.clone(),
                     authentication_date,
                     effective_authentication_type,
-                    challenge_code: None,
-                    signed_pares_status_reason: None,
-                    challenge_cancel_code: None,
+                    challenge_code: authn_data.challenge_code.clone(),
+                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
+                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
                     network_score,
-                    acs_transaction_id: authn_data.ds_transaction_id.clone(),
+                    acs_transaction_id: authn_data.acs_trans_id.clone(),
                     cavv_algorithm,
                 }
             });
@@ -1904,8 +1901,15 @@ impl<
             .authentication_data
             .as_ref()
             .map(|authn_data| {
-                // let effective_authentication_type = authn_data.authentication_type.map(Into::into);
-                let effective_authentication_type = None;
+                let effective_authentication_type =
+                    authn_data.authentication_type.map(|auth_type_i32| {
+                        match auth_type_i32 {
+                            0 => EffectiveAuthenticationType::CH, // Challenge
+                            1 => EffectiveAuthenticationType::FR, // Frictionless
+                            _ => EffectiveAuthenticationType::CH, // Default to Challenge for unknown values
+                        }
+                    });
+                // let effective_authentication_type = None;
                 let (ucaf_authentication_data, cavv, ucaf_collection_indicator) =
                     if token_data.card_network == Some(common_enums::CardNetwork::Mastercard) {
                         (Some(authn_data.cavv.clone()), None, Some("2".to_string()))
@@ -1954,11 +1958,11 @@ impl<
                     eci_raw: authn_data.eci.clone(),
                     authentication_date,
                     effective_authentication_type,
-                    challenge_code: None,
-                    signed_pares_status_reason: None,
-                    challenge_cancel_code: None,
+                    challenge_code: authn_data.challenge_code.clone(),
+                    signed_pares_status_reason: authn_data.challenge_code_reason.clone(),
+                    challenge_cancel_code: authn_data.challenge_cancel.clone(),
                     network_score,
-                    acs_transaction_id: authn_data.ds_transaction_id.clone(),
+                    acs_transaction_id: authn_data.acs_trans_id.clone(),
                     cavv_algorithm,
                 }
             });

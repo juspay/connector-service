@@ -893,6 +893,14 @@ message AuthenticationData {
 
   optional string created_at = 11;
 
+  optional DecoupledAuthenticationType authentication_type = 12;
+
+}
+
+enum DecoupledAuthenticationType {
+  DECOUPLED_AUTHENTICATION_TYPE_UNSPECIFIED = 0; // Default value
+  CHALLENGE = 1;
+  FRICTIONLESS = 2;
 }
 
 // Details of customer acceptance for mandates or terms.

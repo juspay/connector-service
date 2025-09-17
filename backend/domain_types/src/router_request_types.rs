@@ -117,6 +117,7 @@ pub struct AuthenticationData {
     pub challenge_code_reason: Option<String>,
     pub message_extension: Option<pii::SecretSerdeValue>,
     pub acs_trans_id: Option<String>,
+    pub authentication_type: Option<common_enums::DecoupledAuthenticationType>,
 }
 
 #[derive(Debug, Clone)]
