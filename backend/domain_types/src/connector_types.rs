@@ -1122,29 +1122,6 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>>
-    for PaymentsPreAuthenticateData<T>
-{
-    type Error = ApplicationErrorResponse;
-
-    fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            payment_method_data: Some(data.payment_method_data),
-            amount: data.minor_amount,
-            minor_amount: Some(data.minor_amount),
-            email: data.email,
-            currency: Some(data.currency),
-            payment_method_type: data.payment_method_type,
-            router_return_url: data.router_return_url,
-            complete_authorize_url: data.complete_authorize_url,
-            browser_info: data.browser_info,
-            connector_transaction_id: None,
-            redirect_response: None,
-            enrolled_for_3ds: data.enrolled_for_3ds,
-        })
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
@@ -1163,27 +1140,6 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub minor_amount: Option<MinorUnit>,
 }
 
-impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>> for PaymentsAuthenticateData<T> {
-    type Error = ApplicationErrorResponse;
-
-    fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            payment_method_data: Some(data.payment_method_data),
-            amount: data.minor_amount,
-            minor_amount: Some(data.minor_amount),
-            email: data.email,
-            currency: Some(data.currency),
-            payment_method_type: data.payment_method_type,
-            router_return_url: data.router_return_url,
-            complete_authorize_url: data.complete_authorize_url,
-            browser_info: data.browser_info,
-            connector_transaction_id: None,
-            redirect_response: None,
-            enrolled_for_3ds: data.enrolled_for_3ds,
-        })
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
@@ -1200,29 +1156,6 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
 
     // New amount for amount frame work
     pub minor_amount: Option<MinorUnit>,
-}
-
-impl<T: PaymentMethodDataTypes> TryFrom<PaymentsAuthorizeData<T>>
-    for PaymentsPostAuthenticateData<T>
-{
-    type Error = ApplicationErrorResponse;
-
-    fn try_from(data: PaymentsAuthorizeData<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            payment_method_data: Some(data.payment_method_data),
-            amount: data.minor_amount,
-            minor_amount: Some(data.minor_amount),
-            email: data.email,
-            currency: Some(data.currency),
-            payment_method_type: data.payment_method_type,
-            router_return_url: data.router_return_url,
-            complete_authorize_url: data.complete_authorize_url,
-            browser_info: data.browser_info,
-            connector_transaction_id: None,
-            redirect_response: None,
-            enrolled_for_3ds: data.enrolled_for_3ds,
-        })
-    }
 }
 
 #[derive(Debug, Clone)]

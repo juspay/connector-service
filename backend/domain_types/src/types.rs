@@ -4833,35 +4833,6 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             },
                         ),
-                        router_response_types::RedirectForm::Html { html_data } => {
-                            Ok(grpc_api_types::payments::RedirectForm {
-                                form_type: Some(
-                                    grpc_api_types::payments::redirect_form::FormType::Html(
-                                        grpc_api_types::payments::HtmlData { html_data },
-                                    ),
-                                ),
-                            })
-                        }
-                        router_response_types::RedirectForm::Uri { uri } => {
-                            Ok(grpc_api_types::payments::RedirectForm {
-                                form_type: Some(
-                                    grpc_api_types::payments::redirect_form::FormType::Uri(
-                                        grpc_api_types::payments::UriData { uri },
-                                    ),
-                                ),
-                            })
-                        }
-                        router_response_types::RedirectForm::Mifinity {
-                            initialization_token,
-                        } => Ok(grpc_api_types::payments::RedirectForm {
-                            form_type: Some(
-                                grpc_api_types::payments::redirect_form::FormType::Uri(
-                                    grpc_api_types::payments::UriData {
-                                        uri: initialization_token,
-                                    },
-                                ),
-                            ),
-                        }),
                         router_response_types::RedirectForm::CybersourceAuthSetup {
                             access_token,
                             ddc_url,
@@ -4915,27 +4886,12 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            PaymentsResponseData::SessionResponse {
-                session_token: _,
-                status_code,
-            } => grpc_api_types::payments::PaymentServicePreAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        "session_created".to_string(),
-                    )),
-                }),
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                status_code: status_code as u32,
-                raw_connector_response,
-                response_headers,
-                connector_metadata: std::collections::HashMap::new(),
-                state: None,
-            },
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_RESPONSE".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid response from connector".to_owned(),
+                error_object: None,
+            }))?,
         },
         Err(err) => {
             let status = err
@@ -5024,35 +4980,6 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             },
                         ),
-                        router_response_types::RedirectForm::Html { html_data } => {
-                            Ok(grpc_api_types::payments::RedirectForm {
-                                form_type: Some(
-                                    grpc_api_types::payments::redirect_form::FormType::Html(
-                                        grpc_api_types::payments::HtmlData { html_data },
-                                    ),
-                                ),
-                            })
-                        }
-                        router_response_types::RedirectForm::Uri { uri } => {
-                            Ok(grpc_api_types::payments::RedirectForm {
-                                form_type: Some(
-                                    grpc_api_types::payments::redirect_form::FormType::Uri(
-                                        grpc_api_types::payments::UriData { uri },
-                                    ),
-                                ),
-                            })
-                        }
-                        router_response_types::RedirectForm::Mifinity {
-                            initialization_token,
-                        } => Ok(grpc_api_types::payments::RedirectForm {
-                            form_type: Some(
-                                grpc_api_types::payments::redirect_form::FormType::Uri(
-                                    grpc_api_types::payments::UriData {
-                                        uri: initialization_token,
-                                    },
-                                ),
-                            ),
-                        }),
                         _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_RESPONSE".to_owned(),
                             error_identifier: 400,
@@ -5113,28 +5040,12 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            PaymentsResponseData::SessionResponse {
-                session_token: _,
-                status_code,
-            } => grpc_api_types::payments::PaymentServiceAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        "session_created".to_string(),
-                    )),
-                }),
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                authentication_data: None,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                status_code: status_code as u32,
-                raw_connector_response,
-                response_headers,
-                connector_metadata: std::collections::HashMap::new(),
-                state: None,
-            },
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_RESPONSE".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid response from connector".to_owned(),
+                error_object: None,
+            }))?,
         },
         Err(err) => {
             let status = err
@@ -5224,35 +5135,6 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                                 ),
                             },
                         ),
-                        router_response_types::RedirectForm::Html { html_data } => {
-                            Ok(grpc_api_types::payments::RedirectForm {
-                                form_type: Some(
-                                    grpc_api_types::payments::redirect_form::FormType::Html(
-                                        grpc_api_types::payments::HtmlData { html_data },
-                                    ),
-                                ),
-                            })
-                        }
-                        router_response_types::RedirectForm::Uri { uri } => {
-                            Ok(grpc_api_types::payments::RedirectForm {
-                                form_type: Some(
-                                    grpc_api_types::payments::redirect_form::FormType::Uri(
-                                        grpc_api_types::payments::UriData { uri },
-                                    ),
-                                ),
-                            })
-                        }
-                        router_response_types::RedirectForm::Mifinity {
-                            initialization_token,
-                        } => Ok(grpc_api_types::payments::RedirectForm {
-                            form_type: Some(
-                                grpc_api_types::payments::redirect_form::FormType::Uri(
-                                    grpc_api_types::payments::UriData {
-                                        uri: initialization_token,
-                                    },
-                                ),
-                            ),
-                        }),
                         _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_RESPONSE".to_owned(),
                             error_identifier: 400,
@@ -5314,29 +5196,12 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            PaymentsResponseData::SessionResponse {
-                session_token: _,
-                status_code,
-            } => grpc_api_types::payments::PaymentServicePostAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        "session_created".to_string(),
-                    )),
-                }),
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                authentication_data: None,
-                incremental_authorization_allowed: None,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                status_code: status_code as u32,
-                raw_connector_response,
-                response_headers,
-                connector_metadata: std::collections::HashMap::new(),
-                state: None,
-            },
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "INVALID_RESPONSE".to_owned(),
+                error_identifier: 400,
+                error_message: "Invalid response from connector".to_owned(),
+                error_object: None,
+            }))?,
         },
         Err(err) => {
             let status = err
@@ -5616,10 +5481,8 @@ impl
             &tonic::metadata::MetadataMap,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let address = match &value.address {
-            Some(address_value) => {
-                payment_address::PaymentAddress::foreign_try_from((*address_value).clone())?
-            }
+        let address = match value.address {
+            Some(address) => payment_address::PaymentAddress::foreign_try_from(address)?,
             None => {
                 return Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "INVALID_ADDRESS".to_owned(),
@@ -5648,7 +5511,7 @@ impl
             ),
             customer_id: None,
             connector_customer: None,
-            description: value.metadata.get("description").cloned(),
+            description: None,
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
@@ -5663,7 +5526,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: value.test_mode,
+            test_mode: None,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -5737,7 +5600,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: value.test_mode,
+            test_mode: None,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
@@ -5811,7 +5674,7 @@ impl
             payment_method_token: None,
             preprocessing_id: None,
             connector_api_version: None,
-            test_mode: value.test_mode,
+            test_mode: None,
             connector_http_status_code: None,
             external_latency: None,
             connectors,
