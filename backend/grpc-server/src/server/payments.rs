@@ -28,11 +28,10 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     types::{
-        generate_authenticate_response, generate_payment_capture_response,
-        generate_payment_sync_response, generate_payment_void_response,
-        generate_post_authenticate_response, generate_pre_authenticate_response,
-        generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_payment_authenticate_response, generate_payment_capture_response,
+        generate_payment_post_authenticate_response, generate_payment_pre_authenticate_response,
+        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
+        generate_repeat_payment_response, generate_setup_mandate_response,
     },
     utils::ForeignTryFrom,
 };
@@ -144,18 +143,27 @@ trait PaymentOperationsInternal {
 
     async fn internal_pre_authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status>;
+        request: tonic::Request<grpc_api_types::payments::PaymentServicePreAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<grpc_api_types::payments::PaymentServicePreAuthenticateResponse>,
+        tonic::Status,
+    >;
 
     async fn internal_authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status>;
+        request: tonic::Request<grpc_api_types::payments::PaymentServiceAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<grpc_api_types::payments::PaymentServiceAuthenticateResponse>,
+        tonic::Status,
+    >;
 
     async fn internal_post_authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status>;
+        request: tonic::Request<grpc_api_types::payments::PaymentServicePostAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<grpc_api_types::payments::PaymentServicePostAuthenticateResponse>,
+        tonic::Status,
+    >;
 }
 
 #[derive(Clone)]
@@ -1126,45 +1134,45 @@ impl PaymentOperationsInternal for Payments {
     implement_connector_operation!(
         fn_name: internal_pre_authenticate,
         log_prefix: "PRE_AUTHENTICATE",
-        request_type: PaymentServiceAuthorizeRequest,
-        response_type: PaymentServiceAuthorizeResponse,
+        request_type: grpc_api_types::payments::PaymentServicePreAuthenticateRequest,
+        response_type: grpc_api_types::payments::PaymentServicePreAuthenticateResponse,
         flow_marker: PreAuthenticate,
         resource_common_data_type: PaymentFlowData,
         request_data_type: PaymentsPreAuthenticateData<DefaultPCIHolder>,
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentsPreAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_pre_authenticate_response,
+        generate_response_fn: generate_payment_pre_authenticate_response,
         all_keys_required: None
     );
 
     implement_connector_operation!(
         fn_name: internal_authenticate,
         log_prefix: "AUTHENTICATE",
-        request_type: PaymentServiceAuthorizeRequest,
-        response_type: PaymentServiceAuthorizeResponse,
+        request_type: grpc_api_types::payments::PaymentServiceAuthenticateRequest,
+        response_type: grpc_api_types::payments::PaymentServiceAuthenticateResponse,
         flow_marker: Authenticate,
         resource_common_data_type: PaymentFlowData,
         request_data_type: PaymentsAuthenticateData<DefaultPCIHolder>,
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentsAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_authenticate_response,
+        generate_response_fn: generate_payment_authenticate_response,
         all_keys_required: None
     );
 
     implement_connector_operation!(
         fn_name: internal_post_authenticate,
         log_prefix: "POST_AUTHENTICATE",
-        request_type: PaymentServiceAuthorizeRequest,
-        response_type: PaymentServiceAuthorizeResponse,
+        request_type: grpc_api_types::payments::PaymentServicePostAuthenticateRequest,
+        response_type: grpc_api_types::payments::PaymentServicePostAuthenticateResponse,
         flow_marker: PostAuthenticate,
         resource_common_data_type: PaymentFlowData,
         request_data_type: PaymentsPostAuthenticateData<DefaultPCIHolder>,
         response_data_type: PaymentsResponseData,
         request_data_constructor: PaymentsPostAuthenticateData::foreign_try_from,
         common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_post_authenticate_response,
+        generate_response_fn: generate_payment_post_authenticate_response,
         all_keys_required: None
     );
 }
@@ -1991,8 +1999,11 @@ impl PaymentService for Payments {
     )]
     async fn pre_authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        request: tonic::Request<grpc_api_types::payments::PaymentServicePreAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<grpc_api_types::payments::PaymentServicePreAuthenticateResponse>,
+        tonic::Status,
+    > {
         self.internal_pre_authenticate(request).await
     }
 
@@ -2019,8 +2030,11 @@ impl PaymentService for Payments {
     )]
     async fn authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        request: tonic::Request<grpc_api_types::payments::PaymentServiceAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<grpc_api_types::payments::PaymentServiceAuthenticateResponse>,
+        tonic::Status,
+    > {
         self.internal_authenticate(request).await
     }
 
@@ -2047,8 +2061,11 @@ impl PaymentService for Payments {
     )]
     async fn post_authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthorizeRequest>,
-    ) -> Result<tonic::Response<PaymentServiceAuthorizeResponse>, tonic::Status> {
+        request: tonic::Request<grpc_api_types::payments::PaymentServicePostAuthenticateRequest>,
+    ) -> Result<
+        tonic::Response<grpc_api_types::payments::PaymentServicePostAuthenticateResponse>,
+        tonic::Status,
+    > {
         self.internal_post_authenticate(request).await
     }
 }
