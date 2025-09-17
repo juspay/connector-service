@@ -86,7 +86,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
 
         let parsed: serde_json::Value = serde_json::from_slice(&request.body)
-            .map_err(|_| errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(errors::ConnectorError::ParsingFailed)?;
 
         let sorted_payload = transformers::sort_and_minify_json(&parsed)?;
 
@@ -94,7 +94,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .map_err(|_| errors::ConnectorError::WebhookSourceVerificationFailed)?;
+            .change_context(errors::ConnectorError::SourceVerificationFailed)?;
 
         Ok(verify)
     }
