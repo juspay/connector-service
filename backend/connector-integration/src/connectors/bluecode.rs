@@ -94,7 +94,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let verify = ring::hmac::verify(&key, sorted_payload.as_bytes(), &signature)
             .map(|_| true)
-            .change_context(errors::ConnectorError::SourceVerificationFailed)?;
+            .map_err(|_| errors::ConnectorError::WebhookSourceVerificationFailed)?;
 
         Ok(verify)
     }
