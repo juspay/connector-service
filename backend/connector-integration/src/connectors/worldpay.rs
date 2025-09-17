@@ -200,7 +200,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             PaymentsResponseData,
         >,
     ) -> CustomResult<Option<RequestContent>, errors::ConnectorError> {
-        let request = worldpay::WorldpayPaymentsRequest::try_from(req)?;
+        let request = worldpay::WorldpayPaymentsRequest::<T>::try_from(req)?;
         Ok(Some(RequestContent::Json(Box::new(request))))
     }
 

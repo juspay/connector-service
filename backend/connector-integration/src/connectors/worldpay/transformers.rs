@@ -36,7 +36,7 @@ impl TryFrom<&ConnectorAuthType> for WorldpayAuthType {
 
 impl WorldpayAuthType {
     pub fn generate_authorization_header(&self) -> String {
-        let credentials = format!("{}:{}", self.username.peek(), self.password.peek());
+        let credentials = format!("{}:{}",  self.password.peek(),self.username.peek());
         let encoded_credentials = STANDARD.encode(credentials);
         format!("Basic {}", encoded_credentials)
     }
@@ -50,11 +50,11 @@ pub struct WorldpayErrorResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct WorldpayPaymentsRequest {
+pub struct WorldpayPaymentsRequest<T: PaymentMethodDataTypes> {
     #[serde(rename = "transactionReference")]
     pub transaction_reference: String,
     pub merchant: WorldpayMerchant,
-    pub instruction: WorldpayInstruction,
+    pub instruction: WorldpayInstruction<T>,
 }
 
 #[derive(Debug, Serialize)]
@@ -63,20 +63,20 @@ pub struct WorldpayMerchant {
 }
 
 #[derive(Debug, Serialize)]
-pub struct WorldpayInstruction {
+pub struct WorldpayInstruction<T: PaymentMethodDataTypes> {
     pub method: String,
     #[serde(rename = "paymentInstrument")]
-    pub payment_instrument: WorldpayPaymentInstrument,
+    pub payment_instrument: WorldpayPaymentInstrument<T>,
     pub narrative: WorldpayNarrative,
     pub value: WorldpayValue,
 }
 
 #[derive(Debug, Serialize)]
-pub struct WorldpayPaymentInstrument {
+pub struct WorldpayPaymentInstrument<T: PaymentMethodDataTypes> {
     #[serde(rename = "type")]
     pub instrument_type: String,
     #[serde(rename = "cardNumber")]
-    pub card_number: Secret<String>,
+    pub card_number: domain_types::payment_method_data::RawCardNumber<T>,
     #[serde(rename = "cardHolderName")]
     pub card_holder_name: Option<Secret<String>>,
     #[serde(rename = "expiryDate")]
@@ -104,7 +104,7 @@ pub struct WorldpayValue {
 impl<U: PaymentMethodDataTypes>
     TryFrom<
         &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<U>, PaymentsResponseData>,
-    > for WorldpayPaymentsRequest
+    > for WorldpayPaymentsRequest<U>
 {
     type Error = error_stack::Report<errors::ConnectorError>;
 
@@ -120,15 +120,9 @@ impl<U: PaymentMethodDataTypes>
         
         let payment_instrument = match payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
-                // Use Debug formatting as a fallback to get string representation
-                // This works because Debug trait is guaranteed by PaymentMethodDataTypes
-                let card_number_debug = format!("{:?}", card_data.card_number.0);
-                // Remove any debug formatting artifacts like quotes
-                let card_number_str = card_number_debug.trim_matches('"').to_string();
-
                 WorldpayPaymentInstrument {
                     instrument_type: "plain".to_string(),
-                    card_number: Secret::new(card_number_str),
+                    card_number: card_data.card_number.clone(),
                     card_holder_name: card_data.card_holder_name.clone(),
                     expiry_date: WorldpayExpiryDate {
                         month: card_data.card_exp_month.peek().parse::<u8>().map_err(|_| {
