@@ -315,6 +315,9 @@ pub struct AciPaymentsResponse {
     pub redirect: Option<AciRedirectionData>,
 }
 
+// AciCaptureResponse is now a type alias to AciPaymentsResponse
+// Original struct definition commented out as API returns same format as payments
+/*
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciCaptureResponse {
@@ -333,7 +336,11 @@ pub struct AciCaptureResponse {
     pub payment_method: String,
     pub short_id: String,
 }
+*/
 
+// AciCaptureResult and AciCaptureResultDetails commented out as they're not used
+// with the new type alias approach
+/*
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AciCaptureResult {
@@ -352,6 +359,7 @@ pub struct AciCaptureResultDetails {
     pub connector_tx_i_d2: String,
     pub acquirer_response: String,
 }
+*/
 
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -366,6 +374,7 @@ pub struct AciRefundResponse {
 // Response type aliases for unique macro handling
 pub type AciPSyncResponse = AciPaymentsResponse;
 pub type AciVoidResponse = AciPaymentsResponse;
+pub type AciCaptureResponse = AciPaymentsResponse;
 pub type AciRefundSyncResponse = AciRefundResponse;
 
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq, Serialize)]
@@ -526,9 +535,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        println!("aci: Starting capture request transformation");
         let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let amount: StringMinorUnit = serde_json::from_str(&item.router_data.request.amount_to_capture.to_string())
+        println!("aci: Capture auth generation completed");
+        
+        let amount_str = format!("\"{}\"", item.router_data.request.amount_to_capture);
+        println!("aci: Capture amount as JSON string: {}", amount_str);
+        let amount: StringMinorUnit = serde_json::from_str(&amount_str)
             .change_context(errors::ConnectorError::ParsingFailed)?;
+        println!("aci: Capture amount parsed successfully: {}", amount);
         
         Ok(Self {
             txn_details: TransactionDetails {
@@ -556,9 +571,15 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        println!("aci: Starting refund request transformation");
         let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
-        let amount: StringMinorUnit = serde_json::from_str(&item.router_data.request.refund_amount.to_string())
+        println!("aci: Refund auth generation completed");
+        
+        let amount_str = format!("\"{}\"", item.router_data.request.refund_amount);
+        println!("aci: Refund amount as JSON string: {}", amount_str);
+        let amount: StringMinorUnit = serde_json::from_str(&amount_str)
             .change_context(errors::ConnectorError::ParsingFailed)?;
+        println!("aci: Refund amount parsed successfully: {}", amount);
         
         Ok(Self {
             amount,
@@ -599,7 +620,7 @@ impl<F> TryFrom<ResponseRouterData<AciPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<AciPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_aci_attempt_status(&item.response.result.code, true)?;
+        let status = map_aci_void_status(&item.response.result.code)?;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -746,7 +767,7 @@ impl<F> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
     fn try_from(
         item: ResponseRouterData<AciCaptureResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = map_aci_capture_status(&Some(item.response.result.code.clone()))?;
+        let status = map_aci_capture_status(&item.response.result.code)?;
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
@@ -755,7 +776,7 @@ impl<F> TryFrom<ResponseRouterData<AciCaptureResponse, Self>>
                 connector_metadata: None,
                 mandate_reference: None,
                 network_txn_id: None,
-                connector_response_reference_id: Some(item.response.referenced_id),
+                connector_response_reference_id: Some(item.response.id.clone()),
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
@@ -905,6 +926,33 @@ fn map_aci_refund_status(
     }
     else {
         Ok(common_enums::RefundStatus::Failure)
+    }
+}
+
+fn map_aci_void_status(
+    code: &Option<String>,
+) -> Result<common_enums::AttemptStatus, error_stack::Report<ConnectorError>> {
+    let code_str = code.as_ref().ok_or(errors::ConnectorError::MissingRequiredField {
+        field_name: "result.code",
+    })?;
+
+    println!("aci: Void status mapping with code: {}", code_str);
+
+    // ACI success codes pattern: /^(000\.000\.|000\.100\.1|000\.[2-9])/
+    if code_str.starts_with("000.000.") || code_str.starts_with("000.100.1") || 
+       (code_str.starts_with("000.") && code_str.chars().nth(4).map_or(false, |c| c >= '2' && c <= '9')) {
+        println!("aci: Void success code detected, returning Voided status");
+        Ok(common_enums::AttemptStatus::Voided)
+    }
+    // ACI pending codes pattern: /^(000\.200)/
+    else if code_str.starts_with("000.200") {
+        println!("aci: Void pending code detected, returning Pending status");
+        Ok(common_enums::AttemptStatus::Pending)
+    }
+    // All other codes are considered failures
+    else {
+        println!("aci: Void failure code detected, returning Failure status");
+        Ok(common_enums::AttemptStatus::Failure)
     }
 }
 
