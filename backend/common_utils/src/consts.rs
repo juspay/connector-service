@@ -138,6 +138,16 @@ pub enum Env {
 }
 
 impl Env {
+    /// Returns the current environment based on the `CS__COMMON__ENVIRONMENT` environment variable.
+    ///
+    /// If the environment variable is not set, it defaults to `Development` in debug builds
+    /// and `Production` in release builds.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `CS__COMMON__ENVIRONMENT` environment variable contains an invalid value
+    /// that cannot be deserialized into one of the valid environment variants.
+    #[allow(clippy::panic)]
     pub fn current_env() -> Self {
         let default_env = if cfg!(debug_assertions) {
             Self::Development
@@ -148,7 +158,7 @@ impl Env {
         let res = std::env::var(&env_key).map_or_else(
             |_| default_env,
             |v| {
-                Env::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
+                Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
                     panic!(
                         "Invalid value found in environment variable {}: {}",
                         env_key, err
