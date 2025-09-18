@@ -418,3 +418,16 @@ ai_generate_test.md
 fetch_connector_file.sh
 fetch_connector_transformers.sh
 temp_instruction.txt
+
+# Binary files that should not be committed
+*.dmg
+*.zip
+*.pdf
+*.mov
+*.7z
+*.exe
+*.msi
+*.deb
+*.rpm
+*.app
+*.pkg
