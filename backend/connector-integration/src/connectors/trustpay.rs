@@ -248,14 +248,14 @@ macros::create_all_prerequisites!(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
         ) -> &'a str {
-            req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap()
+            &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
         }
 
          pub fn connector_base_url_bank_redirects_refunds<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
-            req.resource_common_data.connectors.trustpay.base_url_bank_redirects.as_deref().unwrap()
+            &req.resource_common_data.connectors.trustpay.base_url_bank_redirects
         }
 
         pub fn connector_base_url_refunds<'a, F, Req, Res>(
