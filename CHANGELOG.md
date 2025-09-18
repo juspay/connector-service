@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.09.18.0
+
+### Miscellaneous Tasks
+
+- Add amount conversion wrapper and integrity checks for Xendit ([#171](https://github.com/juspay/connector-service/pull/171)) ([`1db8901`](https://github.com/juspay/connector-service/commit/1db89016bef235f7f669cee7da4d723f57889013))
+- Update git tag for hyperswitch repo ([#181](https://github.com/juspay/connector-service/pull/181)) ([`52f1b86`](https://github.com/juspay/connector-service/commit/52f1b863ef0a6bf845648ac0cbfc3501fa95f1ef))
+
+**Full Changelog:** [`2025.09.17.0...2025.09.18.0`](https://github.com/juspay/connector-service/compare/2025.09.17.0...2025.09.18.0)
+
+- - -
+
 ## 2025.09.17.0
 
 ### Features
