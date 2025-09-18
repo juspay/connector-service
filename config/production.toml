@@ -41,8 +41,8 @@ noon.base_url = "https://api.noonpayments.com/"
 mifinity.base_url = "https://secure.mifinity.com/"
 braintree.base_url = "https://payments.braintree-api.com/graphql"
 volt.base_url = "https://api.volt.io/"
-bluecode.base_url = "https://dev.eorder.reloadhero.com/"
-trustpay.base_url = "https://test-tpgw.trustpay.eu/"
+bluecode.base_url = "https://app.eorder.reloadhero.com/"
+trustpay.base_url = "https://tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 
 # Generic Events Configuration
