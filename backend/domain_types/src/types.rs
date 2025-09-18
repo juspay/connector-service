@@ -2,7 +2,12 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use common_enums::{CaptureMethod, CardNetwork, CountryAlpha2, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
+use common_utils::{
+    consts::{self, NO_ERROR_CODE},
+    id_type::CustomerId,
+    pii::Email,
+    Method,
+};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
@@ -3696,7 +3701,7 @@ impl
     ForeignTryFrom<(
         PaymentServiceRegisterRequest,
         Connectors,
-        String,
+        consts::Env,
         &tonic::metadata::MetadataMap,
     )> for PaymentFlowData
 {
@@ -3706,7 +3711,7 @@ impl
         (value, connectors, environment, metadata): (
             PaymentServiceRegisterRequest,
             Connectors,
-            String,
+            consts::Env,
             &tonic::metadata::MetadataMap,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
@@ -3721,9 +3726,9 @@ impl
                 }))?
             }
         };
-        let test_mode = match environment.as_str() {
-            common_utils::consts::CONST_DEVELOPMENT => Some(true),
-            common_utils::consts::CONST_PRODUCTION => Some(false),
+        let test_mode = match environment {
+            consts::Env::Development => Some(true),
+            consts::Env::Production => Some(false),
             _ => Some(true),
         };
 
