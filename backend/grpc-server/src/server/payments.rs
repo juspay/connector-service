@@ -1484,16 +1484,25 @@ impl PaymentService for Payments {
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
-                    let source_verified = connector_data
-                        .connector
-                        .verify_webhook_source(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            // TODO: do we need to force authentication? we can make it optional
-                            Some(connector_auth_details.clone()),
-                        )
-                        .switch()
-                        .into_grpc_status()?;
+
+                    let source_verified = match connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
+                    ) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        tracing::warn!(
+                            target: "webhook",
+                            "{:?}",
+                            err
+                        );
+                        false
+                    }
+                };
+
                     let event_type = connector_data
                         .connector
                         .get_event_type(
@@ -1784,15 +1793,13 @@ impl PaymentService for Payments {
                         reference_id: &metadata_payload.reference_id,
                     };
 
-                    let response = Box::pin(
-                        external_services::service::execute_connector_processing_step(
-                            &self.config.proxy,
-                            connector_integration,
-                            router_data,
-                            None,
-                            event_params,
-                            None, // token_data - None for non-proxy payments
-                        ),
+                    let response = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        event_params,
+                        None, // token_data - None for non-proxy payments
                     )
                     .await
                     .switch()
