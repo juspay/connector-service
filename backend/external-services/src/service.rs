@@ -157,6 +157,13 @@ where
                 status_code: 200,
             };
 
+            let status_code = body.status_code;
+            tracing::Span::current()
+                .record("status_code", tracing::field::display(status_code));
+            if let Ok(response) = parse_json_with_bom_handling(&body.response) {
+                tracing::Span::current().record("response.body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
+            }
+
             // Set raw_connector_response BEFORE calling the transformer
             let mut updated_router_data = router_data.clone();
             if all_keys_required.unwrap_or(true) {
