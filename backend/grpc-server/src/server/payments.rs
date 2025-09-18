@@ -391,6 +391,7 @@ impl Payments {
             None,
             event_params,
             token_data,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await;
 
@@ -551,6 +552,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .map_err(
@@ -656,6 +658,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -752,6 +755,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -871,6 +875,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -1007,6 +1012,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -1386,31 +1392,23 @@ impl PaymentService for Payments {
                         reference_id: &metadata_payload.reference_id,
                     };
 
-                    let response_result = match payload.handle_response {
-                        Some(resource_object) => {
-                            external_services::service::execute_connector_processing_step_for_handle_response(
-                                connector_integration,
-                                router_data,
-                                resource_object,
-                            )
-                            .await
-                            .switch()
-                            .into_grpc_status()?
-                        }
-                        _ => {
-                            external_services::service::execute_connector_processing_step(
-                                &self.config.proxy,
-                                connector_integration,
-                                router_data,
-                                None,
-                                event_params,
-                                None,
-                            )
-                            .await
-                            .switch()
-                            .into_grpc_status()?
-                        }
+                    let consume_or_trigger_flow = match payload.handle_response {
+                        Some(resource_object) => common_enums::CallConnectorAction::HandleResponse(resource_object),
+                        None => common_enums::CallConnectorAction::Trigger,
                     };
+
+                    let response_result = external_services::service::execute_connector_processing_step(
+                        &self.config.proxy,
+                        connector_integration,
+                        router_data,
+                        None,
+                        event_params,
+                        None,
+                        consume_or_trigger_flow,
+                    )
+                    .await
+                    .switch()
+                    .into_grpc_status()?;
 
                     // Generate response
                     let final_response = generate_payment_sync_response(response_result)
@@ -1831,6 +1829,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -1947,6 +1946,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()

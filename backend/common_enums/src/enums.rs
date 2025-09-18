@@ -1725,3 +1725,9 @@ pub enum WebhookTransformationStatus {
     /// Transformation incomplete, requires second call for final status
     Incomplete,
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CallConnectorAction {
+    Trigger,
+    HandleResponse(Vec<u8>),
+}
