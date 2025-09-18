@@ -2,7 +2,12 @@ use core::result::Result;
 use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use common_enums::{CaptureMethod, CardNetwork, CountryAlpha2, PaymentMethod, PaymentMethodType};
-use common_utils::{consts::NO_ERROR_CODE, id_type::CustomerId, pii::Email, Method};
+use common_utils::{
+    consts::{self, NO_ERROR_CODE},
+    id_type::CustomerId,
+    pii::Email,
+    Method,
+};
 use error_stack::{report, ResultExt};
 use grpc_api_types::payments::{
     AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
@@ -110,6 +115,7 @@ pub struct Connectors {
     pub noon: ConnectorParams,
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
+    pub bluecode: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -260,6 +266,9 @@ impl<
                 },
                 grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
                     match wallet_type.wallet_type {
+                                                Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Bluecode(_)) => {
+                            Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::BluecodeRedirect{}
+                        ))},
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(mifinity_data)) => {
                             Ok(PaymentMethodData::Wallet(payment_method_data::WalletData::Mifinity(
                                 payment_method_data::MifinityData {
@@ -601,6 +610,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                 },
                 grpc_api_types::payments::payment_method::PaymentMethod::Wallet(wallet_type) => {
                     match wallet_type.wallet_type {
+                        Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Bluecode(_)) => {
+                                        Ok(Some(PaymentMethodType::Bluecode))
+                                    },
                         Some(grpc_api_types::payments::wallet_payment_method_type::WalletType::Mifinity(_mifinity_data)) => {
                             // For PaymentMethodType conversion, we just need to return the type, not the full data
                             Ok(Some(PaymentMethodType::Mifinity))
@@ -3689,7 +3701,7 @@ impl
     ForeignTryFrom<(
         PaymentServiceRegisterRequest,
         Connectors,
-        String,
+        consts::Env,
         &tonic::metadata::MetadataMap,
     )> for PaymentFlowData
 {
@@ -3699,7 +3711,7 @@ impl
         (value, connectors, environment, metadata): (
             PaymentServiceRegisterRequest,
             Connectors,
-            String,
+            consts::Env,
             &tonic::metadata::MetadataMap,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
@@ -3714,9 +3726,9 @@ impl
                 }))?
             }
         };
-        let test_mode = match environment.as_str() {
-            common_utils::consts::CONST_DEVELOPMENT => Some(true),
-            common_utils::consts::CONST_PRODUCTION => Some(false),
+        let test_mode = match environment {
+            consts::Env::Development => Some(true),
+            consts::Env::Production => Some(false),
             _ => Some(true),
         };
 
@@ -4280,6 +4292,7 @@ pub enum PaymentConnectorCategory {
 #[derive(Debug, strum::Display, Eq, PartialEq, Hash)]
 pub enum PaymentMethodDataType {
     Card,
+    Bluecode,
     Knet,
     Benefit,
     MomoAtm,
