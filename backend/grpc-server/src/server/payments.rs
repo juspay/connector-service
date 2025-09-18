@@ -1295,12 +1295,16 @@ impl PaymentService for Payments {
                     > = connector_data.connector.get_connector_integration_v2();
 
                     // Create connector request data
-                    let payments_sync_data = PaymentsSyncData::foreign_try_from(payload.clone())
-                        .into_grpc_status()?;
+                    let payments_sync_data =
+                        PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
                     // Create common request data
-                    let payment_flow_data = PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone(), &metadata))
-                        .into_grpc_status()?;
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &metadata,
+                    ))
+                    .into_grpc_status()?;
 
                     // Extract access token from Hyperswitch request
                     let cached_access_token = payload.access_token.clone();
@@ -1322,7 +1326,9 @@ impl PaymentService for Payments {
                             }
                             None => {
                                 // No cached token - generate fresh one
-                                tracing::info!("No cached access token found, generating new token");
+                                tracing::info!(
+                                    "No cached access token found, generating new token"
+                                );
                                 let event_params = EventParams {
                                     _connector_name: &connector.to_string(),
                                     _service_name: &service_name,
@@ -1386,33 +1392,38 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
+                        raw_request_data: Some(SecretSerdeValue::new(
+                            payload.masked_serialize().unwrap_or_default(),
+                        )),
                         request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
                     };
 
                     let consume_or_trigger_flow = match payload.handle_response {
-                        Some(resource_object) => common_enums::CallConnectorAction::HandleResponse(resource_object),
+                        Some(resource_object) => {
+                            common_enums::CallConnectorAction::HandleResponse(resource_object)
+                        }
                         None => common_enums::CallConnectorAction::Trigger,
                     };
 
-                    let response_result = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None,
-                        consume_or_trigger_flow,
-                    )
-                    .await
-                    .switch()
-                    .into_grpc_status()?;
+                    let response_result =
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            consume_or_trigger_flow,
+                        )
+                        .await
+                        .switch()
+                        .into_grpc_status()?;
 
                     // Generate response
-                    let final_response = generate_payment_sync_response(response_result)
-                        .into_grpc_status()?;
+                    let final_response =
+                        generate_payment_sync_response(response_result).into_grpc_status()?;
                     Ok(tonic::Response::new(final_response))
                 })
             },

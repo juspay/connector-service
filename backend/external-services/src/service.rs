@@ -158,27 +158,27 @@ where
             };
 
             let status_code = body.status_code;
-            tracing::Span::current()
-                .record("status_code", tracing::field::display(status_code));
+            tracing::Span::current().record("status_code", tracing::field::display(status_code));
             if let Ok(response) = parse_json_with_bom_handling(&body.response) {
-                tracing::Span::current().record("response.body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
+                tracing::Span::current().record(
+                    "response.body",
+                    tracing::field::display(response.masked_serialize().unwrap_or(
+                        json!({ "error": "failed to mask serialize connector response"}),
+                    )),
+                );
             }
 
             // Set raw_connector_response BEFORE calling the transformer
             let mut updated_router_data = router_data.clone();
             if all_keys_required.unwrap_or(true) {
-                let raw_response_string =
-                    strip_bom_and_convert_to_string(&body.response);
+                let raw_response_string = strip_bom_and_convert_to_string(&body.response);
                 updated_router_data
                     .resource_common_data
                     .set_raw_connector_response(raw_response_string);
             }
 
-            let handle_response_result = connector.handle_response_v2(
-                &updated_router_data,
-                None,
-                body.clone(),
-            );
+            let handle_response_result =
+                connector.handle_response_v2(&updated_router_data, None, body.clone());
 
             let response = match handle_response_result {
                 Ok(data) => {
@@ -220,16 +220,17 @@ where
                     Some(request) => match request {
                         RequestContent::Json(i)
                         | RequestContent::FormUrlEncoded(i)
-                        | RequestContent::Xml(i) => (**i)
-                            .masked_serialize()
-                            .unwrap_or(json!({ "error": "failed to mask serialize connector request"})),
+                        | RequestContent::Xml(i) => (**i).masked_serialize().unwrap_or(
+                            json!({ "error": "failed to mask serialize connector request"}),
+                        ),
                         RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
                         RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
                     },
                     None => serde_json::Value::Null,
                 };
                 tracing::info!(request=?masked_request, "request of connector");
-                tracing::Span::current().record("request.body", tracing::field::display(&masked_request));
+                tracing::Span::current()
+                    .record("request.body", tracing::field::display(&masked_request));
 
                 masked_request
             });
@@ -247,11 +248,14 @@ where
                         .inc();
                     let external_service_start_latency = tokio::time::Instant::now();
                     tracing::Span::current().record("request.url", tracing::field::display(&url));
-                    tracing::Span::current().record("request.method", tracing::field::display(method));
+                    tracing::Span::current()
+                        .record("request.method", tracing::field::display(method));
                     let request_id = event_params.request_id.to_string();
 
                     let response = if let Some(token_data) = token_data {
-                        tracing::debug!("Creating injector request with token data using unified API");
+                        tracing::debug!(
+                            "Creating injector request with token data using unified API"
+                        );
 
                         // Extract template and combine headers
                         let template = request
@@ -278,7 +282,9 @@ where
                                 router_data
                                     .resource_common_data
                                     .get_vault_headers()
-                                    .map(|headers| headers.iter().map(|(k, v)| (k.clone(), v.clone())))
+                                    .map(|headers| {
+                                        headers.iter().map(|(k, v)| (k.clone(), v.clone()))
+                                    })
                                     .into_iter()
                                     .flatten(),
                             )
@@ -355,10 +361,11 @@ where
 
                     match &response {
                         Ok(Ok(body)) => {
-                            let res_body = serde_json::from_slice::<serde_json::Value>(&body.response).ok();
+                            let res_body =
+                                serde_json::from_slice::<serde_json::Value>(&body.response).ok();
 
-                            let latency =
-                                u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX); // Convert to milliseconds
+                            let latency = u64::try_from(external_service_elapsed.as_millis())
+                                .unwrap_or(u64::MAX); // Convert to milliseconds
                             let status_code = body.status_code;
 
                             // Emit success response event
@@ -378,7 +385,9 @@ where
                                     if let Some(ref_id) = reference_id_clone {
                                         additional_fields.insert(
                                             "reference_id".to_string(),
-                                            SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                            SecretSerdeValue::new(serde_json::Value::String(
+                                                ref_id,
+                                            )),
                                         );
                                     }
 
@@ -408,7 +417,10 @@ where
                                             connector_name
                                         ),
                                         Err(e) => {
-                                            tracing::error!("Failed to publish response event: {:?}", e)
+                                            tracing::error!(
+                                                "Failed to publish response event: {:?}",
+                                                e
+                                            )
                                         }
                                     }
                                 }
@@ -416,10 +428,11 @@ where
                         }
                         Ok(Err(error_body)) => {
                             let error_res_body =
-                                serde_json::from_slice::<serde_json::Value>(&error_body.response).ok();
+                                serde_json::from_slice::<serde_json::Value>(&error_body.response)
+                                    .ok();
 
-                            let latency =
-                                u64::try_from(external_service_elapsed.as_millis()).unwrap_or(u64::MAX);
+                            let latency = u64::try_from(external_service_elapsed.as_millis())
+                                .unwrap_or(u64::MAX);
                             let status_code = error_body.status_code;
 
                             // Emit error response event
@@ -439,7 +452,9 @@ where
                                     if let Some(ref_id) = reference_id_clone {
                                         additional_fields.insert(
                                             "reference_id".to_string(),
-                                            SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                            SecretSerdeValue::new(serde_json::Value::String(
+                                                ref_id,
+                                            )),
                                         );
                                     }
 
@@ -499,7 +514,9 @@ where
                                     if let Some(ref_id) = reference_id_clone {
                                         additional_fields.insert(
                                             "reference_id".to_string(),
-                                            SecretSerdeValue::new(serde_json::Value::String(ref_id)),
+                                            SecretSerdeValue::new(serde_json::Value::String(
+                                                ref_id,
+                                            )),
                                         );
                                     }
 
@@ -543,9 +560,13 @@ where
                             let response = match body {
                                 Ok(body) => {
                                     let status_code = body.status_code;
-                                    tracing::Span::current()
-                                        .record("status_code", tracing::field::display(status_code));
-                                    if let Ok(response) = parse_json_with_bom_handling(&body.response) {
+                                    tracing::Span::current().record(
+                                        "status_code",
+                                        tracing::field::display(status_code),
+                                    );
+                                    if let Ok(response) =
+                                        parse_json_with_bom_handling(&body.response)
+                                    {
                                         let headers = body.headers.clone().unwrap_or_default();
                                         let map = headers.iter().fold(
                                             serde_json::Map::new(),
