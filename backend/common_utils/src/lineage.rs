@@ -34,7 +34,7 @@ impl<'a> LineageIds<'a> {
     pub fn inner(&self) -> HashMap<String, String> {
         self.inner
             .iter()
-            .map(|(k, v)| (format!("{},{}", self.prefix, k), v.clone()))
+            .map(|(k, v)| (format!("{}{}", self.prefix, k), v.clone()))
             .collect()
     }
 
@@ -57,11 +57,7 @@ impl serde::Serialize for LineageIds<'_> {
     where
         S: serde::Serializer,
     {
-        let prefixed_map: HashMap<String, String> = self
-            .inner
-            .iter()
-            .map(|(k, v)| (format!("{}{}", self.prefix, k), v.clone()))
-            .collect();
+        let prefixed_map = self.inner();
         prefixed_map.serialize(serializer)
     }
 }
