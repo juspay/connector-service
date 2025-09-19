@@ -4,6 +4,17 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.09.19.0
+
+### Features
+
+- **connector:** [BLUECODE] Added Bluecode Wallet in UCS ([#127](https://github.com/juspay/connector-service/pull/127)) ([`6074fc8`](https://github.com/juspay/connector-service/commit/6074fc8c64b5a678a1cdbc0439f19653bc665d67))
+- Introduce production/sandbox configs ([#179](https://github.com/juspay/connector-service/pull/179)) ([`ab48178`](https://github.com/juspay/connector-service/commit/ab48178d6926dd5d7f7a4b1ef65071576c96e462))
+
+**Full Changelog:** [`2025.09.18.0...2025.09.19.0`](https://github.com/juspay/connector-service/compare/2025.09.18.0...2025.09.19.0)
+
+- - -
+
 ## 2025.09.18.0
 
 ### Miscellaneous Tasks
