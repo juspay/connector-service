@@ -83,7 +83,7 @@ impl<
         let cryptopay_request = match item.router_data.request.payment_method_data {
             PaymentMethodData::Crypto(ref cryptodata) => {
                 let pay_currency = cryptodata.get_pay_currency()?;
-                let amount = CryptopayAmountConvertor::convert_amount(
+                let amount = CryptopayAmountConvertor::convert(
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )?;
@@ -378,12 +378,10 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(
-                CryptopayAmountConvertor::convert_back_amount_to_minor_units(
-                    amount.clone(),
-                    router_data.request.currency,
-                )?,
-            ),
+            Some(ref amount) => Some(CryptopayAmountConvertor::convert_back(
+                amount.clone(),
+                router_data.request.currency,
+            )?),
             None => None,
         };
         match amount_captured_in_minor_units {
