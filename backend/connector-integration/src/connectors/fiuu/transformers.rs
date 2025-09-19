@@ -14,9 +14,10 @@ use common_utils::{
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, RSync, Refund, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
+        EventType, MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, ResponseId,
+        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -2613,4 +2614,46 @@ pub enum QrCodeInformation {
         display_text: Option<String>,
         border_color: Option<String>,
     },
+}
+
+impl From<FiuuPaymentWebhookStatus> for EventType {
+    fn from(value: FiuuPaymentWebhookStatus) -> Self {
+        match value {
+            FiuuPaymentWebhookStatus::Success => Self::PaymentIntentSuccess,
+            FiuuPaymentWebhookStatus::Failure => Self::PaymentIntentFailure,
+            FiuuPaymentWebhookStatus::Pending => Self::PaymentIntentProcessing,
+        }
+    }
+}
+
+impl From<FiuuRefundsWebhookStatus> for EventType {
+    fn from(value: FiuuRefundsWebhookStatus) -> Self {
+        match value {
+            FiuuRefundsWebhookStatus::RefundSuccess => Self::RefundSuccess,
+            FiuuRefundsWebhookStatus::RefundFailure => Self::RefundFailure,
+            FiuuRefundsWebhookStatus::RefundPending => Self::IncomingWebhookEventUnspecified,
+        }
+    }
+}
+
+impl TryFrom<FiuuRefundSyncResponse> for RefundWebhookDetailsResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(notif: FiuuRefundSyncResponse) -> Result<Self, Self::Error> {
+        match notif {
+            FiuuRefundSyncResponse::Webhook(fiuu_webhooks_refund_response) => Ok(Self {
+                connector_refund_id: Some(fiuu_webhooks_refund_response.refund_id),
+                status: common_enums::RefundStatus::from(
+                    fiuu_webhooks_refund_response.status.clone(),
+                ),
+                status_code: 200,
+                connector_response_reference_id: None,
+                error_code: None,
+                error_message: None,
+                raw_connector_response: None,
+                response_headers: None,
+            }),
+            _ => Err(errors::ConnectorError::WebhookBodyDecodingFailed)?,
+        }
+    }
 }
