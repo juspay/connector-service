@@ -1537,16 +1537,25 @@ impl PaymentService for Payments {
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
-                    let source_verified = connector_data
-                        .connector
-                        .verify_webhook_source(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            // TODO: do we need to force authentication? we can make it optional
-                            Some(connector_auth_details.clone()),
-                        )
-                        .switch()
-                        .into_grpc_status()?;
+
+                    let source_verified = match connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
+                    ) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        tracing::warn!(
+                            target: "webhook",
+                            "{:?}",
+                            err
+                        );
+                        false
+                    }
+                };
+
                     let event_type = connector_data
                         .connector
                         .get_event_type(
@@ -1772,7 +1781,7 @@ impl PaymentService for Payments {
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
                         self.config.connectors.clone(),
-                        self.config.common.environment.clone(),
+                        self.config.common.environment,
                         &metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
