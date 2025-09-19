@@ -153,6 +153,7 @@ mod tests {
                         user_agent: Some(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                         ),
+                        referer: None,
                         os_type: None,
                         os_version: None,
                         device_model: None,
@@ -580,6 +581,7 @@ mod tests {
                         user_agent: Some(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                         ),
+                        referer: None,
                         os_type: None,
                         os_version: None,
                         device_model: None,
@@ -883,6 +885,7 @@ mod tests {
                             .to_string(),
                     ),
                     user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                    referer: None,
                     os_type: None,
                     os_version: None,
                     device_model: None,
@@ -1057,6 +1060,7 @@ mod tests {
                             .to_string(),
                     ),
                     user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                    referer: None,
                     os_type: None,
                     os_version: None,
                     device_model: None,
