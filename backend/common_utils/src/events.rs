@@ -13,7 +13,6 @@ use crate::{
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
     lineage,
     types::TimeRange,
-    SecretSerdeValue,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -185,13 +184,12 @@ pub struct Event {
     pub connector: String,
     pub url: Option<String>,
     pub stage: EventStage,
-    pub latency: Option<u64>,
-    pub status_code: Option<u16>,
-    pub request_data: Option<SecretSerdeValue>,
-    pub connector_request_data: Option<SecretSerdeValue>,
-    pub connector_response_data: Option<SecretSerdeValue>,
+    pub latency_ms: Option<u64>,
+    pub status_code: Option<i32>,
+    pub request_data: Option<serde_json::Value>,
+    pub response_data: Option<serde_json::Value>,
     #[serde(flatten)]
-    pub additional_fields: HashMap<String, SecretSerdeValue>,
+    pub additional_fields: HashMap<String, serde_json::Value>,
     #[serde(flatten)]
     pub lineage_ids: lineage::LineageIds<'static>,
 }
@@ -246,12 +244,14 @@ impl FlowName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventStage {
     ConnectorCall,
+    GrpcRequest,
 }
 
 impl EventStage {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ConnectorCall => "CONNECTOR_CALL",
+            Self::GrpcRequest => "GRPC_REQUEST",
         }
     }
 }

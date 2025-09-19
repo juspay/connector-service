@@ -99,11 +99,12 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            common_utils::events::FlowName::SubmitEvidence,
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 async move {
@@ -217,11 +218,12 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            common_utils::events::FlowName::Dsync,
             |request, _metadata_payload| async {
                 let _payload = request.into_inner();
                 let response = DisputeResponse {
@@ -258,7 +260,19 @@ impl DisputeService for Disputes {
         &self,
         request: tonic::Request<DisputeDefendRequest>,
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
-        self.internal_defend(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "DisputeService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            common_utils::events::FlowName::DefendDispute,
+            |request, _metadata_payload| async move { self.internal_defend(request).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -291,11 +305,12 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            common_utils::events::FlowName::AcceptDispute,
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 async move {
@@ -409,11 +424,12 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            common_utils::events::FlowName::IncomingWebhook,
             |request, metadata_payload| {
                 async move {
                     let connector = metadata_payload.connector;
