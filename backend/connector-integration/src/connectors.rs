@@ -8,7 +8,7 @@ pub mod razorpayv2;
 
 pub use self::{
     adyen::Adyen, authorizedotnet::Authorizedotnet, fiserv::Fiserv, mifinity::Mifinity,
-    razorpay::Razorpay, razorpayv2::RazorpayV2,
+    razorpay::Razorpay, razorpayv2::RazorpayV2, zaakpay::Zaakpay,
 };
 
 pub mod elavon;
@@ -49,3 +49,6 @@ pub use self::nexinets::Nexinets;
 
 pub mod noon;
 pub use self::noon::Noon;
+
+pub mod zaakpay;
+
