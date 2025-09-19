@@ -3,15 +3,16 @@ use domain_types::{
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
     },
+    payment_method_data::PaymentMethodDataTypes,
 };
 
-use crate::connectors::cryptopay::CryptopayRouterData;
+use crate::connectors::cryptopay::{CryptopayAmountConvertor, CryptopayRouterData};
 use crate::types::ResponseRouterData;
 use common_utils::{
     pii,
     types::{StringMajorUnit, StringMajorUnitForConnector},
 };
-use error_stack::ResultExt;
+
 use url::Url;
 
 use domain_types::{
@@ -47,30 +48,46 @@ pub struct CryptopayPaymentsRequest {
     custom_id: String,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         CryptopayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     > for CryptopayPaymentsRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: CryptopayRouterData<
-            RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>,
+            RouterDataV2<
+                Authorize,
+                PaymentFlowData,
+                PaymentsAuthorizeData<T>,
+                PaymentsResponseData,
+            >,
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let cryptopay_request = match item.router_data.request.payment_method_data {
             PaymentMethodData::Crypto(ref cryptodata) => {
                 let pay_currency = cryptodata.get_pay_currency()?;
-                let amount = item
-                    .connector
-                    .amount_converter
-                    .convert(
-                        item.router_data.request.minor_amount,
-                        item.router_data.request.currency,
-                    )
-                    .change_context(ConnectorError::AmountConversionFailed)?;
+                let amount = CryptopayAmountConvertor::convert_amount(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )?;
+
                 Ok(Self {
                     price_amount: amount,
                     price_currency: item.router_data.request.currency,
@@ -162,8 +179,16 @@ pub struct CryptopayPaymentsResponse {
     pub data: CryptopayPaymentResponseData,
 }
 
-impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
@@ -193,7 +218,6 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             let redirection_data = cryptopay_response
@@ -211,7 +235,6 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     .custom_id
                     .or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: http_code,
             })
         };
@@ -334,7 +357,6 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 network_advice_code: None,
                 network_decline_code: None,
                 network_error_message: None,
-                raw_connector_response: None,
             })
         } else {
             let redirection_data = cryptopay_response
@@ -352,16 +374,16 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                     .custom_id
                     .or(Some(cryptopay_response.data.id)),
                 incremental_authorization_allowed: None,
-                raw_connector_response: None,
                 status_code: http_code,
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(convert_back_amount_to_minor_units(
-                &StringMajorUnitForConnector,
-                amount.clone(),
-                router_data.request.currency,
-            )?),
+            Some(ref amount) => Some(
+                CryptopayAmountConvertor::convert_back_amount_to_minor_units(
+                    amount.clone(),
+                    router_data.request.currency,
+                )?,
+            ),
             None => None,
         };
         match amount_captured_in_minor_units {

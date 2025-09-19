@@ -427,20 +427,21 @@ impl<
                     }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Crypto(crypto) => {
-                    match crypto.crypto_currency {
-                        Some(cryptocurrency) => Ok(PaymentMethodData::Crypto(
-                            crate::payment_method_data::CryptoData {
-                                pay_currency: cryptocurrency.pay_currency,
-                                network: cryptocurrency.network,
-                            },
-                        )),
-                        None => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    let crypto_currency = crypto.crypto_currency.ok_or_else( || {
+                        ApplicationErrorResponse::BadRequest(ApiError {
                             sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
                             error_identifier: 400,
                             error_message: "crypto_currency is required".to_owned(),
                             error_object: None,
-                        }))),
-                    }
+                        })
+                    })?;
+
+                    Ok(PaymentMethodData::Crypto(
+                        payment_method_data::CryptoData {
+                            pay_currency: crypto_currency.pay_currency,
+                            network: crypto_currency.network,
+                        },
+                    ))
                 }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
