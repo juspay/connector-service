@@ -2,6 +2,12 @@
 mod test;
 pub mod transformers;
 
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+    sync::LazyLock,
+};
+
 use common_enums::{enums, PaymentMethodType};
 use common_utils::{
     consts,
@@ -45,11 +51,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::{
-    fmt::Debug,
-    marker::{Send, Sync},
-    sync::LazyLock,
-};
 use transformers::*;
 
 use super::macros;
