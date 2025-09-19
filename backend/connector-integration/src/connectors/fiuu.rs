@@ -1,6 +1,6 @@
 pub mod transformers;
 
-use std::{any::type_name, borrow::Cow, collections::HashMap,fmt::Debug};
+use std::{any::type_name, borrow::Cow, collections::HashMap, fmt::Debug};
 
 use bytes::Bytes;
 use common_enums::CurrencyUnit;
@@ -786,14 +786,17 @@ impl<
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?
+            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?,
         };
 
-        let signature = self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
 
-        let message = self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
 
-        algorithm.verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
     }
 
