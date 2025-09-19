@@ -1107,6 +1107,66 @@ pub struct PaymentMethodTokenResponse {
 }
 
 #[derive(Debug, Clone)]
+pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
+    pub amount: MinorUnit,
+    pub email: Option<Email>,
+    pub currency: Option<Currency>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub router_return_url: Option<String>,
+    pub complete_authorize_url: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+    pub connector_transaction_id: Option<String>,
+    pub enrolled_for_3ds: bool,
+    pub redirect_response: Option<CompleteAuthorizeRedirectResponse>,
+
+    // New amount for amount frame work
+    pub minor_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
+    pub amount: MinorUnit,
+    pub email: Option<Email>,
+    pub currency: Option<Currency>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub router_return_url: Option<String>,
+    pub complete_authorize_url: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+    pub connector_transaction_id: Option<String>,
+    pub enrolled_for_3ds: bool,
+    pub redirect_response: Option<CompleteAuthorizeRedirectResponse>,
+
+    // New amount for amount frame work
+    pub minor_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
+    pub payment_method_data: Option<payment_method_data::PaymentMethodData<T>>,
+    pub amount: MinorUnit,
+    pub email: Option<Email>,
+    pub currency: Option<Currency>,
+    pub payment_method_type: Option<PaymentMethodType>,
+    pub router_return_url: Option<String>,
+    pub complete_authorize_url: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+    pub connector_transaction_id: Option<String>,
+    pub enrolled_for_3ds: bool,
+    pub redirect_response: Option<CompleteAuthorizeRedirectResponse>,
+
+    // New amount for amount frame work
+    pub minor_amount: Option<MinorUnit>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompleteAuthorizeRedirectResponse {
+    pub params: Option<Secret<String>>,
+    pub payload: Option<SecretSerdeValue>,
+}
+
+#[derive(Debug, Clone)]
 pub struct SessionTokenRequestData {
     pub amount: MinorUnit,
     pub currency: Currency,
