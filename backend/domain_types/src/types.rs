@@ -2323,6 +2323,102 @@ pub fn generate_payment_void_response(
     }
 }
 
+pub fn generate_payment_void_post_capture_response(
+    router_data_v2: RouterDataV2<
+        crate::connector_flow::VoidPC,
+        PaymentFlowData,
+        crate::connector_types::PaymentVoidPostCaptureData,
+        PaymentsResponseData,
+    >,
+) -> Result<PaymentServiceVoidResponse, error_stack::Report<ApplicationErrorResponse>> {
+    let transaction_response = router_data_v2.response;
+
+    // If there's an access token in PaymentFlowData, it must be newly generated (needs caching)
+    let state = router_data_v2
+        .resource_common_data
+        .access_token
+        .as_ref()
+        .map(|token_data| ConnectorState {
+            access_token: Some(grpc_api_types::payments::AccessToken {
+                token: token_data.access_token.clone(),
+                expires_in_seconds: token_data.expires_in,
+                token_type: token_data.token_type.clone(),
+            }),
+        });
+
+    match transaction_response {
+        Ok(response) => match response {
+            PaymentsResponseData::TransactionResponse {
+                resource_id,
+                redirection_data: _,
+                connector_metadata: _,
+                network_txn_id: _,
+                connector_response_reference_id,
+                incremental_authorization_allowed: _,
+                mandate_reference: _,
+                status_code,
+            } => {
+                let status = router_data_v2.resource_common_data.status;
+                let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
+
+                let grpc_resource_id =
+                    grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
+
+                Ok(PaymentServiceVoidResponse {
+                    transaction_id: Some(grpc_resource_id),
+                    status: grpc_status.into(),
+                    response_ref_id: connector_response_reference_id.map(|id| {
+                        grpc_api_types::payments::Identifier {
+                            id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                        }
+                    }),
+                    error_code: None,
+                    error_message: None,
+                    status_code: status_code as u32,
+                    response_headers: router_data_v2
+                        .resource_common_data
+                        .get_connector_response_headers_as_map(),
+                    state,
+                })
+            }
+            _ => Err(report!(ApplicationErrorResponse::InternalServerError(
+                ApiError {
+                    sub_code: "INVALID_RESPONSE_TYPE".to_owned(),
+                    error_identifier: 500,
+                    error_message: "Invalid response type received from connector".to_owned(),
+                    error_object: None,
+                }
+            ))),
+        },
+        Err(e) => {
+            let status = e
+                .attempt_status
+                .map(grpc_api_types::payments::PaymentStatus::foreign_from)
+                .unwrap_or_default();
+            Ok(PaymentServiceVoidResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(
+                        grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
+                    ),
+                }),
+                response_ref_id: e.connector_transaction_id.map(|id| {
+                    grpc_api_types::payments::Identifier {
+                        id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
+                    }
+                }),
+                status: status as i32,
+                error_message: Some(e.message),
+                error_code: Some(e.code),
+                status_code: e.status_code as u32,
+                response_headers: router_data_v2
+                    .resource_common_data
+                    .get_connector_response_headers_as_map(),
+                state: None,
+            })
+        }
+    }
+}
+
 impl ForeignFrom<common_enums::DisputeStage> for grpc_api_types::payments::DisputeStage {
     fn foreign_from(status: common_enums::DisputeStage) -> Self {
         match status {

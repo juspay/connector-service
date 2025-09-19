@@ -28,6 +28,7 @@ use crate::{
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
+        VoidPCIntegrityObject,
     },
     router_response_types::RedirectForm,
     types::{
@@ -759,6 +760,17 @@ pub struct PaymentVoidData {
     pub browser_info: Option<BrowserInformation>,
 }
 
+#[derive(Debug, Clone)]
+pub struct PaymentVoidPostCaptureData {
+    pub currency: Option<Currency>,
+    pub connector_transaction_id: String,
+    pub cancellation_reason: Option<String>,
+    pub connector_meta: Option<serde_json::Value>,
+    pub minor_amount: Option<MinorUnit>,
+    pub integrity_object: Option<VoidPCIntegrityObject>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
 impl PaymentVoidData {
     // fn get_amount(&self) -> Result<i64, Error> {
     //     self.amount.ok_or_else(missing_field_err("amount"))
@@ -780,6 +792,57 @@ impl PaymentVoidData {
         self.browser_info
             .clone()
             .and_then(|browser_info| browser_info.language)
+    }
+}
+
+impl PaymentVoidPostCaptureData {
+    pub fn get_currency(&self) -> Result<Currency, Error> {
+        self.currency.ok_or_else(missing_field_err("currency"))
+    }
+    
+    pub fn get_cancellation_reason(&self) -> Result<String, Error> {
+        self.cancellation_reason
+            .clone()
+            .ok_or_else(missing_field_err("cancellation_reason"))
+    }
+    
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+    
+    pub fn get_connector_meta(&self) -> Result<serde_json::Value, Error> {
+        self.connector_meta
+            .clone()
+            .ok_or_else(missing_field_err("connector_meta"))
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceVoidRequest> for PaymentVoidPostCaptureData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::PaymentServiceVoidRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let connector_transaction_id = value
+            .transaction_id
+            .and_then(|id| id.id_type)
+            .and_then(|id_type| match id_type {
+                grpc_api_types::payments::identifier::IdType::Id(id) => Some(id),
+                _ => None,
+            })
+            .unwrap_or_default();
+
+        Ok(Self {
+            currency: None, // Not available in PaymentServiceVoidRequest
+            connector_transaction_id,
+            cancellation_reason: value.cancellation_reason,
+            connector_meta: None, // Not available in PaymentServiceVoidRequest
+            minor_amount: None, // Not available in PaymentServiceVoidRequest
+            integrity_object: None,
+            browser_info: value.browser_info.map(BrowserInformation::foreign_try_from).transpose()?,
+        })
     }
 }
 

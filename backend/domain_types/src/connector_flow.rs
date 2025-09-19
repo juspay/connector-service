@@ -43,6 +43,9 @@ pub struct CreateAccessToken;
 #[derive(Debug, Clone)]
 pub struct PaymentMethodToken;
 
+#[derive(Debug, Clone)]
+pub struct VoidPC;
+
 #[derive(strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum FlowName {
@@ -51,6 +54,7 @@ pub enum FlowName {
     Rsync,
     Psync,
     Void,
+    VoidPc,
     SetupMandate,
     RepeatPayment,
     Capture,

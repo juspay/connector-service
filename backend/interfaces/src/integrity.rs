@@ -7,7 +7,7 @@ use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
     AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
-    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentMethodTokenizationData, PaymentVoidData, PaymentVoidPostCaptureData, PaymentsAuthorizeData, PaymentsCaptureData,
     PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData, SessionTokenRequestData,
     SetupMandateRequestData, SubmitEvidenceData,
 };
@@ -19,6 +19,7 @@ use domain_types::{
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SessionTokenIntegrityObject, SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
+        VoidPCIntegrityObject,
     },
 };
 
@@ -144,6 +145,7 @@ impl_check_integrity!(PaymentCreateOrderData);
 impl_check_integrity!(SetupMandateRequestData<S>);
 impl_check_integrity!(PaymentsSyncData);
 impl_check_integrity!(PaymentVoidData);
+impl_check_integrity!(PaymentVoidPostCaptureData);
 impl_check_integrity!(RefundsData);
 impl_check_integrity!(PaymentsCaptureData);
 impl_check_integrity!(AcceptDisputeData);
@@ -223,6 +225,20 @@ impl GetIntegrityObject<PaymentVoidIntegrityObject> for PaymentVoidData {
     fn get_request_integrity_object(&self) -> PaymentVoidIntegrityObject {
         PaymentVoidIntegrityObject {
             connector_transaction_id: self.connector_transaction_id.clone(),
+        }
+    }
+}
+
+impl GetIntegrityObject<VoidPCIntegrityObject> for PaymentVoidPostCaptureData {
+    fn get_response_integrity_object(&self) -> Option<VoidPCIntegrityObject> {
+        self.integrity_object.clone()
+    }
+
+    fn get_request_integrity_object(&self) -> VoidPCIntegrityObject {
+        VoidPCIntegrityObject {
+            connector_transaction_id: self.connector_transaction_id.clone(),
+            currency: self.currency,
+            minor_amount: self.minor_amount,
         }
     }
 }
@@ -519,6 +535,58 @@ impl FlowIntegrity for PaymentVoidIntegrityObject {
                 &req_integrity_object.connector_transaction_id,
                 &res_integrity_object.connector_transaction_id,
             ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for VoidPCIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.connector_transaction_id != res_integrity_object.connector_transaction_id {
+            mismatched_fields.push(format_mismatch(
+                "connector_transaction_id",
+                &req_integrity_object.connector_transaction_id,
+                &res_integrity_object.connector_transaction_id,
+            ));
+        }
+
+        // Handle optional currency field
+        match (req_integrity_object.currency, res_integrity_object.currency) {
+            (Some(req_currency), Some(res_currency)) if req_currency != res_currency => {
+                mismatched_fields.push(format_mismatch(
+                    "currency",
+                    &req_currency.to_string(),
+                    &res_currency.to_string(),
+                ));
+            }
+            (None, Some(_)) | (Some(_), None) => {
+                mismatched_fields.push("currency is missing in request or response".to_string());
+            }
+            _ => {}
+        }
+
+        // Handle optional minor_amount field
+        match (req_integrity_object.minor_amount, res_integrity_object.minor_amount) {
+            (Some(req_amount), Some(res_amount)) if req_amount != res_amount => {
+                mismatched_fields.push(format_mismatch(
+                    "minor_amount",
+                    &req_amount.to_string(),
+                    &res_amount.to_string(),
+                ));
+            }
+            (None, Some(_)) | (Some(_), None) => {
+                mismatched_fields.push("minor_amount is missing in request or response".to_string());
+            }
+            _ => {}
         }
 
         check_integrity_result(mismatched_fields, connector_transaction_id)

@@ -128,6 +128,7 @@ trait PaymentOperationsInternal {
         request: tonic::Request<PaymentServiceVoidRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status>;
 
+
     async fn internal_refund(
         &self,
         request: tonic::Request<PaymentServiceRefundRequest>,
@@ -1103,6 +1104,7 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_capture_response,
         all_keys_required: None
     );
+
 }
 
 #[tonic::async_trait]
