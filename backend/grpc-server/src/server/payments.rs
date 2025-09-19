@@ -391,6 +391,7 @@ impl Payments {
             None,
             event_params,
             token_data,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await;
 
@@ -551,6 +552,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .map_err(
@@ -656,6 +658,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -752,6 +755,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -871,6 +875,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -1007,6 +1012,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -1289,12 +1295,16 @@ impl PaymentService for Payments {
                     > = connector_data.connector.get_connector_integration_v2();
 
                     // Create connector request data
-                    let payments_sync_data = PaymentsSyncData::foreign_try_from(payload.clone())
-                        .into_grpc_status()?;
+                    let payments_sync_data =
+                        PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
 
                     // Create common request data
-                    let payment_flow_data = PaymentFlowData::foreign_try_from((payload.clone(), self.config.connectors.clone(), &metadata))
-                        .into_grpc_status()?;
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &metadata,
+                    ))
+                    .into_grpc_status()?;
 
                     // Extract access token from Hyperswitch request
                     let cached_access_token = payload.access_token.clone();
@@ -1316,7 +1326,9 @@ impl PaymentService for Payments {
                             }
                             None => {
                                 // No cached token - generate fresh one
-                                tracing::info!("No cached access token found, generating new token");
+                                tracing::info!(
+                                    "No cached access token found, generating new token"
+                                );
                                 let event_params = EventParams {
                                     _connector_name: &connector.to_string(),
                                     _service_name: &service_name,
@@ -1380,41 +1392,38 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
+                        raw_request_data: Some(SecretSerdeValue::new(
+                            payload.masked_serialize().unwrap_or_default(),
+                        )),
                         request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
                     };
 
-                    let response_result = match payload.handle_response {
+                    let consume_or_trigger_flow = match payload.handle_response {
                         Some(resource_object) => {
-                            external_services::service::execute_connector_processing_step_for_handle_response(
-                                connector_integration,
-                                router_data,
-                                resource_object,
-                            )
-                            .await
-                            .switch()
-                            .into_grpc_status()?
+                            common_enums::CallConnectorAction::HandleResponse(resource_object)
                         }
-                        _ => {
-                            external_services::service::execute_connector_processing_step(
-                                &self.config.proxy,
-                                connector_integration,
-                                router_data,
-                                None,
-                                event_params,
-                                None,
-                            )
-                            .await
-                            .switch()
-                            .into_grpc_status()?
-                        }
+                        None => common_enums::CallConnectorAction::Trigger,
                     };
 
-                    // Generate response
-                    let final_response = generate_payment_sync_response(response_result)
+                    let response_result =
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            consume_or_trigger_flow,
+                        )
+                        .await
+                        .switch()
                         .into_grpc_status()?;
+
+                    // Generate response
+                    let final_response =
+                        generate_payment_sync_response(response_result).into_grpc_status()?;
                     Ok(tonic::Response::new(final_response))
                 })
             },
@@ -1508,16 +1517,25 @@ impl PaymentService for Payments {
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
-                    let source_verified = connector_data
-                        .connector
-                        .verify_webhook_source(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            // TODO: do we need to force authentication? we can make it optional
-                            Some(connector_auth_details.clone()),
-                        )
-                        .switch()
-                        .into_grpc_status()?;
+
+                    let source_verified = match connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
+                    ) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        tracing::warn!(
+                            target: "webhook",
+                            "{:?}",
+                            err
+                        );
+                        false
+                    }
+                };
+
                     let event_type = connector_data
                         .connector
                         .get_event_type(
@@ -1750,7 +1768,7 @@ impl PaymentService for Payments {
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
                         self.config.connectors.clone(),
-                        self.config.common.environment.clone(),
+                        self.config.common.environment,
                         &metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -1822,6 +1840,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -1938,6 +1957,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()

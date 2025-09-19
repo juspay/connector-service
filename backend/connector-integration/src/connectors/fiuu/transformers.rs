@@ -670,10 +670,13 @@ impl<
                     | WalletData::CashappQr(_)
                     | WalletData::SwishQr(_)
                     | WalletData::Mifinity(_)
-                    | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
-                        utils::get_unimplemented_payment_method_error_message("fiuu"),
-                    )
-                    .into()),
+                    | WalletData::RevolutPay(_)
+                    | WalletData::BluecodeRedirect { .. } => {
+                        Err(errors::ConnectorError::NotImplemented(
+                            utils::get_unimplemented_payment_method_error_message("fiuu"),
+                        )
+                        .into())
+                    }
                 },
                 PaymentMethodData::CardRedirect(_)
                 | PaymentMethodData::PayLater(_)
