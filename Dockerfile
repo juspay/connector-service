@@ -4,15 +4,15 @@
 ########################################
 # 1. Base image with necessary tools
 ########################################
-FROM rust:slim-bookworm AS base
+FROM public.ecr.aws/docker/library/rust:slim-bookworm AS base
 
 # Install system dependencies and clean up
 RUN apt-get update \
     && apt-get install -y \
-       pkg-config \
-       libssl-dev \
-       g++ \
-       make \
+    pkg-config \
+    libssl-dev \
+    g++ \
+    make \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -48,8 +48,8 @@ RUN --mount=type=cache,target=/sccache \
 # Install additional build-time dependencies
 RUN apt-get update \
     && apt-get install -y \
-       protobuf-compiler \
-       libpq-dev \
+    protobuf-compiler \
+    libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -64,14 +64,14 @@ RUN sccache --show-stats
 ########################################
 # 4. Runtime stage
 ########################################
-FROM debian:bookworm-slim AS runtime
+FROM public.ecr.aws/docker/library/debian:bookworm-slim AS runtime
 WORKDIR /app
 
 # Install only runtime dependencies and clean up
 RUN apt-get update \
     && apt-get install -y \
-       libpq-dev \
-       ca-certificates \
+    libpq-dev \
+    ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
