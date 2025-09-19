@@ -1024,6 +1024,14 @@ message WebhookSecrets {
   optional string additional_secret = 2;
 }
 
+message IncompleteTransformationResponse {
+  // The resource object bytes that should be sent in PSync call
+  bytes resource_object = 1;
+  
+  // Reason why transformation is incomplete
+  string reason = 2;
+}
+
 // Content of a webhook response, can be one of several types.
 message WebhookResponseContent {
   oneof content {
@@ -1035,6 +1043,9 @@ message WebhookResponseContent {
     
     // Content if the webhook is for a dispute synchronization.
     DisputeResponse disputes_response = 3;
+
+    // Content if the payment webhook transformation is incomplete and requires psync call.
+    IncompleteTransformationResponse incomplete_transformation = 4;
   }
 }
 
@@ -1189,6 +1200,12 @@ message PaymentServiceGetRequest {
 
   // Session and Token Information
   optional string access_token = 3; // Access token for secure communication
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 8; // Method for capturing the payment
+
+  // Body of the response.
+  optional bytes handle_response = 4;
 }
 
 // Response message for a payment status synchronization.
@@ -1587,6 +1604,13 @@ message PaymentServiceTransformRequest {
   optional string access_token = 4; // Access token for secure communication
 }
 
+// Status of webhook transformation process
+enum WebhookTransformationStatus {
+  WEBHOOK_TRANSFORMATION_STATUS_UNSPECIFIED = 0; // Default value
+  COMPLETE = 1;     // Transformation completed successfully
+  INCOMPLETE = 2;   // Transformation incomplete, requires psync call
+}
+
 // Response message for PaymentService.Transform RPC
 message PaymentServiceTransformResponse {
   // Event Information
@@ -1600,6 +1624,9 @@ message PaymentServiceTransformResponse {
   
   // Reference
   optional Identifier response_ref_id = 4; // Response reference ID for tracking
+
+  // Transformation Status
+  WebhookTransformationStatus transformation_status = 5; // Status of the webhook transformation
 }
 
 // -------------------------
