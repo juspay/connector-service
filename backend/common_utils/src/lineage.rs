@@ -2,8 +2,6 @@
 
 use std::collections::HashMap;
 
-use serde;
-
 /// A domain type representing lineage IDs as key-value pairs(uses hashmap internally).
 ///
 /// This type can deserialize only from URL-encoded format (e.g., "trace_id=123&span_id=456")
