@@ -732,11 +732,11 @@ macro_rules! create_all_prerequisites {
                     pub $converter_name: &'static (dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
                 )*
                 $(
-                    [<$flow_name:snake>]: &'static (dyn BridgeRequestResponse<
+                    [<$flow_name:snake>]: &'static dyn BridgeRequestResponse<
                         RequestBody = crate::connectors::macros::create_all_prerequisites_resolve_request_body_type!($(request_body: $flow_request $(<$generic_param>)?,)? generic_type: $generic_type),
                         ResponseBody = $flow_response,
                         ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
-                    >),
+                    >,
                 )*
             }
 
@@ -869,3 +869,37 @@ macro_rules! expand_imports {
     };
 }
 pub(crate) use expand_imports;
+
+macro_rules! create_amount_converter_wrapper {
+    (connector_name: $connector_name:ident, amount_type: $amount_type:ty) => {
+        paste::paste! {
+            #[derive(Default, Debug, Clone, Copy, PartialEq)]
+            pub struct [<$connector_name AmountConvertor>];
+
+            impl [<$connector_name AmountConvertor>] {
+                pub fn convert(
+                    amount: common_utils::types::MinorUnit,
+                    currency: common_enums::Currency,
+                ) -> Result<common_utils::types::$amount_type, error_stack::Report<errors::ConnectorError>> {
+                    domain_types::utils::convert_amount(
+                        &common_utils::types::[<$amount_type ForConnector>],
+                        amount,
+                        currency,
+                    )
+                }
+
+                pub fn convert_back(
+                    amount: common_utils::types::$amount_type,
+                    currency: common_enums::Currency,
+                ) -> Result<common_utils::types::MinorUnit, error_stack::Report<errors::ConnectorError>> {
+                    domain_types::utils::convert_back_amount_to_minor_units(
+                        &common_utils::types::[<$amount_type ForConnector>],
+                        amount,
+                        currency,
+                    )
+                }
+            }
+        }
+    };
+}
+pub(crate) use create_amount_converter_wrapper;

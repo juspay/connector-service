@@ -15,21 +15,40 @@ pub struct Config {
     pub connectors: Connectors,
     #[serde(default)]
     pub events: EventConfig,
+    #[serde(default)]
+    pub lineage: LineageConfig,
+}
+
+#[derive(Clone, serde::Deserialize, Debug, Default)]
+pub struct LineageConfig {
+    /// Enable processing of x-lineage-ids header
+    pub enabled: bool,
+    /// Custom header name (default: x-lineage-ids)
+    #[serde(default = "default_lineage_header")]
+    pub header_name: String,
+    /// Prefix for lineage fields in events
+    #[serde(default = "default_lineage_prefix")]
+    pub field_prefix: String,
+}
+
+fn default_lineage_header() -> String {
+    consts::X_LINEAGE_IDS.to_string()
+}
+
+fn default_lineage_prefix() -> String {
+    consts::LINEAGE_FIELD_PREFIX.to_string()
 }
 
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Common {
-    pub environment: String,
+    pub environment: consts::Env,
 }
 
 impl Common {
     pub fn validate(&self) -> Result<(), config::ConfigError> {
-        match self.environment.as_str() {
-            "development" | "production" => Ok(()),
-            _ => Err(config::ConfigError::Message(format!(
-                "Invalid environment '{}'. Must be 'development' or 'production'",
-                self.environment
-            ))),
+        let Self { environment } = self;
+        match environment {
+            consts::Env::Development | consts::Env::Production | consts::Env::Sandbox => Ok(()),
         }
     }
 }
@@ -72,7 +91,7 @@ impl Config {
         let config = Self::builder(&env)?
             .add_source(config::File::from(config_path).required(false))
             .add_source(
-                config::Environment::with_prefix("CS")
+                config::Environment::with_prefix(consts::ENV_PREFIX)
                     .try_parsing(true)
                     .separator("__")
                     .list_separator(",")

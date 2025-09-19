@@ -708,7 +708,8 @@ impl<
             | WalletData::PaypalSdk(_)
             | WalletData::WeChatPayQr(_)
             | WalletData::CashappQr(_)
-            | WalletData::Mifinity(_) => Err(errors::ConnectorError::NotImplemented(
+            | WalletData::Mifinity(_)
+            | WalletData::BluecodeRedirect { .. } => Err(errors::ConnectorError::NotImplemented(
                 "payment_method".into(),
             ))?,
         }
@@ -1600,12 +1601,19 @@ pub struct AdyenAdditionalDataWH {
 pub struct AdyenNotificationRequestItemWH {
     pub original_reference: Option<String>,
     pub psp_reference: String,
+    pub amount: AdyenAmountWH,
     pub event_code: WebhookEventCode,
     pub merchant_account_code: String,
     pub merchant_reference: String,
     pub success: String,
     pub reason: Option<String>,
     pub additional_data: AdyenAdditionalDataWH,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AdyenAmountWH {
+    pub value: MinorUnit,
+    pub currency: common_enums::Currency,
 }
 
 fn is_success_scenario(is_success: &str) -> bool {

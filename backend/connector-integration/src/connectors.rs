@@ -50,5 +50,14 @@ pub use self::nexinets::Nexinets;
 pub mod noon;
 pub use self::noon::Noon;
 
+pub mod braintree;
+pub use self::braintree::Braintree;
+
+pub mod volt;
+pub use self::volt::Volt;
+
+pub mod bluecode;
+pub use self::bluecode::Bluecode;
+
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;

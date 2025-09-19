@@ -170,7 +170,10 @@ fn create_payment_sync_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
+        access_token: None,
         // all_keys_required: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 
@@ -243,6 +246,8 @@ fn create_refund_sync_request(
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
         browser_info: None,
+        refund_metadata: HashMap::new(),
+        access_token: None,
     }
 }
 
