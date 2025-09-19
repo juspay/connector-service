@@ -199,8 +199,19 @@ impl Payments {
 
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
-        let should_do_order_create = connector_data.connector.should_do_order_create();
 
+        // Check if order creation should be done - either globally or for specific payment method
+        let payment_method = payload
+            .payment_method
+            .as_ref()
+            .and_then(|pm| common_enums::PaymentMethod::foreign_try_from(pm.clone()).ok());
+
+        let should_do_order_create = connector_data.connector.should_do_order_create()
+            || payment_method.is_some_and(|pm| {
+                connector_data
+                    .connector
+                    .should_do_order_create_for_payment_method(pm)
+            });
         let payment_flow_data = if should_do_order_create {
             let event_params = EventParams {
                 _connector_name: &connector.to_string(),
@@ -518,6 +529,13 @@ impl Payments {
                 Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
             },
             webhook_url: payload.webhook_url.clone(),
+            payment_method_type: payload
+                .payment_method
+                .clone()
+                .map(<Option<common_enums::PaymentMethodType>>::foreign_try_from)
+                .transpose()
+                .unwrap_or(None)
+                .flatten(),
         };
 
         let order_router_data = RouterDataV2::<
@@ -623,6 +641,7 @@ impl Payments {
                 Some(serde_json::to_value(payload.metadata.clone()).unwrap_or_default())
             },
             webhook_url: payload.webhook_url.clone(),
+            payment_method_type: None,
         };
 
         let order_router_data = RouterDataV2::<
@@ -1774,13 +1793,15 @@ impl PaymentService for Payments {
                         reference_id: &metadata_payload.reference_id,
                     };
 
-                    let response = external_services::service::execute_connector_processing_step(
-                        &self.config.proxy,
-                        connector_integration,
-                        router_data,
-                        None,
-                        event_params,
-                        None, // token_data - None for non-proxy payments
+                    let response = Box::pin(
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None, // token_data - None for non-proxy payments
+                        ),
                     )
                     .await
                     .switch()
