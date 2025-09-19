@@ -59,6 +59,7 @@ pub enum ConnectorEnum {
     Novalnet,
     Nexinets,
     Noon,
+    EaseBuzz,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -85,6 +86,16 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Nexinets => Ok(Self::Nexinets),
             grpc_api_types::payments::Connector::Noon => Ok(Self::Noon),
             grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
+            // TODO: Add EaseBuzz to gRPC API when available
+            grpc_api_types::payments::Connector::Mifinity => Ok(Self::Mifinity),
+            // TODO: Add EaseBuzz to gRPC API when available
+            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "CONNECTOR_NOT_SUPPORTED".to_owned(),
+                error_identifier: 400,
+                error_message: "Connector is not supported".to_owned(),
+                error_object: None,
+            })
+            .into()),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
