@@ -729,7 +729,7 @@ macro_rules! create_all_prerequisites {
         paste::paste! {
             pub struct $connector<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
                 $(
-                    pub $converter_name: &'static dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync,
+                    pub $converter_name: &'static (dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
                 )*
                 $(
                     [<$flow_name:snake>]: &'static dyn BridgeRequestResponse<
