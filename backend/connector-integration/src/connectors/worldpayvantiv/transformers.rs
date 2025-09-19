@@ -1692,10 +1692,13 @@ impl<
         let cnp_txn_id = item.router_data.request.connector_transaction_id.clone();
         let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
-        let void = VoidRequest {
-            id: format!("void_{}", merchant_txn_id),
+        // Use auth reversal for all void calls in UCS WorldpayVantiv implementation
+        // This follows the pattern where auth reversal is used for canceling authorized payments
+        let auth_reversal = AuthReversal {
+            id: format!("authrev_{}", merchant_txn_id),
             report_group: "Default".to_string(),
             cnp_txn_id,
+            amount: None, // Full reversal
         };
 
         let cnp_request = CnpOnlineRequest {
@@ -1706,8 +1709,8 @@ impl<
             authorization: None,
             sale: None,
             capture: None,
-            auth_reversal: None,
-            void: Some(void),
+            auth_reversal: Some(auth_reversal),
+            void: None,
             credit: None,
         };
 
@@ -2114,14 +2117,15 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
-        if let Some(void_response) = item.response.void_response {
-            let status = get_attempt_status(WorldpayvantivPaymentFlow::Void, void_response.response)?;
+        // Handle auth reversal response (UCS WorldpayVantiv uses auth reversal for all void calls)
+        if let Some(auth_reversal_response) = item.response.auth_reversal_response.as_ref() {
+            let status = get_attempt_status(WorldpayvantivPaymentFlow::Void, auth_reversal_response.response)?;
             
             if is_payment_failure(status) {
                 let error_response = ErrorResponse {
-                    code: void_response.response.to_string(),
-                    message: void_response.message.clone(),
-                    connector_transaction_id: Some(void_response.cnp_txn_id.clone()),
+                    code: auth_reversal_response.response.to_string(),
+                    message: auth_reversal_response.message.clone(),
+                    connector_transaction_id: Some(auth_reversal_response.cnp_txn_id.clone()),
                     ..Default::default()
                 };
                 
@@ -2135,12 +2139,12 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
                 })
             } else {
                 let payments_response = PaymentsResponseData::TransactionResponse {
-                    resource_id: ResponseId::ConnectorTransactionId(void_response.cnp_txn_id.clone()),
+                    resource_id: ResponseId::ConnectorTransactionId(auth_reversal_response.cnp_txn_id.clone()),
                     redirection_data: None,
                     mandate_reference: None,
                     connector_metadata: None,
                     network_txn_id: None,
-                    connector_response_reference_id: Some(void_response.id.clone()),
+                    connector_response_reference_id: Some(auth_reversal_response.id.clone()),
                     incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 };
@@ -2155,6 +2159,7 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
                 })
             }
         } else {
+            // No auth reversal response found
             let error_response = ErrorResponse {
                 code: item.response.response_code,
                 message: item.response.message.clone(),
