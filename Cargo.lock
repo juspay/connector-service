@@ -914,7 +914,7 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 [[package]]
 name = "common_enums"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?rev=8394a0417#8394a0417a2c92de885c983a4165b063ae979a20"
+source = "git+https://github.com/juspay/hyperswitch?rev=1c65082d9#1c65082d9fd4a530c91d54eaec19ba4d36cd746e"
 dependencies = [
  "diesel",
  "masking",
@@ -929,7 +929,7 @@ dependencies = [
 [[package]]
 name = "common_utils"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?rev=8394a0417#8394a0417a2c92de885c983a4165b063ae979a20"
+source = "git+https://github.com/juspay/hyperswitch?rev=1c65082d9#1c65082d9fd4a530c91d54eaec19ba4d36cd746e"
 dependencies = [
  "base64 0.22.1",
  "base64-serde",
@@ -3215,7 +3215,7 @@ dependencies = [
 [[package]]
 name = "injector"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?rev=8394a0417#8394a0417a2c92de885c983a4165b063ae979a20"
+source = "git+https://github.com/juspay/hyperswitch?rev=1c65082d9#1c65082d9fd4a530c91d54eaec19ba4d36cd746e"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3564,7 +3564,7 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 [[package]]
 name = "masking"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?rev=8394a0417#8394a0417a2c92de885c983a4165b063ae979a20"
+source = "git+https://github.com/juspay/hyperswitch?rev=1c65082d9#1c65082d9fd4a530c91d54eaec19ba4d36cd746e"
 dependencies = [
  "bytes",
  "diesel",
@@ -4860,7 +4860,7 @@ dependencies = [
 [[package]]
 name = "router_derive"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?rev=8394a0417#8394a0417a2c92de885c983a4165b063ae979a20"
+source = "git+https://github.com/juspay/hyperswitch?rev=1c65082d9#1c65082d9fd4a530c91d54eaec19ba4d36cd746e"
 dependencies = [
  "indexmap 2.11.1",
  "proc-macro2",
@@ -4873,7 +4873,7 @@ dependencies = [
 [[package]]
 name = "router_env"
 version = "0.1.0"
-source = "git+https://github.com/juspay/hyperswitch?rev=8394a0417#8394a0417a2c92de885c983a4165b063ae979a20"
+source = "git+https://github.com/juspay/hyperswitch?rev=1c65082d9#1c65082d9fd4a530c91d54eaec19ba4d36cd746e"
 dependencies = [
  "cargo_metadata 0.18.1",
  "config",
