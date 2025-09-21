@@ -131,6 +131,8 @@ fn create_payment_sync_request(request_ref_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
+        capture_method: None,
+        access_token: None,
     }
 }
 
