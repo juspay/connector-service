@@ -1,8 +1,8 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use common_enums::ApiClientError;
-use common_utils::ext_traits::AsyncExt;
 use common_utils::{
+    ext_traits::AsyncExt,
     lineage,
     request::{Method, Request, RequestContent},
 };
@@ -68,6 +68,8 @@ use common_utils::{
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
+// TokenData is now imported from hyperswitch_injector
+use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
     integrity::{CheckIntegrity, FlowIntegrity, GetIntegrityObject},
@@ -78,9 +80,6 @@ use serde_json::json;
 use tracing::field::Empty;
 
 use crate::shared_metrics as metrics;
-
-// TokenData is now imported from hyperswitch_injector
-use injector::{injector_core, HttpMethod, TokenData};
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
 trait ToHttpMethod {

@@ -41,6 +41,7 @@ noon.base_url = "https://api.noonpayments.com/"
 mifinity.base_url = "https://secure.mifinity.com/"
 braintree.base_url = "https://payments.braintree-api.com/graphql"
 volt.base_url = "https://api.volt.io/"
+bluecode.base_url = "https://app.eorder.reloadhero.com/"
 
 # Generic Events Configuration
 [events]

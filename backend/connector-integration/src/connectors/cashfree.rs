@@ -1,6 +1,8 @@
 pub mod test;
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use cashfree::{
     CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreePaymentRequest,
     CashfreePaymentResponse,
@@ -39,7 +41,6 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use std::fmt::Debug;
 use transformers as cashfree;
 
 use super::macros;
