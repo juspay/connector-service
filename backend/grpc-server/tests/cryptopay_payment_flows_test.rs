@@ -133,6 +133,7 @@ fn create_payment_sync_request(request_ref_id: &str) -> PaymentServiceGetRequest
         }),
         capture_method: None,
         access_token: None,
+        handle_response: None,
     }
 }
 
