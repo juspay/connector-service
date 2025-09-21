@@ -169,6 +169,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(generate_unique_id("fiuu_sync"))),
         }),
         access_token: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

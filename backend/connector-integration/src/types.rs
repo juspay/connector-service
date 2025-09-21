@@ -4,9 +4,9 @@ use domain_types::{connector_types::ConnectorEnum, payment_method_data::PaymentM
 use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
-    Adyen, Authorizedotnet, Braintree, Cashfree, Cashtocode, Checkout, Elavon, Fiserv, Fiuu,
-    Mifinity, Nexinets, Noon, Novalnet, Paytm, Payu, Peachpayments, Phonepe, Razorpay, RazorpayV2,
-    Volt, Xendit,
+    Adyen, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Checkout, Elavon, Fiserv,
+    Fiuu, Mifinity, Nexinets, Noon, Novalnet, Paytm, Payu, Peachpayments, Phonepe, Razorpay,
+    RazorpayV2, Volt, Xendit,
 };
 
 #[derive(Clone)]
@@ -48,6 +48,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Noon => Box::new(Noon::new()),
             ConnectorEnum::Volt => Box::new(Volt::new()),
             ConnectorEnum::Braintree => Box::new(Braintree::new()),
+            ConnectorEnum::Bluecode => Box::new(Bluecode::new()),
             ConnectorEnum::Peachpayments => Box::new(Peachpayments::new()),
         }
     }

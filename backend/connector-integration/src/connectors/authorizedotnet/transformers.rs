@@ -1159,6 +1159,7 @@ pub struct AuthorizedotnetRefundCardDetails {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
 }

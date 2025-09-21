@@ -56,5 +56,8 @@ pub use self::braintree::Braintree;
 pub mod volt;
 pub use self::volt::Volt;
 
+pub mod bluecode;
+pub use self::bluecode::Bluecode;
+
 pub mod peachpayments;
 pub use self::peachpayments::Peachpayments;
