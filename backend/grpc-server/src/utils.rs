@@ -20,7 +20,7 @@ use http::request::Request;
 use hyperswitch_masking;
 use tonic::metadata;
 
-use crate::{configs, error::ResultExtGrpc};
+use crate::{configs::{self, HeaderMaskingConfig, MaskedMetadata}, error::ResultExtGrpc};
 
 // Helper function to map flow markers to flow names
 pub fn flow_marker_to_flow_name<F>() -> FlowName
@@ -120,7 +120,6 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
     span
 }
 
-/// Struct to hold extracted metadata payload
 pub struct MetadataPayload {
     pub tenant_id: String,
     pub request_id: String,
@@ -129,19 +128,47 @@ pub struct MetadataPayload {
     pub lineage_ids: LineageIds<'static>,
     pub connector_auth_type: ConnectorAuthType,
     pub reference_id: Option<String>,
+    
+    masked_metadata: MaskedMetadata,
+}
+
+impl MetadataPayload {
+    pub fn get_masked_metadata(&self) -> HashMap<String, String> {
+        self.masked_metadata.get_masked_metadata()
+            .into_iter()
+            .map(|(k, v)| (k, v.expose()))
+            .collect()
+    }
+    
+    pub fn get_metadata_value(&self, key: &str) -> Option<String> {
+        self.masked_metadata.get_metadata_value(key)
+    }
+    
+    pub fn get_metadata_as_secret(&self, key: &str) -> Option<hyperswitch_masking::Secret<String>> {
+        self.masked_metadata.get_metadata_as_secret(key)
+    }
+    
+    pub(crate) fn get_raw_metadata(&self) -> &metadata::MetadataMap {
+        self.masked_metadata.get_raw_metadata()
+    }
 }
 
 pub fn get_metadata_payload(
-    metadata: &metadata::MetadataMap,
+    metadata: metadata::MetadataMap,
     server_config: Arc<configs::Config>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
-    let connector = connector_from_metadata(metadata)?;
-    let merchant_id = merchant_id_from_metadata(metadata)?;
-    let tenant_id = tenant_id_from_metadata(metadata)?;
-    let request_id = request_id_from_metadata(metadata)?;
-    let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
-    let connector_auth_type = auth_from_metadata(metadata)?;
-    let reference_id = reference_id_from_metadata(metadata)?;
+    let connector = connector_from_metadata(&metadata)?;
+    let merchant_id = merchant_id_from_metadata(&metadata)?;
+    let tenant_id = tenant_id_from_metadata(&metadata)?;
+    let request_id = request_id_from_metadata(&metadata)?;
+    let lineage_ids = extract_lineage_fields_from_metadata(&metadata, &server_config.lineage);
+    let connector_auth_type = auth_from_metadata(&metadata)?;
+    let reference_id = reference_id_from_metadata(&metadata)?;
+    
+    let masked_metadata = server_config
+        .unmasked_headers
+        .create_masked_metadata(metadata);
+
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -150,6 +177,7 @@ pub fn get_metadata_payload(
         lineage_ids,
         connector_auth_type,
         reference_id,
+        masked_metadata,
     })
 }
 
@@ -393,16 +421,17 @@ pub async fn grpc_logging_wrapper<T, F, Fut, R>(
 ) -> Result<tonic::Response<R>, tonic::Status>
 where
     T: serde::Serialize + std::fmt::Debug + Send + 'static,
-    F: FnOnce(tonic::Request<T>, MetadataPayload) -> Fut + Send,
+    F: FnOnce(T, MetadataPayload, http::Extensions) -> Fut + Send,
     Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>> + Send,
     R: serde::Serialize + std::fmt::Debug,
 {
     let current_span = tracing::Span::current();
-    let header_payload =
-        get_metadata_payload(request.metadata(), config.clone()).into_grpc_status()?;
-    log_before_initialization(&request, service_name, &header_payload).into_grpc_status()?;
+    let metadata_payload = get_metadata_payload(request.metadata().clone(), config.clone()).into_grpc_status()?;
+    log_before_initialization(&request, service_name, &metadata_payload).into_grpc_status()?;
+    
+    let (metadata, extensions, payload) = request.into_parts();
     let start_time = tokio::time::Instant::now();
-    let result = handler(request, header_payload).await;
+    let result = handler(payload, metadata_payload, extensions).await;
     let duration = start_time.elapsed().as_millis();
     current_span.record("response_time", duration);
     log_after_initialization(&result);
@@ -436,12 +465,11 @@ macro_rules! implement_connector_operation {
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
             let current_span = tracing::Span::current();
-            let metadata_payload = $crate::utils::get_metadata_payload(request.metadata(), self.config.clone()).into_grpc_status()?;
+            let metadata_payload = $crate::utils::get_metadata_payload(request.metadata().clone(), self.config.clone()).into_grpc_status()?;
             $crate::utils::log_before_initialization(&request, service_name.as_str(), &metadata_payload).into_grpc_status()?;
             let start_time = tokio::time::Instant::now();
             let result = Box::pin(async{
             let (connector, request_id, connector_auth_details) = (metadata_payload.connector, metadata_payload.request_id, metadata_payload.connector_auth_type);
-            let metadata = request.metadata().clone();
             let payload = request.into_inner();
 
             // Get connector data
@@ -461,7 +489,7 @@ macro_rules! implement_connector_operation {
                 .into_grpc_status()?;
 
             // Create common request data
-            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), &metadata))
+            let common_flow_data = $common_flow_data_constructor((payload.clone(), self.config.connectors.clone(), metadata_payload.get_raw_metadata()))
                 .into_grpc_status()?;
 
             // Create router data
@@ -480,7 +508,7 @@ macro_rules! implement_connector_operation {
 
             // Execute connector processing
             let flow_name = $crate::utils::flow_marker_to_flow_name::<$flow_marker>();
-            let headers = $crate::utils::extract_headers_with_masking(&metadata, &self.config.events.unmasked_headers.keys);
+            let headers = metadata_payload.get_masked_metadata();
             let event_params = external_services::service::EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name: &service_name,
@@ -517,32 +545,3 @@ macro_rules! implement_connector_operation {
 }
 }
 
-pub fn extract_headers_with_masking(
-    metadata: &metadata::MetadataMap,
-    unmasked_keys: &[String],
-) -> HashMap<String, String> {
-    metadata
-        .iter()
-        .filter_map(|key_and_value| {
-            if let metadata::KeyAndValueRef::Ascii(key, value) = key_and_value {
-                let key_str = key.as_str();
-                
-                let header_value = if unmasked_keys.iter().any(|unmasked_key| unmasked_key.eq_ignore_ascii_case(key_str)) {
-                    value.to_str().unwrap_or_else(|_| {
-                        tracing::warn!(
-                            header_name = %key_str,
-                            "Invalid UTF-8 in header value"
-                        );
-                        "<invalid-utf8>"
-                    }).to_string()
-                } else {
-                    "**MASKED**".to_string()
-                };
-
-                Some((key_str.to_string(), header_value))
-            } else {
-                None
-            }
-        })
-        .collect()
-}

@@ -1,7 +1,8 @@
-use std::path::PathBuf;
+use std::{collections::{HashMap, HashSet}, path::PathBuf};
 
 use common_utils::{consts, events::EventConfig};
 use domain_types::types::{Connectors, Proxy};
+use tonic::metadata;
 
 use crate::{error::ConfigurationError, logger::config::Log};
 
@@ -17,6 +18,8 @@ pub struct Config {
     pub events: EventConfig,
     #[serde(default)]
     pub lineage: LineageConfig,
+    #[serde(default)]
+    pub unmasked_headers: HeaderMaskingConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -174,5 +177,131 @@ pub fn workspace_path() -> PathBuf {
         path
     } else {
         PathBuf::from(".")
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct HeaderMaskingConfig {
+    keys: HashSet<String>,
+}
+
+impl<'de> serde::Deserialize<'de> for HeaderMaskingConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        struct Config {
+            keys: Vec<String>,
+        }
+        
+        Config::deserialize(deserializer).map(|config| Self {
+            keys: config
+                .keys
+                .into_iter()
+                .map(|key| key.to_lowercase())
+                .collect(),
+        })
+    }
+}
+
+impl Default for HeaderMaskingConfig {
+    fn default() -> Self {
+        Self {
+            keys: ["content-type", "content-length", "user-agent"]
+                .iter()
+                .map(|&key| key.to_string())
+                .collect(),
+        }
+    }
+}
+
+impl HeaderMaskingConfig {
+    pub fn is_header_unmasked(&self, header_key: &str) -> bool {
+        self.keys.contains(&header_key.to_lowercase())
+    }
+
+    pub fn should_mask_header(&self, header_key: &str) -> bool {
+        !self.is_header_unmasked(header_key)
+    }
+
+    pub fn create_masked_metadata(&self, metadata: metadata::MetadataMap) -> MaskedMetadata {
+        MaskedMetadata::new(metadata, self.clone())
+    }
+}
+
+pub struct MaskedMetadata {
+    owned_metadata: metadata::MetadataMap,
+    masking_config: HeaderMaskingConfig,
+}
+
+impl MaskedMetadata {
+    pub fn new(metadata: metadata::MetadataMap, config: HeaderMaskingConfig) -> Self {
+        Self {
+            owned_metadata: metadata,
+            masking_config: config,
+        }
+    }
+
+    pub fn get_masked_metadata(&self) -> HashMap<String, hyperswitch_masking::Maskable<String>> {
+        self.owned_metadata
+            .iter()
+            .filter_map(|entry| self.process_metadata_entry(entry))
+            .collect()
+    }
+
+    pub fn get_metadata_value(&self, key: &str) -> Option<String> {
+        self.owned_metadata
+            .get(key)
+            .and_then(|value| value.to_str().ok())
+            .map(String::from)
+    }
+
+    pub fn get_metadata_as_secret(&self, key: &str) -> Option<hyperswitch_masking::Secret<String>> {
+        self.get_metadata_value(key).map(hyperswitch_masking::Secret::new)
+    }
+    
+    pub(crate) fn get_raw_metadata(&self) -> &metadata::MetadataMap {
+        &self.owned_metadata
+    }
+}
+
+impl MaskedMetadata {
+    fn process_metadata_entry(&self, entry: metadata::KeyAndValueRef<'_>) -> Option<(String, hyperswitch_masking::Maskable<String>)> {
+        let header_key = self.extract_header_key(&entry);
+        
+        match entry {
+            metadata::KeyAndValueRef::Ascii(_, value) => value
+                .to_str()
+                .ok()
+                .map(|text_value| (header_key.clone(), self.process_text_header(&header_key, text_value))),
+            metadata::KeyAndValueRef::Binary(_, value) => Some((
+                header_key.clone(),
+                self.process_binary_header(&header_key, value.as_ref()),
+            )),
+        }
+    }
+
+    fn extract_header_key(&self, entry: &metadata::KeyAndValueRef<'_>) -> String {
+        match entry {
+            metadata::KeyAndValueRef::Ascii(key, _) => key.as_str().to_string(),
+            metadata::KeyAndValueRef::Binary(key, _) => key.as_str().to_string(),
+        }
+    }
+
+    fn process_text_header(&self, header_key: &str, value: &str) -> hyperswitch_masking::Maskable<String> {
+        if self.masking_config.is_header_unmasked(header_key) {
+            hyperswitch_masking::Maskable::new(value.to_string())
+        } else {
+            hyperswitch_masking::Maskable::new("**MASKED**".to_string())
+        }
+    }
+
+    fn process_binary_header(&self, header_key: &str, value: &[u8]) -> hyperswitch_masking::Maskable<String> {
+        if self.masking_config.is_header_unmasked(header_key) {
+            hyperswitch_masking::Maskable::new(base64::encode(value))
+        } else {
+            hyperswitch_masking::Maskable::new("**MASKED-BINARY**".to_string())
+        }
     }
 }

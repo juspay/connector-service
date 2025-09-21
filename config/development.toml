@@ -86,5 +86,5 @@ field_prefix = "lineage_"
 "message.req_type" = "EXTERNAL"
 "message.log_type" = "API_CALL"
 
-[events.unmasked_headers]
-keys = ["x-reference-id", "x-request-id", "x-lineage-ids"]
+[unmasked_headers]
+keys = ["x-reference-id", "x-request-id", "x-lineage-ids"] #other?

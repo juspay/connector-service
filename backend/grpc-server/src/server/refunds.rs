@@ -117,7 +117,7 @@ impl RefundService for Refunds {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| async move {
+            |request, metadata_payload, _extensions| async move {
                 let connector = metadata_payload.connector;
                 let connector_auth_details = metadata_payload.connector_auth_type;
                 let payload = request.into_inner();

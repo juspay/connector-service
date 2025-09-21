@@ -53,7 +53,7 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, PaymentAuthorizationError, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{self, auth_from_metadata, extract_headers_with_masking, grpc_logging_wrapper},
+    utils::{self, auth_from_metadata, grpc_logging_wrapper},
 };
 
 
@@ -155,7 +155,6 @@ impl Payments {
         payload: PaymentServiceAuthorizeRequest,
         connector: domain_types::connector_types::ConnectorEnum,
         connector_auth_details: ConnectorAuthType,
-        metadata: &tonic::metadata::MetadataMap,
         metadata_payload: &utils::MetadataPayload,
         service_name: &str,
         request_id: &str,
@@ -177,7 +176,7 @@ impl Payments {
         let payment_flow_data = PaymentFlowData::foreign_try_from((
             payload.clone(),
             self.config.connectors.clone(),
-            metadata,
+            metadata_payload.get_raw_metadata(),
         ))
         .map_err(|err| {
             tracing::error!("Failed to process payment flow data: {:?}", err);
@@ -194,12 +193,13 @@ impl Payments {
         let should_do_order_create = connector_data.connector.should_do_order_create();
 
         let payment_flow_data = if should_do_order_create {
-            let headers =
-                extract_headers_with_masking(metadata, &self.config.events.unmasked_headers.keys);
-            let base_event_params: EventProcessingParams<'_> = EventProcessingParams {
-                flow_name: events::FlowName::Authorize, // Base flow, will be overridden
+            let headers = metadata_payload.get_masked_metadata();
+            let event_params = EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name,
+                flow_name: FlowName::CreateOrder,
                 event_config: &self.config.events,
-                raw_request_data: Some(pii::SecretSerdeValue::new(
+                raw_request_data: Some(SecretSerdeValue::new(
                     payload.masked_serialize().unwrap_or_default(),
                 )),
                 request_id,
@@ -213,11 +213,10 @@ impl Payments {
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
-                    base_event_params.clone(),
+                    event_params,
                     &payload,
                     &connector.to_string(),
                     service_name,
-                    event_params,
                 )
                 .await?;
 
@@ -230,14 +229,13 @@ impl Payments {
         let should_do_session_token = connector_data.connector.should_do_session_token();
 
         let payment_flow_data = if should_do_session_token {
-            let headers =
-                extract_headers_with_masking(metadata, &self.config.events.unmasked_headers.keys);
-            let base_event_params = EventProcessingParams {
+            let headers = metadata_payload.get_masked_metadata();
+            let event_params = EventProcessingParams {
                 connector_name: &connector.to_string(),
                 service_name,
-                flow_name: events::FlowName::Authorize, // Base flow, will be overridden
+                flow_name: FlowName::CreateSessionToken,
                 event_config: &self.config.events,
-                raw_request_data: Some(pii::SecretSerdeValue::new(
+                raw_request_data: Some(SecretSerdeValue::new(
                     payload.masked_serialize().unwrap_or_default(),
                 )),
                 request_id,
@@ -251,11 +249,10 @@ impl Payments {
                     connector_data.clone(),
                     &payment_flow_data,
                     connector_auth_details.clone(),
-                    base_event_params.clone(),
+                    event_params,
                     &payload,
                     &connector.to_string(),
                     service_name,
-                    event_params,
                 )
                 .await?;
             tracing::info!(
@@ -288,12 +285,18 @@ impl Payments {
                 None => {
                     // No cached token - generate fresh one
                     tracing::info!("No cached access token found, generating new token");
-                    let event_params = EventParams {
-                        _connector_name: &connector.to_string(),
-                        _service_name: service_name,
+                    let event_params = EventProcessingParams {
+                        connector_name: &connector.to_string(),
+                        service_name,
+                        flow_name: FlowName::CreateAccessToken,
+                        event_config: &self.config.events,
+                        raw_request_data: Some(SecretSerdeValue::new(
+                            payload.masked_serialize().unwrap_or_default(),
+                        )),
                         request_id,
                         lineage_ids,
                         reference_id,
+                        headers: Some(metadata_payload.get_masked_metadata()),
                     };
 
                     let access_token_data = self
@@ -328,12 +331,18 @@ impl Payments {
             connector_data.connector.should_do_payment_method_token();
 
         let payment_flow_data = if should_do_payment_method_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
+            let event_params = EventProcessingParams {
+                connector_name: &connector.to_string(),
+                service_name,
+                flow_name: FlowName::PaymentMethodToken,
+                event_config: &self.config.events,
+                raw_request_data: Some(SecretSerdeValue::new(
+                    payload.masked_serialize().unwrap_or_default(),
+                )),
                 request_id,
                 lineage_ids,
                 reference_id,
+                headers: Some(metadata_payload.get_masked_metadata()),
             };
             let payment_method_token_data = self
                 .handle_payment_session_token(
@@ -383,8 +392,7 @@ impl Payments {
         };
 
         // Execute connector processing
-        let headers =
-            extract_headers_with_masking(metadata, &self.config.events.unmasked_headers.keys);
+        let headers = metadata_payload.get_masked_metadata();
         let event_params = EventProcessingParams {
             connector_name: &connector.to_string(),
             service_name,
@@ -495,11 +503,10 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        base_event_params: EventProcessingParams<'_>,
+        event_params: EventProcessingParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
-        event_params: EventParams<'_>,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -545,17 +552,6 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Execute connector processing
-        let event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            flow_name: events::FlowName::CreateOrder,
-            lineage_ids: base_event_params.lineage_ids,
-            reference_id: base_event_params.reference_id,
-            ..base_event_params
-        };
-
-        // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -603,7 +599,7 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        base_event_params: EventProcessingParams<'_>,
+        event_params: EventProcessingParams<'_>,
         payload: &PaymentServiceRegisterRequest,
         connector_name: &str,
         service_name: &str,
@@ -645,17 +641,6 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Execute connector processing
-        let event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            flow_name: events::FlowName::CreateOrder,
-            lineage_ids: base_event_params.lineage_ids,
-            reference_id: base_event_params.reference_id,
-            ..base_event_params
-        };
-
-        // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -695,11 +680,10 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        base_event_params: EventProcessingParams<'_>,
+        event_params: EventProcessingParams<'_>,
         payload: &P,
         connector_name: &str,
         service_name: &str,
-        event_params: EventParams<'_>,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
         SessionTokenRequestData: ForeignTryFrom<P, Error = ApplicationErrorResponse>,
@@ -737,15 +721,6 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Execute connector processing
-        let event_params = EventProcessingParams {
-            flow_name: events::FlowName::CreateSessionToken,
-            lineage_ids: base_event_params.lineage_ids,
-            reference_id: base_event_params.reference_id,
-            ..base_event_params
-        };
-
-        // Execute connector processing
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -807,7 +782,7 @@ impl Payments {
         connector_auth_details: ConnectorAuthType,
         connector_name: &str,
         service_name: &str,
-        event_params: EventParams<'_>,
+        event_params: EventProcessingParams<'_>,
         payload: &P,
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
     where
@@ -851,26 +826,12 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Execute connector processing
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            flow_name: FlowName::CreateAccessToken,
-            event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-        };
-
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             access_token_router_data,
             None,
-            external_event_params,
+            event_params,
             None,
         )
         .await
@@ -922,7 +883,7 @@ impl Payments {
         connector_data: ConnectorData<T>,
         payment_flow_data: &PaymentFlowData,
         connector_auth_details: ConnectorAuthType,
-        event_params: EventParams<'_>,
+        event_params: EventProcessingParams<'_>,
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
@@ -988,25 +949,12 @@ impl Payments {
             response: Err(ErrorResponse::default()),
         };
 
-        // Execute connector processing
-        let external_event_params = EventProcessingParams {
-            connector_name,
-            service_name,
-            flow_name: FlowName::PaymentMethodToken,
-            event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
-            )),
-            request_id: event_params.request_id,
-            lineage_ids: event_params.lineage_ids,
-            reference_id: event_params.reference_id,
-        };
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
             payment_method_token_router_data,
             None,
-            external_event_params,
+            event_params,
             None,
         )
         .await
@@ -1134,14 +1082,11 @@ impl PaymentService for Payments {
             .get::<String>()
             .cloned()
             .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
+        grpc_logging_wrapper(request, &service_name, self.config.clone(), |payload, metadata_payload, extensions| {
             let service_name = service_name.clone();
             Box::pin(async move {
-                let utils::MetadataPayload {connector, ref request_id, ..} = metadata_payload;
-                let metadata = request.metadata().clone();
-                let connector_auth_details =
-                    auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
-                let payload = request.into_inner();
+                let utils::MetadataPayload {connector, ref request_id, ref connector_auth_type, ..} = metadata_payload;
+                let connector_auth_details = connector_auth_type.clone();
 
                 let authorize_response = match payload.payment_method.as_ref() {
                     Some(pm) => {
@@ -1154,7 +1099,6 @@ impl PaymentService for Payments {
                                             payload,
                                             connector,
                                             connector_auth_details,
-                                            &metadata,
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
@@ -1178,7 +1122,6 @@ impl PaymentService for Payments {
                                             payload,
                                             connector,
                                             connector_auth_details,
-                                            &metadata,
                                             &metadata_payload,
                                             &service_name,
                                             request_id,
@@ -1203,7 +1146,6 @@ impl PaymentService for Payments {
                                     payload,
                                     connector,
                                     connector_auth_details,
-                                    &metadata,
                                     &metadata_payload,
                                     &service_name,
                                     request_id,
@@ -1222,7 +1164,6 @@ impl PaymentService for Payments {
                             payload,
                             connector,
                             connector_auth_details,
-                            &metadata,
                             &metadata_payload,
                             &service_name,
                             request_id,
@@ -1277,7 +1218,7 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            |request, metadata_payload, _extensions| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let utils::MetadataPayload {
@@ -1321,12 +1262,18 @@ impl PaymentService for Payments {
                                 )
                                 .map_err(|e| e.into_grpc_status())?;
 
-                                let event_params = EventParams {
-                                    _connector_name: &connector.to_string(),
-                                    _service_name: &service_name,
+                                let event_params = EventProcessingParams {
+                                    connector_name: &connector.to_string(),
+                                    service_name: &service_name,
+                                    flow_name: FlowName::CreateAccessToken,
+                                    event_config: &self.config.events,
+                                    raw_request_data: Some(SecretSerdeValue::new(
+                                        payload.masked_serialize().unwrap_or_default(),
+                                    )),
                                     request_id,
                                     lineage_ids: &metadata_payload.lineage_ids,
                                     reference_id: &metadata_payload.reference_id,
+                                    headers: Some(metadata_payload.get_masked_metadata()),
                                 };
 
                                 let access_token_data = self
@@ -1437,7 +1384,7 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            |request, metadata_payload, _extensions| {
                 async move {
                     let connector = metadata_payload.connector;
                     let connector_auth_details = metadata_payload.connector_auth_type;
@@ -1607,7 +1554,7 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |_request, _metadata_payload| async {
+            |_request, _metadata_payload, _extensions| async {
                 let response = DisputeResponse {
                     ..Default::default()
                 };
@@ -1680,13 +1627,12 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            |request, metadata_payload, _extensions| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let (connector, request_id) =
                         (metadata_payload.connector, metadata_payload.request_id);
                     let connector_auth_details = metadata_payload.connector_auth_type;
-                    let metadata = request.metadata().clone();
                     let payload = request.into_inner();
 
                     //get connector data
@@ -1705,24 +1651,21 @@ impl PaymentService for Payments {
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
                         self.config.connectors.clone(),
-                        self.config.common.environment,
-                        &metadata,
+                        self.config.common.environment.clone(),
+                        metadata_payload.get_raw_metadata(),
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
                     let should_do_order_create = connector_data.connector.should_do_order_create();
 
                     let order_id = if should_do_order_create {
-                        let headers = extract_headers_with_masking(
-                            &metadata,
-                            &self.config.events.unmasked_headers.keys,
-                        );
+                        let headers = metadata_payload.get_masked_metadata();
                         let base_event_params = EventProcessingParams {
-                            _connector_name: &connector.to_string(),
-                            _service_name: &service_name,
-                            flow_name: events::FlowName::SetupMandate, // Base flow, will be overridden
+                            connector_name: &connector.to_string(),
+                            service_name: &service_name,
+                            flow_name: FlowName::SetupMandate, // Base flow, will be overridden
                             event_config: &self.config.events,
-                            raw_request_data: Some(pii::SecretSerdeValue::new(
+                            raw_request_data: Some(SecretSerdeValue::new(
                                 payload.masked_serialize().unwrap_or_default(),
                             )),
                             request_id: &request_id,
@@ -1776,10 +1719,7 @@ impl PaymentService for Payments {
                             serde_json::to_value(payload).unwrap_or_default(),
                         )),
                         request_id: &request_id,
-                        headers: Some(extract_headers_with_masking(
-                            &metadata,
-                            &self.config.events.unmasked_headers.keys,
-                        )),
+                        headers: Some(metadata_payload.get_masked_metadata()),
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
                     };
@@ -1840,13 +1780,12 @@ impl PaymentService for Payments {
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            |request, metadata_payload, _extensions| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
                     let (connector, request_id) =
                         (metadata_payload.connector, metadata_payload.request_id);
                     let connector_auth_details = metadata_payload.connector_auth_type;
-                    let metadata = request.metadata().clone();
                     let payload = request.into_inner();
 
                     //get connector data
@@ -1866,7 +1805,7 @@ impl PaymentService for Payments {
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
                         self.config.connectors.clone(),
-                        &metadata,
+                        &metadata_payload,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
@@ -1897,10 +1836,7 @@ impl PaymentService for Payments {
                             payload.masked_serialize().unwrap_or_default(),
                         )),
                         request_id: &request_id,
-                        headers: Some(extract_headers_with_masking(
-                            &metadata,
-                            &self.config.events.unmasked_headers.keys,
-                        )),
+                        headers: Some(metadata_payload.get_masked_metadata()),
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
                     };
