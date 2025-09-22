@@ -8,10 +8,7 @@ use domain_types::{
 
 use crate::connectors::cryptopay::{CryptopayAmountConvertor, CryptopayRouterData};
 use crate::types::ResponseRouterData;
-use common_utils::{
-    pii,
-    types::{StringMajorUnit, StringMajorUnitForConnector},
-};
+use common_utils::{pii, types::StringMajorUnit};
 
 use url::Url;
 
@@ -20,10 +17,7 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils::{
-        convert_back_amount_to_minor_units, get_unimplemented_payment_method_error_message,
-        is_payment_failure,
-    },
+    utils::{get_unimplemented_payment_method_error_message, is_payment_failure},
 };
 
 use domain_types::errors::{self, ConnectorError};
@@ -239,8 +233,7 @@ impl<
             })
         };
         let amount_captured_in_minor_units = match cryptopay_response.data.price_amount {
-            Some(ref amount) => Some(convert_back_amount_to_minor_units(
-                &StringMajorUnitForConnector,
+            Some(ref amount) => Some(CryptopayAmountConvertor::convert_back(
                 amount.clone(),
                 router_data.request.currency,
             )?),
