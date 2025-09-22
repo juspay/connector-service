@@ -4,6 +4,21 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.09.22.0
+
+### Features
+
+- **core:** Implement two step payment webhooks processing ([#177](https://github.com/juspay/connector-service/pull/177)) ([`c324184`](https://github.com/juspay/connector-service/commit/c3241847516663fe696e6401dc79ac67cdcddb4c))
+
+### Bug Fixes
+
+- **configs:** Add Bluecode's base url in sandbox and production configs ([#189](https://github.com/juspay/connector-service/pull/189)) ([`316aa94`](https://github.com/juspay/connector-service/commit/316aa94251a549d5890f13d060b299c9e9c81033))
+- Docker public repo fix ([#186](https://github.com/juspay/connector-service/pull/186)) ([`528e6cf`](https://github.com/juspay/connector-service/commit/528e6cfb0e6737b9811bc63d34e17b7521b92101))
+
+**Full Changelog:** [`2025.09.19.0...2025.09.22.0`](https://github.com/juspay/connector-service/compare/2025.09.19.0...2025.09.22.0)
+
+- - -
+
 ## 2025.09.19.0
 
 ### Features
