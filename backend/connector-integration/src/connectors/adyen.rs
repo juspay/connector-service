@@ -667,6 +667,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             status_code: 200,
             response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
 

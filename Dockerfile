@@ -4,7 +4,7 @@
 ########################################
 # 1. Base image with necessary tools
 ########################################
-FROM rust:slim-bookworm AS base
+FROM public.ecr.aws/docker/library/rust:slim-bookworm AS base
 
 # Install system dependencies and clean up
 RUN apt-get update \
@@ -64,7 +64,7 @@ RUN sccache --show-stats
 ########################################
 # 4. Runtime stage
 ########################################
-FROM debian:bookworm-slim AS runtime
+FROM public.ecr.aws/docker/library/debian:bookworm-slim AS runtime
 WORKDIR /app
 
 # Install only runtime dependencies and clean up
