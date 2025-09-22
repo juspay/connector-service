@@ -34,6 +34,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentAccessToken
     + PaymentTokenV2<T>
     + PaymentVoidV2
+    + PaymentVoidPostCaptureV2
     + IncomingWebhook
     + RefundV2
     + PaymentCapture

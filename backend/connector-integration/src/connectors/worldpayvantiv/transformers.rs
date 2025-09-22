@@ -3,12 +3,12 @@ use common_utils::{
     types::MinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void, VoidPC},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsCaptureData, PaymentsAuthorizeData, 
         PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, 
         SetupMandateRequestData, RefundSyncData, ResponseId, PaymentsResponseData, 
-        MandateReference,
+        MandateReference, PaymentsCancelPostCaptureData,
     },
     errors::ConnectorError,
     payment_method_data::{
@@ -1666,7 +1666,7 @@ impl<
     }
 }
 
-// TryFrom for Void request
+// TryFrom for Void request (pre-capture void using AuthReversal)
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1692,10 +1692,16 @@ impl<
         let cnp_txn_id = item.router_data.request.connector_transaction_id.clone();
         let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
         
-        let void = VoidRequest {
-            id: format!("void_{}", merchant_txn_id),
-            report_group: "Default".to_string(),
+        // Extract report group from metadata or use default
+        let report_group = extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+            .unwrap_or_else(|| "rtpGrp".to_string());
+        
+        // For pre-capture void, use AuthReversal
+        let auth_reversal = AuthReversal {
+            id: format!("Void_{}", merchant_txn_id),
+            report_group,
             cnp_txn_id,
+            amount: None, // Amount is optional for AuthReversal
         };
 
         let cnp_request = CnpOnlineRequest {
@@ -1706,8 +1712,8 @@ impl<
             authorization: None,
             sale: None,
             capture: None,
-            auth_reversal: None,
-            void: Some(void),
+            auth_reversal: Some(auth_reversal),
+            void: None,
             credit: None,
         };
 
@@ -1783,6 +1789,59 @@ impl<
     ) -> Result<Self, Self::Error> {
         // Empty sync request for WorldpayVantiv refund sync
         Ok(Self {})
+    }
+}
+
+// TryFrom for VoidPC (VoidPostCapture) request
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > TryFrom<WorldpayvantivRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>>
+    for WorldpayvantivPaymentsRequest<T>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    
+    fn try_from(
+        item: WorldpayvantivRouterData<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        let auth = WorldpayvantivAuthType::try_from(&item.router_data.connector_auth_type)?;
+        
+        let authentication = Authentication {
+            user: auth.user,
+            password: auth.password,
+        };
+
+        let cnp_txn_id = item.router_data.request.connector_transaction_id.clone();
+        let merchant_txn_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+        
+        // Extract report group from metadata or use default
+        let report_group = extract_report_group(&item.router_data.resource_common_data.connector_meta_data)
+            .unwrap_or_else(|| "rtpGrp".to_string());
+        
+        let void = VoidRequest {
+            id: format!("VoidPC_{}", merchant_txn_id),
+            report_group,
+            cnp_txn_id,
+        };
+
+        let cnp_request = CnpOnlineRequest {
+            version: worldpayvantiv_constants::WORLDPAYVANTIV_VERSION.to_string(),
+            xmlns: worldpayvantiv_constants::XMLNS.to_string(),
+            merchant_id: auth.merchant_id,
+            authentication,
+            authorization: None,
+            sale: None,
+            capture: None,
+            auth_reversal: None,
+            void: Some(void),
+            credit: None,
+        };
+
+        Ok(WorldpayvantivPaymentsRequest { cnp_request })
     }
 }
 
@@ -2114,8 +2173,116 @@ impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlo
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<CnpOnlineResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
-        if let Some(void_response) = item.response.void_response {
+        // Check for AuthReversal response first (pre-capture void)
+        if let Some(auth_reversal_response) = item.response.auth_reversal_response {
+            let status = get_attempt_status(WorldpayvantivPaymentFlow::Void, auth_reversal_response.response)?;
+            
+            if is_payment_failure(status) {
+                let error_response = ErrorResponse {
+                    code: auth_reversal_response.response.to_string(),
+                    message: auth_reversal_response.message.clone(),
+                    connector_transaction_id: Some(auth_reversal_response.cnp_txn_id.clone()),
+                    ..Default::default()
+                };
+                
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Err(error_response),
+                    ..item.router_data
+                })
+            } else {
+                let payments_response = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(auth_reversal_response.cnp_txn_id.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(auth_reversal_response.id.clone()),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                };
+                
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(payments_response),
+                    ..item.router_data
+                })
+            }
+        } else if let Some(void_response) = item.response.void_response {
+            // Fallback to void_response for compatibility
             let status = get_attempt_status(WorldpayvantivPaymentFlow::Void, void_response.response)?;
+            
+            if is_payment_failure(status) {
+                let error_response = ErrorResponse {
+                    code: void_response.response.to_string(),
+                    message: void_response.message.clone(),
+                    connector_transaction_id: Some(void_response.cnp_txn_id.clone()),
+                    ..Default::default()
+                };
+                
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Err(error_response),
+                    ..item.router_data
+                })
+            } else {
+                let payments_response = PaymentsResponseData::TransactionResponse {
+                    resource_id: ResponseId::ConnectorTransactionId(void_response.cnp_txn_id.clone()),
+                    redirection_data: None,
+                    mandate_reference: None,
+                    connector_metadata: None,
+                    network_txn_id: None,
+                    connector_response_reference_id: Some(void_response.id.clone()),
+                    incremental_authorization_allowed: None,
+                    status_code: item.http_code,
+                };
+                
+                Ok(Self {
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    response: Ok(payments_response),
+                    ..item.router_data
+                })
+            }
+        } else {
+            let error_response = ErrorResponse {
+                code: item.response.response_code,
+                message: item.response.message.clone(),
+                connector_transaction_id: None,
+                ..Default::default()
+            };
+            
+            Ok(Self {
+                resource_common_data: PaymentFlowData {
+                    status: common_enums::AttemptStatus::VoidFailed,
+                    ..item.router_data.resource_common_data
+                },
+                response: Err(error_response),
+                ..item.router_data
+            })
+        }
+    }
+}
+
+// TryFrom for VoidPC (VoidPostCapture) response
+impl TryFrom<ResponseRouterData<CnpOnlineResponse, RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(item: ResponseRouterData<CnpOnlineResponse, RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+        if let Some(void_response) = item.response.void_response {
+            let status = get_attempt_status(WorldpayvantivPaymentFlow::VoidPC, void_response.response)?;
             
             if is_payment_failure(status) {
                 let error_response = ErrorResponse {
@@ -2327,8 +2494,8 @@ fn get_attempt_status(flow: WorldpayvantivPaymentFlow, response: WorldpayvantivR
             WorldpayvantivPaymentFlow::Sale => Ok(common_enums::AttemptStatus::Pending),
             WorldpayvantivPaymentFlow::Auth => Ok(common_enums::AttemptStatus::Authorizing),
             WorldpayvantivPaymentFlow::Capture => Ok(common_enums::AttemptStatus::CaptureInitiated),
-            WorldpayvantivPaymentFlow::Void => Ok(common_enums::AttemptStatus::VoidInitiated),
-            WorldpayvantivPaymentFlow::VoidPC => Ok(common_enums::AttemptStatus::VoidInitiated),
+            WorldpayvantivPaymentFlow::Void => Ok(common_enums::AttemptStatus::Voided),
+            WorldpayvantivPaymentFlow::VoidPC => Ok(common_enums::AttemptStatus::Voided),
         },
         // Decline codes
         _ => match flow {
