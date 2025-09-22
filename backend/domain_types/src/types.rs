@@ -2038,6 +2038,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentServiceGetRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let capture_method = Some(common_enums::CaptureMethod::foreign_try_from(
+            value.capture_method(),
+        )?);
         // Create ResponseId from resource_id
         let connector_transaction_id = ResponseId::ConnectorTransactionId(
             value
@@ -2068,7 +2071,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceGetRequest> for Paym
         Ok(Self {
             connector_transaction_id,
             encoded_data,
-            capture_method: None,
+            capture_method,
             connector_meta: None,
             sync_type: router_request_types::SyncRequestType::SinglePaymentSync,
             mandate_id: None,

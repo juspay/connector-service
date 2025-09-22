@@ -23,8 +23,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(debug_assertions)]
 fn verify_other_config_files() {
-    use crate::configs;
     use std::path::PathBuf;
+
+    use crate::configs;
     let config_file_names = vec!["production.toml", "sandbox.toml"];
     let mut config_path = PathBuf::new();
     config_path.push(configs::workspace_path());

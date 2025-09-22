@@ -1,4 +1,3 @@
-use crate::types::ResponseRouterData;
 use common_enums::{self, enums, AttemptStatus};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -16,11 +15,12 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
 };
-use error_stack::report;
-use error_stack::ResultExt;
+use error_stack::{report, ResultExt};
 use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+
+use crate::types::ResponseRouterData;
 
 // Auth
 pub struct BluecodeAuthType {

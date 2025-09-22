@@ -154,6 +154,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(format!("xendit_sync_{}", get_timestamp()))),
         }),
         access_token: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

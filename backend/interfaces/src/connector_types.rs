@@ -287,6 +287,20 @@ pub trait IncomingWebhook {
         )
         .into())
     }
+
+    /// fn get_webhook_resource_object
+    fn get_webhook_resource_object(
+        &self,
+        _request: RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        Err(domain_types::errors::ConnectorError::NotImplemented(
+            "get_webhook_resource_object".to_string(),
+        )
+        .into())
+    }
 }
 
 /// trait ConnectorValidation

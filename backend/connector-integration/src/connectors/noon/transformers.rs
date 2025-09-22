@@ -1,4 +1,3 @@
-use crate::utils;
 use common_enums::enums::{self, AttemptStatus, CountryAlpha2};
 use common_utils::{ext_traits::Encode, pii, request::Method, types::StringMajorUnit};
 use domain_types::{
@@ -22,7 +21,7 @@ use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::NoonRouterData;
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, utils};
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
 const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;
