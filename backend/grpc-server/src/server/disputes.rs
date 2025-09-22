@@ -170,6 +170,7 @@ impl DisputeService for Disputes {
                         None,
                         event_params,
                         None,
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -363,6 +364,7 @@ impl DisputeService for Disputes {
                         None,
                         event_params,
                         None,
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()

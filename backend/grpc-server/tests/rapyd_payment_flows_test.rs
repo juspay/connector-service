@@ -18,13 +18,11 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient,
-        Address, AuthenticationType, BrowserInformation, CaptureMethod, 
-        CardDetails, CardPaymentMethodType, CountryAlpha2, Currency,
-        Identifier, PaymentAddress, PaymentMethod, 
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, 
-        PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
+        payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2,
+        Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceRefundRequest, PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
 use hyperswitch_masking::Secret;
@@ -73,13 +71,14 @@ fn add_rapyd_metadata<T>(request: &mut Request<T>) {
         "x-api-key",
         api_key.parse().expect("Failed to parse x-api-key"),
     );
-    request.metadata_mut().append(
-        "x-key1",
-        key1.parse().expect("Failed to parse x-key1"),
-    );
+    request
+        .metadata_mut()
+        .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
     request.metadata_mut().append(
         "x-merchant-id",
-        "test_merchant".parse().expect("Failed to parse x-merchant-id"),
+        "test_merchant"
+            .parse()
+            .expect("Failed to parse x-merchant-id"),
     );
     request.metadata_mut().append(
         "x-tenant-id",
@@ -194,7 +193,9 @@ fn create_payment_authorize_request(
         screen_height: Some(1080),
         screen_width: Some(1920),
         user_agent: Some("Mozilla/5.0 (compatible; TestAgent/1.0)".to_string()),
-        accept_header: Some("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string()),
+        accept_header: Some(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
+        ),
         java_script_enabled: Some(false),
         language: Some("en-US".to_string()),
         ip_address: None,
@@ -237,6 +238,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(format!("rapyd_sync_{}", get_timestamp()))),
         }),
         access_token: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

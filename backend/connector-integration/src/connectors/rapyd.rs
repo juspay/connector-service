@@ -1,25 +1,21 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_enums::CurrencyUnit;
-use common_utils::{
-    errors::CustomResult, ext_traits::ByteSliceExt, types::StringMinorUnit,
-    consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE}, date_time, request,
-};
-use crate::types;
-use rand::distributions::{Alphanumeric, DistString};
-use serde_json;
+use common_utils::{consts::NO_ERROR_MESSAGE, errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, DefendDispute, PaymentMethodToken, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenizationData, PaymentMethodTokenResponse, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -28,19 +24,20 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use serde::Serialize;
-use std::fmt::Debug;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
+use rand::distributions::{Alphanumeric, DistString};
+use serde::Serialize;
+use serde_json;
+use std::fmt::Debug;
 use transformers::{
-    RapydPaymentsRequest, RapydPaymentsResponse, RapydRefundRequest, RefundResponse,
-    EmptyRequest, CaptureRequest, RapydAuthType,
-    RapydAuthorizeResponse, RapydPSyncResponse, RapydCaptureResponse, RapydVoidResponse,
-    RapydPSyncRequest, RapydVoidRequest, RapydRSyncRequest,
-    RapydRefundResponse, RapydRSyncResponse,
+    CaptureRequest, RapydAuthType, RapydAuthorizeResponse, RapydCaptureResponse, RapydPSyncRequest,
+    RapydPSyncResponse, RapydPaymentsRequest, RapydPaymentsResponse, RapydRSyncRequest,
+    RapydRSyncResponse, RapydRefundRequest, RapydRefundResponse, RapydVoidRequest,
+    RapydVoidResponse,
 };
 
 use super::macros;
@@ -48,11 +45,8 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-use error_stack::ResultExt;
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
 // Trait implementations with generic type parameters
@@ -121,8 +115,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Rapyd<T>
 {
@@ -140,7 +132,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = RapydAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-        
+
         // Return basic auth headers - signature will be added in get_headers method
         Ok(vec![(
             "access_key".to_string(),
@@ -159,8 +151,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         println!("Rapyd build_error_response called:");
         println!("  Status Code: {}", res.status_code);
-        println!("  Response Body: {}", String::from_utf8_lossy(&res.response));
-        
+        println!(
+            "  Response Body: {}",
+            String::from_utf8_lossy(&res.response)
+        );
+
         let response: RapydPaymentsResponse = res
             .response
             .parse_struct("ErrorResponse")
@@ -171,7 +166,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         Ok(ErrorResponse {
             status_code: res.status_code,
             code: response.status.error_code,
-            message: response.status.status.unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            message: response
+                .status
+                .status
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
             reason: response.status.message,
             attempt_status: None,
             connector_transaction_id: None,
@@ -288,7 +286,7 @@ macros::create_all_prerequisites!(
             let auth = RapydAuthType::try_from(&req.connector_auth_type)?;
             let timestamp = common_utils::date_time::now_unix_timestamp();
             let salt = Alphanumeric.sample_string(&mut rand::thread_rng(), 12);
-            
+
             let signature = self.generate_signature(
                 &auth,
                 http_method,
@@ -297,7 +295,7 @@ macros::create_all_prerequisites!(
                 timestamp,
                 &salt,
             )?;
-            
+
             let headers = vec![
                 (headers::CONTENT_TYPE.to_string(), "application/json".to_string().into()),
                 ("access_key".to_string(), auth.access_key.into_masked()),
@@ -305,7 +303,7 @@ macros::create_all_prerequisites!(
                 ("timestamp".to_string(), timestamp.to_string().into()),
                 ("signature".to_string(), signature.into()),
             ];
-            
+
             println!("Rapyd Headers being sent:");
             for (name, _value) in &headers {
                 println!("  {}: [VALUE_PRESENT]", name);
@@ -346,7 +344,7 @@ macros::create_all_prerequisites!(
                 secret_key.peek(),
                 body
             );
-            
+
             // Debug logging
             println!("Rapyd Signature Debug:");
             println!("  Method: {}", http_method);
@@ -356,14 +354,14 @@ macros::create_all_prerequisites!(
             println!("  Access Key: {}", access_key.peek());
             println!("  Body: {}", body);
             println!("  To Sign: {}", to_sign);
-            
+
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
             let tag = ring::hmac::sign(&key, to_sign.as_bytes());
             let hmac_sign = hex::encode(tag);
             let signature_value = BASE64_ENGINE.encode(hmac_sign);
-            
+
             println!("  Signature: {}", signature_value);
-            
+
             Ok(signature_value)
         }
     }
@@ -622,7 +620,8 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
+    >
+    ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
     for Rapyd<T>
 {
 }

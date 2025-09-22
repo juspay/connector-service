@@ -1,19 +1,10 @@
-use std::collections::HashMap;
-
-use cards::CardNumber;
-use common_utils::{
-    ext_traits::OptionExt,
-    pii,
-    request::Method,
-    types::{MinorUnit, StringMinorUnit},
-};
+use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{self, Authorize, PSync, RSync, RepeatPayment, SetupMandate, Void, Capture},
+    connector_flow::{Authorize, Capture, PSync, RSync, Void},
     connector_types::{
-        MandateReference, MandateReferenceId, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SetupMandateRequestData,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -23,18 +14,16 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
-use std::fmt::Debug;
-use serde::Serialize;
 use error_stack;
 use error_stack::ResultExt;
-use hyperswitch_masking::{ExposeInterface, Secret, PeekInterface};
+use hyperswitch_masking::Secret;
 use serde::Deserialize;
-use strum::Display;
+use serde::Serialize;
+use std::fmt::Debug;
 
-use crate::types::ResponseRouterData;
 use super::RapydRouterData;
+use crate::types::ResponseRouterData;
 
 // Custom serializer for amount to ensure it's a string
 fn serialize_amount_as_string<S>(amount: &MinorUnit, serializer: S) -> Result<S::Ok, S::Error>
@@ -47,12 +36,25 @@ where
 
 // Response type conversions
 // Capture Response - should set status to CHARGED when successful
-impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>> for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData> {
+impl<F>
+    TryFrom<
+        ResponseRouterData<
+            RapydPaymentsResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<
+            RapydPaymentsResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
         let (status, response) = match &item.response.data {
             Some(data) => {
-                let attempt_status = get_status(data.status.to_owned(), data.next_action.to_owned());
+                let attempt_status =
+                    get_status(data.status.to_owned(), data.next_action.to_owned());
                 match attempt_status {
                     common_enums::AttemptStatus::Failure => (
                         common_enums::AttemptStatus::Failure,
@@ -73,11 +75,16 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, Paymen
                     ),
                     _ => {
                         // For capture, if status is Closed or Active with NotApplicable, treat as Charged
-                        let final_status = match (data.status.to_owned(), data.next_action.to_owned()) {
-                            (RapydPaymentStatus::Closed, _) => common_enums::AttemptStatus::Charged,
-                            (RapydPaymentStatus::Active, NextAction::NotApplicable) => common_enums::AttemptStatus::Charged,
-                            _ => attempt_status,
-                        };
+                        let final_status =
+                            match (data.status.to_owned(), data.next_action.to_owned()) {
+                                (RapydPaymentStatus::Closed, _) => {
+                                    common_enums::AttemptStatus::Charged
+                                }
+                                (RapydPaymentStatus::Active, NextAction::NotApplicable) => {
+                                    common_enums::AttemptStatus::Charged
+                                }
+                                _ => attempt_status,
+                            };
                         (
                             final_status,
                             Ok(PaymentsResponseData::TransactionResponse {
@@ -86,7 +93,9 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, Paymen
                                 mandate_reference: None,
                                 connector_metadata: None,
                                 network_txn_id: None,
-                                connector_response_reference_id: data.merchant_reference_id.to_owned(),
+                                connector_response_reference_id: data
+                                    .merchant_reference_id
+                                    .to_owned(),
                                 incremental_authorization_allowed: None,
                                 status_code: item.http_code,
                             }),
@@ -122,17 +131,30 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, Paymen
 }
 
 // Void Response - should set status to VOIDED when successful
-impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>> for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData> {
+impl<F>
+    TryFrom<
+        ResponseRouterData<
+            RapydPaymentsResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: ResponseRouterData<
+            RapydPaymentsResponse,
+            RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
         println!("Rapyd Void Response Debug:");
         println!("  HTTP Code: {}", item.http_code);
         println!("  Response Status: {:?}", item.response.status);
         println!("  Response Data: {:?}", item.response.data);
-        
+
         let (status, response) = match &item.response.data {
             Some(data) => {
-                let attempt_status = get_status(data.status.to_owned(), data.next_action.to_owned());
+                let attempt_status =
+                    get_status(data.status.to_owned(), data.next_action.to_owned());
                 match attempt_status {
                     common_enums::AttemptStatus::Failure => (
                         common_enums::AttemptStatus::Failure,
@@ -162,7 +184,9 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, Paymen
                                 mandate_reference: None,
                                 connector_metadata: None,
                                 network_txn_id: None,
-                                connector_response_reference_id: data.merchant_reference_id.to_owned(),
+                                connector_response_reference_id: data
+                                    .merchant_reference_id
+                                    .to_owned(),
                                 incremental_authorization_allowed: None,
                                 status_code: item.http_code,
                             }),
@@ -179,7 +203,7 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, Paymen
                         common_enums::AttemptStatus::Voided,
                         Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                item.router_data.request.connector_transaction_id.clone()
+                                item.router_data.request.connector_transaction_id.clone(),
                             ),
                             redirection_data: None,
                             mandate_reference: None,
@@ -207,7 +231,7 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, RouterDataV2<F, Paymen
                         }),
                     )
                 }
-            },
+            }
         };
 
         Ok(Self {
@@ -366,27 +390,28 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let (capture, payment_method_options) = match item.router_data.resource_common_data.payment_method {
-            common_enums::PaymentMethod::Card => {
-                let three_ds_enabled = matches!(
-                    item.router_data.resource_common_data.auth_type,
-                    common_enums::AuthenticationType::ThreeDs
-                );
-                let payment_method_options = PaymentMethodOptions {
-                    three_ds: three_ds_enabled,
-                };
-                (
-                    Some(matches!(
-                        item.router_data.request.capture_method,
-                        Some(common_enums::CaptureMethod::Automatic)
-                            | Some(common_enums::CaptureMethod::SequentialAutomatic)
-                            | None
-                    )),
-                    Some(payment_method_options),
-                )
-            }
-            _ => (None, None),
-        };
+        let (capture, payment_method_options) =
+            match item.router_data.resource_common_data.payment_method {
+                common_enums::PaymentMethod::Card => {
+                    let three_ds_enabled = matches!(
+                        item.router_data.resource_common_data.auth_type,
+                        common_enums::AuthenticationType::ThreeDs
+                    );
+                    let payment_method_options = PaymentMethodOptions {
+                        three_ds: three_ds_enabled,
+                    };
+                    (
+                        Some(matches!(
+                            item.router_data.request.capture_method,
+                            Some(common_enums::CaptureMethod::Automatic)
+                                | Some(common_enums::CaptureMethod::SequentialAutomatic)
+                                | None
+                        )),
+                        Some(payment_method_options),
+                    )
+                }
+                _ => (None, None),
+            };
 
         let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
@@ -455,7 +480,12 @@ impl<
             payment_method,
             capture,
             payment_method_options,
-            merchant_reference_id: Some(item.router_data.resource_common_data.connector_request_reference_id.clone()),
+            merchant_reference_id: Some(
+                item.router_data
+                    .resource_common_data
+                    .connector_request_reference_id
+                    .clone(),
+            ),
             description: None,
             error_payment_url: return_url.clone(),
             complete_payment_url: return_url,
@@ -649,7 +679,6 @@ impl<
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-
                 }),
             ),
         };
@@ -693,7 +722,6 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                             network_advice_code: None,
                             network_decline_code: None,
                             network_error_message: None,
-
                         }),
                     ),
                     _ => (
@@ -704,9 +732,7 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                             mandate_reference: None,
                             connector_metadata: None,
                             network_txn_id: None,
-                            connector_response_reference_id: data
-                                .merchant_reference_id
-                                .to_owned(),
+                            connector_response_reference_id: data.merchant_reference_id.to_owned(),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,
                         }),
@@ -725,7 +751,6 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
                     network_advice_code: None,
                     network_decline_code: None,
                     network_error_message: None,
-
                 }),
             ),
         };
@@ -790,7 +815,10 @@ pub struct RapydRefundRequest {
 }
 
 // Custom serializer for optional amount to ensure it's a string
-fn serialize_optional_amount_as_string<S>(amount: &Option<MinorUnit>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_optional_amount_as_string<S>(
+    amount: &Option<MinorUnit>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
@@ -808,17 +836,12 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    >
-    TryFrom<
-        RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    > for RapydRefundRequest
+    > TryFrom<RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for RapydRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
-        item: RapydRouterData<
-            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
+        item: RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             payment: item
@@ -874,10 +897,8 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<RefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
-        let (connector_refund_id, refund_status, response_result) = match &item.response.data {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
+        let (_connector_refund_id, _refund_status, response_result) = match &item.response.data {
             Some(data) => (
                 data.id.clone(),
                 common_enums::RefundStatus::from(data.status.clone()),
@@ -885,11 +906,14 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                     connector_refund_id: data.id.clone(),
                     refund_status: common_enums::RefundStatus::from(data.status.clone()),
                     status_code: item.http_code,
-                })
+                }),
             ),
             None => {
                 // If no data, still provide a proper refund ID from the response
-                let refund_id = item.response.status.operation_id
+                let refund_id = item
+                    .response
+                    .status
+                    .operation_id
                     .clone()
                     .unwrap_or_else(|| format!("refund_error_{}", item.response.status.error_code));
                 (
@@ -907,9 +931,9 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
                         network_error_message: None,
                     }),
                 )
-            },
+            }
         };
-        
+
         Ok(Self {
             response: response_result,
             ..item.router_data
@@ -921,9 +945,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<RefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         let (connector_refund_id, refund_status) = match item.response.data {
             Some(data) => (data.id, common_enums::RefundStatus::from(data.status)),
             None => (
@@ -971,25 +993,61 @@ pub type RapydRefundResponse = RefundResponse;
 pub type RapydRSyncResponse = RefundResponse;
 
 // Additional TryFrom implementations for EmptyRequest (used by type aliases)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<RapydRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>> for EmptyRequest {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        RapydRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for EmptyRequest
+{
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(_item: RapydRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+    fn try_from(
+        _item: RapydRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(EmptyRequest)
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<RapydRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>> for VoidRequest {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        RapydRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for VoidRequest
+{
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: RapydRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: RapydRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(VoidRequest {
             description: item.router_data.request.cancellation_reason.clone(),
         })
     }
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> TryFrom<RapydRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>> for EmptyRequest {
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    TryFrom<
+        RapydRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for EmptyRequest
+{
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(_item: RapydRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
+    fn try_from(
+        _item: RapydRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(EmptyRequest)
     }
 }
