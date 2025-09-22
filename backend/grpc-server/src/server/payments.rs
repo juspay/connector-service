@@ -130,6 +130,11 @@ trait PaymentOperationsInternal {
         request: RequestData<PaymentServiceVoidRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status>;
 
+    async fn internal_void_post_capture(
+        &self,
+        request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status>;
+
     async fn internal_refund(
         &self,
         request: RequestData<PaymentServiceRefundRequest>,
@@ -1289,6 +1294,48 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_post_authenticate_response,
         all_keys_required: None
     );
+
+    async fn internal_void_post_capture(
+        &self,
+        request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status> {
+        tracing::info!("PAYMENT_VOID_POST_CAPTURE_FLOW: initiated");
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "unknown_service".to_string());
+
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            |request, metadata_payload| {
+                async move {
+                    let (connector, request_id, connector_auth_details) = (
+                        metadata_payload.connector,
+                        metadata_payload.request_id,
+                        metadata_payload.connector_auth_type,
+                    );
+                    let metadata = request.metadata().clone();
+                    let payload = request.into_inner();
+
+                    // Get connector data
+                    let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> =
+                        connector_integration::types::ConnectorData::get_connector_by_name(&connector);
+
+                    // Check if connector supports VoidPC - if not, return error
+                    // Since VoidPC is optional, we need to check if the connector implements it
+                    // For now, we'll return a not supported error for all connectors
+                    // Individual connectors will need to implement VoidPC support explicitly
+                    return Err(tonic::Status::unimplemented(
+                        "VoidPostCapture is not implemented for this connector",
+                    ));
+                }
+            },
+        )
+        .await
+    }
 }
 
 #[tonic::async_trait]
@@ -1666,6 +1713,34 @@ impl PaymentService for Payments {
             |request_data| async move { self.internal_void_payment(request_data).await },
         )
         .await
+    }
+
+    #[tracing::instrument(
+        name = "payment_void_post_capture",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::VoidPostCapture.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::VoidPostCapture.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn void_post_capture(
+        &self,
+        request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status> {
+        self.internal_void_post_capture(request).await
     }
 
     #[tracing::instrument(

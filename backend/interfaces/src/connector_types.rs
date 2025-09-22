@@ -10,7 +10,7 @@ use domain_types::{
         DisputeDefendData, DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse,
         EventType, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsCancelPostCaptureData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
@@ -53,6 +53,11 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+}
+
+pub trait PaymentVoidPostCaptureV2:
+    ConnectorIntegrationV2<connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
 }
 

@@ -183,6 +183,11 @@ pub struct PaymentVoidIntegrityObject {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PaymentVoidPostCaptureIntegrityObject {
+    pub connector_transaction_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RefundIntegrityObject {
     pub refund_amount: MinorUnit,
     pub currency: Currency,
