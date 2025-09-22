@@ -53,7 +53,6 @@ use super::macros;
 use crate::{types::ResponseRouterData, with_response_body};
 
 pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 
@@ -254,6 +253,28 @@ impl<
             + 'static
             + Serialize,
     > PaymentVoidPostCaptureV2 for Worldpayvantiv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentTokenV2<T> for Worldpayvantiv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentAccessToken for Worldpayvantiv<T>
 {
 }
 
@@ -1019,6 +1040,26 @@ impl<
 {
 }
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
+    > for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Worldpayvantiv<T>
+{
+}
+
 // SourceVerification implementations for all flows
 impl<
         T: PaymentMethodDataTypes
@@ -1185,6 +1226,26 @@ impl<
             + Serialize,
     > SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
     for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
+        domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
+    > for Worldpayvantiv<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
+    SourceVerification<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Worldpayvantiv<T>
 {
 }
 
