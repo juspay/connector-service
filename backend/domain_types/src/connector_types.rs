@@ -1114,9 +1114,8 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
     pub router_return_url: Option<String>,
-    pub complete_authorize_url: Option<String>,
+    pub continue_redirection_url: Option<String>,
     pub browser_info: Option<BrowserInformation>,
-    pub connector_transaction_id: Option<String>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<CompleteAuthorizeRedirectResponse>,
 
@@ -1134,7 +1133,6 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub router_return_url: Option<String>,
     pub complete_authorize_url: Option<String>,
     pub browser_info: Option<BrowserInformation>,
-    pub connector_transaction_id: Option<String>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<CompleteAuthorizeRedirectResponse>,
 

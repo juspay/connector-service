@@ -5310,13 +5310,12 @@ impl<
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
                 payment_method_clone.unwrap_or_default(),
             )?,
+            continue_redirection_url: value.complete_authorize_url,
             router_return_url: return_url,
-            complete_authorize_url: value.complete_authorize_url,
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
-            connector_transaction_id: None,
             enrolled_for_3ds,
             redirect_response: None,
         })
@@ -5394,7 +5393,6 @@ impl<
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
-            connector_transaction_id: None,
             enrolled_for_3ds: false,
             redirect_response,
         })
