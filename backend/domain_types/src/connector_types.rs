@@ -1118,7 +1118,6 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-    pub minor_amount: Option<MinorUnit>,
 }
 
 #[derive(Debug, Clone)]
@@ -1133,7 +1132,6 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-    pub minor_amount: Option<MinorUnit>,
 }
 
 #[derive(Debug, Clone)]
@@ -1148,7 +1146,6 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-    pub minor_amount: Option<MinorUnit>,
 }
 
 #[derive(Debug, Clone)]

@@ -5079,8 +5079,8 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 response_ref_id: None,
                 authentication_data: None,
                 status: status as i32,
-                error_message: None,
-                error_code: None,
+                error_message: Some(err.message),
+                error_code: Some(err.code),
                 status_code: err.status_code as u32,
                 raw_connector_response,
                 response_headers,
@@ -5304,7 +5304,6 @@ impl<
                     error_object: None,
                 }))?,
             amount: minor_amount,
-            minor_amount: Some(minor_amount),
             email,
             currency: Some(currency),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
@@ -5381,7 +5380,6 @@ impl<
                     error_object: None,
                 }))?,
             amount: minor_amount,
-            minor_amount: Some(minor_amount),
             email,
             currency: Some(currency),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
@@ -5458,7 +5456,6 @@ impl<
                     error_object: None,
                 }))?,
             amount: minor_amount,
-            minor_amount: Some(minor_amount),
             email,
             currency: Some(currency),
             payment_method_type: <Option<PaymentMethodType>>::foreign_try_from(
