@@ -75,19 +75,20 @@ message WalletPaymentMethodType {
   oneof wallet_type {
     AppleWallet apple_pay = 1;                          // Apple Pay
     GoogleWallet google_pay = 2;                        // Google Pay
-    // SamsungWallet samsung_pay = 3;                      // Samsung Pay
-    // AliPayWallet ali_pay = 4;                           // Alipay
-    // AliPayHKWallet ali_pay_hk = 5;                      // Alipay Hong Kong
-    // WeChatPayWallet we_chat_pay = 6;                    // WeChat Pay
-    // VenmoWallet venmo = 7;                              // Venmo
+    // SamsungWallet samsung_pay = 3;                   // Samsung Pay
+    // AliPayWallet ali_pay = 4;                        // Alipay
+    // AliPayHKWallet ali_pay_hk = 5;                   // Alipay Hong Kong
+    // WeChatPayWallet we_chat_pay = 6;                 // WeChat Pay
+    // VenmoWallet venmo = 7;                           // Venmo
     CashappQrWallet cashapp_qr = 8;                     // Cash App
     AmazonPayRedirectWallet amazon_pay_redirect = 9;    // Amazon Pay  
-    // PazeWallet paze = 10;                               // Paze
+    // PazeWallet paze = 10;                            // Paze
     PaypalRedirectWallet paypal_redirect = 11;          // Paypal Redirect
     WeChatPayQrWallet we_chat_pay_qr = 12;              // WeChat Pay Qr
     AliPayRedirectWallet ali_pay_redirect = 13;         // AliPay Redirect
     RevolutPayWallet revolut_pay = 14;                  // Revolut Pay
     MifinityWallet mifinity = 15;                       // Mifinity
+    Bluecode bluecode = 16;                             // Bluecode 
   }
 }
 
@@ -518,6 +519,9 @@ message CashappQrWallet {
 
 // Revolut Pay - Revolut digital wallet payment service
 message RevolutPayWallet {
+}
+
+message Bluecode {
 }
 
 // ============================================================================

@@ -1,5 +1,7 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
@@ -30,7 +32,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::fmt::Debug;
 use transformers::{
     self as volt, VoltAuthUpdateRequest, VoltAuthUpdateResponse, VoltPaymentsRequest,
     VoltPaymentsResponse, VoltPsyncRequest, VoltPsyncResponse,

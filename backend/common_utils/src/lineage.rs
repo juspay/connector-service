@@ -1,6 +1,5 @@
 //! Lineage ID domain types for tracking request lineage across services
 
-use serde;
 use std::collections::HashMap;
 
 /// A domain type representing lineage IDs as key-value pairs(uses hashmap internally).
@@ -34,7 +33,7 @@ impl<'a> LineageIds<'a> {
     pub fn inner(&self) -> HashMap<String, String> {
         self.inner
             .iter()
-            .map(|(k, v)| (format!("{},{}", self.prefix, k), v.clone()))
+            .map(|(k, v)| (format!("{}{}", self.prefix, k), v.clone()))
             .collect()
     }
 
@@ -57,11 +56,7 @@ impl serde::Serialize for LineageIds<'_> {
     where
         S: serde::Serializer,
     {
-        let prefixed_map: HashMap<String, String> = self
-            .inner
-            .iter()
-            .map(|(k, v)| (format!("{}{}", self.prefix, k), v.clone()))
-            .collect();
+        let prefixed_map = self.inner();
         prefixed_map.serialize(serializer)
     }
 }

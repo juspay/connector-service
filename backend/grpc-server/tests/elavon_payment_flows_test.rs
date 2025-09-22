@@ -219,6 +219,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
             id_type: Some(IdType::Id(format!("elavon_sync_{}", get_timestamp()))),
         }), // Some(format!("elavon_sync_{}", get_timestamp())),
         // all_keys_required: Some(false),
+        capture_method: None,
+        handle_response: None,
         access_token: None,
     }
 }

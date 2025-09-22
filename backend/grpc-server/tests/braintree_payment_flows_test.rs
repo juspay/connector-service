@@ -5,8 +5,6 @@
 use cards::CardNumber;
 use grpc_server::{app, configs};
 mod common;
-use hyperswitch_masking::Secret;
-
 use std::{
     collections::HashMap,
     env,
@@ -26,6 +24,7 @@ use grpc_api_types::{
         RefundStatus,
     },
 };
+use hyperswitch_masking::Secret;
 use tonic::{transport::Channel, Request};
 
 // Constants for Braintree connector
@@ -166,6 +165,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: None,
         access_token: None,
         // all_keys_required: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

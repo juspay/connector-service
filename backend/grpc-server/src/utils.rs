@@ -497,6 +497,7 @@ macro_rules! implement_connector_operation {
                 $all_keys_required,
                 event_params,
                 None,
+                common_enums::CallConnectorAction::Trigger,
             )
             .await
             .switch()
