@@ -1188,6 +1188,7 @@ message PaymentServiceAuthorizeResponse {
   
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
+  optional string raw_connector_request = 14; // Raw request sent to the connector for debugging
 }
 
 // Request message for synchronizing payment status.

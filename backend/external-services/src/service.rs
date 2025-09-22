@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use common_enums::ApiClientError;
+use common_enums::{ApiClientError, AttemptStatus};
 use common_utils::{
     ext_traits::AsyncExt,
     lineage,
@@ -9,6 +9,7 @@ use common_utils::{
 use domain_types::{
     connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
     errors::{ApiErrorResponse, ConnectorError},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Proxy,
@@ -80,6 +81,7 @@ use serde_json::json;
 use tracing::field::Empty;
 
 use crate::shared_metrics as metrics;
+
 pub type Headers = std::collections::HashSet<(String, Maskable<String>)>;
 
 trait ToHttpMethod {
@@ -126,6 +128,7 @@ pub struct EventProcessingParams<'a> {
         latency = Empty,
     )
 )]
+#[allow(clippy::too_many_arguments)]
 pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Resp>(
     proxy: &Proxy,
     connector: BoxedConnectorIntegrationV2<'static, F, ResourceCommonData, Req, Resp>,
@@ -134,6 +137,7 @@ pub async fn execute_connector_processing_step<T, F, ResourceCommonData, Req, Re
     event_params: EventProcessingParams<'_>,
     token_data: Option<TokenData>,
     call_connector_action: common_enums::CallConnectorAction,
+    ucs_dry_run: bool,
 ) -> CustomResult<RouterDataV2<F, ResourceCommonData, Req, Resp>, ConnectorError>
 where
     F: Clone + 'static,
@@ -145,7 +149,8 @@ where
         + RawConnectorResponse
         + ConnectorResponseHeaders
         + ConnectorRequestReference
-        + AdditionalHeaders,
+        + AdditionalHeaders
+        + domain_types::connector_types::ConnectorDataBuilder,
 {
     let start = tokio::time::Instant::now();
     let result = match call_connector_action {
@@ -212,7 +217,6 @@ where
                 });
             let headers = serde_json::Value::Object(masked_headers);
             tracing::Span::current().record("request.headers", tracing::field::display(&headers));
-            let router_data = router_data.clone();
 
             let req = connector_request.as_ref().map(|connector_request| {
                 let masked_request = match connector_request.body.as_ref() {
@@ -234,7 +238,17 @@ where
                 masked_request
             });
 
-            match connector_request {
+            // Set raw connector request using helper function
+            let router_data = if let Some(ref connector_request_data) = &connector_request {
+                let raw_request_json = extract_raw_connector_request(connector_request_data);
+                router_data.update_resource_common_data(|data| {
+                    data.set_raw_connector_request_builder(Some(raw_request_json))
+                })
+            } else {
+                router_data
+            };
+
+            Ok(match connector_request {
                 Some(request) => {
                     let url = request.url.clone();
                     let method = request.method;
@@ -335,18 +349,23 @@ where
                             status_code: injector_response.status_code, // Use actual status code from connector
                         }))
                     } else {
-                        call_connector_api(proxy, request, "execute_connector_processing_step")
-                            .await
-                            .change_context(ConnectorError::RequestEncodingFailed)
-                            .inspect_err(|err| {
-                                info_log(
-                                    "NETWORK_ERROR",
-                                    &json!(format!(
-                                        "Failed getting response from connector. Error: {:?}",
-                                        err
-                                    )),
-                                );
-                            })
+                        call_connector_api(
+                            proxy,
+                            request,
+                            "execute_connector_processing_step",
+                            ucs_dry_run,
+                        )
+                        .await
+                        .change_context(ConnectorError::RequestEncodingFailed)
+                        .inspect_err(|err| {
+                            info_log(
+                                "NETWORK_ERROR",
+                                &json!(format!(
+                                    "Failed getting response from connector. Error: {:?}",
+                                    err
+                                )),
+                            );
+                        })
                     };
                     let external_service_elapsed = external_service_start_latency.elapsed();
                     metrics::EXTERNAL_SERVICE_API_CALLS_LATENCY
@@ -357,6 +376,19 @@ where
                         ])
                         .observe(external_service_elapsed.as_secs_f64());
                     tracing::info!(?response, "response from connector");
+
+                    // Set connector response data once for both success and error cases
+                    let router_data = match &response {
+                        Ok(Ok(response_body)) | Ok(Err(response_body)) => {
+                            set_connector_response_data(
+                                router_data,
+                                &response_body.response,
+                                response_body.headers.clone(),
+                                all_keys_required,
+                            )
+                        }
+                        Err(_) => router_data, // No response data to set for network errors
+                    };
 
                     match &response {
                         Ok(Ok(body)) => {
@@ -556,7 +588,10 @@ where
 
                     match response {
                         Ok(body) => {
-                            let response = match body {
+                            let response: Result<
+                                RouterDataV2<F, ResourceCommonData, Req, Resp>,
+                                ConnectorError,
+                            > = match body {
                                 Ok(body) => {
                                     let status_code = body.status_code;
                                     tracing::Span::current().record(
@@ -599,23 +634,8 @@ where
                                         ));
                                     }
 
-                                    // Set raw_connector_response BEFORE calling the transformer
-                                    let mut updated_router_data = router_data.clone();
-                                    if all_keys_required.unwrap_or(true) {
-                                        let raw_response_string =
-                                            strip_bom_and_convert_to_string(&body.response);
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
-
-                                        // Set response headers if available
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_connector_response_headers(body.headers.clone());
-                                    }
-
                                     let handle_response_result = connector.handle_response_v2(
-                                        &updated_router_data,
+                                        &router_data,
                                         None,
                                         body.clone(),
                                     );
@@ -625,8 +645,22 @@ where
                                             tracing::info!("Transformer completed successfully");
                                             Ok(data)
                                         }
-                                        Err(err) => Err(err),
-                                    }?
+                                        Err(err) => {
+                                            // Set error in router data instead of returning bare error
+                                            let error_response = create_error_response(
+                                                &router_data,
+                                                "TRANSFORMATION_FAILED",
+                                                format!("Response transformation failed: {}", err),
+                                                Some(
+                                                    "Connector response transformation error"
+                                                        .to_string(),
+                                                ),
+                                                body.status_code,
+                                                None,
+                                            );
+                                            Ok(router_data.set_response(Err(error_response)))
+                                        }
+                                    }
                                 }
                                 Err(body) => {
                                     metrics::EXTERNAL_SERVICE_API_CALLS_ERRORS
@@ -638,24 +672,33 @@ where
                                         ])
                                         .inc();
 
-                                    // Set raw connector response for error cases BEFORE processing error
-                                    let mut updated_router_data = router_data.clone();
-                                    if all_keys_required.unwrap_or(true) {
-                                        let raw_response_string =
-                                            strip_bom_and_convert_to_string(&body.response);
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_raw_connector_response(raw_response_string);
-                                        updated_router_data
-                                            .resource_common_data
-                                            .set_connector_response_headers(body.headers.clone());
-                                    }
-
                                     let error = match body.status_code {
                                         500..=511 => {
-                                            connector.get_5xx_error_response(body.clone(), None)?
+                                            match connector.get_5xx_error_response(body.clone(), None) {
+                                        Ok(error) => error,
+                                        Err(_) => create_error_response(
+                                            &router_data,
+                                            "CONNECTOR_ERROR_PROCESSING_FAILED",
+                                            format!("Failed to process 5xx error response from connector. Status: {}", body.status_code),
+                                            Some("Connector error processing failure".to_string()),
+                                            body.status_code,
+                                            None,
+                                        ),
+                                    }
                                         }
-                                        _ => connector.get_error_response_v2(body.clone(), None)?,
+                                        _ => {
+                                            match connector.get_error_response_v2(body.clone(), None) {
+                                        Ok(error) => error,
+                                        Err(_) => create_error_response(
+                                            &router_data,
+                                            "CONNECTOR_ERROR_PROCESSING_FAILED",
+                                            format!("Failed to process non-5xx error response from connector. Status: {}", body.status_code),
+                                            Some("Connector error processing failure".to_string()),
+                                            body.status_code,
+                                            None,
+                                        ),
+                                    }
+                                        }
                                     };
                                     tracing::Span::current().record(
                                         "response.error_message",
@@ -665,20 +708,28 @@ where
                                         "response.status_code",
                                         tracing::field::display(error.status_code),
                                     );
-                                    updated_router_data.response = Err(error);
-                                    updated_router_data
+                                    Ok(router_data.set_response(Err(error)))
                                 }
                             };
-                            Ok(response)
+                            response
                         }
                         Err(err) => {
                             tracing::Span::current().record("url", tracing::field::display(url));
-                            Err(err.change_context(ConnectorError::ProcessingStepFailed(None)))
+                            // Set network error in router data instead of returning bare error
+                            let error_response = create_error_response(
+                                &router_data,
+                                "NETWORK_ERROR",
+                                format!("Network request failed: {}", err),
+                                Some("Network connectivity error".to_string()),
+                                0, // No HTTP status for network errors
+                                Some(format!("{}", err)),
+                            );
+                            Ok(router_data.set_response(Err(error_response)))
                         }
-                    }
+                    }?
                 }
-                None => Ok(router_data),
-            }
+                None => router_data,
+            })
         }
     };
 
@@ -713,7 +764,22 @@ pub async fn call_connector_api(
     proxy: &Proxy,
     request: Request,
     _flow_name: &str,
+    ucs_dry_run: bool,
 ) -> CustomResult<Result<Response, Response>, ApiClientError> {
+    // If this is a dry run, return a mock success response without making actual HTTP call
+    if ucs_dry_run {
+        let mock_response = Response {
+            headers: None,
+            response:
+                serde_json::json!({"status": "dry_run_success", "message": "UCS dry run completed"})
+                    .to_string()
+                    .into_bytes()
+                    .into(),
+            status_code: 200,
+        };
+        return Ok(Ok(mock_response));
+    }
+
     let url =
         reqwest::Url::parse(&request.url).change_context(ApiClientError::UrlEncodingFailed)?;
 
@@ -975,17 +1041,6 @@ async fn handle_response(
         .await?
 }
 
-/// Helper function to remove BOM from response bytes and convert to string
-fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
-    String::from_utf8(response_bytes.to_vec()).ok().map(|s| {
-        // Remove BOM if present (UTF-8 BOM is 0xEF, 0xBB, 0xBF)
-        if s.starts_with('\u{FEFF}') {
-            s.trim_start_matches('\u{FEFF}').to_string()
-        } else {
-            s
-        }
-    })
-}
 
 /// Helper function to parse JSON from response bytes with BOM handling
 fn parse_json_with_bom_handling(
@@ -1085,4 +1140,102 @@ pub fn error_log(action: &str, message: &serde_json::Value) {
 #[inline]
 pub fn warn_log(action: &str, message: &serde_json::Value) {
     tracing::warn!(tags = %action, json_value= %message);
+}
+
+/// Helper function to extract raw connector request data with actual content
+fn extract_raw_connector_request(connector_request: &Request) -> String {
+    // Extract actual body content
+    let body_content = match connector_request.body.as_ref() {
+        Some(request) => match request {
+            RequestContent::Json(data)
+            | RequestContent::FormUrlEncoded(data)
+            | RequestContent::Xml(data) => serde_json::to_value(&**data)
+                .unwrap_or(json!({ "error": "failed to serialize body"})),
+            RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
+            RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
+        },
+        None => serde_json::Value::Null,
+    };
+
+    // Extract unmasked headers
+    let headers_content = connector_request
+        .headers
+        .iter()
+        .map(|(k, v)| {
+            let value = match v {
+                Maskable::Normal(val) => val.clone(),
+                Maskable::Masked(val) => val.clone().expose().to_string(),
+            };
+            (k.clone(), value)
+        })
+        .collect::<HashMap<_, _>>();
+
+    // Create complete request with actual content
+    json!({
+        "url": connector_request.url,
+        "method": connector_request.method.to_string(),
+        "headers": headers_content,
+        "body": body_content
+    })
+    .to_string()
+}
+
+/// Helper function to remove BOM from response bytes and convert to string
+fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
+    String::from_utf8(response_bytes.to_vec()).ok().map(|s| {
+        // Remove BOM if present (UTF-8 BOM is 0xEF, 0xBB, 0xBF)
+        if s.starts_with('\u{FEFF}') {
+            s.trim_start_matches('\u{FEFF}').to_string()
+        } else {
+            s
+        }
+    })
+}
+
+/// Helper function to set raw connector response and headers if all_keys_required is true
+fn set_connector_response_data<F, ResourceCommonData, Req, Resp>(
+    router_data: RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    response_body: &[u8],
+    headers: Option<http::HeaderMap>,
+    all_keys_required: Option<bool>,
+) -> RouterDataV2<F, ResourceCommonData, Req, Resp>
+where
+    ResourceCommonData: domain_types::connector_types::ConnectorDataBuilder,
+{
+    if all_keys_required.unwrap_or(true) {
+        let raw_response_string = strip_bom_and_convert_to_string(response_body);
+        router_data
+            .update_resource_common_data(|data| {
+                data.set_raw_connector_response_builder(raw_response_string)
+            })
+            .update_resource_common_data(|data| {
+                data.set_connector_response_headers_builder(headers)
+            })
+    } else {
+        router_data
+    }
+}
+
+
+
+/// Helper function to create a generic error response
+fn create_error_response<F, ResourceCommonData, Req, Resp>(
+    _router_data: &RouterDataV2<F, ResourceCommonData, Req, Resp>,
+    code: &str,
+    message: String,
+    reason: Option<String>,
+    status_code: u16,
+    network_error_message: Option<String>,
+) -> ErrorResponse {
+    ErrorResponse {
+        code: code.to_string(),
+        message,
+        reason,
+        status_code,
+        attempt_status: Some(AttemptStatus::Failure),
+        connector_transaction_id: None,
+        network_advice_code: None,
+        network_decline_code: None,
+        network_error_message,
+    }
 }

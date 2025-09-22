@@ -178,6 +178,7 @@ impl ErrorResponse {
             network_error_message: None,
         }
     }
+
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

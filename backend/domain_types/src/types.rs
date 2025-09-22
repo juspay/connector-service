@@ -1534,6 +1534,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers,
         })
@@ -1595,6 +1596,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -1662,6 +1664,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -1724,6 +1727,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -1763,6 +1767,9 @@ pub fn generate_create_order_response(
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
     let response = match transaction_response {
         Ok(response) => {
             // For successful order creation, return basic success response
@@ -1781,6 +1788,7 @@ pub fn generate_create_order_response(
                 error_code: None,
                 status_code: 200,
                 raw_connector_response,
+                raw_connector_request,
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
@@ -1816,6 +1824,7 @@ pub fn generate_create_order_response(
                     .get_connector_response_headers_as_map(),
                 connector_metadata: std::collections::HashMap::new(),
                 raw_connector_response,
+                raw_connector_request,
                 state: None,
             }
         }
@@ -1840,6 +1849,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
     let raw_connector_response = router_data_v2.resource_common_data.raw_connector_response;
+    let raw_connector_request = router_data_v2.resource_common_data.raw_connector_request;
 
     // Create state with access token if available in payment flow data
     let state = router_data_v2
@@ -1933,6 +1943,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     error_message: None,
                     error_code: None,
                     raw_connector_response,
+                    raw_connector_request,
                     status_code: status_code as u32,
                     response_headers,
                     state,
@@ -1968,6 +1979,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code as u32,
                 response_headers,
                 raw_connector_response,
+                raw_connector_request,
                 connector_metadata: std::collections::HashMap::new(),
                 state,
             }
@@ -2128,6 +2140,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -3547,6 +3560,7 @@ impl
             external_latency: None,
             connectors,
             connector_response_headers: None,
+            raw_connector_request: None,
             vault_headers: None,
         })
     }
@@ -3599,6 +3613,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -3766,6 +3781,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -4683,6 +4699,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })

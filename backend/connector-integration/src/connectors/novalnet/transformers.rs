@@ -707,8 +707,7 @@ impl<
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+            incremental_authorization_allowed: None,                        status_code: item.http_code,
                     }),
                     ..item.router_data
                 })
@@ -819,8 +818,7 @@ impl<
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+            incremental_authorization_allowed: None,                        status_code: item.http_code,
                     }),
                     ..item.router_data
                 })
@@ -908,8 +906,7 @@ impl
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+            incremental_authorization_allowed: None,                        status_code: item.http_code,
                     }),
                     ..item.router_data
                 })
@@ -1404,8 +1401,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetPSyncResponse, Self>>
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+            incremental_authorization_allowed: None,                        status_code: item.http_code,
                     }),
                     ..item.router_data
                 })
@@ -1484,8 +1480,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCaptureResponse, Self>>
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+            incremental_authorization_allowed: None,                        status_code: item.http_code,
                     }),
                     ..item.router_data
                 })
@@ -1693,8 +1688,7 @@ impl<F> TryFrom<ResponseRouterData<NovalnetCancelResponse, Self>>
                         connector_metadata: None,
                         network_txn_id: None,
                         connector_response_reference_id: transaction_id.clone(),
-                        incremental_authorization_allowed: None,
-                        status_code: item.http_code,
+            incremental_authorization_allowed: None,                        status_code: item.http_code,
                     }),
                     ..item.router_data
                 })
@@ -2298,9 +2292,8 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                                 .map(Box::new),
                             status_code: 200,
                             connector_response_reference_id: transaction_id.clone(),
-                            error_code: None,
+            raw_connector_response: None,                            error_code: None,
                             error_message: None,
-                            raw_connector_response: None,
                             response_headers: None,
                             transformation_status:
                                 common_enums::WebhookTransformationStatus::Complete,
@@ -2312,9 +2305,8 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         status_code: 200,
                         mandate_reference: None,
                         connector_response_reference_id: None,
-                        error_code: Some(notif.result.status.to_string()),
+            raw_connector_response: None,                        error_code: Some(notif.result.status.to_string()),
                         error_message: Some(notif.result.status_text),
-                        raw_connector_response: None,
                         response_headers: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     }),
@@ -2345,9 +2337,8 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
                     status: common_enums::RefundStatus::from(transaction_status),
                     status_code: 200,
                     connector_response_reference_id: None,
-                    error_code: None,
+            raw_connector_response: None,                    error_code: None,
                     error_message: None,
-                    raw_connector_response: None,
                     response_headers: None,
                 })
             }
@@ -2356,9 +2347,8 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
                 connector_refund_id: None,
                 status_code: 200,
                 connector_response_reference_id: None,
-                error_code: Some(notif.result.status.to_string()),
+            raw_connector_response: None,                error_code: Some(notif.result.status.to_string()),
                 error_message: Some(notif.result.status_text),
-                raw_connector_response: None,
                 response_headers: None,
             }),
         }
