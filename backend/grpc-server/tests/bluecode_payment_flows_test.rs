@@ -5,6 +5,12 @@
 use grpc_server::{app, configs};
 mod common;
 
+use std::{
+    collections::HashMap,
+    env,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -17,11 +23,6 @@ use grpc_api_types::{
 };
 use hyperswitch_masking::Secret;
 use rand::{distributions::Alphanumeric, Rng};
-use std::{
-    collections::HashMap,
-    env,
-    time::{SystemTime, UNIX_EPOCH},
-};
 use tonic::{transport::Channel, Request};
 
 // Constants for Fiserv connector
@@ -248,6 +249,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("fiserv_sync_{}", get_timestamp()))),
         }),
+        capture_method: None,
+        handle_response: None,
         // all_keys_required: None,
     }
 }

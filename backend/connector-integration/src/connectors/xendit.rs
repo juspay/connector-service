@@ -1,5 +1,7 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
@@ -37,7 +39,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::fmt::Debug;
 use transformers::{
     self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditCaptureResponse,
     XenditErrorResponse, XenditPaymentResponse, XenditPaymentsCaptureRequest,
