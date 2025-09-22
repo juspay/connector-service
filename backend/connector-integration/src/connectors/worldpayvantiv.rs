@@ -10,7 +10,7 @@ use common_utils::{
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
-        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
@@ -20,7 +20,7 @@ use domain_types::{
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        WebhookDetailsResponse, PaymentsCancelPostCaptureData,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -37,7 +37,7 @@ use interfaces::{
     connector_types::{
         AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
         PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2, PaymentVoidV2,
-        RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
+        PaymentVoidPostCaptureV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
@@ -243,6 +243,17 @@ impl<
             + 'static
             + Serialize,
     > PaymentVoidV2 for Worldpayvantiv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > PaymentVoidPostCaptureV2 for Worldpayvantiv<T>
 {
 }
 
@@ -602,6 +613,76 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, ConnectorError> {
+        let response_str = std::str::from_utf8(&res.response)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
+            .change_context(ConnectorError::ResponseDeserializationFailed)?;
+        event_builder.map(|i| i.set_response_body(&response));
+        RouterDataV2::try_from(ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        })
+    }
+
+    fn get_error_response_v2(
+        &self,
+        res: Response,
+        event_builder: Option<&mut ConnectorEvent>,
+    ) -> CustomResult<ErrorResponse, ConnectorError> {
+        self.build_error_response(res, event_builder)
+    }
+
+    fn get_http_method(&self) -> common_utils::request::Method {
+        common_utils::request::Method::Post
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Worldpayvantiv<T>
+{
+    fn get_headers(
+        &self,
+        req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+        self.build_headers(req)
+    }
+
+    fn get_content_type(&self) -> &'static str {
+        self.common_get_content_type()
+    }
+
+    fn get_url(
+        &self,
+        req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<String, ConnectorError> {
+        Ok(self.connector_base_url_payments(req).to_string())
+    }
+
+    fn get_request_body(
+        &self,
+        req: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+    ) -> CustomResult<Option<RequestContent>, ConnectorError> {
+        let request = WorldpayvantivPaymentsRequest::try_from(WorldpayvantivRouterData {
+            router_data: req.clone(),
+            connector: self.clone(),
+        })?;
+        Ok(Some(RequestContent::Xml(Box::new(request))))
+    }
+
+    fn handle_response_v2(
+        &self,
+        data: &RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>,
+        event_builder: Option<&mut ConnectorEvent>,
+        res: Response,
+    ) -> CustomResult<RouterDataV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>, ConnectorError> {
         let response_str = std::str::from_utf8(&res.response)
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
         let response: CnpOnlineResponse = deserialize_xml_to_struct(response_str)
@@ -995,6 +1076,18 @@ impl<
             + 'static
             + Serialize,
     > SourceVerification<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+    for Worldpayvantiv<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
     for Worldpayvantiv<T>
 {
 }
