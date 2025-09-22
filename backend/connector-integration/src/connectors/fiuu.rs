@@ -221,9 +221,10 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::RepeatPaymentV2 for Fiuu<T>
+    > connector_types::PaymentVoidPostCaptureV2 for Fiuu<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -231,7 +232,7 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentVoidPostCaptureV2 for Fiuu<T>
+    > connector_types::PaymentTokenV2<T> for Fiuu<T>
 {
 }
 
