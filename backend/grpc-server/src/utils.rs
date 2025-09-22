@@ -12,7 +12,7 @@ use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SetupMandate, SubmitEvidence, Void,
+        SetupMandate, SubmitEvidence, Void, VoidPC,
     },
     connector_types,
     errors::{ApiError, ApplicationErrorResponse},
@@ -40,6 +40,8 @@ where
         FlowName::Rsync
     } else if type_id == std::any::TypeId::of::<Void>() {
         FlowName::Void
+    } else if type_id == std::any::TypeId::of::<VoidPC>() {
+        FlowName::VoidPostCapture
     } else if type_id == std::any::TypeId::of::<Refund>() {
         FlowName::Refund
     } else if type_id == std::any::TypeId::of::<Capture>() {
