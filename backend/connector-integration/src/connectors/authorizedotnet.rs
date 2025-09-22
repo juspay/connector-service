@@ -10,14 +10,14 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorSpecifications, ConnectorWebhookSecrets,
         DisputeDefendData, DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsCancelPostCaptureData, PaymentsAuthenticateData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
         RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
@@ -40,7 +40,7 @@ use interfaces::{
     connector_types::{
         self, AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook,
         PaymentAccessToken, PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate,
-        PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2,
+        PaymentSessionToken, PaymentSyncV2, PaymentTokenV2, PaymentVoidV2, PaymentVoidPostCaptureV2, RefundSyncV2, RefundV2,
         RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
@@ -387,6 +387,16 @@ impl<
             + 'static
             + Serialize,
     > RepeatPaymentV2 for Authorizedotnet<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > PaymentVoidPostCaptureV2 for Authorizedotnet<T>
 {
 }
 impl<
@@ -1278,6 +1288,30 @@ impl<
             + 'static
             + Serialize,
     > SourceVerification<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
+    for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
     for Authorizedotnet<T>
 {
 }

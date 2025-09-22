@@ -15,7 +15,7 @@ use grpc_api_types::payments::{
     DisputeResponse, DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse,
+    PaymentServiceVoidResponse, PaymentServiceVoidPostCaptureResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
@@ -2640,7 +2640,7 @@ pub fn generate_payment_void_post_capture_response(
 
 pub fn generate_payment_void_post_capture_response(
     router_data_v2: RouterDataV2<VoidPC, PaymentFlowData, crate::connector_types::PaymentsCancelPostCaptureData, PaymentsResponseData>,
-) -> Result<PaymentServiceVoidResponse, error_stack::Report<ApplicationErrorResponse>> {
+) -> Result<PaymentServiceVoidPostCaptureResponse, error_stack::Report<ApplicationErrorResponse>> {
     let transaction_response = router_data_v2.response;
 
     match transaction_response {
@@ -2661,7 +2661,7 @@ pub fn generate_payment_void_post_capture_response(
                 let grpc_resource_id =
                     grpc_api_types::payments::Identifier::foreign_try_from(resource_id)?;
 
-                Ok(PaymentServiceVoidResponse {
+                Ok(PaymentServiceVoidPostCaptureResponse {
                     transaction_id: Some(grpc_resource_id),
                     status: grpc_status.into(),
                     response_ref_id: connector_response_reference_id.map(|id| {
@@ -2691,7 +2691,7 @@ pub fn generate_payment_void_post_capture_response(
                 .attempt_status
                 .map(grpc_api_types::payments::PaymentStatus::foreign_from)
                 .unwrap_or_default();
-            Ok(PaymentServiceVoidResponse {
+            Ok(PaymentServiceVoidPostCaptureResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
                     id_type: Some(
                         grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),

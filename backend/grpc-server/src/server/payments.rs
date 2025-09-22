@@ -9,7 +9,7 @@ use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer, CreateOrder,
         CreateSessionToken, PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund,
-        RepeatPayment, SetupMandate, Void,
+        RepeatPayment, SetupMandate, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
@@ -20,7 +20,7 @@ use domain_types::{
         PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
         RawConnectorRequestResponse, RefundFlowData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData,
+        SetupMandateRequestData, PaymentsCancelPostCaptureData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -30,7 +30,7 @@ use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_setup_mandate_response, generate_payment_void_post_capture_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
 };
@@ -1295,47 +1295,20 @@ impl PaymentOperationsInternal for Payments {
         all_keys_required: None
     );
 
-    async fn internal_void_post_capture(
-        &self,
-        request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
-    ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status> {
-        tracing::info!("PAYMENT_VOID_POST_CAPTURE_FLOW: initiated");
-        let service_name = request
-            .extensions()
-            .get::<String>()
-            .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
-
-        grpc_logging_wrapper(
-            request,
-            &service_name,
-            self.config.clone(),
-            |request, metadata_payload| {
-                async move {
-                    let (connector, request_id, connector_auth_details) = (
-                        metadata_payload.connector,
-                        metadata_payload.request_id,
-                        metadata_payload.connector_auth_type,
-                    );
-                    let metadata = request.metadata().clone();
-                    let payload = request.into_inner();
-
-                    // Get connector data
-                    let connector_data: ConnectorData<domain_types::payment_method_data::DefaultPCIHolder> =
-                        connector_integration::types::ConnectorData::get_connector_by_name(&connector);
-
-                    // Check if connector supports VoidPC - if not, return error
-                    // Since VoidPC is optional, we need to check if the connector implements it
-                    // For now, we'll return a not supported error for all connectors
-                    // Individual connectors will need to implement VoidPC support explicitly
-                    return Err(tonic::Status::unimplemented(
-                        "VoidPostCapture is not implemented for this connector",
-                    ));
-                }
-            },
-        )
-        .await
-    }
+    implement_connector_operation!(
+        fn_name: internal_void_post_capture,
+        log_prefix: "PAYMENT_VOID_POST_CAPTURE",
+        request_type: PaymentServiceVoidPostCaptureRequest,
+        response_type: PaymentServiceVoidPostCaptureResponse,
+        flow_marker: VoidPC,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsCancelPostCaptureData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsCancelPostCaptureData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_payment_void_post_capture_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
