@@ -1216,6 +1216,57 @@ pub enum WorldpayvantivPaymentFlow {
     VoidPC, // VoidPostCapture
 }
 
+// Helper function to determine payment flow type from merchant transaction ID
+fn get_payment_flow_type(merchant_txn_id: &str) -> Result<WorldpayvantivPaymentFlow, ConnectorError> {
+    let merchant_txn_id_lower = merchant_txn_id.to_lowercase();
+    if merchant_txn_id_lower.contains("auth") {
+        Ok(WorldpayvantivPaymentFlow::Auth)
+    } else if merchant_txn_id_lower.contains("sale") {
+        Ok(WorldpayvantivPaymentFlow::Sale)
+    } else if merchant_txn_id_lower.contains("voidpc") {
+        Ok(WorldpayvantivPaymentFlow::VoidPC)
+    } else if merchant_txn_id_lower.contains("void") {
+        Ok(WorldpayvantivPaymentFlow::Void)
+    } else if merchant_txn_id_lower.contains("capture") {
+        Ok(WorldpayvantivPaymentFlow::Capture)
+    } else {
+        // Default to Sale if we can't determine the flow type to avoid errors
+        Ok(WorldpayvantivPaymentFlow::Sale)
+    }
+}
+
+// Helper function to determine attempt status based on payment flow and Vantiv response status
+fn determine_attempt_status_for_psync(
+    payment_status: PaymentStatus,
+    merchant_txn_id: &str,
+    current_status: common_enums::AttemptStatus,
+) -> Result<common_enums::AttemptStatus, ConnectorError> {
+    let flow_type = get_payment_flow_type(merchant_txn_id)?;
+    
+    match payment_status {
+        PaymentStatus::ProcessedSuccessfully => match flow_type {
+            WorldpayvantivPaymentFlow::Sale | WorldpayvantivPaymentFlow::Capture => {
+                Ok(common_enums::AttemptStatus::Charged)
+            }
+            WorldpayvantivPaymentFlow::Auth => Ok(common_enums::AttemptStatus::Authorized),
+            WorldpayvantivPaymentFlow::Void => Ok(common_enums::AttemptStatus::Voided),
+            WorldpayvantivPaymentFlow::VoidPC => Ok(common_enums::AttemptStatus::VoidedPostCapture),
+        },
+        PaymentStatus::TransactionDeclined => match flow_type {
+            WorldpayvantivPaymentFlow::Sale | WorldpayvantivPaymentFlow::Capture => {
+                Ok(common_enums::AttemptStatus::Failure)
+            }
+            WorldpayvantivPaymentFlow::Auth => Ok(common_enums::AttemptStatus::AuthorizationFailed),
+            WorldpayvantivPaymentFlow::Void | WorldpayvantivPaymentFlow::VoidPC => {
+                Ok(common_enums::AttemptStatus::VoidFailed)
+            }
+        },
+        PaymentStatus::PaymentStatusNotFound
+        | PaymentStatus::NotYetProcessed
+        | PaymentStatus::StatusUnavailable => Ok(current_status),
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
 #[serde(rename_all = "lowercase")]
 pub enum OperationId {
@@ -1584,10 +1635,24 @@ impl TryFrom<ResponseRouterData<VantivSyncResponse, RouterDataV2<PSync, PaymentF
     fn try_from(
         item: ResponseRouterData<VantivSyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.payment_status {
-            PaymentStatus::ProcessedSuccessfully => common_enums::AttemptStatus::Charged,
-            PaymentStatus::TransactionDeclined => common_enums::AttemptStatus::Failure,
-            _ => item.router_data.resource_common_data.status,
+        let status = if let Some(merchant_txn_id) = item
+            .response
+            .payment_detail
+            .as_ref()
+            .and_then(|detail| detail.merchant_txn_id.as_ref())
+        {
+            determine_attempt_status_for_psync(
+                item.response.payment_status,
+                merchant_txn_id,
+                item.router_data.resource_common_data.status,
+            )?
+        } else {
+            // Fallback to simple status mapping if no merchant_txn_id available
+            match item.response.payment_status {
+                PaymentStatus::ProcessedSuccessfully => common_enums::AttemptStatus::Charged,
+                PaymentStatus::TransactionDeclined => common_enums::AttemptStatus::Failure,
+                _ => item.router_data.resource_common_data.status,
+            }
         };
 
         let payments_response = PaymentsResponseData::TransactionResponse {
@@ -2494,8 +2559,8 @@ fn get_attempt_status(flow: WorldpayvantivPaymentFlow, response: WorldpayvantivR
             WorldpayvantivPaymentFlow::Sale => Ok(common_enums::AttemptStatus::Pending),
             WorldpayvantivPaymentFlow::Auth => Ok(common_enums::AttemptStatus::Authorizing),
             WorldpayvantivPaymentFlow::Capture => Ok(common_enums::AttemptStatus::CaptureInitiated),
-            WorldpayvantivPaymentFlow::Void => Ok(common_enums::AttemptStatus::Voided),
-            WorldpayvantivPaymentFlow::VoidPC => Ok(common_enums::AttemptStatus::Voided),
+            WorldpayvantivPaymentFlow::Void => Ok(common_enums::AttemptStatus::VoidInitiated),
+            WorldpayvantivPaymentFlow::VoidPC => Ok(common_enums::AttemptStatus::VoidPostCaptureInitiated),
         },
         // Decline codes
         _ => match flow {

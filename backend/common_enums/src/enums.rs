@@ -1137,7 +1137,9 @@ pub enum AttemptStatus {
     Authorizing,
     CodInitiated,
     Voided,
+    VoidedPostCapture,
     VoidInitiated,
+    VoidPostCaptureInitiated,
     CaptureInitiated,
     CaptureFailed,
     VoidFailed,
@@ -1171,19 +1173,21 @@ impl TryFrom<u32> for AttemptStatus {
             9 => AttemptStatus::Authorizing,
             10 => AttemptStatus::CodInitiated,
             11 => AttemptStatus::Voided,
-            12 => AttemptStatus::VoidInitiated,
-            13 => AttemptStatus::CaptureInitiated,
-            14 => AttemptStatus::CaptureFailed,
-            15 => AttemptStatus::VoidFailed,
-            16 => AttemptStatus::AutoRefunded,
-            17 => AttemptStatus::PartialCharged,
-            18 => AttemptStatus::PartialChargedAndChargeable,
-            19 => AttemptStatus::Unresolved,
-            20 => AttemptStatus::Pending,
-            21 => AttemptStatus::Failure,
-            22 => AttemptStatus::PaymentMethodAwaited,
-            23 => AttemptStatus::ConfirmationAwaited,
-            24 => AttemptStatus::DeviceDataCollectionPending,
+            12 => AttemptStatus::VoidedPostCapture,
+            13 => AttemptStatus::VoidInitiated,
+            14 => AttemptStatus::VoidPostCaptureInitiated,
+            15 => AttemptStatus::CaptureInitiated,
+            16 => AttemptStatus::CaptureFailed,
+            17 => AttemptStatus::VoidFailed,
+            18 => AttemptStatus::AutoRefunded,
+            19 => AttemptStatus::PartialCharged,
+            20 => AttemptStatus::PartialChargedAndChargeable,
+            21 => AttemptStatus::Unresolved,
+            22 => AttemptStatus::Pending,
+            23 => AttemptStatus::Failure,
+            24 => AttemptStatus::PaymentMethodAwaited,
+            25 => AttemptStatus::ConfirmationAwaited,
+            26 => AttemptStatus::DeviceDataCollectionPending,
             _ => AttemptStatus::Unknown,
         })
     }
@@ -1196,6 +1200,7 @@ impl AttemptStatus {
             Self::Charged
                 | Self::AutoRefunded
                 | Self::Voided
+                | Self::VoidedPostCapture
                 | Self::PartialCharged
                 | Self::AuthenticationFailed
                 | Self::AuthorizationFailed
