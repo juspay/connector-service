@@ -11,13 +11,13 @@ use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
         DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentVoidData, PaymentsCancelPostCaptureData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
@@ -687,6 +687,29 @@ impl<
             + 'static
             + Serialize,
     > interfaces::connector_types::RepeatPaymentV2 for RazorpayV2<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > interfaces::connector_types::PaymentVoidPostCaptureV2 for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for RazorpayV2<T>
 {
 }
 
@@ -1373,6 +1396,23 @@ impl<
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
+    > for RazorpayV2<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        VoidPC,
+        PaymentFlowData,
+        PaymentsCancelPostCaptureData,
+        PaymentsResponseData,
     > for RazorpayV2<T>
 {
 }

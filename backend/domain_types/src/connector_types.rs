@@ -25,7 +25,7 @@ use crate::{
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
         CaptureIntegrityObject, CreateOrderIntegrityObject, DefendDisputeIntegrityObject,
-        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,PaymentVoidPostCaptureIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
     },
@@ -62,6 +62,7 @@ pub enum ConnectorEnum {
     Braintree,
     Volt,
     Bluecode,
+    Worldpayvantiv,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -91,6 +92,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Braintree => Ok(Self::Braintree),
             grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
             grpc_api_types::payments::Connector::Bluecode => Ok(Self::Bluecode),
+            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpayvantiv),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -782,6 +784,31 @@ impl PaymentVoidData {
             .and_then(|browser_info| browser_info.language)
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct PaymentsCancelPostCaptureData {
+    pub connector_transaction_id: String,
+    pub cancellation_reason: Option<String>,
+    pub integrity_object: Option<PaymentVoidPostCaptureIntegrityObject>,
+    pub raw_connector_response: Option<String>,
+    pub browser_info: Option<BrowserInformation>,
+}
+
+impl PaymentsCancelPostCaptureData {
+    pub fn get_cancellation_reason(&self) -> Result<String, Error> {
+        self.cancellation_reason
+            .clone()
+            .ok_or_else(missing_field_err("cancellation_reason"))
+    }
+    
+    pub fn get_optional_language_from_browser_info(&self) -> Option<String> {
+        self.browser_info
+            .clone()
+            .and_then(|browser_info| browser_info.language)
+    }
+}
+
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {

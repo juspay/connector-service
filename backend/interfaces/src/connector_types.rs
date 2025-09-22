@@ -9,7 +9,7 @@ use domain_types::{
         ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData,
         PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentMethodTokenizationData, PaymentVoidData,PaymentsCancelPostCaptureData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
         RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
         RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
@@ -33,6 +33,7 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentAccessToken
     + PaymentTokenV2<T>
     + PaymentVoidV2
+    + PaymentVoidPostCaptureV2
     + IncomingWebhook
     + RefundV2
     + PaymentCapture
@@ -47,6 +48,11 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
 
 pub trait PaymentVoidV2:
     ConnectorIntegrationV2<connector_flow::Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
+{
+}
+
+pub trait PaymentVoidPostCaptureV2:
+    ConnectorIntegrationV2<connector_flow::VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
 {
 }
 
