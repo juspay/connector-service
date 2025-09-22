@@ -80,7 +80,7 @@ impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
         let nonce_b64 =
-            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &nonce_bytes);
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, nonce_bytes);
 
         let mut hasher = ring::digest::Context::new(&ring::digest::SHA256);
         hasher.update(&nonce_bytes);
