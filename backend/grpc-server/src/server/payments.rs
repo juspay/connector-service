@@ -42,7 +42,7 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterResponse, PaymentServiceRepeatEverythingRequest,
     PaymentServiceRepeatEverythingResponse, PaymentServiceTransformRequest,
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
-    RefundResponse,
+    RefundResponse, WebhookTransformationStatus,
 };
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};
 use injector::{TokenData, VaultConnectors};
@@ -118,11 +118,6 @@ impl ToTokenData for grpc_api_types::payments::CardDetails {
 }
 // Helper trait for payment operations
 trait PaymentOperationsInternal {
-    async fn internal_payment_sync(
-        &self,
-        request: tonic::Request<PaymentServiceGetRequest>,
-    ) -> Result<tonic::Response<PaymentServiceGetResponse>, tonic::Status>;
-
     async fn internal_void_payment(
         &self,
         request: tonic::Request<PaymentServiceVoidRequest>,
@@ -396,6 +391,7 @@ impl Payments {
             None,
             event_params,
             token_data,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await;
 
@@ -556,6 +552,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .map_err(
@@ -661,6 +658,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -757,6 +755,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -876,6 +875,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -1012,6 +1012,7 @@ impl Payments {
             None,
             external_event_params,
             None,
+            common_enums::CallConnectorAction::Trigger,
         )
         .await
         .switch()
@@ -1044,21 +1045,6 @@ impl Payments {
 }
 
 impl PaymentOperationsInternal for Payments {
-    implement_connector_operation!(
-        fn_name: internal_payment_sync,
-        log_prefix: "PAYMENT_SYNC",
-        request_type: PaymentServiceGetRequest,
-        response_type: PaymentServiceGetResponse,
-        flow_marker: PSync,
-        resource_common_data_type: PaymentFlowData,
-        request_data_type: PaymentsSyncData,
-        response_data_type: PaymentsResponseData,
-        request_data_constructor: PaymentsSyncData::foreign_try_from,
-        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
-        generate_response_fn: generate_payment_sync_response,
-        all_keys_required: None
-    );
-
     implement_connector_operation!(
         fn_name: internal_void_payment,
         log_prefix: "PAYMENT_VOID",
@@ -1271,6 +1257,7 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceGetRequest>,
     ) -> Result<tonic::Response<PaymentServiceGetResponse>, tonic::Status> {
+        info!("PAYMENT_SYNC_FLOW: initiated");
         let service_name = request
             .extensions()
             .get::<String>()
@@ -1298,33 +1285,50 @@ impl PaymentService for Payments {
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
 
+                    // Get connector integration
+                    let connector_integration: BoxedConnectorIntegrationV2<
+                        '_,
+                        PSync,
+                        PaymentFlowData,
+                        PaymentsSyncData,
+                        PaymentsResponseData,
+                    > = connector_data.connector.get_connector_integration_v2();
+
+                    // Create connector request data
+                    let payments_sync_data =
+                        PaymentsSyncData::foreign_try_from(payload.clone()).into_grpc_status()?;
+
+                    // Create common request data
+                    let payment_flow_data = PaymentFlowData::foreign_try_from((
+                        payload.clone(),
+                        self.config.connectors.clone(),
+                        &metadata,
+                    ))
+                    .into_grpc_status()?;
+
                     // Extract access token from Hyperswitch request
                     let cached_access_token = payload.access_token.clone();
 
                     // Check if connector supports access tokens
                     let should_do_access_token = connector_data.connector.should_do_access_token();
 
-                    // Conditional token generation - ONLY if not provided by Hyperswitch
-                    let final_payload =
-                        if should_do_access_token {
-                            if cached_access_token.is_some() {
+                    // Conditional token generation - ONLY if not provided in request
+                    let payment_flow_data = if should_do_access_token {
+                        let access_token_data = match cached_access_token {
+                            Some(token) => {
                                 // If provided cached token - use it, don't generate new one
-                                tracing::info!(
-                                    "Using cached access token from Hyperswitch for sync flow"
-                                );
-                                payload
-                            } else {
+                                tracing::info!("Using cached access token from Hyperswitch");
+                                Some(AccessTokenResponseData {
+                                    access_token: token,
+                                    token_type: None,
+                                    expires_in: None,
+                                })
+                            }
+                            None => {
                                 // No cached token - generate fresh one
                                 tracing::info!(
-                                "No cached access token found, generating new token for sync flow"
-                            );
-
-                                // Create initial PaymentFlowData for access token generation
-                                let initial_payment_flow_data = PaymentFlowData::foreign_try_from(
-                                    (payload.clone(), self.config.connectors.clone(), &metadata),
-                                )
-                                .map_err(|e| e.into_grpc_status())?;
-
+                                    "No cached access token found, generating new token"
+                                );
                                 let event_params = EventParams {
                                     _connector_name: &connector.to_string(),
                                     _service_name: &service_name,
@@ -1336,7 +1340,7 @@ impl PaymentService for Payments {
                                 let access_token_data = self
                                     .handle_access_token(
                                         connector_data.clone(),
-                                        &initial_payment_flow_data,
+                                        &payment_flow_data,
                                         connector_auth_details.clone(),
                                         &connector.to_string(),
                                         &service_name,
@@ -1352,27 +1356,75 @@ impl PaymentService for Payments {
                                     })?;
 
                                 tracing::info!(
-                                "Access token created successfully for sync flow with expiry: {:?}",
-                                access_token_data.expires_in
-                            );
+                                    "Access token created successfully with expiry: {:?}",
+                                    access_token_data.expires_in
+                                );
 
-                                // Update payload with generated access token
-                                let mut updated_payload = payload.clone();
-                                updated_payload.access_token =
-                                    Some(access_token_data.access_token.clone());
-                                updated_payload
+                                Some(access_token_data)
                             }
-                        } else {
-                            // Connector doesn't support access tokens
-                            payload
                         };
 
-                    // Continue with normal sync flow execution
-                    // The macro will extract access_token from payload into PaymentFlowData
-                    let mut new_request = tonic::Request::new(final_payload);
-                    *new_request.metadata_mut() = metadata;
+                        // Store in flow data for connector API calls
+                        payment_flow_data.set_access_token(access_token_data)
+                    } else {
+                        // Connector doesn't support access tokens
+                        payment_flow_data
+                    };
 
-                    self.internal_payment_sync(new_request).await
+                    // Create router data
+                    let router_data = RouterDataV2::<
+                        PSync,
+                        PaymentFlowData,
+                        PaymentsSyncData,
+                        PaymentsResponseData,
+                    > {
+                        flow: std::marker::PhantomData,
+                        resource_common_data: payment_flow_data,
+                        connector_auth_type: connector_auth_details,
+                        request: payments_sync_data,
+                        response: Err(ErrorResponse::default()),
+                    };
+
+                    // Execute connector processing
+                    let flow_name = utils::flow_marker_to_flow_name::<PSync>();
+                    let event_params = EventProcessingParams {
+                        connector_name: &connector.to_string(),
+                        service_name: &service_name,
+                        flow_name,
+                        event_config: &self.config.events,
+                        raw_request_data: Some(SecretSerdeValue::new(
+                            payload.masked_serialize().unwrap_or_default(),
+                        )),
+                        request_id,
+                        lineage_ids: &metadata_payload.lineage_ids,
+                        reference_id: &metadata_payload.reference_id,
+                    };
+
+                    let consume_or_trigger_flow = match payload.handle_response {
+                        Some(resource_object) => {
+                            common_enums::CallConnectorAction::HandleResponse(resource_object)
+                        }
+                        None => common_enums::CallConnectorAction::Trigger,
+                    };
+
+                    let response_result =
+                        external_services::service::execute_connector_processing_step(
+                            &self.config.proxy,
+                            connector_integration,
+                            router_data,
+                            None,
+                            event_params,
+                            None,
+                            consume_or_trigger_flow,
+                        )
+                        .await
+                        .switch()
+                        .into_grpc_status()?;
+
+                    // Generate response
+                    let final_response =
+                        generate_payment_sync_response(response_result).into_grpc_status()?;
+                    Ok(tonic::Response::new(final_response))
                 })
             },
         )
@@ -1465,16 +1517,25 @@ impl PaymentService for Payments {
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
-                    let source_verified = connector_data
-                        .connector
-                        .verify_webhook_source(
-                            request_details.clone(),
-                            webhook_secrets.clone(),
-                            // TODO: do we need to force authentication? we can make it optional
-                            Some(connector_auth_details.clone()),
-                        )
-                        .switch()
-                        .into_grpc_status()?;
+
+                    let source_verified = match connector_data
+                    .connector
+                    .verify_webhook_source(
+                        request_details.clone(),
+                        webhook_secrets.clone(),
+                        Some(connector_auth_details.clone()),
+                    ) {
+                    Ok(result) => result,
+                    Err(err) => {
+                        tracing::warn!(
+                            target: "webhook",
+                            "{:?}",
+                            err
+                        );
+                        false
+                    }
+                };
+
                     let event_type = connector_data
                         .connector
                         .get_event_type(
@@ -1527,11 +1588,18 @@ impl PaymentService for Payments {
                     let api_event_type =
                         grpc_api_types::payments::WebhookEventType::foreign_try_from(event_type)
                             .map_err(|e| e.into_grpc_status())?;
+
+                    let webhook_transformation_status = match content.content {
+                        Some(grpc_api_types::payments::webhook_response_content::Content::IncompleteTransformation(_)) => WebhookTransformationStatus::Incomplete,
+                        _ => WebhookTransformationStatus::Complete,
+                    };
+
                     let response = PaymentServiceTransformResponse {
                         event_type: api_event_type.into(),
                         content: Some(content),
                         source_verified,
                         response_ref_id: None,
+                        transformation_status: webhook_transformation_status.into(),
                     };
                     Ok(tonic::Response::new(response))
                 }
@@ -1700,7 +1768,7 @@ impl PaymentService for Payments {
                     let payment_flow_data = PaymentFlowData::foreign_try_from((
                         payload.clone(),
                         self.config.connectors.clone(),
-                        self.config.common.environment.clone(),
+                        self.config.common.environment,
                         &metadata,
                     ))
                     .map_err(|e| e.into_grpc_status())?;
@@ -1772,6 +1840,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -1888,6 +1957,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // token_data - None for non-proxy payments
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -1913,24 +1983,58 @@ async fn get_payments_webhook_content(
 ) -> CustomResult<grpc_api_types::payments::WebhookResponseContent, ApplicationErrorResponse> {
     let webhook_details = connector_data
         .connector
-        .process_payment_webhook(request_details, webhook_secrets, connector_auth_details)
+        .process_payment_webhook(
+            request_details.clone(),
+            webhook_secrets,
+            connector_auth_details,
+        )
         .switch()?;
 
-    // Generate response
-    let response = PaymentServiceGetResponse::foreign_try_from(webhook_details).change_context(
-        ApplicationErrorResponse::InternalServerError(ApiError {
-            sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
-            error_identifier: 500,
-            error_message: "Error while constructing response".to_string(),
-            error_object: None,
-        }),
-    )?;
+    match webhook_details.transformation_status {
+        common_enums::WebhookTransformationStatus::Complete => {
+            // Generate response
+            let response = PaymentServiceGetResponse::foreign_try_from(webhook_details)
+                .change_context(ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "RESPONSE_CONSTRUCTION_ERROR".to_string(),
+                    error_identifier: 500,
+                    error_message: "Error while constructing response".to_string(),
+                    error_object: None,
+                }))?;
 
-    Ok(grpc_api_types::payments::WebhookResponseContent {
-        content: Some(
-            grpc_api_types::payments::webhook_response_content::Content::PaymentsResponse(response),
-        ),
-    })
+            Ok(grpc_api_types::payments::WebhookResponseContent {
+                content: Some(
+                    grpc_api_types::payments::webhook_response_content::Content::PaymentsResponse(
+                        response,
+                    ),
+                ),
+            })
+        }
+        common_enums::WebhookTransformationStatus::Incomplete => {
+            let resource_object = connector_data
+                .connector
+                .get_webhook_resource_object(request_details)
+                .switch()?;
+            let resource_object_vec = serde_json::to_vec(&resource_object).change_context(
+                ApplicationErrorResponse::InternalServerError(ApiError {
+                    sub_code: "SERIALIZATION_ERROR".to_string(),
+                    error_identifier: 500,
+                    error_message: "Error while serializing resource object".to_string(),
+                    error_object: None,
+                }),
+            )?;
+
+            Ok(grpc_api_types::payments::WebhookResponseContent {
+                content: Some(
+                    grpc_api_types::payments::webhook_response_content::Content::IncompleteTransformation(
+                        grpc_api_types::payments::IncompleteTransformationResponse {
+                            resource_object: resource_object_vec,
+                            reason: "Payment information required".to_string(),
+                        }
+                    ),
+                ),
+            })
+        }
+    }
 }
 
 async fn get_refunds_webhook_content<
