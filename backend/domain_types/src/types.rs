@@ -5364,7 +5364,7 @@ impl<
 
         // Create redirect response from authentication data if present
         let redirect_response = value.authentication_data.map(|auth_data| {
-            crate::connector_types::CompleteAuthorizeRedirectResponse {
+            crate::connector_types::ContinueRedirectionResponse {
                 params: auth_data.ds_transaction_id.clone().map(Secret::new),
                 payload: None,
             }
@@ -5441,7 +5441,7 @@ impl<
 
         // Create redirect response from authentication data if present
         let redirect_response = value.authentication_data.map(|auth_data| {
-            crate::connector_types::CompleteAuthorizeRedirectResponse {
+            crate::connector_types::ContinueRedirectionResponse {
                 params: auth_data.ds_transaction_id.clone().map(Secret::new),
                 payload: None,
             }
