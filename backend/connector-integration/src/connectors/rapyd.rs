@@ -385,7 +385,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let url = self.get_url(req)?;
-            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+            let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             // Get the exact request body that will be sent
             let body = self.get_request_body(req)?
@@ -420,7 +420,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let url = self.get_url(req)?;
-            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+            let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             let body = "";
             self.build_headers(req, "get", url_path, body)
@@ -453,7 +453,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let url = self.get_url(req)?;
-            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+            let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             let body = self.get_request_body(req)?
                 .map(|content| {
@@ -495,7 +495,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let url = self.get_url(req)?;
-            let url_path = url.strip_prefix(&self.connector_base_url_payments(req))
+            let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             println!("Void URL debug:");
             println!("  Full URL: {}", url);
@@ -540,7 +540,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let url = self.get_url(req)?;
-            let url_path = url.strip_prefix(&self.connector_base_url_refunds(req))
+            let url_path = url.strip_prefix(self.connector_base_url_refunds(req))
                 .unwrap_or(&url);
             let body = self.get_request_body(req)?
                 .map(|content| {
@@ -581,7 +581,7 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             let url = self.get_url(req)?;
-            let url_path = url.strip_prefix(&self.connector_base_url_refunds(req))
+            let url_path = url.strip_prefix(self.connector_base_url_refunds(req))
                 .unwrap_or(&url);
             let body = "";
             self.build_headers(req, "get", url_path, body)
