@@ -1621,7 +1621,7 @@ message PaymentServicePreAuthenticateRequest {
   
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
-  optional string complete_authorize_url = 12; // URL to complete authorization
+  optional string continue_redirection_url = 12; // URL to complete authorization
   
   // Session and Token Information
   optional string access_token = 13; // Access token for secure communication
@@ -1685,7 +1685,7 @@ message PaymentServiceAuthenticateRequest {
   
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
-  optional string complete_authorize_url = 12; // URL to complete authorization
+  optional string continue_redirection_url = 12; // URL to complete authorization
   
   // Session and Token Information
   optional string access_token = 13; // Access token for secure communication
@@ -1752,7 +1752,7 @@ message PaymentServicePostAuthenticateRequest {
   
   // URLs for Redirection
   optional string return_url = 11; // URL to redirect after authentication
-  optional string complete_authorize_url = 12; // URL to complete authorization
+  optional string continue_redirection_url = 12; // URL to complete authorization
   
   // Session and Token Information
   optional string access_token = 13; // Access token for secure communication
