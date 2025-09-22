@@ -1,5 +1,7 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::FloatMajorUnit};
@@ -36,7 +38,6 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use std::fmt::Debug;
 use transformers::{self as cashtocode, CashtocodePaymentsRequest, CashtocodePaymentsResponse};
 
 use super::macros;
@@ -250,6 +251,7 @@ impl<
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request.body).to_string()),
             response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
 }

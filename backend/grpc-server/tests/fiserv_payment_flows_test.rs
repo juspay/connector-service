@@ -193,6 +193,8 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         }),
         access_token: None,
         // all_keys_required: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

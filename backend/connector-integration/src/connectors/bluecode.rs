@@ -2,6 +2,12 @@
 mod test;
 pub mod transformers;
 
+use std::{
+    fmt::Debug,
+    marker::{Send, Sync},
+    sync::LazyLock,
+};
+
 use common_enums::{enums, PaymentMethodType};
 use common_utils::{
     consts,
@@ -45,11 +51,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::{
-    fmt::Debug,
-    marker::{Send, Sync},
-    sync::LazyLock,
-};
 use transformers::*;
 
 use super::macros;
@@ -126,6 +127,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
             mandate_reference: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
 
