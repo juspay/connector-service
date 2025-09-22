@@ -39,9 +39,6 @@ const HELCIM_API_KEY_ENV: &str = "TEST_HELCIM_API_KEY";
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
 const TEST_AMOUNT_MANUAL: i64 = 1100;
-const TEST_AMOUNT_VOID: i64 = 1200;
-const TEST_AMOUNT_SYNC: i64 = 1300;
-const TEST_AMOUNT_REFUND: i64 = 1400;
 const TEST_CARD_NUMBER: &str = "5413330089099130"; // Valid test card for Helcim
 const TEST_CARD_EXP_MONTH: &str = "01";
 const TEST_CARD_EXP_YEAR: &str = "2027";
@@ -54,7 +51,9 @@ fn get_timestamp() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap()
-        .as_micros() as u64
+        .as_micros()
+        .try_into()
+        .unwrap_or(0)
 }
 
 // Helper function to add Helcim metadata headers to a request
@@ -121,8 +120,8 @@ fn create_test_billing_address() -> PaymentAddress {
     PaymentAddress {
         shipping_address: Some(Address::default()),
         billing_address: Some(Address {
-            first_name: Some("John".to_string()),
-            last_name: Some("Doe".to_string()),
+            first_name: Some("John".to_string().into()),
+            last_name: Some("Doe".to_string().into()),
             phone_number: Some("1234567890".to_string().into()),
             phone_country_code: Some("+1".to_string()),
             email: Some(TEST_EMAIL.to_string().into()),
@@ -205,7 +204,9 @@ fn create_payment_sync_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(request_ref_id.to_string())),
         }),
-        // all_keys_required: None,
+        access_token: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 
@@ -235,6 +236,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("void_ref_{}", get_timestamp()))),
         }),
+        access_token: None,
         all_keys_required: None,
         browser_info: None,
     }
@@ -273,6 +275,8 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("rsync_ref_{}", get_timestamp()))),
         }),
+        access_token: None,
+        refund_metadata: HashMap::new(),
         browser_info: None,
     }
 }
@@ -317,13 +321,6 @@ async fn test_payment_authorization_auto_capture() {
             "Resource ID should be present"
         );
 
-        println!(
-            "Response status: {}, Expected: {}",
-            response.status,
-            i32::from(PaymentStatus::Charged)
-        );
-        println!("Response: {:?}", response);
-
         assert!(
             response.status == i32::from(PaymentStatus::Charged),
             "Payment should be in Charged state. Got status: {}",
@@ -355,9 +352,6 @@ async fn test_payment_authorization_manual_capture() {
             auth_response.transaction_id.is_some(),
             "Transaction ID should be present"
         );
-
-        // Debug the auth response
-        println!("Manual capture auth response: {:?}", auth_response);
 
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
