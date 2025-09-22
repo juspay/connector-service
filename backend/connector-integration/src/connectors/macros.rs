@@ -4,6 +4,12 @@ use common_utils::{errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{errors, router_data_v2::RouterDataV2};
 use error_stack::ResultExt;
 
+pub mod macro_types {
+    pub use common_utils::{errors::CustomResult, ext_traits::ValueExt, id_type, request::Method, types::StringMinorUnit};
+    pub use domain_types::errors::ConnectorError;
+    pub use common_utils::RequestContent;
+}
+
 use crate::types;
 
 pub trait FlowTypes {
@@ -114,7 +120,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 _req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<common_utils::RequestContent>, errors::ConnectorError>
             {
                 // always return None
                 Ok(None)
@@ -135,7 +141,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<common_utils::RequestContent>, errors::ConnectorError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [<$connector RouterData>] {
@@ -144,7 +150,7 @@ macro_rules! expand_fn_get_request_body {
                 };
                 let request = bridge.request_body(input_data)?;
                 let form_data = <$curl_req as GetFormData>::get_form_data(&request);
-                Ok(Some(macro_types::RequestContent::FormData(form_data)))
+                Ok(Some(common_utils::RequestContent::FormData(form_data)))
             }
         }
     };
@@ -162,7 +168,7 @@ macro_rules! expand_fn_get_request_body {
             fn get_request_body(
                 &self,
                 req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            ) -> CustomResult<Option<macro_types::RequestContent>, macro_types::ConnectorError>
+            ) -> CustomResult<Option<common_utils::RequestContent>, errors::ConnectorError>
             {
                 let bridge = self.[< $flow:snake >];
                 let input_data = [< $connector RouterData >] {
@@ -170,7 +176,7 @@ macro_rules! expand_fn_get_request_body {
                     router_data: req.clone(),
                 };
                 let request = bridge.request_body(input_data)?;
-                Ok(Some(macro_types::RequestContent::$content_type(Box::new(request))))
+                Ok(Some(common_utils::RequestContent::$content_type(Box::new(request))))
             }
         }
     };
@@ -187,7 +193,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            macro_types::ConnectorError,
+            errors::ConnectorError,
         > {
             use error_stack::ResultExt;
             paste::paste! {let bridge = self.[< $flow:snake >];}
@@ -218,7 +224,7 @@ macro_rules! expand_fn_handle_response {
             res: Response,
         ) -> CustomResult<
             RouterDataV2<$flow, $resource_common_data, $request, $response>,
-            macro_types::ConnectorError,
+            errors::ConnectorError,
         > {
             paste::paste! {let bridge = self.[< $flow:snake >];}
             let response_body = bridge.response(res.response)?;
@@ -246,9 +252,9 @@ macro_rules! expand_default_functions {
         fn get_headers(
             &self,
             req: &RouterDataV2<$flow, $resource_common_data, $request, $response>,
-        ) -> macro_types::CustomResult<
-            Vec<(String, macro_types::Maskable<String>)>,
-            macro_types::ConnectorError,
+        ) -> common_utils::CustomResult<
+            Vec<(String, hyperswitch_masking::Maskable<String>)>,
+            errors::ConnectorError,
         > {
             self.build_headers(req)
         }
@@ -275,7 +281,7 @@ macro_rules! expand_default_functions {
             &self,
             res: Response,
             event_builder: Option<&mut ConnectorEvent>,
-        ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
+        ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
             self.build_error_response(res, event_builder)
         }
     };
