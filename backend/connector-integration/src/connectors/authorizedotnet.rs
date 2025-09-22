@@ -7,18 +7,20 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, EventType, PaymentCreateOrderData,
-        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
-        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails, ResponseId,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
@@ -33,10 +35,10 @@ use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
-        AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAuthorizeV2,
-        PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2, PaymentTokenV2,
-        PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2, SubmitEvidenceV2,
-        ValidationTrait,
+        AcceptDispute, ConnectorServiceTrait, DisputeDefend, IncomingWebhook, PaymentAccessToken,
+        PaymentAuthorizeV2, PaymentCapture, PaymentOrderCreate, PaymentSessionToken, PaymentSyncV2,
+        PaymentTokenV2, PaymentVoidV2, RefundSyncV2, RefundV2, RepeatPaymentV2, SetupMandateV2,
+        SubmitEvidenceV2, ValidationTrait,
     },
     events::connector_api_logs::ConnectorEvent,
     verification::SourceVerification,
@@ -78,6 +80,17 @@ impl<
             + 'static
             + Serialize,
     > PaymentSessionToken for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > PaymentAccessToken for Authorizedotnet<T>
 {
 }
 
@@ -267,6 +280,7 @@ impl<
             error_message: None,
             raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
             response_headers: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Complete,
         })
     }
 
@@ -872,6 +886,24 @@ impl<
     > for Authorizedotnet<T>
 {
 }
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Authorizedotnet<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -948,6 +980,23 @@ impl<
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Authorizedotnet<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
     > for Authorizedotnet<T>
 {
 }

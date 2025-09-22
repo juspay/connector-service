@@ -1,5 +1,7 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::CurrencyUnit;
 use common_utils::{
@@ -10,17 +12,18 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
-        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
+        SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
+        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -36,9 +39,9 @@ use interfaces::{
 };
 use serde::Serialize;
 use transformers::{
-    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditErrorResponse,
-    XenditPaymentResponse, XenditPaymentResponse as XenditCaptureResponse,
-    XenditPaymentsCaptureRequest, XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
+    self as xendit, RefundResponse, RefundResponse as RefundSyncResponse, XenditCaptureResponse,
+    XenditErrorResponse, XenditPaymentResponse, XenditPaymentsCaptureRequest,
+    XenditPaymentsRequest, XenditRefundRequest, XenditResponse,
 };
 
 use super::macros;
@@ -72,6 +75,10 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Xendit<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Xendit<T>
 {
 }
 
@@ -198,6 +205,7 @@ impl<
 {
 }
 
+macros::create_amount_converter_wrapper!(connector_name: Xendit, amount_type: FloatMajorUnit);
 macros::create_all_prerequisites!(
     connector_name:  Xendit,
     generic_type: T,
@@ -611,6 +619,23 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
@@ -877,6 +902,16 @@ impl<
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Xendit<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
     > for Xendit<T>
 {
 }

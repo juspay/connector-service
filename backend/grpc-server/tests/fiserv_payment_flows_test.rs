@@ -191,7 +191,10 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("fiserv_sync_{}", get_timestamp()))),
         }),
+        access_token: None,
         // all_keys_required: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 
@@ -219,6 +222,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata,
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -255,6 +259,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None, // all_keys_required: None,
+        access_token: None,
     }
 }
 
@@ -269,6 +274,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         request_ref_id: None, // all_keys_required: None,
         browser_info: None,
         refund_metadata: HashMap::new(),
+        access_token: None,
     }
 }
 

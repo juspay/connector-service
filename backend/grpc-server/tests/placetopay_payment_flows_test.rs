@@ -19,11 +19,10 @@ use grpc_api_types::{
     payments::{
         card_payment_method_type, identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        Address, AuthenticationType, BrowserInformation, CaptureMethod, 
-        CardDetails, CardPaymentMethodType, CountryAlpha2, Currency,
-        Identifier, PaymentAddress, PaymentMethod, 
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, 
-        PaymentServiceGetRequest, PaymentServiceRefundRequest,
+        Address, AuthenticationType, BrowserInformation, CaptureMethod, CardDetails,
+        CardPaymentMethodType, CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };
@@ -73,13 +72,14 @@ fn add_placetopay_metadata<T>(request: &mut Request<T>) {
         "x-api-key",
         api_key.parse().expect("Failed to parse x-api-key"),
     );
-    request.metadata_mut().append(
-        "x-key1",
-        key1.parse().expect("Failed to parse x-key1"),
-    );
+    request
+        .metadata_mut()
+        .append("x-key1", key1.parse().expect("Failed to parse x-key1"));
     request.metadata_mut().append(
         "x-merchant-id",
-        "test_merchant".parse().expect("Failed to parse x-merchant-id"),
+        "test_merchant"
+            .parse()
+            .expect("Failed to parse x-merchant-id"),
     );
     request.metadata_mut().append(
         "x-tenant-id",
@@ -194,7 +194,9 @@ fn create_payment_authorize_request(
         screen_height: Some(1080),
         screen_width: Some(1920),
         user_agent: Some("Mozilla/5.0 (compatible; TestAgent/1.0)".to_string()),
-        accept_header: Some("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string()),
+        accept_header: Some(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
+        ),
         java_script_enabled: Some(false),
         language: Some("en-US".to_string()),
         ip_address: None,
@@ -236,6 +238,9 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("placetopay_sync_{}", get_timestamp()))),
         }),
+        access_token: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 
@@ -251,6 +256,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata: HashMap::new(),
         request_ref_id: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -274,6 +280,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None,
+        access_token: None,
     }
 }
 
@@ -288,6 +295,7 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         browser_info: None,
         request_ref_id: None,
         refund_metadata: HashMap::new(),
+        access_token: None,
     }
 }
 
@@ -301,6 +309,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         request_ref_id: None,
         all_keys_required: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -560,7 +569,8 @@ async fn test_refund_sync() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         grpc_test!(refund_client, RefundServiceClient<Channel>, {
             // First create a payment
-            let auth_request = create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
+            let auth_request =
+                create_payment_authorize_request(common_enums::CaptureMethod::Automatic);
 
             // Add metadata headers for auth request
             let mut auth_grpc_request = Request::new(auth_request);
