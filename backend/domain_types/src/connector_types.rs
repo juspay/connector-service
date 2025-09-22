@@ -1118,8 +1118,6 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-
-    // New amount for amount frame work
     pub minor_amount: Option<MinorUnit>,
 }
 
@@ -1135,8 +1133,6 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-
-    // New amount for amount frame work
     pub minor_amount: Option<MinorUnit>,
 }
 
@@ -1153,8 +1149,6 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub connector_transaction_id: Option<String>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
-
-    // New amount for amount frame work
     pub minor_amount: Option<MinorUnit>,
 }
 

@@ -2045,7 +2045,7 @@ impl PaymentService for Payments {
         fields(
             name = common_utils::consts::NAME,
             service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = "PreAuthenticate",
+            service_method = FlowName::PreAuthenticate.as_str(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -2056,7 +2056,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = "PreAuthenticate",
+            flow = FlowName::PreAuthenticate.as_str(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -2073,7 +2073,7 @@ impl PaymentService for Payments {
         fields(
             name = common_utils::consts::NAME,
             service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = "Authenticate",
+            service_method = FlowName::Authenticate.as_str(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -2084,7 +2084,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = "Authenticate",
+            flow = FlowName::Authenticate.as_str(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
@@ -2101,7 +2101,7 @@ impl PaymentService for Payments {
         fields(
             name = common_utils::consts::NAME,
             service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
-            service_method = "PostAuthenticate",
+            service_method = FlowName::PostAuthenticate.as_str(),
             request_body = tracing::field::Empty,
             response_body = tracing::field::Empty,
             error_message = tracing::field::Empty,
@@ -2112,7 +2112,7 @@ impl PaymentService for Payments {
             message_ = "Golden Log Line (incoming)",
             response_time = tracing::field::Empty,
             tenant_id = tracing::field::Empty,
-            flow = "PostAuthenticate",
+            flow = FlowName::PostAuthenticate.as_str(),
             flow_specific_fields.status = tracing::field::Empty,
         )
         skip(self, request)
