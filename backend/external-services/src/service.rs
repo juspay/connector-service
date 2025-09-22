@@ -173,16 +173,15 @@ where
             }
 
             // Set raw_connector_response BEFORE calling the transformer
-            let mut updated_router_data = router_data.clone();
-            if all_keys_required.unwrap_or(true) {
-                let raw_response_string = strip_bom_and_convert_to_string(&body.response);
-                updated_router_data
-                    .resource_common_data
-                    .set_raw_connector_response(raw_response_string);
-            }
+            let router_data = set_connector_response_data(
+                router_data,
+                &body.response,
+                body.headers.clone(),
+                all_keys_required,
+            );
 
             let handle_response_result =
-                connector.handle_response_v2(&updated_router_data, None, body.clone());
+                connector.handle_response_v2(&router_data, None, body.clone());
 
             let response = match handle_response_result {
                 Ok(data) => {
@@ -1041,7 +1040,6 @@ async fn handle_response(
         .await?
 }
 
-
 /// Helper function to parse JSON from response bytes with BOM handling
 fn parse_json_with_bom_handling(
     response_bytes: &[u8],
@@ -1215,8 +1213,6 @@ where
         router_data
     }
 }
-
-
 
 /// Helper function to create a generic error response
 fn create_error_response<F, ResourceCommonData, Req, Resp>(

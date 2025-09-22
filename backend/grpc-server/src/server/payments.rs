@@ -218,7 +218,6 @@ impl Payments {
                         &connector.to_string(),
                         service_name,
                         event_params,
-                        ucs_dry_run,
                     )
                     .await?;
 
@@ -248,7 +247,6 @@ impl Payments {
                         &connector.to_string(),
                         service_name,
                         event_params,
-                        ucs_dry_run,
                     )
                     .await?;
                 tracing::info!(
@@ -298,7 +296,6 @@ impl Payments {
                                 service_name,
                                 event_params,
                                 &payload,
-                                ucs_dry_run,
                             )
                             .await?;
 
@@ -338,7 +335,6 @@ impl Payments {
                         &payload,
                         &connector.to_string(),
                         service_name,
-                        ucs_dry_run,
                     )
                     .await?;
                 tracing::info!("Payment Method Token created successfully");
@@ -500,7 +496,6 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-        ucs_dry_run: bool,
     ) -> Result<String, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -570,7 +565,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
-            ucs_dry_run,
+            false,
         )
         .await
         .map_err(
@@ -715,7 +710,6 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-        ucs_dry_run: bool,
     ) -> Result<SessionTokenResponseData, PaymentAuthorizationError>
     where
         SessionTokenRequestData: ForeignTryFrom<P, Error = ApplicationErrorResponse>,
@@ -777,7 +771,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
-            ucs_dry_run,
+            false,
         )
         .await
         .switch()
@@ -834,7 +828,6 @@ impl Payments {
         service_name: &str,
         event_params: EventParams<'_>,
         payload: &P,
-        ucs_dry_run: bool,
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
     where
         P: Clone + ErasedMaskSerialize,
@@ -899,7 +892,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
-            ucs_dry_run,
+            false,
         )
         .await
         .switch()
@@ -954,7 +947,6 @@ impl Payments {
         payload: &PaymentServiceAuthorizeRequest,
         connector_name: &str,
         service_name: &str,
-        ucs_dry_run: bool,
     ) -> Result<PaymentMethodTokenResponse, PaymentAuthorizationError> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -1038,7 +1030,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
-            ucs_dry_run,
+            false,
         )
         .await
         .switch()
@@ -1380,7 +1372,6 @@ impl PaymentService for Payments {
                                             &service_name,
                                             event_params,
                                             &payload,
-                                            ucs_dry_run,
                                         )
                                         .await
                                         .map_err(|e| {

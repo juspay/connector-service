@@ -115,7 +115,6 @@ impl DisputeService for Disputes {
                         connector_auth_type,
                         reference_id,
                         ucs_dry_run,
-                        
                         ..
                     } = metadata_payload;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -310,7 +309,6 @@ impl DisputeService for Disputes {
                         connector_auth_type,
                         reference_id,
                         ucs_dry_run,
-                        
                         ..
                     } = metadata_payload;
 
