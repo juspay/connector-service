@@ -1,21 +1,18 @@
 pub mod transformers;
 
-use common_utils::{ 
-    errors::CustomResult,
-    ext_traits::BytesExt,
-    consts::NO_ERROR_CODE,
-    };
+use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, ext_traits::BytesExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -24,23 +21,21 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
+use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
+use interfaces::{
+    api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
+    events::connector_api_logs::ConnectorEvent,
+};
 use serde::Serialize;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
 };
-use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
-use interfaces::{
-    api::ConnectorCommon,
-    connector_integration_v2::ConnectorIntegrationV2,
-    connector_types,
-    events::connector_api_logs::ConnectorEvent,
-};
 use transformers::{
-    self as helcim,
-    HelcimPaymentsRequest, HelcimPaymentsResponse, HelcimPaymentsSyncResponse, HelcimPaymentsCaptureResponse,
-    HelcimPaymentsVoidResponse, HelcimCaptureRequest, HelcimVoidRequest,
-    HelcimRefundRequest, RefundResponse, RefundSyncResponse, HelcimSyncRequest, HelcimRefundSyncRequest,
+    self as helcim, HelcimCaptureRequest, HelcimPaymentsCaptureResponse, HelcimPaymentsRequest,
+    HelcimPaymentsResponse, HelcimPaymentsSyncResponse, HelcimPaymentsVoidResponse,
+    HelcimRefundRequest, HelcimRefundSyncRequest, HelcimSyncRequest, HelcimVoidRequest,
+    RefundResponse, RefundSyncResponse,
 };
 
 use super::macros;
@@ -48,16 +43,12 @@ use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
-
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 
     pub(crate) const API_TOKEN: &str = "api-token";
     pub(crate) const IDEMPOTENCY_KEY: &str = "idempotency-key";
 }
-
-
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -180,7 +171,7 @@ macros::create_all_prerequisites!(
                 "application/json".to_string().into(),
             )];
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
-            
+
             // Helcim requires an Idempotency Key of length 25. We prefix every ID by "HS_".
             // Use UUID to generate a unique string and take first 22 chars
             let uuid_str = uuid::Uuid::new_v4().to_string().replace("-", "");
@@ -229,7 +220,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = helcim::HelcimAuthType::try_from(auth_type)
             .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-        
+
         Ok(vec![(
             headers::API_TOKEN.to_string(),
             auth.api_key.expose().into_masked(),
@@ -479,8 +470,13 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > ConnectorIntegrationV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>
-    for Helcim<T>
+    >
+    ConnectorIntegrationV2<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Helcim<T>
 {
 }
 

@@ -1,21 +1,18 @@
 use common_utils::pii;
 use domain_types::{
-    connector_flow::{Authorize, PSync, RSync, SetupMandate, Void, Capture},
+    connector_flow::{Authorize, Capture, PSync, RSync, SetupMandate, Void},
     connector_types::{
-        MandateReference, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId, SetupMandateRequestData,
+        MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
+        PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
-    payment_method_data::{
-        PaymentMethodData, PaymentMethodDataTypes, RawCardNumber,
-    },
+    payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Secret, PeekInterface};
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::helcim::HelcimRouterData, types::ResponseRouterData};
@@ -56,7 +53,12 @@ impl TryFrom<&ConnectorAuthType> for HelcimAuthType {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimPaymentsRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > {
     amount: common_utils::types::FloatMajorUnit,
     currency: common_enums::Currency,
@@ -101,7 +103,12 @@ pub struct HelcimLineItems {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimCard<
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > {
     card_number: RawCardNumber<T>,
     card_expiry: Secret<String>,
@@ -113,10 +120,29 @@ pub struct HelcimSyncRequest {
     // Empty struct for sync requests that don't need a body
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<HelcimRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>> for HelcimSyncRequest {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        HelcimRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for HelcimSyncRequest
+{
     type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(_item: HelcimRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+
+    fn try_from(
+        _item: HelcimRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }
@@ -126,10 +152,29 @@ pub struct HelcimRefundSyncRequest {
     // Empty struct for refund sync requests that don't need a body
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<HelcimRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>> for HelcimRefundSyncRequest {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        HelcimRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    > for HelcimRefundSyncRequest
+{
     type Error = error_stack::Report<ConnectorError>;
-    
-    fn try_from(_item: HelcimRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
+
+    fn try_from(
+        _item: HelcimRouterData<
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         Ok(Self {})
     }
 }
@@ -148,7 +193,7 @@ impl<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
             T,
         >,
@@ -161,21 +206,28 @@ impl<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => HelcimCard {
-                card_expiry: Secret::new(format!("{}{}", card.card_exp_month.peek(), &card.card_exp_year.peek()[2..])),
+                card_expiry: Secret::new(format!(
+                    "{}{}",
+                    card.card_exp_month.peek(),
+                    &card.card_exp_year.peek()[2..]
+                )),
                 card_number: card.card_number.clone(),
                 card_c_v_v: card.card_cvc.clone(),
             },
             _ => return Err(ConnectorError::NotImplemented("payment method".into()).into()),
         };
 
-        let req_address = item.router_data.resource_common_data.get_billing_address()?;
+        let req_address = item
+            .router_data
+            .resource_common_data
+            .get_billing_address()?;
 
         let billing_address = HelcimBillingAddress {
             name: req_address.get_full_name()?,
@@ -183,27 +235,37 @@ impl<
             postal_code: req_address.get_zip()?.to_owned(),
             street2: req_address.line2.clone(),
             city: req_address.city.clone(),
-            email: item.router_data.resource_common_data.get_optional_billing_email(),
+            email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
         };
 
         let ip_address = Secret::new("127.0.0.1".to_string()); // Default IP
-        
-        // Convert amount to FloatMajorUnit
-        let amount = common_utils::types::FloatMajorUnit(item.router_data.request.minor_amount.get_amount_as_i64() as f64 / 100.0);
 
-        let line_items = vec![
-            HelcimLineItems {
-                description: item.router_data.resource_common_data.description
-                    .clone()
-                    .unwrap_or("No Description".to_string()),
-                quantity: 1,
-                price: amount,
-                total: amount,
-            },
-        ];
+        // Convert amount to FloatMajorUnit
+        let amount = common_utils::types::FloatMajorUnit(
+            item.router_data.request.minor_amount.get_amount_as_i64() as f64 / 100.0,
+        );
+
+        let line_items = vec![HelcimLineItems {
+            description: item
+                .router_data
+                .resource_common_data
+                .description
+                .clone()
+                .unwrap_or("No Description".to_string()),
+            quantity: 1,
+            price: amount,
+            total: amount,
+        }];
 
         let invoice = HelcimInvoice {
-            invoice_number: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            invoice_number: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             line_items,
         };
 
@@ -294,7 +356,7 @@ impl<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
         >,
     > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
@@ -307,11 +369,12 @@ impl<
                 Authorize,
                 PaymentFlowData,
                 PaymentsAuthorizeData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let resource_id = ResponseId::ConnectorTransactionId(item.response.transaction_id.to_string());
+        let resource_id =
+            ResponseId::ConnectorTransactionId(item.response.transaction_id.to_string());
 
         let connector_metadata = if !item.router_data.request.is_auto_capture()? {
             Some(serde_json::json!(HelcimMetaData {
@@ -384,14 +447,42 @@ pub struct HelcimCaptureRequest {
     ecommerce: Option<bool>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<HelcimRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>> for HelcimCaptureRequest {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        HelcimRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    > for HelcimCaptureRequest
+{
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: HelcimRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: HelcimRouterData<
+            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         let ip_address = Secret::new("127.0.0.1".to_string());
-        let amount = common_utils::types::FloatMajorUnit(item.router_data.request.minor_amount_to_capture.get_amount_as_i64() as f64 / 100.0);
+        let amount = common_utils::types::FloatMajorUnit(
+            item.router_data
+                .request
+                .minor_amount_to_capture
+                .get_amount_as_i64() as f64
+                / 100.0,
+        );
 
         Ok(Self {
-            pre_auth_transaction_id: item.router_data.request.get_connector_transaction_id()?
+            pre_auth_transaction_id: item
+                .router_data
+                .request
+                .get_connector_transaction_id()?
                 .parse::<u64>()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             amount,
@@ -441,13 +532,35 @@ pub struct HelcimVoidRequest {
     ecommerce: Option<bool>,
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<HelcimRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>> for HelcimVoidRequest {
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        HelcimRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    > for HelcimVoidRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: HelcimRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>) -> Result<Self, Self::Error> {
+    fn try_from(
+        item: HelcimRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
         let ip_address = Secret::new("127.0.0.1".to_string());
 
         Ok(Self {
-            card_transaction_id: item.router_data.request.connector_transaction_id
+            card_transaction_id: item
+                .router_data
+                .request
+                .connector_transaction_id
                 .parse::<u64>()
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?,
             ip_address,
@@ -493,7 +606,12 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimSetupMandateRequest<
-    T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize,
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
 > {
     amount: common_utils::types::FloatMajorUnit,
     currency: common_enums::Currency,
@@ -520,7 +638,7 @@ impl<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
             T,
         >,
@@ -533,21 +651,28 @@ impl<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
             T,
         >,
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => HelcimCard {
-                card_expiry: Secret::new(format!("{}{}", card.card_exp_month.peek(), &card.card_exp_year.peek()[2..])),
+                card_expiry: Secret::new(format!(
+                    "{}{}",
+                    card.card_exp_month.peek(),
+                    &card.card_exp_year.peek()[2..]
+                )),
                 card_number: card.card_number.clone(),
                 card_c_v_v: card.card_cvc.clone(),
             },
             _ => return Err(ConnectorError::NotImplemented("payment method".into()).into()),
         };
 
-        let req_address = item.router_data.resource_common_data.get_billing_address()?;
+        let req_address = item
+            .router_data
+            .resource_common_data
+            .get_billing_address()?;
 
         let billing_address = HelcimBillingAddress {
             name: req_address.get_full_name()?,
@@ -555,27 +680,42 @@ impl<
             postal_code: req_address.get_zip()?.to_owned(),
             street2: req_address.line2.clone(),
             city: req_address.city.clone(),
-            email: item.router_data.resource_common_data.get_optional_billing_email(),
+            email: item
+                .router_data
+                .resource_common_data
+                .get_optional_billing_email(),
         };
 
         let ip_address = Secret::new("127.0.0.1".to_string()); // Default IP
-        
-        // Convert amount to FloatMajorUnit  
-        let amount = common_utils::types::FloatMajorUnit(item.router_data.request.minor_amount.unwrap_or(common_utils::types::MinorUnit::new(0)).get_amount_as_i64() as f64 / 100.0);
 
-        let line_items = vec![
-            HelcimLineItems {
-                description: item.router_data.resource_common_data.description
-                    .clone()
-                    .unwrap_or("Setup Mandate".to_string()),
-                quantity: 1,
-                price: amount,
-                total: amount,
-            },
-        ];
+        // Convert amount to FloatMajorUnit
+        let amount = common_utils::types::FloatMajorUnit(
+            item.router_data
+                .request
+                .minor_amount
+                .unwrap_or(common_utils::types::MinorUnit::new(0))
+                .get_amount_as_i64() as f64
+                / 100.0,
+        );
+
+        let line_items = vec![HelcimLineItems {
+            description: item
+                .router_data
+                .resource_common_data
+                .description
+                .clone()
+                .unwrap_or("Setup Mandate".to_string()),
+            quantity: 1,
+            price: amount,
+            total: amount,
+        }];
 
         let invoice = HelcimInvoice {
-            invoice_number: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            invoice_number: item
+                .router_data
+                .resource_common_data
+                .connector_request_reference_id
+                .clone(),
             line_items,
         };
 
@@ -609,7 +749,7 @@ impl<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
         >,
     >
@@ -617,7 +757,7 @@ impl<
         SetupMandate,
         PaymentFlowData,
         SetupMandateRequestData<T>,
-        PaymentsResponseData
+        PaymentsResponseData,
     >
 {
     type Error = error_stack::Report<ConnectorError>;
@@ -628,7 +768,7 @@ impl<
                 SetupMandate,
                 PaymentFlowData,
                 SetupMandateRequestData<T>,
-                PaymentsResponseData
+                PaymentsResponseData,
             >,
         >,
     ) -> Result<Self, Self::Error> {
@@ -671,15 +811,40 @@ pub struct HelcimRefundRequest {
     ecommerce: Option<bool>,
 }
 
-impl<F, T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> TryFrom<HelcimRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>> for HelcimRefundRequest {
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<HelcimRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for HelcimRefundRequest
+{
     type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: HelcimRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>) -> Result<Self, Self::Error> {
-        let original_transaction_id = item.router_data.request.connector_transaction_id
+    fn try_from(
+        item: HelcimRouterData<
+            RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let original_transaction_id = item
+            .router_data
+            .request
+            .connector_transaction_id
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
         let ip_address = Secret::new("127.0.0.1".to_string());
-        let amount = common_utils::types::FloatMajorUnit(item.router_data.request.minor_refund_amount.get_amount_as_i64() as f64 / 100.0);
+        let amount = common_utils::types::FloatMajorUnit(
+            item.router_data
+                .request
+                .minor_refund_amount
+                .get_amount_as_i64() as f64
+                / 100.0,
+        );
 
         Ok(Self {
             amount,
@@ -722,9 +887,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<RefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id.to_string(),
@@ -740,9 +903,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<RefundResponse, Self>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
         Ok(Self {
             response: Ok(RefundsResponseData {
                 connector_refund_id: item.response.transaction_id.to_string(),

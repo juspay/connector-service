@@ -18,11 +18,12 @@ use grpc_api_types::{
     payments::{
         card_payment_method_type, identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
-        AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType, Currency,
-        Identifier, PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        Address, AuthenticationType, CaptureMethod, CardDetails, CardPaymentMethodType,
+        CountryAlpha2, Currency, Identifier, PaymentAddress, PaymentMethod,
+        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus, RefundResponse,
-        PaymentAddress, Address, CountryAlpha2
+        PaymentServiceVoidRequest, PaymentStatus, RefundResponse, RefundServiceGetRequest,
+        RefundStatus,
     },
 };
 use hyperswitch_masking::Secret;
@@ -315,13 +316,18 @@ async fn test_payment_authorization_auto_capture() {
             response.transaction_id.is_some(),
             "Resource ID should be present"
         );
-        
-        println!("Response status: {}, Expected: {}", response.status, i32::from(PaymentStatus::Charged));
+
+        println!(
+            "Response status: {}, Expected: {}",
+            response.status,
+            i32::from(PaymentStatus::Charged)
+        );
         println!("Response: {:?}", response);
-        
+
         assert!(
             response.status == i32::from(PaymentStatus::Charged),
-            "Payment should be in Charged state. Got status: {}", response.status
+            "Payment should be in Charged state. Got status: {}",
+            response.status
         );
     });
 }
@@ -331,7 +337,8 @@ async fn test_payment_authorization_auto_capture() {
 async fn test_payment_authorization_manual_capture() {
     grpc_test!(client, PaymentServiceClient<Channel>, {
         // Create the payment authorization request with manual capture
-        let auth_request = create_payment_authorize_request_with_amount(CaptureMethod::Manual, TEST_AMOUNT_MANUAL);
+        let auth_request =
+            create_payment_authorize_request_with_amount(CaptureMethod::Manual, TEST_AMOUNT_MANUAL);
 
         // Add metadata headers for auth request
         let mut auth_grpc_request = Request::new(auth_request);
@@ -351,7 +358,7 @@ async fn test_payment_authorization_manual_capture() {
 
         // Debug the auth response
         println!("Manual capture auth response: {:?}", auth_response);
-        
+
         // Extract the transaction ID
         let transaction_id = extract_transaction_id(&auth_response);
 
