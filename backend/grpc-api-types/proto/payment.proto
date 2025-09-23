@@ -911,6 +911,7 @@ message BrowserInformation {
   optional string accept_header = 9;
   optional string user_agent = 10;
   optional string accept_language = 14;
+  optional string referer = 15;
   
   // Device Information
   optional string ip_address = 8;

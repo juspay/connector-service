@@ -344,6 +344,7 @@ fn create_payment_authorize_request(
         ),
         java_script_enabled: Some(false),
         language: Some("en-US".to_string()),
+        referer: None,
         ip_address: None,
         os_type: None,
         os_version: None,

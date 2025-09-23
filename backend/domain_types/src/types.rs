@@ -3707,6 +3707,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 os_version: info.os_version,
                 device_model: info.device_model,
                 accept_language: info.accept_language,
+                referer: info.referer,
             }),
             email,
             customer_name: None,
@@ -4267,6 +4268,7 @@ impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInf
             os_version: value.os_version,
             device_model: value.device_model,
             accept_language: value.accept_language,
+            referer: value.referer,
         })
     }
 }

@@ -121,6 +121,7 @@ mod tests {
                             java_script_enabled: Some(false),
                             language: Some("en-US".to_string()),
                             time_zone: None,
+                            referer: None,
                             ip_address: None,
                             os_type: None,
                             os_version: None,
