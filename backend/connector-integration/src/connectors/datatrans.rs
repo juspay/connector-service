@@ -29,14 +29,22 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
         ConnectorValidation, PaymentAuthorizeV2, PaymentCapture, PaymentSyncV2, PaymentTokenV2,
-        PaymentVoidV2, RefundSyncV2, RefundV2, ConnectorSpecifications,
+        PaymentVoidV2, RefundSyncV2, RefundV2,
     },
     events::connector_api_logs::ConnectorEvent,
 };
+use domain_types::connector_types::ConnectorSpecifications;
 use serde::Serialize;
 
+use super::macros;
 use crate::{
-    connectors::datatrans::transformers as datatrans,
+    connectors::datatrans::transformers::{
+        self as datatrans, DatatransPaymentsRequest, DatatransResponse, DatatransSyncRequest,
+        DatatransSyncResponse, DataPaymentCaptureRequest, DataTransCaptureResponse,
+        DatatransVoidRequest, DataTransCancelResponse, DatatransRefundRequest,
+        DatatransRefundsResponse, DatatransRSyncRequest, DatatransRSyncResponse,
+        DatatransSetupMandateRequest, DatatransSetupMandateResponse,
+    },
     types::ResponseRouterData,
     utils,
     with_error_response_body,
@@ -168,7 +176,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     fn build_error_response(
         &self,
         res: Response,
-        event_builder: Option<&mut dyn ConnectorEvent>,
+        event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, ConnectorError> {
         let response: datatrans::DatatransErrorResponse = res
             .response
@@ -272,7 +280,7 @@ super::macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}", 
                 self.connector_base_url_payments(req),
-                req.request.connector_transaction_id.get_connector_transaction_id()?
+                req.request.connector_transaction_id.get_connector_transaction_id().change_context(errors::ConnectorError::RequestEncodingFailed)?
             ))
         }
     }
@@ -303,7 +311,7 @@ super::macros::macro_connector_implementation!(
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}/settle", 
                 self.connector_base_url_payments(req),
-                req.request.connector_transaction_id
+                req.request.connector_transaction_id.get_connector_transaction_id().change_context(errors::ConnectorError::RequestEncodingFailed)?
             ))
         }
     }
@@ -405,7 +413,7 @@ super::macros::macro_connector_implementation!(
 super::macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Datatrans,
-    curl_request: Json(DatatransSetupMandateRequest),
+    curl_request: Json(DatatransSetupMandateRequest<T>),
     curl_response: DatatransSetupMandateResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
@@ -510,3 +518,4 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Datatrans<T>
 {
 }
+

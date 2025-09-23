@@ -365,27 +365,14 @@ fn create_card_details<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker
         res_type: "PLAIN".to_string(),
         number: card.card_number.clone(),
         expiry_month: card.card_exp_month.clone(),
-        expiry_year: card.get_card_expiry_year_2_digit()?,
+        expiry_year: card.card_exp_year.clone(),
         cvv: card.card_cvc.clone(),
         three_ds: None,
     };
 
-    if let Some(auth_data) = &item.router_data.request.authentication_data {
-        details.three_ds = Some(ThreeDSecureData::Authentication(ThreeDSData {
-            three_ds_transaction_id: auth_data
-                .threeds_server_transaction_id
-                .clone()
-                .map(Secret::new),
-            cavv: auth_data.cavv.clone(),
-            eci: auth_data.eci.clone(),
-            xid: auth_data.ds_trans_id.clone().map(Secret::new),
-            three_ds_version: auth_data
-                .message_version
-                .clone()
-                .map(|version| version.to_string()),
-            authentication_response: "Y".to_string(),
-        }));
-    } else if item.router_data.resource_common_data.is_three_ds() {
+    // Note: authentication_data field access removed as it's not available in current PaymentsAuthorizeData
+    // TODO: Implement proper 3DS authentication when authentication_data field is available
+    if item.router_data.resource_common_data.is_three_ds() {
         details.three_ds = Some(ThreeDSecureData::Cardholder(ThreedsInfo {
             cardholder: CardHolder {
                 cardholder_name: item.router_data.resource_common_data.get_billing_full_name()?,
@@ -476,7 +463,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                     res_type: "PLAIN".to_string(),
                     number: req_card.card_number.clone(),
                     expiry_month: req_card.card_exp_month.clone(),
-                    expiry_year: req_card.get_card_expiry_year_2_digit()?,
+                    expiry_year: req_card.card_exp_year.clone(),
                     cvv: req_card.card_cvc.clone(),
                     three_ds: Some(ThreeDSecureData::Cardholder(ThreedsInfo {
                         cardholder: CardHolder {
@@ -525,7 +512,8 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                 // provides return url for only mandate payment(CIT) or 3ds through datatrans
                 let redirect = if is_mandate_payment
                     || (item.router_data.resource_common_data.is_three_ds()
-                        && item.router_data.request.authentication_data.is_none())
+                        // && item.router_data.request.authentication_data.is_none() // Field not available
+                        )
                 {
                     Some(RedirectUrls {
                         success_url: item.router_data.request.router_return_url.clone(),
