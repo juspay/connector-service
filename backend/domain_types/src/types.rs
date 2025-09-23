@@ -4834,14 +4834,11 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
 
     let response = match transaction_response {
         Ok(response) => match response {
-            PaymentsResponseData::TransactionResponse {
+            PaymentsResponseData::PreAuthenticateResponse {
                 resource_id,
                 redirection_data,
                 connector_metadata,
-                network_txn_id,
                 connector_response_reference_id,
-                incremental_authorization_allowed: _,
-                mandate_reference: _,
                 status_code,
             } => grpc_api_types::payments::PaymentServicePreAuthenticateResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
@@ -4938,7 +4935,6 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                             .collect::<HashMap<_, _>>()
                     })
                     .unwrap_or_default(),
-                network_txn_id,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -4950,29 +4946,18 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 raw_connector_response,
                 status_code: status_code as u32,
                 response_headers,
-                state: None,
-            },
-            PaymentsResponseData::SessionResponse {
-                session_token: _,
-                status_code,
-            } => grpc_api_types::payments::PaymentServicePreAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        "session_created".to_string(),
-                    )),
-                }),
-                redirection_data: None,
                 network_txn_id: None,
-                response_ref_id: None,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                status_code: status_code as u32,
-                raw_connector_response,
-                response_headers,
-                connector_metadata: std::collections::HashMap::new(),
                 state: None,
             },
+            _ => {
+                return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_RESPONSE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid response type for pre authenticate".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         },
         Err(err) => {
             let status = err
@@ -5025,14 +5010,11 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
 
     let response = match transaction_response {
         Ok(response) => match response {
-            PaymentsResponseData::TransactionResponse {
+            PaymentsResponseData::AuthenticateResponse {
                 resource_id,
                 redirection_data,
                 connector_metadata,
-                network_txn_id,
                 connector_response_reference_id,
-                incremental_authorization_allowed: _,
-                mandate_reference: _,
                 status_code,
             } => grpc_api_types::payments::PaymentServiceAuthenticateResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
@@ -5130,7 +5112,6 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                             .collect::<HashMap<_, _>>()
                     })
                     .unwrap_or_default(),
-                network_txn_id,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -5171,30 +5152,18 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 raw_connector_response,
                 status_code: status_code as u32,
                 response_headers,
-                state: None,
-            },
-            PaymentsResponseData::SessionResponse {
-                session_token: _,
-                status_code,
-            } => grpc_api_types::payments::PaymentServiceAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        "session_created".to_string(),
-                    )),
-                }),
-                redirection_data: None,
                 network_txn_id: None,
-                response_ref_id: None,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                status_code: status_code as u32,
-                raw_connector_response,
-                response_headers,
-                connector_metadata: std::collections::HashMap::new(),
                 state: None,
-                authentication_data: None,
             },
+            _ => {
+                return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_RESPONSE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid response type for authenticate".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         },
         Err(err) => {
             let status = err
@@ -5248,14 +5217,11 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
 
     let response = match transaction_response {
         Ok(response) => match response {
-            PaymentsResponseData::TransactionResponse {
+            PaymentsResponseData::PostAuthenticateResponse {
                 resource_id,
                 redirection_data,
                 connector_metadata,
-                network_txn_id,
                 connector_response_reference_id,
-                incremental_authorization_allowed,
-                mandate_reference: _,
                 status_code,
             } => grpc_api_types::payments::PaymentServicePostAuthenticateResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier::foreign_try_from(
@@ -5353,7 +5319,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                             .collect::<HashMap<_, _>>()
                     })
                     .unwrap_or_default(),
-                network_txn_id,
+                network_txn_id: None,
                 response_ref_id: connector_response_reference_id.map(|id| {
                     grpc_api_types::payments::Identifier {
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
@@ -5388,38 +5354,24 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                             .map(|s| s.to_string()),
                     }
                 }),
-                incremental_authorization_allowed,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                raw_connector_response,
-                status_code: status_code as u32,
-                response_headers,
-                state: None,
-            },
-            PaymentsResponseData::SessionResponse {
-                session_token: _,
-                status_code,
-            } => grpc_api_types::payments::PaymentServicePostAuthenticateResponse {
-                transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
-                        "session_created".to_string(),
-                    )),
-                }),
-                redirection_data: None,
-                network_txn_id: None,
-                response_ref_id: None,
-                status: grpc_status as i32,
-                error_message: None,
-                error_code: None,
-                status_code: status_code as u32,
-                raw_connector_response,
-                response_headers,
-                connector_metadata: std::collections::HashMap::new(),
-                state: None,
-                authentication_data: None,
                 incremental_authorization_allowed: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                raw_connector_response,
+                status_code: status_code as u32,
+                response_headers,
+                state: None,
             },
+            _ => {
+                return Err(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_RESPONSE".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Invalid response type for post authenticate".to_owned(),
+                    error_object: None,
+                })
+                .into())
+            }
         },
         Err(err) => {
             let status = err

@@ -1068,6 +1068,27 @@ pub enum PaymentsResponseData {
         session_token: String,
         status_code: u16,
     },
+    PreAuthenticateResponse {
+        resource_id: ResponseId,
+        redirection_data: Option<Box<RedirectForm>>,
+        connector_metadata: Option<serde_json::Value>,
+        connector_response_reference_id: Option<String>,
+        status_code: u16,
+    },
+    AuthenticateResponse {
+        resource_id: ResponseId,
+        redirection_data: Option<Box<RedirectForm>>,
+        connector_metadata: Option<serde_json::Value>,
+        connector_response_reference_id: Option<String>,
+        status_code: u16,
+    },
+    PostAuthenticateResponse {
+        resource_id: ResponseId,
+        redirection_data: Option<Box<RedirectForm>>,
+        connector_metadata: Option<serde_json::Value>,
+        connector_response_reference_id: Option<String>,
+        status_code: u16,
+    },
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
