@@ -4952,12 +4952,27 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
+            PaymentsResponseData::SessionResponse {
+                session_token: _,
+                status_code,
+            } => grpc_api_types::payments::PaymentServicePreAuthenticateResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        "session_created".to_string(),
+                    )),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                status_code: status_code as u32,
+                raw_connector_response,
+                response_headers,
+                connector_metadata: std::collections::HashMap::new(),
+                state: None,
+            },
         },
         Err(err) => {
             let status = err
@@ -5158,12 +5173,28 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
+            PaymentsResponseData::SessionResponse {
+                session_token: _,
+                status_code,
+            } => grpc_api_types::payments::PaymentServiceAuthenticateResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        "session_created".to_string(),
+                    )),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                status_code: status_code as u32,
+                raw_connector_response,
+                response_headers,
+                connector_metadata: std::collections::HashMap::new(),
+                state: None,
+                authentication_data: None,
+            },
         },
         Err(err) => {
             let status = err
@@ -5366,12 +5397,29 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 response_headers,
                 state: None,
             },
-            _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_RESPONSE".to_owned(),
-                error_identifier: 400,
-                error_message: "Invalid response from connector".to_owned(),
-                error_object: None,
-            }))?,
+            PaymentsResponseData::SessionResponse {
+                session_token: _,
+                status_code,
+            } => grpc_api_types::payments::PaymentServicePostAuthenticateResponse {
+                transaction_id: Some(grpc_api_types::payments::Identifier {
+                    id_type: Some(grpc_api_types::payments::identifier::IdType::Id(
+                        "session_created".to_string(),
+                    )),
+                }),
+                redirection_data: None,
+                network_txn_id: None,
+                response_ref_id: None,
+                status: grpc_status as i32,
+                error_message: None,
+                error_code: None,
+                status_code: status_code as u32,
+                raw_connector_response,
+                response_headers,
+                connector_metadata: std::collections::HashMap::new(),
+                state: None,
+                authentication_data: None,
+                incremental_authorization_allowed: None,
+            },
         },
         Err(err) => {
             let status = err
