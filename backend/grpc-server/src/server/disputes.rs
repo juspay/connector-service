@@ -27,7 +27,6 @@ use grpc_api_types::payments::{
     DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
-use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -156,9 +155,6 @@ impl DisputeService for Disputes {
                         service_name: &service_name,
                         flow_name: common_utils::events::FlowName::SubmitEvidence,
                         event_config: &self.config.events,
-                        raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
@@ -364,9 +360,6 @@ impl DisputeService for Disputes {
                         service_name: &service_name,
                         flow_name: common_utils::events::FlowName::AcceptDispute,
                         event_config: &self.config.events,
-                        raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,

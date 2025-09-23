@@ -15,6 +15,22 @@ use crate::{
     types::TimeRange,
 };
 
+/// Wrapper type that enforces masked serialization for sensitive data
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct MaskedSerdeValue {
+    inner: serde_json::Value,
+}
+
+impl MaskedSerdeValue {
+    pub fn from_masked<T: Serialize>(value: &T) -> Result<Self, serde_json::Error> {
+        let masked_value = hyperswitch_masking::masked_serialize(value)?;
+        Ok(Self {
+            inner: masked_value,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "flow_type", rename_all = "snake_case")]
 pub enum ApiEventsType {
@@ -186,10 +202,10 @@ pub struct Event {
     pub stage: EventStage,
     pub latency_ms: Option<u64>,
     pub status_code: Option<i32>,
-    pub request_data: Option<serde_json::Value>,
-    pub response_data: Option<serde_json::Value>,
+    pub request_data: Option<MaskedSerdeValue>,
+    pub response_data: Option<MaskedSerdeValue>,
     #[serde(flatten)]
-    pub additional_fields: HashMap<String, serde_json::Value>,
+    pub additional_fields: HashMap<String, MaskedSerdeValue>,
     #[serde(flatten)]
     pub lineage_ids: lineage::LineageIds<'static>,
 }

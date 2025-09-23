@@ -63,8 +63,7 @@ impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
 }
 use common_utils::{
     emit_event_with_config,
-    events::{Event, EventConfig, EventStage, FlowName},
-    pii::SecretSerdeValue,
+    events::{Event, EventConfig, EventStage, FlowName, MaskedSerdeValue},
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
@@ -104,7 +103,6 @@ pub struct EventProcessingParams<'a> {
     pub service_name: &'a str,
     pub flow_name: FlowName,
     pub event_config: &'a EventConfig,
-    pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
@@ -368,6 +366,29 @@ where
                         .observe(external_service_elapsed.as_secs_f64());
                     tracing::info!(?response, "response from connector");
 
+                    // Construct masked request data once for all events
+                    let masked_request_data =
+                        req.as_ref()
+                            .and_then(|r| match MaskedSerdeValue::from_masked(r) {
+                                Ok(masked) => Some(masked),
+                                Err(_) => {
+                                    tracing::error!("Failed to mask serialize request data");
+                                    None
+                                }
+                            });
+
+                    // Construct additional_fields once for all events
+                    let mut additional_fields = HashMap::new();
+                    if let Some(ref_id) = event_params.reference_id {
+                        if let Ok(processed_ref_id) = MaskedSerdeValue::from_masked(ref_id) {
+                            additional_fields.insert("reference_id".to_string(), processed_ref_id);
+                        } else {
+                            tracing::error!(
+                                "Failed to mask serialize reference_id, skipping field"
+                            );
+                        }
+                    }
+
                     match &response {
                         Ok(Ok(body)) => {
                             let res_body =
@@ -379,15 +400,6 @@ where
 
                             // Emit success response event
                             {
-                                let reference_id_clone = event_params.reference_id.clone();
-                                let mut additional_fields = HashMap::new();
-                                if let Some(ref_id) = reference_id_clone {
-                                    additional_fields.insert(
-                                        "reference_id".to_string(),
-                                        serde_json::Value::String(ref_id),
-                                    );
-                                }
-
                                 let event = Event {
                                     request_id: request_id.to_string(),
                                     timestamp: chrono::Utc::now().timestamp().into(),
@@ -397,9 +409,19 @@ where
                                     stage: EventStage::ConnectorCall,
                                     latency_ms: Some(latency),
                                     status_code: Some(i32::from(status_code)),
-                                    request_data: req.clone(),
-                                    response_data: res_body,
-                                    additional_fields,
+                                    request_data: masked_request_data.clone(),
+                                    response_data: res_body.as_ref().and_then(|r| {
+                                        match MaskedSerdeValue::from_masked(r) {
+                                            Ok(masked) => Some(masked),
+                                            Err(_) => {
+                                                tracing::error!(
+                                                    "Failed to mask serialize response data"
+                                                );
+                                                None
+                                            }
+                                        }
+                                    }),
+                                    additional_fields: additional_fields.clone(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
                                 };
 
@@ -417,14 +439,6 @@ where
 
                             // Emit error response event
                             {
-                                let reference_id_clone = event_params.reference_id.clone();
-                                let mut additional_fields = HashMap::new();
-                                if let Some(ref_id) = reference_id_clone {
-                                    additional_fields.insert(
-                                        "reference_id".to_string(),
-                                        serde_json::Value::String(ref_id),
-                                    );
-                                }
                                 let event = Event {
                                     request_id: request_id.to_string(),
                                     timestamp: chrono::Utc::now().timestamp().into(),
@@ -434,9 +448,19 @@ where
                                     stage: EventStage::ConnectorCall,
                                     latency_ms: Some(latency),
                                     status_code: Some(i32::from(status_code)),
-                                    request_data: req.clone(),
-                                    response_data: error_res_body,
-                                    additional_fields,
+                                    request_data: masked_request_data.clone(),
+                                    response_data: error_res_body.as_ref().and_then(|r| {
+                                        match MaskedSerdeValue::from_masked(r) {
+                                            Ok(masked) => Some(masked),
+                                            Err(_) => {
+                                                tracing::error!(
+                                                    "Failed to mask serialize response data"
+                                                );
+                                                None
+                                            }
+                                        }
+                                    }),
+                                    additional_fields: additional_fields.clone(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
                                 };
 
@@ -455,15 +479,6 @@ where
 
                             // Emit network error event
                             {
-                                let reference_id_clone = event_params.reference_id.clone();
-                                let mut additional_fields: HashMap<String, serde_json::Value> =
-                                    HashMap::new();
-                                if let Some(ref_id) = reference_id_clone {
-                                    additional_fields.insert(
-                                        "reference_id".to_string(),
-                                        serde_json::Value::String(ref_id),
-                                    );
-                                }
                                 let event = Event {
                                     request_id: request_id.to_string(),
                                     timestamp: chrono::Utc::now().timestamp().into(),
@@ -473,9 +488,9 @@ where
                                     stage: EventStage::ConnectorCall,
                                     latency_ms: Some(latency),
                                     status_code: None,
-                                    request_data: req.clone(),
+                                    request_data: masked_request_data.clone(),
                                     response_data: None,
-                                    additional_fields,
+                                    additional_fields: additional_fields.clone(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
                                 };
 

@@ -39,7 +39,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformResponse, PaymentServiceVoidRequest, PaymentServiceVoidResponse,
     RefundResponse, WebhookTransformationStatus,
 };
-use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};
+use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -286,7 +286,6 @@ impl Payments {
                             &connector.to_string(),
                             service_name,
                             event_params,
-                            &payload,
                         )
                         .await?;
 
@@ -370,9 +369,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::Authorize,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id,
             lineage_ids,
             reference_id,
@@ -530,9 +526,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateOrder,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -635,9 +628,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateOrder,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -731,9 +721,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateSessionToken,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -794,7 +781,6 @@ impl Payments {
             + Sync
             + domain_types::types::CardConversionHelper<T>
             + 'static,
-        P,
     >(
         &self,
         connector_data: ConnectorData<T>,
@@ -803,10 +789,8 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-        payload: &P,
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
     where
-        P: Clone + ErasedMaskSerialize,
         AccessTokenRequestData:
             for<'a> ForeignTryFrom<&'a ConnectorAuthType, Error = ApplicationErrorResponse>,
     {
@@ -852,9 +836,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateAccessToken,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -990,9 +971,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::PaymentMethodToken,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -1338,7 +1316,6 @@ impl PaymentService for Payments {
                                         &connector.to_string(),
                                         &service_name,
                                         event_params,
-                                        &payload,
                                     )
                                     .await
                                     .map_err(|e| {
@@ -1385,9 +1362,6 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
@@ -1861,9 +1835,6 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name: FlowName::SetupMandate,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
@@ -1979,9 +1950,6 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name: FlowName::RepeatPayment,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,

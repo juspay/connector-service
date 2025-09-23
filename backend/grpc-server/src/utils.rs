@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
-    events::FlowName,
+    events::{FlowName, MaskedSerdeValue, Event},
     lineage::LineageIds,
 };
 use domain_types::{
@@ -409,7 +409,13 @@ where
     log_before_initialization(&request, service_name, &header_payload).into_grpc_status()?;
     let start_time = tokio::time::Instant::now();
 
-    let masked_request_data = request.get_ref().masked_serialize().unwrap_or_default();
+    let masked_request_data = match MaskedSerdeValue::from_masked(request.get_ref()) {
+        Ok(masked) => Some(masked),
+        Err(_) => {
+            tracing::error!("Failed to mask serialize grpc request data");
+            None
+        }
+    };
 
     let result = handler(request, header_payload.clone()).await;
     let duration = start_time.elapsed().as_millis();
@@ -417,25 +423,39 @@ where
     log_after_initialization(&result);
 
     let (grpc_status_code, masked_response_data) = match &result {
-        Ok(response) => (
-            Some(0i32),
-            response.get_ref().masked_serialize().unwrap_or_default(),
-        ),
-        Err(status) => (
-            Some(status.code().into()),
-            serde_json::json!({ "grpc_code": format!("{:?}", status.code()) }),
-        ),
+        Ok(response) => {
+            let masked_response_data = match MaskedSerdeValue::from_masked(response.get_ref()) {
+                Ok(masked) => Some(masked),
+                Err(_) => {
+                    tracing::error!("Failed to mask serialize grpc response data");
+                    None
+                }
+            };
+            (Some(0i32), masked_response_data)
+        }
+        Err(status) => {
+            let error_data = serde_json::json!({ "grpc_code": format!("{:?}", status.code()) });
+            let masked_error_data = match MaskedSerdeValue::from_masked(&error_data) {
+                Ok(masked) => Some(masked),
+                Err(_) => {
+                    tracing::error!("Failed to mask serialize grpc error data");
+                    None
+                }
+            };
+            (Some(status.code().into()), masked_error_data)
+        }
     };
 
     let mut additional_fields = std::collections::HashMap::new();
     if let Some(ref reference_id) = header_payload.reference_id {
-        additional_fields.insert(
-            "reference_id".to_string(),
-            serde_json::Value::String(reference_id.clone()),
-        );
+        if let Ok(processed_ref_id) = MaskedSerdeValue::from_masked(reference_id) {
+            additional_fields.insert("reference_id".to_string(), processed_ref_id);
+        } else {
+            tracing::error!("Failed to mask serialize reference_id, skipping field");
+        }
     }
 
-    let grpc_event = common_utils::events::Event {
+    let grpc_event = Event {
         request_id: header_payload.request_id.clone(),
         timestamp: chrono::Utc::now().timestamp().into(),
         flow_type: flow_name,
@@ -444,8 +464,8 @@ where
         stage: common_utils::events::EventStage::GrpcRequest,
         latency_ms: Some(u64::try_from(duration).unwrap_or(u64::MAX)),
         status_code: grpc_status_code,
-        request_data: Some(masked_request_data),
-        response_data: Some(masked_response_data),
+        request_data: masked_request_data,
+        response_data: masked_response_data,
         additional_fields,
         lineage_ids: header_payload.lineage_ids.clone(),
     };
@@ -528,7 +548,6 @@ macro_rules! implement_connector_operation {
                 service_name: &service_name,
                 flow_name,
                 event_config: &self.config.events,
-                raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(payload.masked_serialize().unwrap_or_default())),
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,
