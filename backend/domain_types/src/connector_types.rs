@@ -36,6 +36,7 @@ use crate::{
     },
     utils::{missing_field_err, Error, ForeignTryFrom},
 };
+use url::Url;
 
 // snake case for enum variants
 #[derive(Clone, Copy, Debug, Display, EnumString)]
@@ -1115,8 +1116,8 @@ pub struct PaymentsPreAuthenticateData<T: PaymentMethodDataTypes> {
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub router_return_url: Option<String>,
-    pub continue_redirection_url: Option<String>,
+    pub router_return_url: Option<Url>,
+    pub continue_redirection_url: Option<Url>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
@@ -1129,8 +1130,8 @@ pub struct PaymentsAuthenticateData<T: PaymentMethodDataTypes> {
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub router_return_url: Option<String>,
-    pub continue_redirection_url: Option<String>,
+    pub router_return_url: Option<Url>,
+    pub continue_redirection_url: Option<Url>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
@@ -1143,8 +1144,8 @@ pub struct PaymentsPostAuthenticateData<T: PaymentMethodDataTypes> {
     pub email: Option<Email>,
     pub currency: Option<Currency>,
     pub payment_method_type: Option<PaymentMethodType>,
-    pub router_return_url: Option<String>,
-    pub continue_redirection_url: Option<String>,
+    pub router_return_url: Option<Url>,
+    pub continue_redirection_url: Option<Url>,
     pub browser_info: Option<BrowserInformation>,
     pub enrolled_for_3ds: bool,
     pub redirect_response: Option<ContinueRedirectionResponse>,
