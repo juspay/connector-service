@@ -308,7 +308,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_transaction_id = &req.request.connector_transaction_id;
             Ok(format!(
-                "{}/transactions/{}/void",
+                "{}/transactions/{}/reverse",
                 self.connector_base_url_payments(req),
                 connector_transaction_id
             ))
