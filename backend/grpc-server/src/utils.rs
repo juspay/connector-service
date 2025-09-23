@@ -3,7 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use common_utils::{
     consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
-    events::{FlowName, MaskedSerdeValue, Event},
+    events::{Event, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
 };
 use domain_types::{
