@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.09.23.0
+
+### Features
+
+- **connector:** Added authorize, psync and tests for Cryptopay and CryptoCurrency PaymentMethod ([#82](https://github.com/juspay/connector-service/pull/82)) ([`dc38d42`](https://github.com/juspay/connector-service/commit/dc38d425a5ba851898acce6bdbc83ead38483bd3))
+
+### Miscellaneous Tasks
+
+- Added webhooks support in Fiuu ([#185](https://github.com/juspay/connector-service/pull/185)) ([`567e767`](https://github.com/juspay/connector-service/commit/567e767433b49b4ca77879ce01fd6aab0c906250))
+
+**Full Changelog:** [`2025.09.22.0...2025.09.23.0`](https://github.com/juspay/connector-service/compare/2025.09.22.0...2025.09.23.0)
+
+- - -
+
 ## 2025.09.22.0
 
 ### Features
