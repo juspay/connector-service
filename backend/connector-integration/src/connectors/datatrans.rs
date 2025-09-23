@@ -9,18 +9,18 @@ use common_utils::{
     types::StringMinorUnit,
 };
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Refund, SetupMandate, Void, PaymentMethodToken},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, SetupMandateRequestData,
+        RefundsResponseData, SetupMandateRequestData, PaymentMethodTokenizationData, PaymentMethodTokenResponse,
     },
     errors::{self, ConnectorError},
     payment_method_data::PaymentMethodDataTypes,
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
-    types::ConnectorInfo,
+    types::{ConnectorInfo, SupportedPaymentMethods},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Maskable};
@@ -29,7 +29,7 @@ use interfaces::{
     connector_integration_v2::ConnectorIntegrationV2,
     connector_types::{
         ConnectorValidation, PaymentAuthorizeV2, PaymentCapture, PaymentSyncV2, PaymentTokenV2,
-        PaymentVoidV2, RefundSyncV2, RefundV2,
+        PaymentVoidV2, RefundSyncV2, RefundV2, ConnectorSpecifications,
     },
     events::connector_api_logs::ConnectorEvent,
 };
@@ -39,31 +39,100 @@ use crate::{
     connectors::datatrans::transformers as datatrans,
     types::ResponseRouterData,
     utils,
+    with_error_response_body,
 };
 
-#[derive(Debug, Clone)]
-pub struct Datatrans<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> {
-    amount_converter: &'static (dyn common_utils::types::AmountConvertor<Output = common_utils::types::MinorUnit> + Sync),
-    _phantom: std::marker::PhantomData<T>,
-}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentAuthorizeV2<T> for Datatrans<T> {}
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Datatrans<T> {
-    pub fn new() -> &'static Self {
-        &Self {
-            amount_converter: &StringMinorUnit,
-            _phantom: std::marker::PhantomData,
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentSyncV2 for Datatrans<T> {}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentCapture for Datatrans<T> {}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentVoidV2 for Datatrans<T> {}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> RefundV2 for Datatrans<T> {}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> RefundSyncV2 for Datatrans<T> {}
+
+super::macros::create_all_prerequisites!(
+    connector_name: Datatrans,
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: DatatransPaymentsRequest<T>,
+            response_body: DatatransResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: DatatransSyncRequest,
+            response_body: DatatransSyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: DataPaymentCaptureRequest,
+            response_body: DataTransCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            request_body: DatatransVoidRequest,
+            response_body: DataTransCancelResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: DatatransRefundRequest,
+            response_body: DatatransRefundsResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: DatatransRSyncRequest,
+            response_body: DatatransRSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: DatatransSetupMandateRequest<T>,
+            response_body: DatatransSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        )
+    ],
+    amount_converters: [
+        amount_converter: StringMinorUnit
+    ],
+    member_functions: {
+        pub fn build_headers<F, FCD, Req, Res>(
+            &self,
+            req: &RouterDataV2<F, FCD, Req, Res>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            let mut header = vec![(
+                "Content-Type".to_string(),
+                "application/json".to_string().into(),
+            )];
+            let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
+            header.append(&mut api_key);
+            Ok(header)
+        }
+
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.datatrans.base_url
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.datatrans.base_url
         }
     }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Default for Datatrans<T> {
-    fn default() -> Self {
-        Self {
-            amount_converter: &StringMinorUnit,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
+);
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon for Datatrans<T> {
     fn id(&self) -> &'static str {
@@ -106,7 +175,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
             .parse_struct("DatatransErrorResponse")
             .change_context(ConnectorError::ResponseDeserializationFailed)?;
 
-        event_builder.map(|i| i.set_error_response_body(&response));
+        with_error_response_body!(event_builder, response);
 
         Ok(ErrorResponse {
             status_code: res.status_code,
@@ -122,75 +191,33 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorSpecifications for Datatrans<T> {
+    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
+        None
+    }
+
+    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
+        None
+    }
+
+    fn get_supported_webhook_flows(&self) -> Option<&'static [common_enums::EventClass]> {
+        None
+    }
+}
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorValidation for Datatrans<T> {}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentAuthorizeV2<T> for Datatrans<T> {}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentSyncV2 for Datatrans<T> {}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentCapture for Datatrans<T> {}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentVoidV2 for Datatrans<T> {}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> RefundV2 for Datatrans<T> {}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> RefundSyncV2 for Datatrans<T> {}
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> PaymentTokenV2<T> for Datatrans<T> {}
 
-super::macros::create_all_prerequisites!(
-    connector_name: Datatrans,
-    generic_type: T,
-    api: [
-        (
-            flow: Authorize,
-            request_body: DatatransPaymentsRequest<T>,
-            response_body: DatatransResponse,
-            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
-        ),
-        (
-            flow: PSync,
-            request_body: DatatransSyncRequest,
-            response_body: DatatransSyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        ),
-        (
-            flow: Capture,
-            request_body: DataPaymentCaptureRequest,
-            response_body: DataTransCaptureResponse,
-            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        ),
-        (
-            flow: Void,
-            request_body: DatatransVoidRequest,
-            response_body: DataTransCancelResponse,
-            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        ),
-        (
-            flow: Refund,
-            request_body: DatatransRefundRequest,
-            response_body: DatatransRefundsResponse,
-            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ),
-        (
-            flow: RSync,
-            request_body: DatatransRSyncRequest,
-            response_body: DatatransSyncResponse,
-            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-        ),
-        (
-            flow: SetupMandate,
-            request_body: DatatransPaymentsRequest<T>,
-            response_body: DatatransResponse,
-            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        )
-    ],
-    amount_converters: [
-        amount_converter: common_utils::types::MinorUnit
-    ],
-    member_functions: {
-    }
-);
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Datatrans<T>
+{
+}
 
 super::macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -205,11 +232,17 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(format!("{}/v1/transactions", self.base_url(&req.connector_info.connectors)))
+            Ok(format!("{}/v1/transactions", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -227,12 +260,18 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}", 
-                self.base_url(&req.connector_info.connectors),
+                self.connector_base_url_payments(req),
                 req.request.connector_transaction_id.get_connector_transaction_id()?
             ))
         }
@@ -252,12 +291,18 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}/settle", 
-                self.base_url(&req.connector_info.connectors),
+                self.connector_base_url_payments(req),
                 req.request.connector_transaction_id
             ))
         }
@@ -277,12 +322,18 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}/cancel", 
-                self.base_url(&req.connector_info.connectors),
+                self.connector_base_url_payments(req),
                 req.request.connector_transaction_id
             ))
         }
@@ -302,12 +353,18 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}/credit", 
-                self.base_url(&req.connector_info.connectors),
+                self.connector_base_url_refunds(req),
                 req.request.connector_transaction_id
             ))
         }
@@ -318,7 +375,7 @@ super::macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Datatrans,
     curl_request: Json(DatatransRSyncRequest),
-    curl_response: DatatransSyncResponse,
+    curl_response: DatatransRSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
     flow_request: RefundSyncData,
@@ -327,12 +384,18 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
             Ok(format!("{}/v1/transactions/{}", 
-                self.base_url(&req.connector_info.connectors),
+                self.connector_base_url_refunds(req),
                 req.request.connector_transaction_id
             ))
         }
@@ -342,8 +405,8 @@ super::macros::macro_connector_implementation!(
 super::macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Datatrans,
-    curl_request: Json(DatatransPaymentsRequest),
-    curl_response: DatatransResponse,
+    curl_request: Json(DatatransSetupMandateRequest),
+    curl_response: DatatransSetupMandateResponse,
     flow_name: SetupMandate,
     resource_common_data: PaymentFlowData,
     flow_request: SetupMandateRequestData<T>,
@@ -352,11 +415,98 @@ super::macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, ConnectorError> {
+            self.build_headers(req)
+        }
         fn get_url(
             &self,
             req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, ConnectorError> {
-            Ok(format!("{}/v1/transactions", self.base_url(&req.connector_info.connectors)))
+            Ok(format!("{}/v1/transactions", self.connector_base_url_payments(req)))
         }
     }
 );
+
+// SourceVerification implementations for all flows
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authorize,
+        PaymentFlowData,
+        PaymentsAuthorizeData<T>,
+        PaymentsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PSync,
+        PaymentFlowData,
+        PaymentsSyncData,
+        PaymentsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Capture,
+        PaymentFlowData,
+        PaymentsCaptureData,
+        PaymentsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Void,
+        PaymentFlowData,
+        PaymentVoidData,
+        PaymentsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Refund,
+        RefundFlowData,
+        RefundsData,
+        RefundsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        RSync,
+        RefundFlowData,
+        RefundSyncData,
+        RefundsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        SetupMandate,
+        PaymentFlowData,
+        SetupMandateRequestData<T>,
+        PaymentsResponseData,
+    > for Datatrans<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PaymentMethodToken,
+        PaymentFlowData,
+        PaymentMethodTokenizationData<T>,
+        PaymentMethodTokenResponse,
+    > for Datatrans<T>
+{
+}

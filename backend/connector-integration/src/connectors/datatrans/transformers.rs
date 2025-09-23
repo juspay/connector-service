@@ -309,12 +309,23 @@ pub struct DatatransRSyncRequest {
     // Empty request body for refund sync operations
 }
 
+#[derive(Debug, Deserialize, Clone, Serialize)]
+#[serde(untagged)]
+pub enum DatatransRSyncResponse {
+    Error(DatatransError),
+    Response(SyncResponse),
+}
+
 #[derive(Debug, Serialize, Clone)]
 pub struct DataPaymentCaptureRequest {
     pub amount: MinorUnit,
     pub currency: common_enums::Currency,
     pub refno: String,
 }
+
+// Type aliases for unique flow types
+pub type DatatransSetupMandateRequest<T> = DatatransPaymentsRequest<T>;
+pub type DatatransSetupMandateResponse = DatatransResponse;
 
 impl TryFrom<&ConnectorAuthType> for DatatransAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
@@ -764,15 +775,15 @@ impl<F> TryFrom<ResponseRouterData<DatatransRefundsResponse, Self>>
 }
 
 // RSync Response TryFrom implementation
-impl<F> TryFrom<ResponseRouterData<DatatransSyncResponse, Self>>
+impl<F> TryFrom<ResponseRouterData<DatatransRSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<DatatransSyncResponse, Self>,
+        item: ResponseRouterData<DatatransRSyncResponse, Self>,
     ) -> Result<Self, Self::Error> {
         let response = match item.response {
-            DatatransSyncResponse::Error(error) => Err(ErrorResponse {
+            DatatransRSyncResponse::Error(error) => Err(ErrorResponse {
                 code: error.code.clone(),
                 message: error.message.clone(),
                 reason: Some(error.message),
@@ -783,7 +794,7 @@ impl<F> TryFrom<ResponseRouterData<DatatransSyncResponse, Self>>
                 network_decline_code: None,
                 network_error_message: None,
             }),
-            DatatransSyncResponse::Response(response) => Ok(RefundsResponseData {
+            DatatransRSyncResponse::Response(response) => Ok(RefundsResponseData {
                 connector_refund_id: response.transaction_id.to_string(),
                 refund_status: common_enums::RefundStatus::from(response),
                 status_code: item.http_code,
