@@ -2298,9 +2298,9 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                                 .map(Box::new),
                             status_code: 200,
                             connector_response_reference_id: transaction_id.clone(),
-                            raw_connector_response: None,
                             error_code: None,
                             error_message: None,
+                            raw_connector_response: None,
                             response_headers: None,
                             transformation_status:
                                 common_enums::WebhookTransformationStatus::Complete,
@@ -2312,9 +2312,9 @@ impl TryFrom<NovalnetWebhookNotificationResponse> for WebhookDetailsResponse {
                         status_code: 200,
                         mandate_reference: None,
                         connector_response_reference_id: None,
-                        raw_connector_response: None,
                         error_code: Some(notif.result.status.to_string()),
                         error_message: Some(notif.result.status_text),
+                        raw_connector_response: None,
                         response_headers: None,
                         transformation_status: common_enums::WebhookTransformationStatus::Complete,
                     }),
@@ -2345,9 +2345,9 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
                     status: common_enums::RefundStatus::from(transaction_status),
                     status_code: 200,
                     connector_response_reference_id: None,
-                    raw_connector_response: None,
                     error_code: None,
                     error_message: None,
+                    raw_connector_response: None,
                     response_headers: None,
                 })
             }
@@ -2356,9 +2356,9 @@ impl TryFrom<NovalnetWebhookNotificationResponseRefunds> for RefundWebhookDetail
                 connector_refund_id: None,
                 status_code: 200,
                 connector_response_reference_id: None,
-                raw_connector_response: None,
                 error_code: Some(notif.result.status.to_string()),
                 error_message: Some(notif.result.status_text),
+                raw_connector_response: None,
                 response_headers: None,
             }),
         }

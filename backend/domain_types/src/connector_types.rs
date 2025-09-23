@@ -156,7 +156,7 @@ impl ConnectorMandateReferenceId {
     }
 }
 
-pub trait RawConnectorResponse {
+pub trait RawConnectorRequestResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
     fn get_raw_connector_response(&self) -> Option<String>;
     fn set_raw_connector_request(&mut self, request: Option<String>);
@@ -742,7 +742,7 @@ impl PaymentFlowData {
     }
 }
 
-impl RawConnectorResponse for PaymentFlowData {
+impl RawConnectorRequestResponse for PaymentFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
@@ -1203,7 +1203,7 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
 }
 
-impl RawConnectorResponse for RefundFlowData {
+impl RawConnectorRequestResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
@@ -1896,7 +1896,7 @@ pub struct DisputeFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
 }
 
-impl RawConnectorResponse for DisputeFlowData {
+impl RawConnectorRequestResponse for DisputeFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
