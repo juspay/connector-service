@@ -71,7 +71,7 @@ pub struct EcommerceCardPaymentOnlyTransactionData<
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct MerchantInformation {
     pub client_merchant_reference_id: Secret<String>,
     pub name: Secret<String>,
@@ -97,7 +97,7 @@ pub struct MerchantInformation {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "lowercase"]]
+#[serde(rename_all = "lowercase")]
 pub enum MerchantType {
     Standard,
     Sub,
@@ -105,7 +105,7 @@ pub enum MerchantType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct Routing {
     pub route: Route,
     pub mid: Secret<String>,
@@ -121,7 +121,7 @@ pub struct Routing {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
-#[serde[rename_all = "snake_case"]]
+#[serde(rename_all = "snake_case")]
 pub enum Route {
     #[default]
     ExipayEmulator,
@@ -138,7 +138,7 @@ pub enum Route {
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct CardDetails<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -157,7 +157,7 @@ pub struct CardDetails<
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct AmountDetails {
     pub amount: MinorUnit,
     pub currency_code: String,
@@ -167,7 +167,7 @@ pub struct AmountDetails {
 
 // Confirm Transaction Request (for capture)
 #[derive(Debug, Serialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsConfirmRequest {
     pub ecommerce_card_payment_only_confirmation_data: EcommerceCardPaymentOnlyConfirmationData,
 }
@@ -477,7 +477,7 @@ impl From<PeachpaymentsPaymentStatus> for common_enums::AttemptStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsPaymentsResponse {
     pub transaction_id: String,
     pub response_code: Option<ResponseCode>,
@@ -532,7 +532,7 @@ impl ResponseCode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct EcommerceCardPaymentOnlyResponseData {
     pub amount: Option<AmountDetails>,
     pub stan: Option<Secret<String>>,

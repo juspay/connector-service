@@ -5,8 +5,8 @@ use interfaces::connector_types::BoxedConnector;
 
 use crate::connectors::{
     Adyen, Authorizedotnet, Bluecode, Braintree, Cashfree, Cashtocode, Checkout, Cryptopay, Elavon,
-    Fiserv, Fiuu, Mifinity, Nexinets, Noon, Novalnet, Paytm, Payu, Peachpayments, Phonepe, Razorpay, RazorpayV2,
-    Volt, Xendit,
+    Fiserv, Fiuu, Mifinity, Nexinets, Noon, Novalnet, Paytm, Payu, Peachpayments, Phonepe,
+    Razorpay, RazorpayV2, Volt, Xendit,
 };
 
 #[derive(Clone)]
