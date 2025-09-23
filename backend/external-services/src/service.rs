@@ -192,6 +192,17 @@ where
         common_enums::CallConnectorAction::Trigger => {
             let connector_request = connector.build_request_v2(&router_data)?;
 
+            let mut updated_router_data = router_data.clone();
+            updated_router_data = match &connector_request {
+                Some(request) => {
+                    updated_router_data
+                        .resource_common_data
+                        .set_raw_connector_request(Some(extract_raw_connector_request(request)));
+                    updated_router_data
+                }
+                None => updated_router_data,
+            };
+
             let headers = connector_request
                 .as_ref()
                 .map(|connector_request| connector_request.headers.clone())
@@ -212,7 +223,6 @@ where
                 });
             let headers = serde_json::Value::Object(masked_headers);
             tracing::Span::current().record("request.headers", tracing::field::display(&headers));
-            let router_data = router_data.clone();
 
             let req = connector_request.as_ref().map(|connector_request| {
                 let masked_request = match connector_request.body.as_ref() {
@@ -278,7 +288,7 @@ where
                                 )
                             })
                             .chain(
-                                router_data
+                                updated_router_data
                                     .resource_common_data
                                     .get_vault_headers()
                                     .map(|headers| {
@@ -591,7 +601,7 @@ where
                                         tracing::Span::current().record("response.body", tracing::field::display(response.masked_serialize().unwrap_or(json!({ "error": "failed to mask serialize connector response"}))));
                                     }
 
-                                    let is_source_verified = connector.verify(&router_data, interfaces::verification::ConnectorSourceVerificationSecrets::AuthHeaders(router_data.connector_auth_type.clone()), &body.response)?;
+                                    let is_source_verified = connector.verify(&updated_router_data, interfaces::verification::ConnectorSourceVerificationSecrets::AuthHeaders(updated_router_data.connector_auth_type.clone()), &body.response)?;
 
                                     if !is_source_verified {
                                         return Err(error_stack::report!(
@@ -599,8 +609,6 @@ where
                                         ));
                                     }
 
-                                    // Set raw_connector_response BEFORE calling the transformer
-                                    let mut updated_router_data = router_data.clone();
                                     if all_keys_required.unwrap_or(true) {
                                         let raw_response_string =
                                             strip_bom_and_convert_to_string(&body.response);
@@ -638,8 +646,6 @@ where
                                         ])
                                         .inc();
 
-                                    // Set raw connector response for error cases BEFORE processing error
-                                    let mut updated_router_data = router_data.clone();
                                     if all_keys_required.unwrap_or(true) {
                                         let raw_response_string =
                                             strip_bom_and_convert_to_string(&body.response);
@@ -985,6 +991,43 @@ fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
             s
         }
     })
+}
+
+fn extract_raw_connector_request(connector_request: &Request) -> String {
+    // Extract actual body content
+    let body_content = match connector_request.body.as_ref() {
+        Some(request) => match request {
+            RequestContent::Json(data)
+            | RequestContent::FormUrlEncoded(data)
+            | RequestContent::Xml(data) => serde_json::to_value(&**data)
+                .unwrap_or(json!({ "error": "failed to serialize body"})),
+            RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
+            RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
+        },
+        None => serde_json::Value::Null,
+    };
+
+    // Extract unmasked headers
+    let headers_content = connector_request
+        .headers
+        .iter()
+        .map(|(k, v)| {
+            let value = match v {
+                Maskable::Normal(val) => val.clone(),
+                Maskable::Masked(val) => val.clone().expose().to_string(),
+            };
+            (k.clone(), value)
+        })
+        .collect::<HashMap<_, _>>();
+
+    // Create complete request with actual content
+    json!({
+        "url": connector_request.url,
+        "method": connector_request.method.to_string(),
+        "headers": headers_content,
+        "body": body_content
+    })
+    .to_string()
 }
 
 /// Helper function to parse JSON from response bytes with BOM handling
