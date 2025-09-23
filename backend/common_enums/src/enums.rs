@@ -1645,7 +1645,6 @@ pub enum RoutableConnectors {
     Wise,
     Worldline,
     Worldpay,
-    Worldpayvantiv,
     Worldpayxml,
     Xendit,
     Zen,
