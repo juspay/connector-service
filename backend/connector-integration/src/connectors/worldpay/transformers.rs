@@ -2,9 +2,9 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Void, Refund, RSync},
+    connector_flow::{Authorize, Capture, PSync, Refund, RSync},
     connector_types::{
-        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentFlowData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
         RefundSyncData, ResponseId,
     },
@@ -166,19 +166,6 @@ pub struct WorldpayCaptureResponse {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct WorldpayVoidRequest {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WorldpayVoidResponse {
-    pub outcome: String,
-    pub transaction_reference: String,
-    #[serde(rename = "_links")]
-    pub links: WorldpayLinks,
-}
-
-
-#[derive(Debug, Clone, Serialize)]
 pub struct WorldpaySyncRequest {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,6 +196,17 @@ pub struct WorldpayRefundSyncRequest {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayRefundSyncResponse {
+    pub outcome: String,
+    #[serde(rename = "_links")]
+    pub links: WorldpayLinks,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorldpayVoidRequest {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldpayVoidResponse {
     pub outcome: String,
     #[serde(rename = "_links")]
     pub links: WorldpayLinks,
@@ -368,51 +366,6 @@ impl
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>>
-    for WorldpayVoidRequest
-{
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
-    fn try_from(
-        _item: super::WorldpayRouterData<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {})
-    }
-}
-
-impl
-    TryFrom<
-        ResponseRouterData<WorldpayVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<WorldpayVoidResponse, RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
-    ) -> Result<Self, Self::Error> {
-        let status = match item.response.outcome.as_str() {
-            "sentForCancellation" => AttemptStatus::Voided,
-            _ => AttemptStatus::VoidFailed,
-        };
-
-        let connector_transaction_id = extract_transaction_id(&item.response.links.self_link.href)
-            .unwrap_or_else(|| item.response.transaction_reference.clone());
-
-        let mut router_data = item.router_data;
-        router_data.resource_common_data.status = status;
-        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: None,
-            connector_response_reference_id: Some(item.response.transaction_reference),
-            incremental_authorization_allowed: None,
-            status_code: item.http_code,
-        });
-        Ok(router_data)
-    }
-}
-
-
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for WorldpaySyncRequest
 {
@@ -554,6 +507,59 @@ impl
         router_data.response = Ok(RefundsResponseData {
             connector_refund_id,
             refund_status,
+            status_code: item.http_code,
+        });
+        Ok(router_data)
+    }
+}
+
+// Void Request Transformer
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>, T>>
+    for WorldpayVoidRequest
+{
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    fn try_from(
+        _item: super::WorldpayRouterData<RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Worldpay uses empty body for cancellations
+        Ok(Self {})
+    }
+}
+
+// Void Response Transformer
+impl
+    TryFrom<
+        ResponseRouterData<
+            WorldpayVoidResponse,
+            RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
+        >,
+    > for RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            WorldpayVoidResponse,
+            RouterDataV2<domain_types::connector_flow::Void, PaymentFlowData, domain_types::connector_types::PaymentVoidData, PaymentsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let status = match item.response.outcome.as_str() {
+            "sentForCancellation" => AttemptStatus::Voided,
+            _ => AttemptStatus::VoidFailed,
+        };
+
+        let connector_transaction_id = extract_transaction_id(&item.response.links.self_link.href)
+            .unwrap_or_else(|| "unknown_void_id".to_string());
+
+        let mut router_data = item.router_data;
+        router_data.resource_common_data.status = status;
+        router_data.response = Ok(PaymentsResponseData::TransactionResponse {
+            resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
+            redirection_data: None,
+            mandate_reference: None,
+            connector_metadata: None,
+            network_txn_id: None,
+            connector_response_reference_id: None,
+            incremental_authorization_allowed: None,
             status_code: item.http_code,
         });
         Ok(router_data)
