@@ -55,3 +55,8 @@ use_self = "warn"
 
 # Lints to allow
 option_map_unit_fn = "allow"
+
+[patch.'https://github.com/juspay/hyperswitch']
+masking = { path = "./local-masking-fix" }
+
+

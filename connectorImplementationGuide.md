@@ -90,10 +90,9 @@ use crate::connectors::{Adyen, Razorpay, NewConnectorName}; // Add your connecto
 
 ### File: config/development.toml
 
-7. Take reference from hyperswitch development.toml for base_url
-https://github.com/juspay/hyperswitch/blob/main/config/development.toml
+7. Take reference from hyperswitch development.toml for base_url in context
 
-### Create Connector Implementation
+### 3. Create Connector Implementation
 
 8. Export the connector name and run these two scripts
 ```sh
@@ -631,12 +630,7 @@ macros::create_all_prerequisites!(
 );
 ```
 
-19. **VALIDATION STEP**: Verify that steps 17 and 18 are completed correctly:
-   - Confirm that the `build_headers` function has been moved from its original location into the `member_functions` block of `macros::create_all_prerequisites!`
-   - Verify that the function signature has been updated to use the new parameters: `req: &RouterDataV2<F, FCD, Req, Res>`
-   - Ensure that the function body from the original `build_headers` function has been preserved inside the new location
-
-20. Remove the whole ConnectorCommonExt trait
+19. Remove the whole ConnectorCommonExt trait
 e.g:
 ```rust
 impl<Flow, Request, Response> ConnectorCommonExt<Flow, Request, Response> for New_connector_name
@@ -653,71 +647,39 @@ where
 }
 ```
 
-21. Add pub(crate) mod headers with only the required headers above the macros::create_all_prerequisites!
+20. Copy and paste the following code block as it is above the macros::create_all_prerequisites!
 ```rust
 pub(crate) mod headers {
-    pub(crate) const ACCEPT: &str = "Accept";
-    pub(crate) const API_KEY: &str = "API-KEY";
-    pub(crate) const APIKEY: &str = "apikey";
-    pub(crate) const API_TOKEN: &str = "Api-Token";
-    pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
-    pub(crate) const DATE: &str = "Date";
-    pub(crate) const IDEMPOTENCY_KEY: &str = "Idempotency-Key";
-    pub(crate) const MESSAGE_SIGNATURE: &str = "Message-Signature";
-    pub(crate) const MERCHANT_ID: &str = "Merchant-ID";
-    pub(crate) const REQUEST_ID: &str = "request-id";
-    pub(crate) const NONCE: &str = "nonce";
-    pub(crate) const TIMESTAMP: &str = "Timestamp";
-    pub(crate) const TOKEN: &str = "token";
-    pub(crate) const X_ACCEPT_VERSION: &str = "X-Accept-Version";
-    pub(crate) const X_CC_API_KEY: &str = "X-CC-Api-Key";
-    pub(crate) const X_CC_VERSION: &str = "X-CC-Version";
-    pub(crate) const X_DATE: &str = "X-Date";
-    pub(crate) const X_LOGIN: &str = "X-Login";
-    pub(crate) const X_NN_ACCESS_KEY: &str = "X-NN-Access-Key";
-    pub(crate) const X_TRANS_KEY: &str = "X-Trans-Key";
-    pub(crate) const X_RANDOM_VALUE: &str = "X-RandomValue";
-    pub(crate) const X_REQUEST_DATE: &str = "X-RequestDate";
-    pub(crate) const X_VERSION: &str = "X-Version";
-    pub(crate) const X_API_KEY: &str = "X-Api-Key";
-    pub(crate) const CORRELATION_ID: &str = "Correlation-Id";
-    pub(crate) const WP_API_VERSION: &str = "WP-Api-Version";
-    pub(crate) const STRIPE_COMPATIBLE_CONNECT_ACCOUNT: &str = "Stripe-Account";
-    pub(crate) const SOURCE: &str = "Source";
-    pub(crate) const USER_AGENT: &str = "User-Agent";
-    pub(crate) const KEY: &str = "key";
-    pub(crate) const X_SIGNATURE: &str = "X-Signature";
-    pub(crate) const SOAP_ACTION: &str = "SOAPAction";
-    pub(crate) const X_PROFILE_ID: &str = "X-Profile-Id";
+    pub(crate) const AUTHORIZATION: &str = "Authorization";
 }
 ```
 
-22. Locate the ConnectorCommon trait impl
+21. Locate the ConnectorCommon trait impl
 e.g
 ```rust
 impl ConnectorCommon for New_connector_name {
 ```
 
-23. Update the impl with this code block, dont fix any errors and dont combine multiple steps
+22. Update the impl with this code block, dont fix any errors and dont combine multiple steps
 ```rust
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for New_connector_name<T>
 {
 ```
 
-24. Remove this code block inside the build_error_response function in ConnectorCommon trait
+23. Remove this code block inside the build_error_response function in ConnectorCommon trait
 ```rust
         event_builder.map(|i| i.set_error_response_body(&response));
         router_env::logger::info!(connector_response=?response);
 ```
 
-25. Copy and paste the following code block in place of the code block that you removed in the previous step, dont fix any errors and dont combine multiple steps
+24. Copy and paste the following code block in place of the code block that you removed in the previous step, dont fix any errors and dont combine multiple steps
 ```rust
         with_error_response_body!(event_builder, response);
 ```
 
-26. Copy and paste the following code block as it is in the member_functions: block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
+25. Copy and paste the following code block as it is in the member_functions: block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
 ```rust
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
@@ -734,17 +696,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         }
 ```
 
-27. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
+26. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites, dont fix any errors and dont combine multiple steps
 ```rust
 (
     flow: Authorize,
-    request_body: ,
+    request_body: <T>,
     response_body: ,
     router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
 )
 ```
 
-28. Copy and paste the following code block as it is in the file under ConnectorCommon impl, dont fix any errors and dont combine multiple steps
+27. Copy and paste the following code block as it is in the file under ConnectorCommon impl, dont fix any errors and dont combine multiple steps
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -773,12 +735,12 @@ macros::macro_connector_implementation!(
 );
 ```
 
-29. Locate the following trait
+28. Locate the following trait
 ```rust
 impl ConnectorIntegration<Authorize, PaymentsAuthorizeData, PaymentsResponseData> for New_connector_name
 ```
 
-29.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+29.a Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
@@ -829,20 +791,13 @@ macros::macro_connector_implementation!(
 )
 ```
 
-30. **VALIDATION STEP**: Verify that step 29 (all substeps) are completed correctly for the Authorize flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 29.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 29.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 29.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the Authorize flow (step 29.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: Authorize` (step 29.e)
-
-31. Remove the following trait
+30. Remove the following trait
 e.g:
 ```rust
 impl ConnectorIntegration<Authorize, PaymentsAuthorizeData, PaymentsResponseData> for New_connector_name
 ```
 
-32. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites put comma (,) after the previous one and dont fix any errors
+31. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites put comma (,) after the previous one and dont fix any errors
 ```rust
 (
     flow: PSync,
@@ -852,7 +807,7 @@ impl ConnectorIntegration<Authorize, PaymentsAuthorizeData, PaymentsResponseData
 )
 ```
 
-33. Copy and paste the following code block as it is in the file under ConnectorCommon impl, dont fix any errors and dont combine multiple steps
+32. Copy and paste the following code block as it is in the file under ConnectorCommon impl, dont fix any errors and dont combine multiple steps
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -881,12 +836,12 @@ macros::macro_connector_implementation!(
 );
 ```
 
-34. Locate the following trait
+33. Locate the following trait
 ```rust
 impl ConnectorIntegration<PSync, PaymentsSyncData, PaymentsResponseData> for New_connector_name
 ```
 
-35. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+34. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
@@ -894,7 +849,7 @@ macros::macro_connector_implementation!(
     flow_name: PSync,
 )
 ```
-35.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 34
+34.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 33
 ```rust
 fn get_request_body(
     &self,
@@ -909,14 +864,14 @@ fn handle_response(
 }
 ```
 
-35.c. Add the request struct name and response struct name to import from transformers
+34.c. Add the request struct name and response struct name to import from transformers
 ```rust
 use transformers::{
     self as new_connector_name, New_connector_nameSyncRequest, New_connector_nameSyncResponse,
 };
 ```
 
-35.d. Add the request struct name and response struct name in the flow: PSync of api: [] block in macros::create_all_prerequisites,
+34.d. Add the request struct name and response struct name in the flow: PSync of api: [] block in macros::create_all_prerequisites,
 ```rust
 (
     flow: PSync,
@@ -925,7 +880,7 @@ use transformers::{
     router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
 ```
 
-35.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: PSync
+34.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: PSync
 ```rust
 macros::macro_connector_implementation!(
     //..
@@ -935,25 +890,13 @@ macros::macro_connector_implementation!(
 )
 ```
 
-35.f. **If get_request_body function is missing**: Remove the request_body and curl_request fields as they are not needed
-- Remove `request_body: New_connector_nameSyncRequest<T>,` from the flow: PSync in api: [] block of macros::create_all_prerequisites
-- Remove `curl_request: Format(New_connector_nameSyncRequest),` from the macros::macro_connector_implementation! for flow_name: PSync
-- Keep only the response_body and curl_response fields
-
-36. **VALIDATION STEP**: Verify that step 35 (all substeps) are completed correctly for the PSync flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 35.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 35.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 35.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the PSync flow (step 35.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: PSync` (step 35.e)
-
-37. Remove the following trait
+35. Remove the following trait
 e.g:
 ```rust
 impl ConnectorIntegration<PSync, PaymentsSyncData, PaymentsResponseData> for New_connector_name
 ```
 
-38. Remove the PSync stub implementation
+36. Remove the PSync stub implementation
 e.g:
 ```rust
 impl<
@@ -968,7 +911,7 @@ impl<
 {
 }
 ```
-39. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+37. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
 ```rust
 (
     flow: Refund,
@@ -978,7 +921,7 @@ impl<
 )
 ```
 
-40. Copy and paste the following code block as it is in the file
+38. Copy and paste the following code block as it is in the file
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -1009,12 +952,12 @@ macros::macro_connector_implementation!(
 );
 ```
 
-41. Locate the following trait
+39. Locate the following trait
 ```rust
 impl ConnectorIntegration<Execute, RefundsData, RefundsResponseData> for New_connector_name
 ```
 
-42.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+40.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
@@ -1023,7 +966,7 @@ macros::macro_connector_implementation!(
 )
 ```
 
-42.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 41, dont fix any errors and dont combine multiple steps
+40.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 39, dont fix any errors and dont combine multiple steps
 ```rust
 fn get_request_body(
     &self,
@@ -1038,14 +981,14 @@ fn handle_response(
 }
 ```
 
-42.c. Add the request struct name and response struct name to import from transformers
+40.c. Add the request struct name and response struct name to import from transformers
 ```rust
 use transformers::{
     self as new_connector_name, New_connector_nameRefundRequest, New_connector_nameRefundResponse,
 };
 ```
 
-42.d. Add the request struct name and response struct name in the flow: Refund of api: [] block in macros::create_all_prerequisites,
+40.d. Add the request struct name and response struct name in the flow: Refund of api: [] block in macros::create_all_prerequisites,
 ```rust
 (
     flow: Refund,
@@ -1055,7 +998,7 @@ use transformers::{
 )
 ```
 
-42.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Refund
+40.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Refund
 ```rust
 macros::macro_connector_implementation!(
     //..
@@ -1065,20 +1008,13 @@ macros::macro_connector_implementation!(
 )
 ```
 
-43. **VALIDATION STEP**: Verify that step 42 (all substeps) are completed correctly for the Refund flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 42.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 42.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 42.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the Refund flow (step 42.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: Refund` (step 42.e)
-
-44. Remove the following trait
+41. Remove the following trait
 e.g:
 ```rust
 impl ConnectorIntegration<Execute, RefundsData, RefundsResponseData> for New_connector_name
 ```
 
-45. Remove the Refund stub implementation
+42. Remove the Refund stub implementation
 e.g:
 ```rust
 impl<
@@ -1094,7 +1030,7 @@ impl<
 }
 ```
 
-46. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+43. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
 ```rust
 (
     flow: RSync,
@@ -1104,7 +1040,7 @@ impl<
 )
 ```
 
-47. Copy and paste the following code block as it is in the file
+44. Copy and paste the following code block as it is in the file
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -1135,12 +1071,12 @@ macros::macro_connector_implementation!(
 );
 ```
 
-48. Locate the following trait
+45. Locate the following trait
 ```rust
 impl ConnectorIntegration<RSync, RefundsData, RefundsResponseData> for New_connector_name
 ```
 
-49.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+46.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
@@ -1148,7 +1084,7 @@ macros::macro_connector_implementation!(
     flow_name: RSync,
 )
 ```
-49.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 48
+46.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 45
 ```rust
 fn get_request_body(
     &self,
@@ -1163,14 +1099,14 @@ fn handle_response(
 }
 ```
 
-49.c. Add the request struct name and response struct name to import from transformers
+46.c. Add the request struct name and response struct name to import from transformers
 ```rust
 use transformers::{
     self as new_connector_name, New_connector_nameRSyncRequest, New_connector_nameRSyncResponse,
 };
 ```
 
-49.d. Add the request struct name and response struct name in the flow: RSync of api: [] block in macros::create_all_prerequisites,
+46.d. Add the request struct name and response struct name in the flow: RSync of api: [] block in macros::create_all_prerequisites,
 ```rust
 (
     flow: RSync,
@@ -1179,7 +1115,7 @@ use transformers::{
     router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
 ```
 
-49.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: RSync
+46.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: RSync
 ```rust
 macros::macro_connector_implementation!(
     //..
@@ -1189,26 +1125,13 @@ macros::macro_connector_implementation!(
 )
 ```
 
-49.f. **If get_request_body function is missing**: Remove the request_body and curl_request fields as they are not needed
-- Remove `request_body: New_connector_nameRSyncRequest<T>,` from the flow: RSync in api: [] block of macros::create_all_prerequisites
-- Remove `curl_request: Format(New_connector_nameRSyncRequest),` from the macros::macro_connector_implementation! for flow_name: RSync
-- Keep only the response_body and curl_response fields
-
-50. **VALIDATION STEP**: Verify that step 49 (all substeps) are completed correctly for the RSync flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 49.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 49.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 49.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the RSync flow (step 49.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: RSync` (step 49.e)
-   - If applicable, verify that step 49.f has been completed for handling missing `get_request_body` function
-
-51. Remove the following trait
+47. Remove the following trait
 e.g:
 ```rust
 impl ConnectorIntegration<RSync, RefundsData, RefundsResponseData> for New_connector_name
 ```
 
-52. Remove the RSync stub implementation
+48. Remove the RSync stub implementation
 e.g:
 ```rust
 impl<
@@ -1224,7 +1147,7 @@ impl<
 }
 ```
 
-53. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+49. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
 ```rust
 (
     flow: Capture,
@@ -1234,7 +1157,7 @@ impl<
 )
 ```
 
-54. Copy and paste the following code block as it is in the file
+50. Copy and paste the following code block as it is in the file
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -1265,12 +1188,12 @@ macros::macro_connector_implementation!(
 );
 ```
 
-55. Locate the following trait
+51. Locate the following trait
 ```rust
 impl ConnectorIntegration<Capture, PaymentsCaptureData, PaymentsResponseData>  for New_connector_name
 ```
 
-56.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+52.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
@@ -1278,7 +1201,7 @@ macros::macro_connector_implementation!(
     flow_name: Capture,
 )
 ```
-56.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 55
+52.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 51
 ```rust
 fn get_request_body(
     &self,
@@ -1293,14 +1216,14 @@ fn handle_response(
 }
 ```
 
-56.c. Add the request struct name and response struct name to import from transformers
+52.c. Add the request struct name and response struct name to import from transformers
 ```rust
 use transformers::{
     self as new_connector_name, New_connector_nameCaptureRequest, New_connector_nameCaptureResponse,
 };
 ```
 
-56.d. Add the request struct name and response struct name in the flow: Capture of api: [] block in macros::create_all_prerequisites,
+52.d. Add the request struct name and response struct name in the flow: Capture of api: [] block in macros::create_all_prerequisites,
 ```rust
 (
     flow: Capture,
@@ -1310,7 +1233,7 @@ use transformers::{
 )
 ```
 
-56.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Capture
+52.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Capture
 ```rust
 macros::macro_connector_implementation!(
     //..
@@ -1320,20 +1243,13 @@ macros::macro_connector_implementation!(
 )
 ```
 
-57. **VALIDATION STEP**: Verify that step 56 (all substeps) are completed correctly for the Capture flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 56.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 56.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 56.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the Capture flow (step 56.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: Capture` (step 56.e)
-
-58. Remove the following trait
+53. Remove the following trait
 e.g:
 ```rust
 impl ConnectorIntegration<Capture, PaymentsCaptureData, PaymentsResponseData>  for New_connector_name
 ```
 
-59. Remove the Capture stub implementation
+54. Remove the Capture stub implementation
 e.g:
 ```rust
 impl<
@@ -1349,7 +1265,7 @@ impl<
 }
 ```
 
-60. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
+55. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
 ```rust
 (
     flow: Void,
@@ -1359,7 +1275,7 @@ impl<
 )
 ```
 
-61. Copy and paste the following code block as it is in the file
+56. Copy and paste the following code block as it is in the file
 ```rust
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -1390,12 +1306,12 @@ macros::macro_connector_implementation!(
 );
 ```
 
-62. Locate the following trait
+57. Locate the following trait
 ```rust
 impl ConnectorIntegration<Void, PaymentsCancelData, PaymentsResponseData>  for New_connector_name
 ```
 
-63.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
+58.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
 get_headers and get_url functions in the following macro, dont fix any errors
 ```rust
 macros::macro_connector_implementation!(
@@ -1403,7 +1319,7 @@ macros::macro_connector_implementation!(
     flow_name: Void,
 )
 ```
-63.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 62
+58.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 57
 ```rust
 fn get_request_body(
     &self,
@@ -1418,14 +1334,14 @@ fn handle_response(
 }
 ```
 
-63.c. Add the request struct name and response struct name to import from transformers
+58.c. Add the request struct name and response struct name to import from transformers
 ```rust
 use transformers::{
     self as new_connector_name, New_connector_nameCancelRequest, New_connector_nameCancelResponse,
 };
 ```
 
-63.d. Add the request struct name and response struct name in the flow: Void of api: [] block in macros::create_all_prerequisites,
+58.d. Add the request struct name and response struct name in the flow: Void of api: [] block in macros::create_all_prerequisites,
 ```rust
 (
     flow: Void,
@@ -1435,7 +1351,7 @@ use transformers::{
 )
 ```
 
-63.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Void
+58.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: Void
 ```rust
 macros::macro_connector_implementation!(
     //..
@@ -1445,26 +1361,13 @@ macros::macro_connector_implementation!(
 )
 ```
 
-63.f. **If get_request_body function is missing**: Remove the request_body and curl_request fields as they are not needed
-- Remove `request_body: New_connector_nameCancelRequest,` from the flow: Void in api: [] block of macros::create_all_prerequisites
-- Remove `curl_request: Format(New_connector_nameCancelRequest),` from the macros::macro_connector_implementation! for flow_name: Void
-- Keep only the response_body and curl_response fields
-
-64. **VALIDATION STEP**: Verify that step 63 (all substeps) are completed correctly for the Void flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 63.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 63.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 63.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the Void flow (step 63.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: Void` (step 63.e)
-   - If applicable, verify that step 63.f has been completed for handling missing `get_request_body` function
-
-65. Remove the following trait
+59. Remove the following trait
 e.g:
 ```rust
 impl ConnectorIntegration<Void, PaymentsCancelData, PaymentsResponseData>  for New_connector_name
 ```
 
-66. Remove the Void stub implementation
+60. Remove the Void stub implementation
 e.g:
 ```rust
 impl<
@@ -1480,145 +1383,9 @@ impl<
 }
 ```
 
-67. Copy and paste the following code block as it is in the api: [] block of macros::create_all_prerequisites
-```rust
-(
-    flow: SetupMandate,
-    request_body: ,
-    response_body: ,
-    router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-)
-```
-
-68. Copy and paste the following code block as it is in the file
-```rust
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: New_connector_name,
-    curl_request: Json(),
-    curl_response: ,
-    flow_name: SetupMandate,
-    resource_common_data: PaymentFlowData,
-    flow_request: SetupMandateRequestData<T>,
-    flow_response: PaymentsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        }
-
-        fn get_url(
-            &self,
-            req: &RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-        }
-    }
-);
-```
-
-69. Locate the following trait
-```rust
-impl ConnectorIntegration<SetupMandate, SetupMandateRequestData, PaymentsResponseData>  for New_connector_name
-```
-
-70.a. Copy and paste the code inside the get_headers and get_url functions as it is in the 
-get_headers and get_url functions in the following macro, dont fix any errors
-```rust
-macros::macro_connector_implementation!(
-    //..
-    flow_name: SetupMandate,
-)
-```
-70.b. Locate the request struct and the response struct in the fn get_request_body and fn handle_response respectively inside the impl that you located in step no 69
-```rust
-fn get_request_body(
-    &self,
-    req: &SetupMandateRouterData,
-    //..
-    let connector_req = new_connector_name::New_connector_namePaymentsRequest::try_from(&connector_router_data)?; //This one is the request struct i.e New_connector_namePaymentsRequest
-    Ok(RequestContent::Json(Box::new(connector_req))) //The Request Format e.g: Json, Formdata
-}
-fn handle_response(
-    //..
-    let response: new_connector_name::New_connector_namePaymentsResponse = res //This one is the response struct i.e New_connector_namePaymentsResponse
-}
-```
-
-70.c. Add the request struct name and response struct name to import from transformers
-```rust
-use transformers::{
-    self as new_connector_name, New_connector_namePaymentsRequest, New_connector_namePaymentsResponse,
-};
-```
-
-70.d. Add the request struct name and response struct name in the flow: SetupMandate of api: [] block in macros::create_all_prerequisites,
-```rust
-(
-    flow: SetupMandate,
-    request_body: New_connector_namePaymentsRequest,
-    response_body: New_connector_namePaymentsResponse,
-    router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-)
-```
-
-70.e. Add the request struct name and response struct name in the macros::macro_connector_implementation! for flow_name: SetupMandate
-```rust
-macros::macro_connector_implementation!(
-    //..
-    curl_request: Json(New_connector_namePaymentsRequest),
-    curl_response: New_connector_namePaymentsResponse,
-    flow_name: SetupMandate,
-)
-```
-
-70.f. **If get_request_body function is missing**: Remove the request_body and curl_request fields as they are not needed
-- Remove `request_body: New_connector_namePaymentsRequest,` from the flow: SetupMandate in api: [] block of macros::create_all_prerequisites
-- Remove `curl_request: Format(New_connector_namePaymentsRequest),` from the macros::macro_connector_implementation! for flow_name: SetupMandate
-- Keep only the response_body and curl_response fields
-
-71. **VALIDATION STEP**: Verify that step 70 (all substeps) are completed correctly for the SetupMandate flow:
-   - Confirm that the `get_headers` and `get_url` function implementations have been copied as it is from the original trait into the macro (step 70.a)
-   - Verify that the request and response struct names have been identified from `get_request_body` and `handle_response` functions (step 70.b)
-   - Check that the request and response struct names have been added to the transformers import statement (step 70.c)
-   - Ensure that the request and response struct names have been added to the `api: []` block in `macros::create_all_prerequisites!` for the SetupMandate flow (step 70.d)
-   - Confirm that the request and response struct names have been added to the `macros::macro_connector_implementation!` for `flow_name: SetupMandate` (step 70.e)
-   - If applicable, verify that step 70.f has been completed for handling missing `get_request_body` function
-
-72. Remove the following trait
-e.g:
-```rust
-impl ConnectorIntegration<SetupMandate, SetupMandateRequestData, PaymentsResponseData>  for New_connector_name
-```
-
-73. Remove the SetupMandate stub implementation
-e.g:
-```rust
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        SetupMandate,
-        PaymentFlowData,
-        SetupMandateRequestData<T>,
-        PaymentsResponseData,
-    > for Payu<T>
-{
-}
-```
-
 ### File: backend/connector-integration/src/connectors/new_connector/transformers.rs
 
-74. Remove all lines at the top of the Rust file that start with use, including any grouped imports and multiline use statements. Dont do anything else dont fix any errors
+61. Remove all lines at the top of the Rust file that start with use, including any grouped imports and multiline use statements. Dont do anything else dont fix any errors
 e.g:
 ```rust
 use common_enums::enums;
@@ -1640,7 +1407,7 @@ use hyperswitch_domain_models::{
 };
 ```
 
-75. Copy and paste the following code block as it is into the starting of transformers.rs file and dont remove anything else dont fix any errors
+62. Copy and paste the following code block as it is into the starting of transformers.rs file and dont remove anything else dont fix any errors
 ```rust
 use std::collections::HashMap;
 
@@ -1675,12 +1442,12 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 ```
 
-76. Copy and paste the following code block below the code block that you added in the previous step dont do anything else
+63. Copy and paste the following code block below the code block that you added in the previous step dont do anything else
 ```rust
 use crate::{connectors::new_connector_name::New_connector_nameRouterData, types::ResponseRouterData};
 ```
 
-77. Locate and remove the New_connector_nameRouterData struct and its impl
+64. Locate and remove the New_connector_nameRouterData struct and its impl
 ```rust
 #[derive(Debug, Serialize)]
 pub struct New_connector_nameRouterData<T> {
@@ -1693,7 +1460,7 @@ impl<T> From<(Unit, T)> for New_connector_nameRouterData<T> {
 }
 ```
 
-78. See the name of the request struct in Authorize flow in new_connector_name.rs file
+65. See the name of the request struct in Authorize flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1704,14 +1471,14 @@ e.g:
 )
 ```
 
-79. Locate the struct in transformers.rs file
+66. Locate the struct in transformers.rs file
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
 pub struct New_connector_namePaymentsRequest {
 ```
 
-80. Update the struct you located in the previous step similar to this following code
+67. Update the struct you located in the previous step similar to this following code
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
@@ -1725,7 +1492,7 @@ pub struct New_connector_namePaymentsRequest<
 > {
 ```
 
-81. Add <T> in the struct which is used for payment method information like card
+68. Add <T> in the struct which is used for payment method information like card
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
@@ -1736,7 +1503,7 @@ pub struct New_connector_namePaymentsRequest<
 }
 ```
 
-82. Now locate the struct where you added <T> in last step and do the changes similar in step 73 and 74 until a field with "CardNumber" is reached
+69. Now locate the struct where you added <T> in last step and do the changes similar in step 67 and 68 until a field with "CardNumber" is reached
 e.g:
 ```rust
 #[derive(Debug, Serialize)]
@@ -1747,7 +1514,7 @@ pub struct StructName {
 }
 ```
 
-83. Replace CardNumber with RawCardNumber<T>
+70. Replace CardNumber with RawCardNumber<T>
 ```rust
 pub struct StructName {
     //..
@@ -1756,28 +1523,7 @@ pub struct StructName {
 }
 ```
 
-84. **Validation: Verify CardNumber to RawCardNumber<T> Transformation**
-   - [ ] Confirm all CardNumber fields have been replaced with RawCardNumber<T>
-   - [ ] Verify that all structs containing card information now have the generic type parameter <T>
-   - [ ] Ensure all card-related structs follow the pattern:
-     ```rust
-     #[derive(Debug, Serialize)]
-     pub struct StructName<
-         T: PaymentMethodDataTypes
-             + std::fmt::Debug
-             + std::marker::Sync
-             + std::marker::Send
-             + 'static
-             + Serialize,
-     > {
-         //..
-         card_field: RawCardNumber<T>,
-         //..
-     }
-     ```
-   - [ ] Validate that the transformation is consistent across all card-related data structures
-
-85. See the name of the request struct in Authorize flow in new_connector_name.rs file
+71. See the name of the request struct in Authorize flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1788,7 +1534,7 @@ e.g:
 )
 ```
 
-86. Locate the TryFrom impl for the request struct
+72. Locate the TryFrom impl for the request struct
 e.g:
 ```rust
 impl TryFrom<&New_connector_nameRouterData<PaymentsAuthorizeRouterData>> for New_connector_namePaymentsRequest {
@@ -1798,7 +1544,7 @@ impl TryFrom<&New_connector_nameRouterData<PaymentsAuthorizeRouterData>> for New
     ) -> Result<Self, Self::Error> {
 ```
 
-87. Replace the code block you located in the previous step with the following one
+73. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         T: PaymentMethodDataTypes
@@ -1834,14 +1580,14 @@ impl<
     ) -> Result<Self, Self::Error> {
 ```
 
-88. Inside the try_from function all the function/fields that are coming from item should come from item.resource_common_data
+74. Inside the try_from function all the function/fields that are coming from item should come from item.resource_common_data
 e.g:
 ```rust
 item.get_billing_address()? //previous
 item.resource_common_data.get_billing_address()? //Correct
 ```
 
-89. See the name of the response_body struct in Authorize flow in new_connector_name.rs file
+75. See the name of the response_body struct in Authorize flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1852,7 +1598,7 @@ e.g:
 )
 ```
 
-90. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePaymentsResponse *>
+76. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePaymentsResponse *>
 e.g:
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<* New_connector_namePaymentsResponse, *>
@@ -1864,7 +1610,7 @@ impl<F, T> TryFrom<ResponseRouterData<* New_connector_namePaymentsResponse, *>
     ) -> Result<Self, Self::Error> {
 ```
 
-91. Replace the code block you located in the previous step with the following one
+77. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         T: PaymentMethodDataTypes
@@ -1900,7 +1646,7 @@ impl<
     ) -> Result<Self, Self::Error> {
 ```
 
-92. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+78. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1913,7 +1659,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-93. Wrap status inside resource_common_data: PaymentFlowData for response try_from for authorize
+79. Wrap status inside resource_common_data: PaymentFlowData for response try_from for authorize
 e.g:
 ```rust
 Ok(Self {
@@ -1924,7 +1670,7 @@ Ok(Self {
     response: //..
 ```
 
-94. See the name of the response_body struct in PSync flow in new_connector_name.rs file
+80. See the name of the response_body struct in PSync flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1935,7 +1681,7 @@ e.g:
 )
 ```
 
-95. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePSyncResponse *>
+81. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_namePSyncResponse *>
 e.g:
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<* FortePaymentsSyncResponse *>
@@ -1947,7 +1693,7 @@ impl<F, T> TryFrom<ResponseRouterData<* FortePaymentsSyncResponse *>
     ) -> Result<Self, Self::Error> {
 ```
 
-96. Replace the code block you located in the previous step with the following one
+82. Replace the code block you located in the previous step with the following one
 ```rust
 impl<F> TryFrom<ResponseRouterData<New_connector_namePSyncResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
@@ -1958,7 +1704,7 @@ impl<F> TryFrom<ResponseRouterData<New_connector_namePSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
 ```
 
-97. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+83. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -1971,7 +1717,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-98. Wrap status inside resource_common_data: PaymentFlowData for response try_from for PSync
+84. Wrap status inside resource_common_data: PaymentFlowData for response try_from for PSync
 e.g:
 ```rust
 Ok(Self {
@@ -1982,7 +1728,7 @@ Ok(Self {
     response: //..
 ```
 
-99. See the name of the request struct in Refund flow in new_connector_name.rs file
+85. See the name of the request struct in Refund flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -1993,7 +1739,7 @@ e.g:
 )
 ```
 
-100. Locate the TryFrom impl for the request struct
+86. Locate the TryFrom impl for the request struct
 e.g:
 ```rust
 impl<F> TryFrom<&New_connector_nameRouterData<&types::RefundsRouterData<F>>> for New_connector_nameRefundRequest {
@@ -2003,7 +1749,7 @@ impl<F> TryFrom<&New_connector_nameRouterData<&types::RefundsRouterData<F>>> for
     ) -> Result<Self, Self::Error> {
 ```
 
-101. Replace the code block you located in the previous step with the following one
+87. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         F,
@@ -2027,7 +1773,7 @@ impl<
     ) -> Result<Self, Self::Error> {
 ```
 
-102. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+88. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2040,7 +1786,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-103. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Refund
+89. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Refund
 e.g:
 ```rust
 Ok(Self {
@@ -2050,7 +1796,7 @@ Ok(Self {
     },
     response: //..
 ```
-104. See the name of the response_body struct in Refund flow in new_connector_name.rs file
+90. See the name of the response_body struct in Refund flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2061,7 +1807,7 @@ e.g:
 )
 ```
 
-105. Locate the TryFrom impl for the RouterData from RefundsResponseRouterData<* New_connector_nameRefundResponse *>
+91. Locate the TryFrom impl for the RouterData from RefundsResponseRouterData<* New_connector_nameRefundResponse *>
 e.g:
 ```rust
 impl TryFrom<RefundsResponseRouterData<* New_connector_nameRefundResponse, *>>
@@ -2073,7 +1819,7 @@ impl TryFrom<RefundsResponseRouterData<* New_connector_nameRefundResponse, *>>
     ) -> Result<Self, Self::Error> {
 ```
 
-106. Replace the code block you located in the previous step with the following one
+92. Replace the code block you located in the previous step with the following one
 ```rust
 impl<F> TryFrom<ResponseRouterData<New_connector_nameRefundResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
@@ -2084,7 +1830,7 @@ impl<F> TryFrom<ResponseRouterData<New_connector_nameRefundResponse, Self>>
     ) -> Result<Self, Self::Error> {
 ```
 
-107. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+93. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2097,7 +1843,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-108. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Refund
+94. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Refund
 e.g:
 ```rust
 Ok(Self {
@@ -2108,7 +1854,7 @@ Ok(Self {
     response: //..
 ```
 
-109. See the name of the response_body struct in RSync flow in new_connector_name.rs file
+95. See the name of the response_body struct in RSync flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2119,7 +1865,7 @@ e.g:
 )
 ```
 
-110. Locate the TryFrom impl for the RouterData from RefundsResponseRouterData<* New_connector_nameRSyncResponse *>
+96. Locate the TryFrom impl for the RouterData from RefundsResponseRouterData<* New_connector_nameRSyncResponse *>
 e.g:
 ```rust
 impl TryFrom<RefundsResponseRouterData<* New_connector_nameRSyncResponse, *>>
@@ -2131,7 +1877,7 @@ impl TryFrom<RefundsResponseRouterData<* New_connector_nameRSyncResponse, *>>
     ) -> Result<Self, Self::Error> {
 ```
 
-111. Replace the code block you located in the previous step with the following one
+97. Replace the code block you located in the previous step with the following one
 ```rust
 impl<F> TryFrom<ResponseRouterData<New_connector_nameRSyncResponse, Self>>
     for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
@@ -2142,7 +1888,7 @@ impl<F> TryFrom<ResponseRouterData<New_connector_nameRSyncResponse, Self>>
     ) -> Result<Self, Self::Error> {
 ```
 
-112. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+98. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2155,7 +1901,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-113. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Rsync
+99. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Rsync
 e.g:
 ```rust
 Ok(Self {
@@ -2165,7 +1911,7 @@ Ok(Self {
     },
     response: //..
 ```
-114. See the name of the request struct in Capture flow in new_connector_name.rs file
+100. See the name of the request struct in Capture flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2176,7 +1922,7 @@ e.g:
 )
 ```
 
-115. Locate the TryFrom impl for the request struct
+101. Locate the TryFrom impl for the request struct
 e.g:
 ```rust
 impl TryFrom<&types::PaymentsCaptureRouterData> for New_connector_nameCaptureRequest {
@@ -2184,7 +1930,7 @@ impl TryFrom<&types::PaymentsCaptureRouterData> for New_connector_nameCaptureReq
     fn try_from(item: &types::PaymentsCaptureRouterData) -> Result<Self, Self::Error> {
 ```
 
-116. Replace the code block you located in the previous step with the following one
+102. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         T: PaymentMethodDataTypes
@@ -2213,7 +1959,7 @@ impl<
 }
 ```
 
-117. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+103. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2226,7 +1972,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-118. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Capture
+104. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Capture
 e.g:
 ```rust
 Ok(Self {
@@ -2237,7 +1983,7 @@ Ok(Self {
     response: //..
 ```
 
-119. See the name of the request struct in Capture flow in new_connector_name.rs file
+105. See the name of the request struct in Capture flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2248,7 +1994,7 @@ e.g:
 )
 ```
 
-120. Locate the TryFrom impl for the request struct
+106. Locate the TryFrom impl for the request struct
 e.g:
 ```rust
 impl TryFrom<PaymentsCaptureResponseRouterData<New_connector_nameCaptureResponse>>
@@ -2260,7 +2006,7 @@ impl TryFrom<PaymentsCaptureResponseRouterData<New_connector_nameCaptureResponse
     ) -> Result<Self, Self::Error> {
 ```
 
-121. Replace the code block you located in the previous step with the following one
+107. Replace the code block you located in the previous step with the following one
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<New_connector_nameCaptureResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
@@ -2271,7 +2017,7 @@ impl<F, T> TryFrom<ResponseRouterData<New_connector_nameCaptureResponse, Self>>
     ) -> Result<Self, Self::Error> {
 ```
 
-122. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+108. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2284,7 +2030,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-123. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Capture
+109. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Capture
 e.g:
 ```rust
 Ok(Self {
@@ -2294,7 +2040,7 @@ Ok(Self {
     },
     response: //..
 ```
-124. See the name of the request struct in Void flow in new_connector_name.rs file
+110. See the name of the request struct in Void flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2305,7 +2051,7 @@ e.g:
 )
 ```
 
-125. Locate the TryFrom impl for the request struct
+111. Locate the TryFrom impl for the request struct
 e.g:
 ```rust
 impl TryFrom<&types::PaymentsCancelRouterData> for New_connector_nameVoidRequest {
@@ -2313,7 +2059,7 @@ impl TryFrom<&types::PaymentsCancelRouterData> for New_connector_nameVoidRequest
     fn try_from(item: &types::PaymentsCancelRouterData) -> Result<Self, Self::Error> {
 ```
 
-126. Replace the code block you located in the previous step with the following one
+112. Replace the code block you located in the previous step with the following one
 ```rust
 impl<
         T: PaymentMethodDataTypes
@@ -2339,7 +2085,7 @@ impl<
     ) -> Result<Self, Self::Error> {
 ```
 
-127. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+113. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2352,7 +2098,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-128. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Void
+114. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for Void
 e.g:
 ```rust
 Ok(Self {
@@ -2362,7 +2108,7 @@ Ok(Self {
     },
     response: //..
 ```
-129. See the name of the response_body struct in RSync flow in new_connector_name.rs file
+115. See the name of the response_body struct in RSync flow in new_connector_name.rs file
 e.g:
 ```rust
 (
@@ -2373,7 +2119,7 @@ e.g:
 )
 ```
 
-130. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_nameVoidResponse *>
+116. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_nameVoidResponse *>
 e.g:
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<F, New_connector_nameVoidResponse, T, PaymentsResponseData>>
@@ -2386,7 +2132,7 @@ impl<F, T> TryFrom<ResponseRouterData<F, New_connector_nameVoidResponse, T, Paym
 
 ```
 
-131. Replace the code block you located in the previous step with the following one
+117. Replace the code block you located in the previous step with the following one
 ```rust
 impl<F, T> TryFrom<ResponseRouterData<New_connector_nameVoidResponse, Self>>
     for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
@@ -2395,7 +2141,7 @@ impl<F, T> TryFrom<ResponseRouterData<New_connector_nameVoidResponse, Self>>
     fn try_from(item: ResponseRouterData<New_connector_nameVoidResponse, Self>) -> Result<Self, Self::Error> {
 ```
 
-132. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
+118. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
 e.g:
 ```rust
 response: Ok(PaymentsResponseData::TransactionResponse {
@@ -2408,132 +2154,7 @@ response: Ok(PaymentsResponseData::TransactionResponse {
 ....item.router_data //right
 ```
 
-133. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Void
-e.g:
-```rust
-Ok(Self {
-    resource_common_data: PaymentFlowData {
-        status: //..,
-        ..item.router_data.resource_common_data
-    },
-    response: //..
-```
-
-134. See the name of the request struct in SetupMandate flow in new_connector_name.rs file
-e.g:
-```rust
-(
-    flow: SetupMandate,
-    request_body: New_connector_nameSetupMandateRequest<T>, //This one
-    response_body: New_connector_nameSetupMandateResponse,
-    router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-)
-```
-
-135. Locate the TryFrom impl for the request struct
-e.g:
-```rust
-impl TryFrom<&types::PaymentsSetupMandateRouterData> for New_connector_nameSetupMandateRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(item: &types::PaymentsSetupMandateRouterData) -> Result<Self, Self::Error> {
-```
-
-136. Replace the code block you located in the previous step with the following one
-```rust
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        New_connector_nameRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-            T,
-        >,
-    > for New_connector_nameSetupMandateRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: New_connector_nameRouterData<
-            RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-```
-
-137. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
-e.g:
-```rust
-response: Ok(PaymentsResponseData::TransactionResponse {
-    //..
-    charges: None, //Remove
-    raw_connector_response: None, // Add
-    status_code: item.http_code,
-}),
-..item.data //wrong
-....item.router_data //right
-```
-
-138. If status is present Wrap status inside resource_common_data: PaymentFlowData for request try_from for SetupMandate
-e.g:
-```rust
-Ok(Self {
-    resource_common_data: PaymentFlowData {
-        status: //..,
-        ..item.router_data.resource_common_data
-    },
-    response: //..
-```
-139. See the name of the response_body struct in SetupMandate flow in new_connector_name.rs file
-e.g:
-```rust
-(
-    flow: SetupMandate,
-    request_body: New_connector_nameSetupMandateRequest<T>, 
-    response_body: New_connector_nameSetupMandateResponse, //This one
-    router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
-)
-```
-
-140. Locate the TryFrom impl for the RouterData from ResponseRouterData<* New_connector_nameSetupMandateResponse *>
-e.g:
-```rust
-impl<F, T> TryFrom<ResponseRouterData<F, New_connector_nameSetupMandateResponse, T, PaymentsResponseData>>
-    for RouterData<F, T, PaymentsResponseData>
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<F, New_connector_nameSetupMandateResponse, T, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-
-```
-
-141. Replace the code block you located in the previous step with the following one
-```rust
-impl<F, T> TryFrom<ResponseRouterData<New_connector_nameSetupMandateResponse, Self>>
-    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<New_connector_nameSetupMandateResponse, Self>) -> Result<Self, Self::Error> {
-```
-
-142. Remove charges field from PaymentsResponseData::TransactionResponse and add raw_connector_response inside try_from function that you modified in the last step and add status_code and change item.data to item.router_data
-e.g:
-```rust
-response: Ok(PaymentsResponseData::TransactionResponse {
-    //..
-    charges: None, //Remove
-    raw_connector_response: None, // Add
-    status_code: item.http_code,
-}),
-..item.data //wrong
-....item.router_data //right
-```
-
-143. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for SetupMandate
+119. If status is present Wrap status inside resource_common_data: PaymentFlowData for response try_from for Void
 e.g:
 ```rust
 Ok(Self {
@@ -2546,21 +2167,21 @@ Ok(Self {
 
 ### File: backend/connector-integration/src/connectors/new_connector.rs
 
-144. Remove the following unused code, dont fix any errors and dont combine multiple steps
+120. Remove the following unused code, dont fix any errors and dont combine multiple steps
 ```rust
 impl ConnectorValidation
 impl ConnectorIntegration
 impl IncomingWebhook
 impl ConnectorSpecifications
 ```
-145. **Build using command `cargo build`**: Build the project and fix the build errors using the errorFixGuide mentioned at step number 146 also remove all the warnings
+121.  **Build using command `cargo build`**: Build the project to check for compilation errors. And fix all the errors from step 122.
 
-146. To resolve the common errors step by step run the instructions written in this file
-``
+122. To resolve the common errors step by step run the instructions written in this file
+```
 ./connectorErrorFixGuide.md
-``
+```
 
-147. Write the Test file by following the steps present in ai_generated_test file.
-``
+123. Create Test file for new_connector by following the steps present in this file
+```
 ./ai_generate_test.md
-``
+```

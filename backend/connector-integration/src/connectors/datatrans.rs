@@ -22,6 +22,8 @@ use std::fmt::Debug;
 use hyperswitch_masking::{Mask, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{
@@ -117,9 +119,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [
-        amount_converter: StringMinorUnit
-    ],
+    amount_converters: [],
     member_functions: {
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
