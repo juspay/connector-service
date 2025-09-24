@@ -367,27 +367,9 @@ where
                     tracing::info!(?response, "response from connector");
 
                     // Construct masked request data once for all events
-                    let masked_request_data =
-                        req.as_ref()
-                            .and_then(|r| match MaskedSerdeValue::from_masked(r) {
-                                Ok(masked) => Some(masked),
-                                Err(_) => {
-                                    tracing::error!("Failed to mask serialize request data");
-                                    None
-                                }
-                            });
-
-                    // Construct additional_fields once for all events
-                    let mut additional_fields = HashMap::new();
-                    if let Some(ref_id) = event_params.reference_id {
-                        if let Ok(processed_ref_id) = MaskedSerdeValue::from_masked(ref_id) {
-                            additional_fields.insert("reference_id".to_string(), processed_ref_id);
-                        } else {
-                            tracing::error!(
-                                "Failed to mask serialize reference_id, skipping field"
-                            );
-                        }
-                    }
+                    let masked_request_data = req.as_ref().and_then(|r| {
+                        MaskedSerdeValue::from_masked_optional(r, "connector_request")
+                    });
 
                     match &response {
                         Ok(Ok(body)) => {
@@ -411,19 +393,15 @@ where
                                     status_code: Some(i32::from(status_code)),
                                     request_data: masked_request_data.clone(),
                                     response_data: res_body.as_ref().and_then(|r| {
-                                        match MaskedSerdeValue::from_masked(r) {
-                                            Ok(masked) => Some(masked),
-                                            Err(_) => {
-                                                tracing::error!(
-                                                    "Failed to mask serialize response data"
-                                                );
-                                                None
-                                            }
-                                        }
+                                        MaskedSerdeValue::from_masked_optional(
+                                            r,
+                                            "connector_response",
+                                        )
                                     }),
-                                    additional_fields: additional_fields.clone(),
+                                    additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
-                                };
+                                }
+                                .with_reference_id(event_params.reference_id.as_deref());
 
                                 emit_event_with_config(event, event_params.event_config);
                             }
@@ -450,19 +428,15 @@ where
                                     status_code: Some(i32::from(status_code)),
                                     request_data: masked_request_data.clone(),
                                     response_data: error_res_body.as_ref().and_then(|r| {
-                                        match MaskedSerdeValue::from_masked(r) {
-                                            Ok(masked) => Some(masked),
-                                            Err(_) => {
-                                                tracing::error!(
-                                                    "Failed to mask serialize response data"
-                                                );
-                                                None
-                                            }
-                                        }
+                                        MaskedSerdeValue::from_masked_optional(
+                                            r,
+                                            "connector_error_response",
+                                        )
                                     }),
-                                    additional_fields: additional_fields.clone(),
+                                    additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
-                                };
+                                }
+                                .with_reference_id(event_params.reference_id.as_deref());
 
                                 emit_event_with_config(event, event_params.event_config);
                             }
@@ -490,9 +464,10 @@ where
                                     status_code: None,
                                     request_data: masked_request_data.clone(),
                                     response_data: None,
-                                    additional_fields: additional_fields.clone(),
+                                    additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
-                                };
+                                }
+                                .with_reference_id(event_params.reference_id.as_deref());
 
                                 emit_event_with_config(event, event_params.event_config);
                             }

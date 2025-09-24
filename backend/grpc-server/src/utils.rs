@@ -409,13 +409,8 @@ where
     log_before_initialization(&request, service_name, &header_payload).into_grpc_status()?;
     let start_time = tokio::time::Instant::now();
 
-    let masked_request_data = match MaskedSerdeValue::from_masked(request.get_ref()) {
-        Ok(masked) => Some(masked),
-        Err(_) => {
-            tracing::error!("Failed to mask serialize grpc request data");
-            None
-        }
-    };
+    let masked_request_data =
+        MaskedSerdeValue::from_masked_optional(request.get_ref(), "grpc_request");
 
     let result = handler(request, header_payload.clone()).await;
     let duration = start_time.elapsed().as_millis();
@@ -423,37 +418,18 @@ where
     log_after_initialization(&result);
 
     let (grpc_status_code, masked_response_data) = match &result {
-        Ok(response) => {
-            let masked_response_data = match MaskedSerdeValue::from_masked(response.get_ref()) {
-                Ok(masked) => Some(masked),
-                Err(_) => {
-                    tracing::error!("Failed to mask serialize grpc response data");
-                    None
-                }
-            };
-            (Some(0i32), masked_response_data)
-        }
+        Ok(response) => (
+            Some(0i32),
+            MaskedSerdeValue::from_masked_optional(response.get_ref(), "grpc_response"),
+        ),
         Err(status) => {
             let error_data = serde_json::json!({ "grpc_code": format!("{:?}", status.code()) });
-            let masked_error_data = match MaskedSerdeValue::from_masked(&error_data) {
-                Ok(masked) => Some(masked),
-                Err(_) => {
-                    tracing::error!("Failed to mask serialize grpc error data");
-                    None
-                }
-            };
-            (Some(status.code().into()), masked_error_data)
+            (
+                Some(status.code().into()),
+                MaskedSerdeValue::from_masked_optional(&error_data, "grpc_error"),
+            )
         }
     };
-
-    let mut additional_fields = std::collections::HashMap::new();
-    if let Some(ref reference_id) = header_payload.reference_id {
-        if let Ok(processed_ref_id) = MaskedSerdeValue::from_masked(reference_id) {
-            additional_fields.insert("reference_id".to_string(), processed_ref_id);
-        } else {
-            tracing::error!("Failed to mask serialize reference_id, skipping field");
-        }
-    }
 
     let grpc_event = Event {
         request_id: header_payload.request_id.clone(),
@@ -466,9 +442,10 @@ where
         status_code: grpc_status_code,
         request_data: masked_request_data,
         response_data: masked_response_data,
-        additional_fields,
+        additional_fields: std::collections::HashMap::new(),
         lineage_ids: header_payload.lineage_ids.clone(),
-    };
+    }
+    .with_reference_id(header_payload.reference_id.as_deref());
     common_utils::emit_event_with_config(grpc_event, &config.events);
 
     result

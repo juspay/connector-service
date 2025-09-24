@@ -15,7 +15,7 @@ use crate::{
     types::TimeRange,
 };
 
-/// Wrapper type that enforces masked serialization for sensitive data
+/// Wrapper type that enforces masked serialization for Serde values
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
 pub struct MaskedSerdeValue {
@@ -28,6 +28,21 @@ impl MaskedSerdeValue {
         Ok(Self {
             inner: masked_value,
         })
+    }
+
+    pub fn from_masked_optional<T: Serialize>(value: &T, context: &str) -> Option<Self> {
+        hyperswitch_masking::masked_serialize(value)
+            .map(|masked_value| Self {
+                inner: masked_value,
+            })
+            .inspect_err(|e| {
+                tracing::error!(
+                    error_category = ?e.classify(),
+                    context = context,
+                    "Failed to mask serialize data"
+                );
+            })
+            .ok()
     }
 }
 
@@ -208,6 +223,20 @@ pub struct Event {
     pub additional_fields: HashMap<String, MaskedSerdeValue>,
     #[serde(flatten)]
     pub lineage_ids: lineage::LineageIds<'static>,
+}
+
+impl Event {
+    pub fn with_reference_id(mut self, reference_id: Option<&str>) -> Self {
+        reference_id
+            .and_then(|ref_id| {
+                MaskedSerdeValue::from_masked_optional(&ref_id.to_string(), "reference_id")
+            })
+            .map(|masked_ref| {
+                self.additional_fields
+                    .insert("reference_id".to_string(), masked_ref);
+            });
+        self
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

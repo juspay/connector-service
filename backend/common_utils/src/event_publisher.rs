@@ -54,13 +54,12 @@ impl EventPublisher {
             .topic(config.topic.clone())
             .build()
             .map_err(|e| {
-                tracing::error!(
-                    error = ?e,
-                    brokers = ?config.brokers,
-                    topic = %config.topic,
-                    "Failed to create KafkaWriter"
-                );
                 error_stack::Report::new(EventPublisherError::KafkaWriterInitializationFailed)
+                    .attach_printable(format!("KafkaWriter build failed: {}", e))
+                    .attach_printable(format!(
+                        "Brokers: {:?}, Topic: {}",
+                        config.brokers, config.topic
+                    ))
             })?;
 
         tracing::info!("EventPublisher created successfully");
@@ -103,21 +102,22 @@ impl EventPublisher {
         };
 
         let event_bytes = serde_json::to_vec(&event).map_err(|e| {
-            tracing::error!(error = ?e, "Failed to serialize audit event to JSON bytes");
             error_stack::Report::new(EventPublisherError::EventSerializationFailed)
-                .attach_printable(format!("Serialization error: {e}"))
+                .attach_printable(format!("Failed to serialize Event to JSON bytes: {e}"))
         })?;
 
         self.writer
             .publish_event(&self.config.topic, key, &event_bytes, Some(headers))
             .map_err(|e| {
-                tracing::error!(
-                    error = ?e,
-                    event_size = event_bytes.len(),
-                    "Failed to publish audit event"
-                );
+                let event_json = serde_json::to_string(&event).unwrap_or_default();
                 error_stack::Report::new(EventPublisherError::EventPublishFailed)
-                    .attach_printable(format!("Kafka publish error: {e}"))
+                    .attach_printable(format!("Kafka publish failed: {}", e))
+                    .attach_printable(format!(
+                        "Topic: {}, Event size: {} bytes",
+                        self.config.topic,
+                        event_bytes.len()
+                    ))
+                    .attach_printable(format!("Failed event: {}", event_json))
             })?;
 
         let event_json = serde_json::to_string(&event).unwrap_or_default();
@@ -141,12 +141,8 @@ impl EventPublisher {
 
     fn process_event(&self, event: &Event) -> CustomResult<serde_json::Value, EventPublisherError> {
         let mut result = event.masked_serialize().map_err(|e| {
-            tracing::error!(
-                error = ?e,
-                "Failed to serialize event to JSON value with masking"
-            );
             error_stack::Report::new(EventPublisherError::EventSerializationFailed)
-                .attach_printable(format!("Event masked serialization error: {e}"))
+                .attach_printable(format!("Event masked serialization failed: {e}"))
         })?;
 
         // Process transformations
@@ -280,13 +276,6 @@ pub fn init_event_publisher(config: &EventConfig) -> CustomResult<(), EventPubli
     let publisher = EventPublisher::new(config)?;
 
     EVENT_PUBLISHER.set(publisher).map_err(|failed_publisher| {
-        tracing::error!(
-            existing_brokers = ?failed_publisher.config.brokers,
-            existing_topic = %failed_publisher.config.topic,
-            new_brokers = ?config.brokers,
-            new_topic = %config.topic,
-            "EventPublisher already initialized with different configuration"
-        );
         error_stack::Report::new(EventPublisherError::AlreadyInitialized)
             .attach_printable("EventPublisher was already initialized")
             .attach_printable(format!(
@@ -317,13 +306,10 @@ pub fn emit_event_with_config(event: Event, config: &EventConfig) {
         return;
     }
 
-    match get_event_publisher(config) {
-        Ok(publisher) => match publisher.emit_event_with_config(event, config) {
-            Ok(_) => tracing::info!("Successfully published audit event"),
-            Err(e) => {
-                tracing::error!(error = ?e, "Failed to publish audit event")
-            }
-        },
-        Err(e) => tracing::error!(error = ?e, "Failed to initialize event publisher"),
-    }
+    // just log the error if publishing fails
+    let _ = get_event_publisher(config)
+        .and_then(|publisher| publisher.emit_event_with_config(event, config))
+        .inspect_err(|e| {
+            tracing::error!(error = ?e, "Failed to emit event");
+        });
 }
