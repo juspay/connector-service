@@ -354,7 +354,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
         req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
     ) -> CustomResult<String, errors::ConnectorError> {
         let base_url = self.base_url(&req.resource_common_data.connectors);
-        let url = format!("{}/v1/transactions", base_url);
+        println!("datatrans: Base URL from config: '{}'", base_url);
+        println!("datatrans: Base URL ends with slash: {}", base_url.ends_with('/'));
+        
+        // Fix double slash issue by trimming trailing slash from base_url
+        let clean_base_url = base_url.trim_end_matches('/');
+        let url = format!("{}/v1/transactions", clean_base_url);
         println!("datatrans: Using URL: {}", url);
         Ok(url)
     }
@@ -471,7 +476,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
         let connector_payment_id = req.request.connector_transaction_id
             .get_connector_transaction_id()
             .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-        let url = format!("{}/v1/transactions/{}", base_url, connector_payment_id);
+        
+        // Fix double slash issue by trimming trailing slash from base_url
+        let clean_base_url = base_url.trim_end_matches('/');
+        let url = format!("{}/v1/transactions/{}", clean_base_url, connector_payment_id);
         println!("datatrans: Using sync URL: {}", url);
         Ok(url)
     }
