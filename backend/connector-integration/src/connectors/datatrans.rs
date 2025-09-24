@@ -546,10 +546,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
         println!("datatrans: Handling sync response with status: {}", res.status_code);
         println!("datatrans: Sync response body: {}", String::from_utf8_lossy(&res.response));
         
-        let response: DatatransSyncResponse = res
-            .response
-            .parse_struct("DatatransSyncResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: DatatransSyncResponse = match res.response.parse_struct("DatatransSyncResponse") {
+            Ok(resp) => resp,
+            Err(err) => {
+                println!("datatrans: Failed to parse sync response: {:?}", err);
+                println!("datatrans: Raw sync response: {}", String::from_utf8_lossy(&res.response));
+                return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+            }
+        };
         
         println!("datatrans: Sync response parsed successfully: {:?}", response);
         event_builder.map(|i| i.set_response_body(&response));
@@ -582,7 +586,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
                     transformers::TransactionStatus::Authenticated => common_enums::AttemptStatus::Authorized,
                     transformers::TransactionStatus::Transmitted => common_enums::AttemptStatus::Pending,
                     transformers::TransactionStatus::ChallengeOngoing => common_enums::AttemptStatus::AuthenticationPending,
-                    transformers::TransactionStatus::ChallengeRequired => common_enums::AttemptStatus::AuthenticationPending,
+                    transformers::TransactionStatus::ChallengeRequired => common_enums::AttemptStatus::Authorized,
                 }
             },
             DatatransSyncResponse::Error(_) => common_enums::AttemptStatus::Failure,
@@ -780,11 +784,21 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         }
         
         let response = if res.response.is_empty() {
+            println!("datatrans: Capture response is empty - treating as success");
             transformers::DataTransCaptureResponse::Empty
         } else {
-            res.response
-                .parse_struct("DataTransCaptureResponse")
-                .change_context(errors::ConnectorError::ResponseDeserializationFailed)?
+            println!("datatrans: Capture response is not empty - attempting to parse as error");
+            match res.response.parse_struct::<transformers::DatatransError>("DatatransError") {
+                Ok(error) => {
+                    println!("datatrans: Parsed capture error: {:?}", error);
+                    transformers::DataTransCaptureResponse::Error(error)
+                },
+                Err(parse_err) => {
+                    println!("datatrans: Failed to parse capture response as error: {:?}", parse_err);
+                    println!("datatrans: Raw response: {}", String::from_utf8_lossy(&res.response));
+                    return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+                }
+            }
         };
         
         println!("datatrans: Capture response parsed successfully: {:?}", response);

@@ -189,12 +189,18 @@ pub enum DatatransSyncResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SyncResponse {
+    #[serde(rename = "transactionId")]
     pub transaction_id: String,
+    #[serde(rename = "merchantId")]
+    pub merchant_id: Option<String>,
     #[serde(rename = "type")]
-    pub res_type: TransactionType,
+    pub res_type: Option<TransactionType>,
     pub status: TransactionStatus,
-    pub detail: SyncDetails,
+    pub currency: Option<String>,
+    pub refno: Option<String>,
+    pub detail: Option<serde_json::Value>,
     pub card: Option<SyncCardDetails>,
+    pub history: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -222,7 +228,21 @@ pub enum TransactionStatus {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncDetails {
-    fail: Option<FailDetails>,
+    pub init: Option<InitDetails>,
+    pub authorize: Option<AuthorizeDetails>,
+    pub fail: Option<FailDetails>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InitDetails {
+    pub expires: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthorizeDetails {
+    pub amount: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

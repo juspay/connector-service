@@ -39,7 +39,7 @@ const TEST_DATATRANS_API_KEY_ENV: &str = "TEST_DATATRANS_API_KEY";
 const TEST_DATATRANS_KEY1_ENV: &str = "TEST_DATATRANS_KEY1";
 
 const TEST_AMOUNT: i64 = 1000;
-const TEST_CARD_NUMBER: &str = "4111111111111111";
+const TEST_CARD_NUMBER: &str = "4242424242424242";
 const TEST_CARD_EXP_MONTH: &str = "10";
 const TEST_CARD_EXP_YEAR: &str = "2030";
 const TEST_CARD_CVC: &str = "123";
@@ -556,9 +556,12 @@ async fn test_payment_capture() {
             .into_inner();
 
         // Verify payment status is charged after capture
+        println!("Capture response status: {}", capture_response.status);
+        println!("Expected status (Charged): {}", i32::from(PaymentStatus::Charged));
         assert!(
             capture_response.status == i32::from(PaymentStatus::Charged),
-            "Payment should be in CHARGED state after capture"
+            "Payment should be in CHARGED state after capture. Got: {}, Expected: {}", 
+            capture_response.status, i32::from(PaymentStatus::Charged)
         );
     });
 }
