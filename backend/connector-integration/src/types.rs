@@ -50,10 +50,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Braintree => Box::new(Braintree::new()),
             ConnectorEnum::Bluecode => Box::new(Bluecode::new()),
             ConnectorEnum::Cryptopay => Box::new(Cryptopay::new()),
-            ConnectorEnum::Datatrans => {
-                // TODO: Implement full ConnectorServiceTrait for Datatrans
-                panic!("Datatrans connector not fully implemented yet")
-            }
+            ConnectorEnum::Datatrans => Box::new(Datatrans::new()),
         }
     }
 }

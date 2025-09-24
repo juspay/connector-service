@@ -129,3 +129,12 @@ macros::create_all_prerequisites!(
         }
     }
 );
+
+// Manual trait implementations since macro isn't working properly
+use interfaces::connector_types::*;
+
+// Implement ConnectorServiceTrait by virtue of implementing all required traits
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::ConnectorServiceTrait<T> for Datatrans<T>
+{
+}
