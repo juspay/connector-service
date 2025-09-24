@@ -15,7 +15,7 @@ use domain_types::{
     },
     errors::ConnectorError,
 };
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use common_enums::AttemptStatus;
@@ -64,6 +64,7 @@ pub struct DatatransPaymentsRequest<
     pub currency: common_enums::Currency,
     pub card: DataTransPaymentDetails<T>,
     pub refno: String,
+    #[serde(rename = "autoSettle")]
     pub auto_settle: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect: Option<RedirectUrls>,
@@ -98,8 +99,6 @@ pub enum DataTransPaymentDetails<
 pub struct PlainCardDetails<
     T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize,
 > {
-    #[serde(rename = "type")]
-    pub res_type: String,
     pub number: RawCardNumber<T>,
     pub expiry_month: Secret<String>,
     pub expiry_year: Secret<String>,
@@ -305,10 +304,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_method_data = match &item.router_data.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 DataTransPaymentDetails::Cards(PlainCardDetails {
-                    res_type: "card".to_string(),
                     number: card_data.card_number.clone(),
                     expiry_month: card_data.card_exp_month.clone(),
-                    expiry_year: card_data.card_exp_year.clone(),
+                    expiry_year: {
+                        let year = card_data.card_exp_year.peek();
+                        if year.len() == 4 {
+                            year[2..].to_string().into()
+                        } else {
+                            card_data.card_exp_year.clone()
+                        }
+                    },
                     cvv: card_data.card_cvc.clone(),
                     three_ds: None,
                 })
@@ -320,7 +325,14 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             amount: Some(item.amount),
             currency: item.router_data.request.currency,
             card: payment_method_data,
-            refno: item.router_data.resource_common_data.connector_request_reference_id.clone(),
+            refno: {
+                let ref_id = item.router_data.resource_common_data.connector_request_reference_id.clone();
+                if ref_id.is_empty() {
+                    item.router_data.resource_common_data.payment_id.chars().take(40).collect()
+                } else {
+                    ref_id.chars().take(40).collect()
+                }
+            },
             auto_settle: matches!(item.router_data.request.capture_method, Some(common_enums::CaptureMethod::Automatic)),
             redirect: item.router_data.request.router_return_url.as_ref().map(|return_url| {
                 RedirectUrls {
@@ -347,10 +359,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let payment_method_data = match &item.router_data.request.payment_method_data {
             domain_types::payment_method_data::PaymentMethodData::Card(card_data) => {
                 DataTransPaymentDetails::Cards(PlainCardDetails {
-                    res_type: "card".to_string(),
                     number: card_data.card_number.clone(),
                     expiry_month: card_data.card_exp_month.clone(),
-                    expiry_year: card_data.card_exp_year.clone(),
+                    expiry_year: {
+                        let year = card_data.card_exp_year.peek();
+                        if year.len() == 4 {
+                            year[2..].to_string().into()
+                        } else {
+                            card_data.card_exp_year.clone()
+                        }
+                    },
                     cvv: card_data.card_cvc.clone(),
                     three_ds: None,
                 })

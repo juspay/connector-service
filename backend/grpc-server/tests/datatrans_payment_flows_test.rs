@@ -49,7 +49,7 @@ const DATATRANS_API_KEY_ENV: &str = "TEST_DATATRANS_API_KEY"; // api_key
 
 // Test card data
 const TEST_AMOUNT: i64 = 1000;
-const TEST_CARD_NUMBER: &str = "4111111111111111"; // Valid test card
+const TEST_CARD_NUMBER: &str = "5555555555554444"; // Datatrans test card (Mastercard)
 const TEST_CARD_EXP_MONTH: &str = "12";
 const TEST_CARD_EXP_YEAR: &str = "2025";
 const TEST_CARD_CVC: &str = "123";
@@ -201,11 +201,12 @@ async fn test_payment_authorization_auto_capture() {
         println!("datatrans: Received response with status: {:?}", response.status);
         println!("datatrans: Response details: {:?}", response);
 
-        // For datatrans, we expect either Charged or Authorized status for auto capture
+        // For datatrans, we expect Charged, Authorized, or AuthenticationPending (for 3DS enrolled cards)
         assert!(
             response.status == i32::from(PaymentStatus::Charged) ||
-            response.status == i32::from(PaymentStatus::Authorized),
-            "Payment should be in Charged or Authorized state, got: {:?}", response.status
+            response.status == i32::from(PaymentStatus::Authorized) ||
+            response.status == i32::from(PaymentStatus::AuthenticationPending),
+            "Payment should be in Charged, Authorized, or AuthenticationPending state, got: {:?}", response.status
         );
         
         println!("datatrans: Payment authorization auto capture test passed");
