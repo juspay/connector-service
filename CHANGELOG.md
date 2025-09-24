@@ -4,6 +4,16 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.09.24.0
+
+### Refactors
+
+- Added proper referer handling ([#184](https://github.com/juspay/connector-service/pull/184)) ([`f719688`](https://github.com/juspay/connector-service/commit/f719688943adf7bc17bb93dcb43f27485c17a96e))
+
+**Full Changelog:** [`2025.09.23.0...2025.09.24.0`](https://github.com/juspay/connector-service/compare/2025.09.23.0...2025.09.24.0)
+
+- - -
+
 ## 2025.09.23.0
 
 ### Features
