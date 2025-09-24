@@ -116,6 +116,7 @@ pub struct Connectors {
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
+    pub cryptopay: ConnectorParams,
     pub placetopay: ConnectorParams,
 }
 
@@ -477,6 +478,23 @@ impl<
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Crypto(crypto) => {
+                    let crypto_currency = crypto.crypto_currency.ok_or_else( || {
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "crypto_currency is required".to_owned(),
+                            error_object: None,
+                        })
+                    })?;
+
+                    Ok(PaymentMethodData::Crypto(
+                        payment_method_data::CryptoData {
+                            pay_currency: crypto_currency.pay_currency,
+                            network: crypto_currency.network,
+                        },
+                    ))
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -667,6 +685,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Crypto(_) => Ok(Some(PaymentMethodType::CryptoCurrency)),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -3853,6 +3872,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 os_version: info.os_version,
                 device_model: info.device_model,
                 accept_language: info.accept_language,
+                referer: info.referer,
             }),
             email,
             customer_name: None,
@@ -4452,6 +4472,7 @@ impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInf
             os_version: value.os_version,
             device_model: value.device_model,
             accept_language: value.accept_language,
+            referer: value.referer,
         })
     }
 }

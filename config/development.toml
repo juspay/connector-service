@@ -52,6 +52,7 @@ noon.base_url = "https://api-test.noonpayments.com/"
 mifinity.base_url = "https://demo.mifinity.com/"
 braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
+cryptopay.base_url = "https://business-sandbox.cryptopay.me"
 placetopay.base_url = "https://test.placetopay.com/rest/gateway/"
 
 # Generic Events Configuration
