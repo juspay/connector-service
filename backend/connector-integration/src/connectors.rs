@@ -61,3 +61,6 @@ pub use self::bluecode::Bluecode;
 
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
+
+pub mod trustpay;
+pub use self::trustpay::Trustpay;

@@ -20,7 +20,7 @@ use crate::{
     errors::{ApiError, ApplicationErrorResponse, ConnectorError},
     mandates::{CustomerAcceptance, MandateData},
     payment_address::{self, Address, AddressDetails, PhoneDetails},
-    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes},
+    payment_method_data::{self, Card, PaymentMethodData, PaymentMethodDataTypes, SessionToken},
     router_data::PaymentMethodToken,
     router_request_types::{
         AcceptDisputeIntegrityObject, AuthoriseIntegrityObject, BrowserInformation,
@@ -63,6 +63,7 @@ pub enum ConnectorEnum {
     Volt,
     Bluecode,
     Cryptopay,
+    Trustpay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -93,6 +94,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
             grpc_api_types::payments::Connector::Bluecode => Ok(Self::Bluecode),
             grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
+            grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -1082,11 +1084,13 @@ pub struct PaymentCreateOrderData {
     pub integrity_object: Option<CreateOrderIntegrityObject>,
     pub metadata: Option<serde_json::Value>,
     pub webhook_url: Option<String>,
+    pub payment_method_type: Option<common_enums::PaymentMethodType>,
 }
 
 #[derive(Debug, Clone)]
 pub struct PaymentCreateOrderResponse {
     pub order_id: String,
+    pub session_token: Option<SessionToken>,
 }
 
 #[derive(Debug, Clone)]

@@ -53,6 +53,8 @@ mifinity.base_url = "https://demo.mifinity.com/"
 braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
+trustpay.base_url = "https://test-tpgw.trustpay.eu/"
+trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 
 # Generic Events Configuration
 [events]

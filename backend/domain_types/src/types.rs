@@ -117,6 +117,7 @@ pub struct Connectors {
     pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
     pub cryptopay: ConnectorParams,
+    pub trustpay: ConnectorParamsWithMoreUrls,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -124,6 +125,14 @@ pub struct ConnectorParams {
     /// base url
     pub base_url: String,
     pub dispute_base_url: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize, Clone, Default)]
+pub struct ConnectorParamsWithMoreUrls {
+    /// base url
+    pub base_url: String,
+    /// base url for bank redirects
+    pub base_url_bank_redirects: String,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]

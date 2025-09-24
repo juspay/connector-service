@@ -68,6 +68,10 @@ pub trait ValidationTrait {
     fn should_do_payment_method_token(&self) -> bool {
         false
     }
+
+    fn should_do_order_create_for_payment_method(&self, _payment_method: PaymentMethod) -> bool {
+        self.should_do_order_create()
+    }
 }
 
 pub trait PaymentOrderCreate:
