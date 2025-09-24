@@ -75,8 +75,15 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2.7.8
 
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+          checksum: true
+
       - name: Run Tests
-        run: cargo test --all-features --workspace
+        shell: bash
+        run: cargo nextest run --config-file .nextest.toml --profile ci
 
   formatting:
     name: Check formatting
