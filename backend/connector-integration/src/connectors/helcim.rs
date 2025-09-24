@@ -1,6 +1,9 @@
 pub mod transformers;
 
-use common_utils::{consts::NO_ERROR_CODE, errors::CustomResult, ext_traits::BytesExt};
+use common_utils::{
+    consts::NO_ERROR_CODE, errors::CustomResult, ext_traits::BytesExt, fp_utils::generate_id,
+    types::FloatMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
@@ -21,6 +24,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -42,6 +46,9 @@ use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+
+// Helcim requires an Idempotency Key of length 25. We prefix every ID by "HS_".
+const ID_LENGTH: usize = 22;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -165,7 +172,7 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [amount_converter: FloatMajorUnit],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -181,13 +188,9 @@ macros::create_all_prerequisites!(
             let mut api_key = self.get_auth_header(&req.connector_auth_type)?;
 
             // Helcim requires an Idempotency Key of length 25. We prefix every ID by "HS_".
-            // Use UUID to generate a unique string and take first 22 chars
-            let uuid_str = uuid::Uuid::new_v4().to_string().replace("-", "");
-            let random_part = &uuid_str[..22]; // Take first 22 characters
-            let idempotency_key_value = format!("HS_{random_part}");
             let mut idempotency_key = vec![(
                 headers::IDEMPOTENCY_KEY.to_string(),
-                idempotency_key_value.into_masked(),
+                generate_id(ID_LENGTH, "HS").into_masked(),
             )];
 
             header.append(&mut api_key);
@@ -227,7 +230,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = helcim::HelcimAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         Ok(vec![(
             headers::API_TOKEN.to_string(),
@@ -247,7 +250,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: helcim::HelcimErrorResponse = res
             .response
             .parse_struct("HelcimErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 

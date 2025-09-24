@@ -10,6 +10,7 @@ use domain_types::{
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
+    router_request_types::SyncRequestType,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{PeekInterface, Secret};
@@ -235,18 +236,19 @@ impl<
             postal_code: req_address.get_zip()?.to_owned(),
             street2: req_address.line2.clone(),
             city: req_address.city.clone(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_email(),
+            email: item.router_data.request.email.clone(),
         };
 
-        let ip_address = Secret::new("127.0.0.1".to_string()); // Default IP
+        let ip_address = item.router_data.request.get_ip_address()?;
 
-        // Convert amount to FloatMajorUnit
-        let amount = common_utils::types::FloatMajorUnit(
-            item.router_data.request.minor_amount.get_amount_as_i64() as f64 / 100.0,
-        );
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         let line_items = vec![HelcimLineItems {
             description: item
@@ -373,8 +375,14 @@ impl<
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        let resource_id =
-            ResponseId::ConnectorTransactionId(item.response.transaction_id.to_string());
+        //PreAuth Transaction ID is stored in connector metadata
+        //Initially resource_id is stored as NoResponseID for manual capture
+        //After Capture Transaction is completed it is updated to store the Capture ID
+        let resource_id = if item.router_data.request.is_auto_capture()? {
+            ResponseId::ConnectorTransactionId(item.response.transaction_id.to_string())
+        } else {
+            ResponseId::NoResponseId
+        };
 
         let connector_metadata = if !item.router_data.request.is_auto_capture()? {
             Some(serde_json::json!(HelcimMetaData {
@@ -413,27 +421,45 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
     fn try_from(
         item: ResponseRouterData<HelcimPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
-        let status = common_enums::AttemptStatus::from(item.response.clone());
+        match item.router_data.request.sync_type {
+            SyncRequestType::SinglePaymentSync => {
+                let status = common_enums::AttemptStatus::from(item.response.clone());
 
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.transaction_id.to_string(),
-                ),
-                redirection_data: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: item.response.invoice_number.clone(),
-                incremental_authorization_allowed: None,
-                mandate_reference: None,
-                status_code: item.http_code,
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
+                Ok(Self {
+                    response: Ok(PaymentsResponseData::TransactionResponse {
+                        resource_id: ResponseId::ConnectorTransactionId(
+                            item.response.transaction_id.to_string(),
+                        ),
+                        redirection_data: None,
+                        connector_metadata: None,
+                        network_txn_id: None,
+                        connector_response_reference_id: item.response.invoice_number.clone(),
+                        incremental_authorization_allowed: None,
+                        mandate_reference: None,
+                        status_code: item.http_code,
+                    }),
+                    resource_common_data: PaymentFlowData {
+                        status,
+                        ..item.router_data.resource_common_data
+                    },
+                    ..item.router_data
+                })
+            }
+            SyncRequestType::MultipleCaptureSync(_) => {
+                Err(errors::ConnectorError::NotImplemented(
+                    "manual multiple capture sync".to_string(),
+                )
+                .into())
+                // let capture_sync_response_list =
+                //     utils::construct_captures_response_hashmap(vec![item.response]);
+                // Ok(Self {
+                //     response: Ok(PaymentsResponseData::MultipleCaptureResponse {
+                //         capture_sync_response_list,
+                //     }),
+                //     ..item.router_data
+                // })
+            }
+        }
     }
 }
 
@@ -469,14 +495,15 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let amount = common_utils::types::FloatMajorUnit(
-            item.router_data
-                .request
-                .minor_amount_to_capture
-                .get_amount_as_i64() as f64
-                / 100.0,
-        );
+        let ip_address = item.router_data.request.get_ip_address()?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             pre_auth_transaction_id: item
@@ -554,7 +581,7 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let ip_address = Secret::new("127.0.0.1".to_string());
+        let ip_address = item.router_data.request.get_ip_address()?;
 
         Ok(Self {
             card_transaction_id: item
@@ -680,23 +707,22 @@ impl<
             postal_code: req_address.get_zip()?.to_owned(),
             street2: req_address.line2.clone(),
             city: req_address.city.clone(),
-            email: item
-                .router_data
-                .resource_common_data
-                .get_optional_billing_email(),
+            email: item.router_data.request.email.clone(),
         };
 
-        let ip_address = Secret::new("127.0.0.1".to_string()); // Default IP
+        let ip_address = item.router_data.request.get_ip_address()?;
 
-        // Convert amount to FloatMajorUnit
-        let amount = common_utils::types::FloatMajorUnit(
-            item.router_data
-                .request
-                .minor_amount
-                .unwrap_or(common_utils::types::MinorUnit::new(0))
-                .get_amount_as_i64() as f64
-                / 100.0,
-        );
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data
+                    .request
+                    .minor_amount
+                    .unwrap_or(common_utils::types::MinorUnit::new(0)),
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         let line_items = vec![HelcimLineItems {
             description: item
@@ -837,14 +863,15 @@ impl<
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let amount = common_utils::types::FloatMajorUnit(
-            item.router_data
-                .request
-                .minor_refund_amount
-                .get_amount_as_i64() as f64
-                / 100.0,
-        );
+        let ip_address = item.router_data.request.get_ip_address()?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_refund_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(errors::ConnectorError::AmountConversionFailed)?;
 
         Ok(Self {
             amount,

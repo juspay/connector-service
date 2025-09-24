@@ -50,7 +50,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Braintree => Box::new(Braintree::new()),
             ConnectorEnum::Bluecode => Box::new(Bluecode::new()),
             ConnectorEnum::Cryptopay => Box::new(Cryptopay::new()),
-            ConnectorEnum::Helcim => Box::new(Helcim::<T>::new()),
+            ConnectorEnum::Helcim => Box::new(Helcim::new()),
         }
     }
 }
