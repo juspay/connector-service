@@ -18,11 +18,11 @@ use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
         card_payment_method_type, identifier::IdType, payment_method,
-        payment_service_client::PaymentServiceClient, Address, AuthenticationType, CaptureMethod,
-        CardDetails, CardPaymentMethodType, CountryAlpha2, Currency, Identifier, PaymentAddress,
-        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
-        PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceVoidRequest,
-        PaymentStatus,
+        payment_service_client::PaymentServiceClient, Address, AuthenticationType,
+        BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2,
+        Currency, Identifier, PaymentAddress, PaymentMethod, PaymentServiceAuthorizeRequest,
+        PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, PaymentServiceGetRequest,
+        PaymentServiceVoidRequest, PaymentStatus,
     },
 };
 use tonic::{transport::Channel, Request};
@@ -102,7 +102,16 @@ fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String 
         Some(id) => match &id.id_type {
             Some(IdType::Id(id)) => id.clone(),
             Some(IdType::EncodedData(id)) => id.clone(),
-            Some(_) => panic!("Unexpected ID type in transaction_id"),
+            Some(IdType::NoResponseIdMarker(_)) => {
+                // For manual capture, extract the transaction ID from connector metadata
+                if let Some(preauth_id) = response.connector_metadata.get("preauth_transaction_id")
+                {
+                    return preauth_id.clone();
+                }
+                panic!(
+                    "NoResponseIdMarker found but no preauth_transaction_id in connector metadata"
+                )
+            }
             None => panic!("ID type is None in transaction_id"),
         },
         None => panic!("Transaction ID is None"),
@@ -132,6 +141,30 @@ fn extract_request_ref_id(response: &PaymentServiceAuthorizeResponse) -> String 
             _ => panic!("Expected connector response_ref_id"),
         },
         None => panic!("Resource ID is None"),
+    }
+}
+
+// Helper function to create browser info with IP address (required for Helcim)
+fn create_test_browser_info() -> BrowserInformation {
+    BrowserInformation {
+        ip_address: Some("192.168.1.1".to_string().into()),
+        user_agent: Some(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".to_string(),
+        ),
+        accept_header: Some(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8".to_string(),
+        ),
+        language: Some("en-US".to_string()),
+        color_depth: Some(24),
+        screen_height: Some(1080),
+        screen_width: Some(1920),
+        time_zone_offset_minutes: Some(-300), // EST timezone offset
+        java_enabled: Some(false),
+        java_script_enabled: Some(true),
+        os_type: None,
+        os_version: None,
+        device_model: None,
+        accept_language: None,
     }
 }
 
@@ -201,6 +234,7 @@ fn create_payment_authorize_request_with_amount(
         return_url: Some("https://duck.com".to_string()),
         email: Some(TEST_EMAIL.to_string().into()),
         address: Some(create_test_billing_address()),
+        browser_info: Some(create_test_browser_info()),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("helcim_test_{}", get_timestamp()))),
@@ -248,6 +282,7 @@ fn create_payment_capture_request(
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("capture_ref_{}", get_timestamp()))),
         }),
+        browser_info: Some(create_test_browser_info()),
         ..Default::default()
     }
 }
@@ -264,7 +299,7 @@ fn create_payment_void_request(transaction_id: &str) -> PaymentServiceVoidReques
         }),
         access_token: None,
         all_keys_required: None,
-        browser_info: None,
+        browser_info: Some(create_test_browser_info()),
     }
 }
 

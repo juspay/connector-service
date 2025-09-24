@@ -1,4 +1,4 @@
-use common_utils::pii;
+use common_utils::{pii, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture, SetupMandate, Void},
     connector_types::{
@@ -61,7 +61,7 @@ pub struct HelcimPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    amount: common_utils::types::FloatMajorUnit,
+    amount: FloatMajorUnit,
     currency: common_enums::Currency,
     ip_address: Secret<String, pii::IpAddress>,
     card_data: HelcimCard<T>,
@@ -97,8 +97,8 @@ pub struct HelcimInvoice {
 pub struct HelcimLineItems {
     description: String,
     quantity: u8,
-    price: common_utils::types::FloatMajorUnit,
-    total: common_utils::types::FloatMajorUnit,
+    price: FloatMajorUnit,
+    total: FloatMajorUnit,
 }
 
 #[derive(Debug, Serialize)]
@@ -276,7 +276,7 @@ pub struct HelcimPaymentsResponse {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct HelcimMetaData {
-    pub preauth_transaction_id: u64,
+    pub preauth_transaction_id: String,
 }
 
 impl<
@@ -314,15 +314,18 @@ impl<
         //PreAuth Transaction ID is stored in connector metadata
         //Initially resource_id is stored as NoResponseID for manual capture
         //After Capture Transaction is completed it is updated to store the Capture ID
-        let resource_id = if item.router_data.request.is_auto_capture()? {
+
+        let is_auto_capture = item.router_data.request.is_auto_capture()?;
+
+        let resource_id = if is_auto_capture {
             ResponseId::ConnectorTransactionId(item.response.transaction_id.to_string())
         } else {
             ResponseId::NoResponseId
         };
 
-        let connector_metadata = if !item.router_data.request.is_auto_capture()? {
+        let connector_metadata = if !is_auto_capture {
             Some(serde_json::json!(HelcimMetaData {
-                preauth_transaction_id: item.response.transaction_id,
+                preauth_transaction_id: item.response.transaction_id.to_string(),
             }))
         } else {
             None
@@ -403,7 +406,7 @@ impl<F> TryFrom<ResponseRouterData<HelcimPaymentsResponse, Self>>
 #[serde(rename_all = "camelCase")]
 pub struct HelcimCaptureRequest {
     pre_auth_transaction_id: u64,
-    amount: common_utils::types::FloatMajorUnit,
+    amount: FloatMajorUnit,
     ip_address: Secret<String, pii::IpAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ecommerce: Option<bool>,
@@ -576,7 +579,7 @@ pub struct HelcimSetupMandateRequest<
         + 'static
         + Serialize,
 > {
-    amount: common_utils::types::FloatMajorUnit,
+    amount: FloatMajorUnit,
     currency: common_enums::Currency,
     ip_address: Secret<String, pii::IpAddress>,
     card_data: HelcimCard<T>,
@@ -766,7 +769,7 @@ impl<
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HelcimRefundRequest {
-    amount: common_utils::types::FloatMajorUnit,
+    amount: FloatMajorUnit,
     original_transaction_id: u64,
     ip_address: Secret<String, pii::IpAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
