@@ -180,14 +180,14 @@ pub struct ThreeDSEnolled {
     pub enrolled: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum DatatransSyncResponse {
     Error(DatatransError),
     Response(SyncResponse),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct SyncResponse {
     pub transaction_id: String,
     #[serde(rename = "type")]
@@ -197,7 +197,7 @@ pub struct SyncResponse {
     pub card: Option<SyncCardDetails>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TransactionType {
     Payment,
@@ -205,7 +205,7 @@ pub enum TransactionType {
     CardCheck,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TransactionStatus {
     Initialized,
@@ -219,20 +219,20 @@ pub enum TransactionStatus {
     ChallengeRequired,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncDetails {
     fail: Option<FailDetails>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FailDetails {
     reason: Option<String>,
     message: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncCardDetails {
     pub alias: Option<String>,
@@ -245,7 +245,7 @@ pub struct DatatransRefundRequest {
     pub refno: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum DatatransRefundsResponse {
     Success(DatatransSuccessResponse),
@@ -259,13 +259,13 @@ pub struct DataPaymentCaptureRequest {
     pub refno: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum DataTransCaptureResponse {
     Error(DatatransError),
     Empty,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum DataTransCancelResponse {
     Error(DatatransError),
     Empty,
