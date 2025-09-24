@@ -63,8 +63,7 @@ impl AdditionalHeaders for domain_types::connector_types::DisputeFlowData {
 }
 use common_utils::{
     emit_event_with_config,
-    events::{Event, EventConfig, EventStage, FlowName},
-    pii::SecretSerdeValue,
+    events::{Event, EventConfig, EventStage, FlowName, MaskedSerdeValue},
 };
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
@@ -104,7 +103,6 @@ pub struct EventProcessingParams<'a> {
     pub service_name: &'a str,
     pub flow_name: FlowName,
     pub event_config: &'a EventConfig,
-    pub raw_request_data: Option<SecretSerdeValue>,
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
@@ -368,6 +366,11 @@ where
                         .observe(external_service_elapsed.as_secs_f64());
                     tracing::info!(?response, "response from connector");
 
+                    // Construct masked request data once for all events
+                    let masked_request_data = req.as_ref().and_then(|r| {
+                        MaskedSerdeValue::from_masked_optional(r, "connector_request")
+                    });
+
                     match &response {
                         Ok(Ok(body)) => {
                             let res_body =
@@ -378,62 +381,30 @@ where
                             let status_code = body.status_code;
 
                             // Emit success response event
-                            tokio::spawn({
-                                let connector_name = event_params.connector_name.to_string();
-                                let event_config = event_params.event_config.clone();
-                                let request_data = req.clone();
-                                let response_data = res_body.clone();
-                                let raw_request_data_clone = event_params.raw_request_data.clone();
-                                let url_clone = url.clone();
-                                let flow_name = event_params.flow_name;
-                                let lineage_ids = event_params.lineage_ids.to_owned();
-                                let reference_id_clone = event_params.reference_id.clone();
+                            {
+                                let mut event = Event {
+                                    request_id: request_id.to_string(),
+                                    timestamp: chrono::Utc::now().timestamp().into(),
+                                    flow_type: event_params.flow_name,
+                                    connector: event_params.connector_name.to_string(),
+                                    url: Some(url.clone()),
+                                    stage: EventStage::ConnectorCall,
+                                    latency_ms: Some(latency),
+                                    status_code: Some(i32::from(status_code)),
+                                    request_data: masked_request_data.clone(),
+                                    response_data: res_body.as_ref().and_then(|r| {
+                                        MaskedSerdeValue::from_masked_optional(
+                                            r,
+                                            "connector_response",
+                                        )
+                                    }),
+                                    additional_fields: HashMap::new(),
+                                    lineage_ids: event_params.lineage_ids.to_owned(),
+                                };
+                                event.add_reference_id(event_params.reference_id.as_deref());
 
-                                async move {
-                                    let mut additional_fields = HashMap::new();
-                                    if let Some(ref_id) = reference_id_clone {
-                                        additional_fields.insert(
-                                            "reference_id".to_string(),
-                                            SecretSerdeValue::new(serde_json::Value::String(
-                                                ref_id,
-                                            )),
-                                        );
-                                    }
-
-                                    let event = Event {
-                                        request_id: request_id.to_string(),
-                                        timestamp: chrono::Utc::now().timestamp().into(),
-                                        flow_type: flow_name,
-                                        connector: connector_name.clone(),
-                                        url: Some(url_clone),
-                                        stage: EventStage::ConnectorCall,
-                                        latency: Some(latency),
-                                        status_code: Some(status_code),
-                                        request_data: raw_request_data_clone,
-                                        connector_request_data: request_data.map(Secret::new),
-                                        connector_response_data: response_data.map(Secret::new),
-                                        additional_fields,
-                                        lineage_ids,
-                                    };
-
-                                    match emit_event_with_config(event, &event_config).await {
-                                        Ok(true) => tracing::info!(
-                                            "Successfully published response event for {}",
-                                            connector_name
-                                        ),
-                                        Ok(false) => tracing::info!(
-                                            "Event publishing is disabled for {}",
-                                            connector_name
-                                        ),
-                                        Err(e) => {
-                                            tracing::error!(
-                                                "Failed to publish response event: {:?}",
-                                                e
-                                            )
-                                        }
-                                    }
-                                }
-                            });
+                                emit_event_with_config(event, event_params.event_config);
+                            }
                         }
                         Ok(Err(error_body)) => {
                             let error_res_body =
@@ -445,60 +416,30 @@ where
                             let status_code = error_body.status_code;
 
                             // Emit error response event
-                            tokio::spawn({
-                                let connector_name = event_params.connector_name.to_string();
-                                let event_config = event_params.event_config.clone();
-                                let request_data = req.clone();
-                                let response_data = error_res_body.clone();
-                                let raw_request_data_clone = event_params.raw_request_data.clone();
-                                let url_clone = url.clone();
-                                let flow_name = event_params.flow_name;
-                                let lineage_ids = event_params.lineage_ids.to_owned();
-                                let reference_id_clone = event_params.reference_id.clone();
+                            {
+                                let mut event = Event {
+                                    request_id: request_id.to_string(),
+                                    timestamp: chrono::Utc::now().timestamp().into(),
+                                    flow_type: event_params.flow_name,
+                                    connector: event_params.connector_name.to_string(),
+                                    url: Some(url.clone()),
+                                    stage: EventStage::ConnectorCall,
+                                    latency_ms: Some(latency),
+                                    status_code: Some(i32::from(status_code)),
+                                    request_data: masked_request_data.clone(),
+                                    response_data: error_res_body.as_ref().and_then(|r| {
+                                        MaskedSerdeValue::from_masked_optional(
+                                            r,
+                                            "connector_error_response",
+                                        )
+                                    }),
+                                    additional_fields: HashMap::new(),
+                                    lineage_ids: event_params.lineage_ids.to_owned(),
+                                };
+                                event.add_reference_id(event_params.reference_id.as_deref());
 
-                                async move {
-                                    let mut additional_fields = HashMap::new();
-                                    if let Some(ref_id) = reference_id_clone {
-                                        additional_fields.insert(
-                                            "reference_id".to_string(),
-                                            SecretSerdeValue::new(serde_json::Value::String(
-                                                ref_id,
-                                            )),
-                                        );
-                                    }
-
-                                    let event = Event {
-                                        request_id: request_id.to_string(),
-                                        timestamp: chrono::Utc::now().timestamp().into(),
-                                        flow_type: flow_name,
-                                        connector: connector_name.clone(),
-                                        url: Some(url_clone),
-                                        stage: EventStage::ConnectorCall,
-                                        latency: Some(latency),
-                                        status_code: Some(status_code),
-                                        request_data: raw_request_data_clone,
-                                        connector_request_data: request_data.map(Secret::new),
-                                        connector_response_data: response_data.map(Secret::new),
-                                        additional_fields,
-                                        lineage_ids,
-                                    };
-
-                                    match emit_event_with_config(event, &event_config).await {
-                                        Ok(true) => tracing::info!(
-                                            "Successfully published error response event for {}",
-                                            connector_name
-                                        ),
-                                        Ok(false) => tracing::info!(
-                                            "Event publishing is disabled for {}",
-                                            connector_name
-                                        ),
-                                        Err(e) => tracing::error!(
-                                            "Failed to publish error response event: {:?}",
-                                            e
-                                        ),
-                                    }
-                                }
-                            });
+                                emit_event_with_config(event, event_params.event_config);
+                            }
                         }
                         Err(network_error) => {
                             tracing::error!(
@@ -507,60 +448,29 @@ where
                                 network_error
                             );
 
+                            let latency = u64::try_from(external_service_elapsed.as_millis())
+                                .unwrap_or(u64::MAX);
+
                             // Emit network error event
-                            tokio::spawn({
-                                let connector_name = event_params.connector_name.to_string();
-                                let event_config = event_params.event_config.clone();
-                                let request_data = req.clone();
-                                let raw_request_data_clone = event_params.raw_request_data.clone();
-                                let url_clone = url.clone();
-                                let flow_name = event_params.flow_name;
-                                let lineage_ids = event_params.lineage_ids.to_owned();
-                                let reference_id_clone = event_params.reference_id.clone();
+                            {
+                                let mut event = Event {
+                                    request_id: request_id.to_string(),
+                                    timestamp: chrono::Utc::now().timestamp().into(),
+                                    flow_type: event_params.flow_name,
+                                    connector: event_params.connector_name.to_string(),
+                                    url: Some(url.clone()),
+                                    stage: EventStage::ConnectorCall,
+                                    latency_ms: Some(latency),
+                                    status_code: None,
+                                    request_data: masked_request_data.clone(),
+                                    response_data: None,
+                                    additional_fields: HashMap::new(),
+                                    lineage_ids: event_params.lineage_ids.to_owned(),
+                                };
+                                event.add_reference_id(event_params.reference_id.as_deref());
 
-                                async move {
-                                    let mut additional_fields = HashMap::new();
-                                    if let Some(ref_id) = reference_id_clone {
-                                        additional_fields.insert(
-                                            "reference_id".to_string(),
-                                            SecretSerdeValue::new(serde_json::Value::String(
-                                                ref_id,
-                                            )),
-                                        );
-                                    }
-
-                                    let event = Event {
-                                        request_id: request_id.to_string(),
-                                        timestamp: chrono::Utc::now().timestamp().into(),
-                                        flow_type: flow_name,
-                                        connector: connector_name.clone(),
-                                        url: Some(url_clone),
-                                        stage: EventStage::ConnectorCall,
-                                        latency: None,
-                                        status_code: None,
-                                        request_data: raw_request_data_clone,
-                                        connector_request_data: request_data.map(Secret::new),
-                                        connector_response_data: None,
-                                        additional_fields,
-                                        lineage_ids,
-                                    };
-
-                                    match emit_event_with_config(event, &event_config).await {
-                                        Ok(true) => tracing::info!(
-                                            "Successfully published network error event for {}",
-                                            connector_name
-                                        ),
-                                        Ok(false) => tracing::info!(
-                                            "Event publishing is disabled for {}",
-                                            connector_name
-                                        ),
-                                        Err(e) => tracing::error!(
-                                            "Failed to publish network error event: {:?}",
-                                            e
-                                        ),
-                                    }
-                                }
-                            });
+                                emit_event_with_config(event, event_params.event_config);
+                            }
                         }
                     }
 

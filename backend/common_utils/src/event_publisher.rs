@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use hyperswitch_masking::ErasedMaskSerialize;
 use once_cell::sync::OnceCell;
 use rdkafka::message::{Header, OwnedHeaders};
 use serde_json;
@@ -43,9 +44,9 @@ impl EventPublisher {
         }
 
         tracing::debug!(
-            brokers = ?config.brokers,
-            topic = %config.topic,
-            "Creating EventPublisher with configuration"
+          brokers = ?config.brokers,
+          topic = %config.topic,
+          "Creating EventPublisher with configuration"
         );
 
         let writer = KafkaWriterBuilder::new()
@@ -53,24 +54,15 @@ impl EventPublisher {
             .topic(config.topic.clone())
             .build()
             .map_err(|e| {
-                tracing::error!(
-                    error = ?e,
-                    brokers = ?config.brokers,
-                    topic = %config.topic,
-                    "Failed to create KafkaWriter"
-                );
                 error_stack::Report::new(EventPublisherError::KafkaWriterInitializationFailed)
+                    .attach_printable(format!("KafkaWriter build failed: {}", e))
                     .attach_printable(format!(
                         "Brokers: {:?}, Topic: {}",
                         config.brokers, config.topic
                     ))
             })?;
 
-        tracing::info!(
-            brokers = ?config.brokers,
-            topic = %config.topic,
-            "EventPublisher created successfully"
-        );
+        tracing::info!("EventPublisher created successfully");
 
         Ok(Self {
             writer: Arc::new(writer),
@@ -79,7 +71,7 @@ impl EventPublisher {
     }
 
     /// Publishes a single event to Kafka with metadata as headers.
-    pub async fn publish_event(
+    pub fn publish_event(
         &self,
         event: serde_json::Value,
         topic: &str,
@@ -110,50 +102,22 @@ impl EventPublisher {
         };
 
         let event_bytes = serde_json::to_vec(&event).map_err(|e| {
-            tracing::error!(
-                error = ?e,
-                request_id = %event.get("request_id").unwrap_or(&serde_json::Value::Null),
-                connector = %event.get("connector").unwrap_or(&serde_json::Value::Null),
-                flow_type = %event.get("flow_type").unwrap_or(&serde_json::Value::Null),
-                "Failed to serialize audit event to JSON bytes"
-            );
             error_stack::Report::new(EventPublisherError::EventSerializationFailed)
-                .attach_printable(format!("Serialization error: {e}"))
-                .attach_printable(format!(
-                    "Event context: request_id={}, connector={}, flow_type={}, txn_uuid={}",
-                    event.get("request_id").unwrap_or(&serde_json::Value::Null),
-                    event.get("connector").unwrap_or(&serde_json::Value::Null),
-                    event.get("flow_type").unwrap_or(&serde_json::Value::Null),
-                    event
-                        .get("udf_txn_uuid")
-                        .unwrap_or(&serde_json::Value::Null)
-                ))
+                .attach_printable(format!("Failed to serialize Event to JSON bytes: {e}"))
         })?;
 
         self.writer
             .publish_event(&self.config.topic, key, &event_bytes, Some(headers))
             .map_err(|e| {
-                tracing::error!(
-                    error = ?e,
-                    topic = %topic,
-                    request_id = %event.get("request_id").unwrap_or(&serde_json::Value::Null),
-                    connector = %event.get("connector").unwrap_or(&serde_json::Value::Null),
-                    flow_type = %event.get("flow_type").unwrap_or(&serde_json::Value::Null),
-                    event_size = event_bytes.len(),
-                    "Failed to publish audit event - critical data may be lost"
-                );
+                let event_json = serde_json::to_string(&event).unwrap_or_default();
                 error_stack::Report::new(EventPublisherError::EventPublishFailed)
-                    .attach_printable(format!("Kafka publish error: {e}"))
-                    .attach_printable(format!("Topic: {topic}"))
+                    .attach_printable(format!("Kafka publish failed: {}", e))
                     .attach_printable(format!(
-                        "Event context: request_id={}, connector={}, flow_type={}, txn_uuid={}",
-                        event.get("request_id").unwrap_or(&serde_json::Value::Null),
-                        event.get("connector").unwrap_or(&serde_json::Value::Null),
-                        event.get("flow_type").unwrap_or(&serde_json::Value::Null),
-                        event
-                            .get("udf_txn_uuid")
-                            .unwrap_or(&serde_json::Value::Null)
+                        "Topic: {}, Event size: {} bytes",
+                        self.config.topic,
+                        event_bytes.len()
                     ))
+                    .attach_printable(format!("Failed event: {}", event_json))
             })?;
 
         let event_json = serde_json::to_string(&event).unwrap_or_default();
@@ -165,7 +129,7 @@ impl EventPublisher {
         Ok(())
     }
 
-    pub async fn emit_event_with_config(
+    pub fn emit_event_with_config(
         &self,
         base_event: Event,
         config: &EventConfig,
@@ -173,17 +137,12 @@ impl EventPublisher {
         let processed_event = self.process_event(&base_event)?;
 
         self.publish_event(processed_event, &config.topic, &config.partition_key_field)
-            .await
     }
 
     fn process_event(&self, event: &Event) -> CustomResult<serde_json::Value, EventPublisherError> {
-        let mut result = serde_json::to_value(event).map_err(|e| {
-            tracing::error!(
-                error = ?e,
-                "Failed to serialize event to JSON value"
-            );
+        let mut result = event.masked_serialize().map_err(|e| {
             error_stack::Report::new(EventPublisherError::EventSerializationFailed)
-                .attach_printable(format!("Event serialization error: {e}"))
+                .attach_printable(format!("Event masked serialization failed: {e}"))
         })?;
 
         // Process transformations
@@ -310,8 +269,6 @@ impl EventPublisher {
 /// Initialize the global EventPublisher with the given configuration
 pub fn init_event_publisher(config: &EventConfig) -> CustomResult<(), EventPublisherError> {
     tracing::info!(
-        brokers = ?config.brokers,
-        topic = %config.topic,
         enabled = config.enabled,
         "Initializing global EventPublisher"
     );
@@ -319,13 +276,6 @@ pub fn init_event_publisher(config: &EventConfig) -> CustomResult<(), EventPubli
     let publisher = EventPublisher::new(config)?;
 
     EVENT_PUBLISHER.set(publisher).map_err(|failed_publisher| {
-        tracing::error!(
-            existing_brokers = ?failed_publisher.config.brokers,
-            existing_topic = %failed_publisher.config.topic,
-            new_brokers = ?config.brokers,
-            new_topic = %config.topic,
-            "EventPublisher already initialized with different configuration"
-        );
         error_stack::Report::new(EventPublisherError::AlreadyInitialized)
             .attach_printable("EventPublisher was already initialized")
             .attach_printable(format!(
@@ -350,15 +300,16 @@ fn get_event_publisher(
 }
 
 /// Standalone function to emit events using the global EventPublisher
-pub async fn emit_event_with_config(
-    event: Event,
-    config: &EventConfig,
-) -> CustomResult<bool, EventPublisherError> {
+pub fn emit_event_with_config(event: Event, config: &EventConfig) {
     if !config.enabled {
-        return Ok(false);
+        tracing::info!("Event publishing disabled");
+        return;
     }
 
-    let publisher: &'static EventPublisher = get_event_publisher(config)?;
-    publisher.emit_event_with_config(event, config).await?;
-    Ok(true)
+    // just log the error if publishing fails
+    let _ = get_event_publisher(config)
+        .and_then(|publisher| publisher.emit_event_with_config(event, config))
+        .inspect_err(|e| {
+            tracing::error!(error = ?e, "Failed to emit event");
+        });
 }
