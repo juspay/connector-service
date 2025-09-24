@@ -996,15 +996,8 @@ fn strip_bom_and_convert_to_string(response_bytes: &[u8]) -> Option<String> {
 fn extract_raw_connector_request(connector_request: &Request) -> String {
     // Extract actual body content
     let body_content = match connector_request.body.as_ref() {
-        Some(request) => match request {
-            RequestContent::Json(data)
-            | RequestContent::FormUrlEncoded(data)
-            | RequestContent::Xml(data) => serde_json::to_value(&**data)
-                .unwrap_or(json!({ "error": "failed to serialize body"})),
-            RequestContent::FormData(_) => json!({"request_type": "FORM_DATA"}),
-            RequestContent::RawBytes(_) => json!({"request_type": "RAW_BYTES"}),
-        },
-        None => serde_json::Value::Null,
+        Some(request) => request.get_inner_value().expose().to_string(),
+        None => String::from("None"),
     };
 
     // Extract unmasked headers
