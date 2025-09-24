@@ -16,7 +16,7 @@ use domain_types::{
     router_data_v2::RouterDataV2,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::Secret;
+use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -272,6 +272,17 @@ pub struct PeachPaymentsConnectorMetadataObject {
     pub amex_id: Option<Secret<String>>,
 }
 
+fn get_card_expiry_year_2_digit(
+    expiry_year: Secret<String>,
+) -> Result<Secret<String>, errors::ConnectorError> {
+    let year = expiry_year.peek();
+    Ok(Secret::new(
+        year.get(year.len() - 2..)
+            .ok_or(errors::ConnectorError::RequestEncodingFailed)?
+            .to_string(),
+    ))
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -344,7 +355,7 @@ impl<
                 let card = CardDetails {
                     pan: req_card.card_number.clone(),
                     cardholder_name: req_card.card_holder_name.clone(),
-                    expiry_year: req_card.card_exp_year.clone(),
+                    expiry_year: get_card_expiry_year_2_digit(req_card.card_exp_year.clone())?,
                     expiry_month: req_card.card_exp_month.clone(),
                     cvv: Some(req_card.card_cvc.clone()),
                 };
