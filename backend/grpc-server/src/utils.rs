@@ -431,7 +431,7 @@ where
         }
     };
 
-    let grpc_event = Event {
+    let mut grpc_event = Event {
         request_id: header_payload.request_id.clone(),
         timestamp: chrono::Utc::now().timestamp().into(),
         flow_type: flow_name,
@@ -444,8 +444,8 @@ where
         response_data: masked_response_data,
         additional_fields: std::collections::HashMap::new(),
         lineage_ids: header_payload.lineage_ids.clone(),
-    }
-    .with_reference_id(header_payload.reference_id.as_deref());
+    };
+    grpc_event.add_reference_id(header_payload.reference_id.as_deref());
     common_utils::emit_event_with_config(grpc_event, &config.events);
 
     result

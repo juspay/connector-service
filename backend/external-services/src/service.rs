@@ -382,7 +382,7 @@ where
 
                             // Emit success response event
                             {
-                                let event = Event {
+                                let mut event = Event {
                                     request_id: request_id.to_string(),
                                     timestamp: chrono::Utc::now().timestamp().into(),
                                     flow_type: event_params.flow_name,
@@ -400,8 +400,8 @@ where
                                     }),
                                     additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
-                                }
-                                .with_reference_id(event_params.reference_id.as_deref());
+                                };
+                                event.add_reference_id(event_params.reference_id.as_deref());
 
                                 emit_event_with_config(event, event_params.event_config);
                             }
@@ -417,7 +417,7 @@ where
 
                             // Emit error response event
                             {
-                                let event = Event {
+                                let mut event = Event {
                                     request_id: request_id.to_string(),
                                     timestamp: chrono::Utc::now().timestamp().into(),
                                     flow_type: event_params.flow_name,
@@ -435,8 +435,8 @@ where
                                     }),
                                     additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
-                                }
-                                .with_reference_id(event_params.reference_id.as_deref());
+                                };
+                                event.add_reference_id(event_params.reference_id.as_deref());
 
                                 emit_event_with_config(event, event_params.event_config);
                             }
@@ -453,7 +453,7 @@ where
 
                             // Emit network error event
                             {
-                                let event = Event {
+                                let mut event = Event {
                                     request_id: request_id.to_string(),
                                     timestamp: chrono::Utc::now().timestamp().into(),
                                     flow_type: event_params.flow_name,
@@ -466,8 +466,8 @@ where
                                     response_data: None,
                                     additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
-                                }
-                                .with_reference_id(event_params.reference_id.as_deref());
+                                };
+                                event.add_reference_id(event_params.reference_id.as_deref());
 
                                 emit_event_with_config(event, event_params.event_config);
                             }

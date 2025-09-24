@@ -226,7 +226,7 @@ pub struct Event {
 }
 
 impl Event {
-    pub fn with_reference_id(mut self, reference_id: Option<&str>) -> Self {
+    pub fn add_reference_id(&mut self, reference_id: Option<&str>) {
         reference_id
             .and_then(|ref_id| {
                 MaskedSerdeValue::from_masked_optional(&ref_id.to_string(), "reference_id")
@@ -235,7 +235,6 @@ impl Event {
                 self.additional_fields
                     .insert("reference_id".to_string(), masked_ref);
             });
-        self
     }
 }
 
