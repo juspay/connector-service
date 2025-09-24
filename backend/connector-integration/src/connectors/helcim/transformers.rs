@@ -1,6 +1,6 @@
 use common_utils::pii;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, SetupMandate, Void},
     connector_types::{
         MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
@@ -114,70 +114,6 @@ pub struct HelcimCard<
     card_number: RawCardNumber<T>,
     card_expiry: Secret<String>,
     card_c_v_v: Secret<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct HelcimSyncRequest {
-    // Empty struct for sync requests that don't need a body
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        HelcimRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for HelcimSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        _item: HelcimRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {})
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct HelcimRefundSyncRequest {
-    // Empty struct for refund sync requests that don't need a body
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        HelcimRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for HelcimRefundSyncRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(
-        _item: HelcimRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {})
-    }
 }
 
 impl<

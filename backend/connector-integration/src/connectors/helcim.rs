@@ -38,8 +38,7 @@ use std::{
 use transformers::{
     self as helcim, HelcimCaptureRequest, HelcimPaymentsCaptureResponse, HelcimPaymentsRequest,
     HelcimPaymentsResponse, HelcimPaymentsSyncResponse, HelcimPaymentsVoidResponse,
-    HelcimRefundRequest, HelcimRefundSyncRequest, HelcimSyncRequest, HelcimVoidRequest,
-    RefundResponse, RefundSyncResponse,
+    HelcimRefundRequest, HelcimVoidRequest, RefundResponse, RefundSyncResponse,
 };
 
 use super::macros;
@@ -143,7 +142,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: HelcimSyncRequest,
             response_body: HelcimPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
@@ -167,7 +165,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: RSync,
-            request_body: HelcimRefundSyncRequest,
             response_body: RefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
@@ -312,7 +309,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Helcim,
-    curl_request: Json(HelcimSyncRequest),
     curl_response: HelcimPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -438,7 +434,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Helcim,
-    curl_request: Json(HelcimRefundSyncRequest),
     curl_response: RefundResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
