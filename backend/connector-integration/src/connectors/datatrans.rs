@@ -7,7 +7,7 @@ use common_enums::CurrencyUnit;
 use common_utils::{
     errors::CustomResult, 
     ext_traits::ByteSliceExt, 
-    types::{StringMinorUnit, AmountConvertor, MinorUnit}, 
+    types::{AmountConvertor, MinorUnit}, 
     request::RequestBuilder
 };
 use domain_types::{
@@ -18,12 +18,12 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        RequestDetails, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
         SubmitEvidenceData,
     },
     errors,
@@ -34,7 +34,7 @@ use domain_types::{
     types::Connectors,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon,
     connector_integration_v2::ConnectorIntegrationV2,
@@ -43,10 +43,10 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use transformers::{self as datatrans, DatatransPaymentsRequest, DatatransResponse, DatatransSyncResponse};
+use transformers::{self as datatrans, DatatransResponse, DatatransSyncResponse};
 
-use super::macros;
-use crate::{types::ResponseRouterData, with_error_response_body};
+
+
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -539,8 +539,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
 
     fn handle_response_v2(
         &self,
-        data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        event_builder: Option<&mut ConnectorEvent>,
+        _data: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        _event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, errors::ConnectorError> {
         println!("datatrans: Handling sync response with status: {}", res.status_code);

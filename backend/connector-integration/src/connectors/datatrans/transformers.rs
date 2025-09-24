@@ -6,10 +6,10 @@ use domain_types::{
     payment_method_data::{PaymentMethodDataTypes, RawCardNumber},
     router_data::ConnectorAuthType,
     router_data_v2::RouterDataV2,
-    connector_flow::{Authorize, PSync, Capture, Void, Refund, RSync, SetupMandate},
+    connector_flow::{Authorize, Capture, Refund, SetupMandate},
     connector_types::{
         PaymentFlowData, RefundFlowData, PaymentsAuthorizeData, PaymentsSyncData,
-        PaymentsCaptureData, PaymentVoidData, RefundsData, RefundSyncData,
+        PaymentsCaptureData, RefundsData,
         SetupMandateRequestData, PaymentsResponseData, RefundsResponseData,
         ResponseId,
     },
@@ -688,7 +688,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         item: ResponseRouterData<DataTransCaptureResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response {
+        let _status = match item.response {
             DataTransCaptureResponse::Empty => AttemptStatus::Charged,
             DataTransCaptureResponse::Error(_) => AttemptStatus::Failure,
         };
@@ -719,7 +719,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         item: ResponseRouterData<DataTransCancelResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response {
+        let _status = match item.response {
             DataTransCancelResponse::Empty => AttemptStatus::Voided,
             DataTransCancelResponse::Error(_) => AttemptStatus::VoidFailed,
         };
