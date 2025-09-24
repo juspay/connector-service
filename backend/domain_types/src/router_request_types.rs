@@ -30,6 +30,7 @@ pub struct BrowserInformation {
     pub os_version: Option<String>,
     pub device_model: Option<String>,
     pub accept_language: Option<String>,
+    pub referer: Option<String>,
 }
 
 impl BrowserInformation {
@@ -77,6 +78,11 @@ impl BrowserInformation {
     pub fn get_java_script_enabled(&self) -> Result<bool, Error> {
         self.java_script_enabled
             .ok_or_else(missing_field_err("browser_info.java_script_enabled"))
+    }
+    pub fn get_referer(&self) -> Result<String, Error> {
+        self.referer
+            .clone()
+            .ok_or_else(missing_field_err("browser_info.referer"))
     }
 }
 
@@ -212,6 +218,17 @@ pub struct SubmitEvidenceIntegrityObject {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SessionTokenIntegrityObject {
+    pub amount: MinorUnit,
+    pub currency: Currency,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct AccessTokenIntegrityObject {
+    pub grant_type: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct PaymentMethodTokenIntegrityObject {
     pub amount: MinorUnit,
     pub currency: Currency,
 }

@@ -1,5 +1,5 @@
 use common_enums::{self, enums, AttemptStatus, RefundStatus};
-use common_utils::{consts, ext_traits::OptionExt, pii::Email};
+use common_utils::{consts, ext_traits::OptionExt, pii::Email, types::FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund, RepeatPayment, SetupMandate},
     connector_types::{
@@ -324,7 +324,7 @@ struct AuthorizationIndicatorType {
 pub struct AuthorizedotnetTransactionRequest<T: PaymentMethodDataTypes> {
     // General structure for transaction details in Authorize
     transaction_type: TransactionType,
-    amount: Option<String>,
+    amount: Option<FloatMajorUnit>,
     currency_code: Option<api_enums::Currency>,
     payment: Option<PaymentDetails<T>>,
     profile: Option<ProfileDetails>,
@@ -548,18 +548,24 @@ fn create_regular_transaction_request<
         }
     });
 
-    let customer_id_string: String = item
+    let customer_id_string = item
         .router_data
         .request
         .customer_id
         .as_ref()
-        .map(|cid| cid.get_string_repr().to_owned())
-        .unwrap_or_else(|| "anonymous_customer".to_string());
+        .and_then(|cid| {
+            let id_str = cid.get_string_repr().to_owned();
+            if id_str.len() > MAX_ID_LENGTH {
+                None
+            } else {
+                Some(id_str)
+            }
+        });
 
-    let customer_details = CustomerDetails {
-        id: customer_id_string,
+    let customer_details = customer_id_string.map(|cid| CustomerDetails {
+        id: cid,
         email: item.router_data.request.email.clone(),
-    };
+    });
 
     // Check if we should create a profile for future mandate usage
     let profile = if item.router_data.request.setup_future_usage.is_some() {
@@ -572,12 +578,21 @@ fn create_regular_transaction_request<
 
     Ok(AuthorizedotnetTransactionRequest {
         transaction_type,
-        amount: Some(item.router_data.request.amount.to_string()),
+        amount: Some(
+            item.connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)
+                .attach_printable("Failed to convert payment amount for authorize transaction")?,
+        ),
         currency_code: Some(currency),
         payment: Some(payment_details),
         profile,
         order: Some(order),
-        customer: Some(customer_details),
+        customer: customer_details,
         bill_to,
         user_fields,
         processing_options: None,
@@ -608,7 +623,7 @@ pub struct CreateRepeatPaymentRequest {
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetRepeatPaymentTransactionRequest {
     transaction_type: TransactionType,
-    amount: String,
+    amount: FloatMajorUnit,
     currency_code: api_enums::Currency,
     profile: ProfileDetails,
     order: Option<Order>,
@@ -716,18 +731,6 @@ impl<
             description: order_description,
         };
 
-        let customer_id_string =
-            if item.router_data.resource_common_data.payment_id.len() <= MAX_ID_LENGTH {
-                item.router_data.resource_common_data.payment_id.clone()
-            } else {
-                "repeat_payment_customer".to_string()
-            };
-
-        let customer_details = CustomerDetails {
-            id: customer_id_string,
-            email: None, // Email not available in RepeatPaymentData
-        };
-
         // Extract user fields from metadata
         let user_fields: Option<UserFields> = match item.router_data.request.metadata.clone() {
             Some(metadata) => {
@@ -751,13 +754,42 @@ impl<
 
         let ref_id = get_the_truncate_id(ref_id, MAX_ID_LENGTH);
 
+        let customer_id_string = item
+            .router_data
+            .resource_common_data
+            .customer_id
+            .as_ref()
+            .and_then(|cid| {
+                let id_str = cid.get_string_repr().to_owned();
+                if id_str.len() > MAX_ID_LENGTH {
+                    None
+                } else {
+                    Some(id_str)
+                }
+            });
+
+        let customer_details = customer_id_string.map(|cid| CustomerDetails {
+            id: cid,
+            email: item.router_data.request.email.clone(),
+        });
+
         let transaction_request = AuthorizedotnetRepeatPaymentTransactionRequest {
             transaction_type: TransactionType::AuthCaptureTransaction, // Repeat payments are typically captured immediately
-            amount: item.router_data.request.amount.to_string(),
+            amount: item
+                .connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_amount,
+                    item.router_data.request.currency,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)
+                .attach_printable(
+                    "Failed to convert payment amount for repeat payment transaction",
+                )?,
             currency_code: currency,
             profile,
             order: Some(order),
-            customer: Some(customer_details),
+            customer: customer_details,
             user_fields,
         };
 
@@ -777,7 +809,7 @@ impl<
 pub struct AuthorizedotnetCaptureTransactionInternal {
     // Specific transaction details for Capture
     transaction_type: TransactionType,
-    amount: String,
+    amount: FloatMajorUnit,
     ref_trans_id: String,
 }
 
@@ -846,11 +878,14 @@ impl<
         let transaction_request_payload = AuthorizedotnetCaptureTransactionInternal {
             transaction_type: TransactionType::PriorAuthCaptureTransaction,
             amount: item
-                .router_data
-                .request
-                .amount_to_capture
-                .to_string()
-                .clone(),
+                .connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_amount_to_capture,
+                    item.router_data.request.currency,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)
+                .attach_printable("Failed to convert capture amount for capture transaction")?,
             ref_trans_id: original_connector_txn_id,
         };
 
@@ -1124,6 +1159,7 @@ pub struct AuthorizedotnetRefundCardDetails {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
     CreditCard(CreditCardDetails<T>),
 }
@@ -1133,7 +1169,7 @@ enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedotnetRefundTransactionDetails<T: PaymentMethodDataTypes> {
     transaction_type: TransactionType,
-    amount: String,
+    amount: FloatMajorUnit,
     payment: PaymentDetails<T>,
     ref_trans_id: String,
 }
@@ -1255,7 +1291,17 @@ impl
         // Build the refund transaction request with parsed payment details
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
-            amount: item.router_data.request.minor_refund_amount.to_string(),
+            amount: item
+                .connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.currency,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)
+                .attach_printable(
+                    "Failed to convert refund amount for refund transaction (DefaultPCIHolder)",
+                )?,
             payment: payment_details,
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };
@@ -1362,7 +1408,17 @@ impl
         // Build the refund transaction request with parsed payment details
         let transaction_request = AuthorizedotnetRefundTransactionDetails {
             transaction_type: TransactionType::RefundTransaction,
-            amount: item.router_data.request.minor_refund_amount.to_string(),
+            amount: item
+                .connector
+                .amount_converter
+                .convert(
+                    item.router_data.request.minor_refund_amount,
+                    item.router_data.request.currency,
+                )
+                .change_context(ConnectorError::AmountConversionFailed)
+                .attach_printable(
+                    "Failed to convert refund amount for refund transaction (VaultTokenHolder)",
+                )?,
             payment: payment_details,
             ref_trans_id: item.router_data.request.connector_transaction_id.clone(),
         };

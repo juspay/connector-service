@@ -45,10 +45,14 @@ fiuu.base_url = "https://sandbox.merchant.razer.com/"
 payu.base_url = "https://test.payu.in/"
 paytm.base_url = "https://securegw-stage.paytm.in/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
+bluecode.base_url = "https://dev.eorder.reloadhero.com/"
 novalnet.base_url = "https://payport.novalnet.de/v2"
 nexinets.base_url = "https://apitest.payengine.de/v1"
 noon.base_url = "https://api-test.noonpayments.com/"
 mifinity.base_url = "https://demo.mifinity.com/"
+braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
+volt.base_url = "https://api.sandbox.volt.io/"
+cryptopay.base_url = "https://business-sandbox.cryptopay.me"
 
 # Generic Events Configuration
 [events]
@@ -56,6 +60,11 @@ enabled = true
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
+
+[lineage]
+enabled = true
+header_name = "x-lineage-ids"
+field_prefix = "lineage_"
 
 # Euler-compatible configuration
 [events.transformations]

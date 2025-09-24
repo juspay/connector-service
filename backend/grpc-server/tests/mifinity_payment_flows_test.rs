@@ -123,8 +123,8 @@ fn create_authorize_request(capture_method: CaptureMethod) -> PaymentServiceAuth
         address: Some(grpc_api_types::payments::PaymentAddress {
             shipping_address: Some(grpc_api_types::payments::Address::default()),
             billing_address: Some(grpc_api_types::payments::Address {
-                first_name: Some("joseph".to_string()),
-                last_name: Some("Doe".to_string()),
+                first_name: Some("joseph".to_string().into()),
+                last_name: Some("Doe".to_string().into()),
                 phone_number: Some("8056594427".to_string().into()),
                 phone_country_code: Some("+91".to_string()),
                 email: Some("swangi@gmail.com".to_string().into()),
@@ -164,6 +164,9 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(transaction_id.to_string())),
         }),
+        access_token: None,
+        capture_method: None,
+        handle_response: None,
     }
 }
 

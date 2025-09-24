@@ -2,6 +2,8 @@
 
 use grpc_server::{app, configs};
 mod common;
+use std::fmt::Write;
+
 use common_utils::crypto::{HmacSha512, SignMessage};
 use grpc_api_types::payments::{
     payment_service_client::PaymentServiceClient, PaymentServiceTransformRequest, RequestDetails,
@@ -128,10 +130,10 @@ fn generate_webhook_signature(webhook_body: &[u8], secret: &str) -> String {
         .expect("Failed to generate signature");
 
     // Convert bytes to hex string manually
-    let hex_string = signature
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect::<String>();
+    let mut hex_string = String::with_capacity(signature.len() * 2);
+    for b in signature {
+        write!(&mut hex_string, "{:02x}", b).expect("writing to a String should never fail");
+    }
 
     format!("sha512={hex_string}")
 }
@@ -177,6 +179,7 @@ async fn process_webhook_request(
             body: request_body_bytes,
         }),
         webhook_secrets,
+        access_token: None,
     });
 
     // Use the same metadata pattern as the payment flows test
@@ -729,6 +732,7 @@ async fn test_webhook_malformed_body() {
                 body: request_body_bytes,
             }),
             webhook_secrets: None,
+            access_token: None,
         });
 
         let api_key =
@@ -983,6 +987,7 @@ async fn test_webhook_source_verification_invalid_signature() {
                 body: request_body_bytes,
             }),
             webhook_secrets,
+            access_token: None,
         });
 
         let api_key =
@@ -1079,6 +1084,7 @@ async fn test_webhook_source_verification_missing_signature() {
                 body: request_body_bytes,
             }),
             webhook_secrets,
+            access_token: None,
         });
 
         let api_key =
@@ -1173,6 +1179,7 @@ async fn test_webhook_source_verification_no_secret_provided() {
                 body: request_body_bytes,
             }),
             webhook_secrets,
+            access_token: None,
         });
 
         let api_key =

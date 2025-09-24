@@ -68,6 +68,7 @@ mod tests {
                     external_latency: None,
                     connector_response_headers: None,
                     raw_connector_response: None,
+                    vault_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -121,6 +122,7 @@ mod tests {
                             java_script_enabled: Some(false),
                             language: Some("en-US".to_string()),
                             time_zone: None,
+                            referer: None,
                             ip_address: None,
                             os_type: None,
                             os_version: None,
@@ -148,6 +150,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                 },
                 response: Err(ErrorResponse::default()),
             };
@@ -235,6 +238,7 @@ mod tests {
                     external_latency: None,
                     connector_response_headers: None,
                     raw_connector_response: None,
+                    vault_headers: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -274,6 +278,7 @@ mod tests {
                     merchant_account_id: None,
                     merchant_config_currency: None,
                     all_keys_required: None,
+                    access_token: None,
                 },
                 response: Err(ErrorResponse::default()),
             };

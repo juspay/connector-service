@@ -15,11 +15,11 @@ error-stack = "0.5.0"
 
 # First-party dependencies
 cards = { path = "../cards", package = "ucs_cards" }
-hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "v1.116.0", package = "masking", features = ["proto_tonic"] }
+hyperswitch_masking = { git = "https://github.com/juspay/hyperswitch", tag = "2025.09.17.0", package = "masking", features = ["proto_tonic"] }
 
 [build-dependencies]
 tonic-build = "0.13.0"
 prost-build = "0.13.4"
 prost = "0.13"
 heck = "0.5.0"
-g2h = "0.5.0"
+g2h = { git = "https://github.com/juspay/g2h", rev = "ebe5d2c38716abd7b1def43a6a0123a5e4193489" }
