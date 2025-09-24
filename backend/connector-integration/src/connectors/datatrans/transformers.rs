@@ -431,15 +431,17 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 // Response transformations
 use crate::types::ResponseRouterData;
 
+// Specific implementation for PaymentsAuthorizeData to handle capture_method
 impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+    TryFrom<ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>,
+        item: ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        println!("datatrans: Starting response transformation");
+        println!("datatrans: *** USING SPECIFIC PaymentsAuthorizeData IMPLEMENTATION ***");
+        println!("datatrans: Starting authorize response transformation");
         println!("datatrans: HTTP status code: {}", item.http_code);
         println!("datatrans: Response type: {:?}", item.response);
         
@@ -459,7 +461,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 
                 // Check capture method from router data
                 let capture_method = item.router_data.request.capture_method;
-                println!("datatrans: Capture method: {:?}", capture_method);
+                println!("datatrans: *** CAPTURE METHOD FROM REQUEST: {:?} ***", capture_method);
                 
                 // For manual capture with 3DS enrolled, we should return Authorized status
                 // because the payment will be authorized after 3DS completion
@@ -468,14 +470,146 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                         println!("datatrans: Manual capture detected - mapping ThreeDSResponse to Authorized status");
                         AttemptStatus::Authorized
                     },
-                    Some(common_enums::CaptureMethod::Automatic) | None => {
+                    Some(common_enums::CaptureMethod::Automatic) 
+                    | Some(common_enums::CaptureMethod::SequentialAutomatic) 
+                    | None => {
                         println!("datatrans: Automatic capture detected - mapping ThreeDSResponse to AuthenticationPending status");
                         AttemptStatus::AuthenticationPending
+                    },
+                    Some(common_enums::CaptureMethod::ManualMultiple) => {
+                        println!("datatrans: Manual multiple capture detected - mapping ThreeDSResponse to Authorized status");
+                        AttemptStatus::Authorized
+                    },
+                    Some(common_enums::CaptureMethod::Scheduled) => {
+                        println!("datatrans: Scheduled capture detected - mapping ThreeDSResponse to Authorized status");
+                        AttemptStatus::Authorized
                     },
                 };
                 
                 (
                     status,
+                    Some(response.transaction_id),
+                )
+            },
+            DatatransResponse::ErrorResponse(_error) => {
+                println!("datatrans: Received ErrorResponse - mapping to Failure status");
+                (
+                    AttemptStatus::Failure,
+                    None,
+                )
+            },
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    connector_transaction_id.unwrap_or_default(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// Implementation for PaymentsSyncData
+impl<F>
+    TryFrom<ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        println!("datatrans: *** USING PaymentsSyncData IMPLEMENTATION ***");
+        println!("datatrans: Starting sync response transformation");
+        println!("datatrans: HTTP status code: {}", item.http_code);
+        println!("datatrans: Response type: {:?}", item.response);
+        
+        let (status, connector_transaction_id) = match item.response {
+            DatatransResponse::TransactionResponse(response) => {
+                println!("datatrans: Received TransactionResponse - mapping to Charged status");
+                println!("datatrans: Transaction ID: {}", response.transaction_id);
+                (
+                    AttemptStatus::Charged,
+                    Some(response.transaction_id),
+                )
+            },
+            DatatransResponse::ThreeDSResponse(response) => {
+                println!("datatrans: Received ThreeDSResponse - mapping to AuthenticationPending status");
+                println!("datatrans: Transaction ID: {}", response.transaction_id);
+                println!("datatrans: 3DS Enrolled: {}", response.three_ds_enrolled.enrolled);
+                
+                // For sync flows, default to AuthenticationPending for 3DS
+                (
+                    AttemptStatus::AuthenticationPending,
+                    Some(response.transaction_id),
+                )
+            },
+            DatatransResponse::ErrorResponse(_error) => {
+                println!("datatrans: Received ErrorResponse - mapping to Failure status");
+                (
+                    AttemptStatus::Failure,
+                    None,
+                )
+            },
+        };
+
+        Ok(Self {
+            response: Ok(PaymentsResponseData::TransactionResponse {
+                resource_id: ResponseId::ConnectorTransactionId(
+                    connector_transaction_id.unwrap_or_default(),
+                ),
+                redirection_data: None,
+                mandate_reference: None,
+                connector_metadata: None,
+                network_txn_id: None,
+                connector_response_reference_id: None,
+                incremental_authorization_allowed: None,
+                status_code: item.http_code,
+            }),
+            ..item.router_data
+        })
+    }
+}
+
+// Implementation for PaymentsCaptureData
+impl<F>
+    TryFrom<ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
+{
+    type Error = error_stack::Report<ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
+    ) -> Result<Self, Self::Error> {
+        println!("datatrans: *** USING PaymentsCaptureData IMPLEMENTATION ***");
+        println!("datatrans: Starting capture response transformation");
+        println!("datatrans: HTTP status code: {}", item.http_code);
+        println!("datatrans: Response type: {:?}", item.response);
+        
+        let (status, connector_transaction_id) = match item.response {
+            DatatransResponse::TransactionResponse(response) => {
+                println!("datatrans: Received TransactionResponse - mapping to Charged status");
+                println!("datatrans: Transaction ID: {}", response.transaction_id);
+                (
+                    AttemptStatus::Charged,
+                    Some(response.transaction_id),
+                )
+            },
+            DatatransResponse::ThreeDSResponse(response) => {
+                println!("datatrans: Received ThreeDSResponse - mapping to Charged status for capture");
+                println!("datatrans: Transaction ID: {}", response.transaction_id);
+                println!("datatrans: 3DS Enrolled: {}", response.three_ds_enrolled.enrolled);
+                
+                // For capture flows, 3DS completion means payment is captured
+                (
+                    AttemptStatus::Charged,
                     Some(response.transaction_id),
                 )
             },

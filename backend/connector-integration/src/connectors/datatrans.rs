@@ -415,20 +415,50 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
         println!("datatrans: Response parsed successfully: {:?}", response);
         event_builder.map(|i| i.set_response_body(&response));
         
-        // Create the response manually for now
+        // Create the response with proper capture method handling
         let (status, transaction_id) = match response {
-            DatatransResponse::TransactionResponse(ref resp) => (
-                common_enums::AttemptStatus::Charged,
-                Some(resp.transaction_id.clone()),
-            ),
-            DatatransResponse::ThreeDSResponse(ref resp) => (
-                common_enums::AttemptStatus::AuthenticationPending,
-                Some(resp.transaction_id.clone()),
-            ),
-            DatatransResponse::ErrorResponse(_) => (
-                common_enums::AttemptStatus::Failure,
-                None,
-            ),
+            DatatransResponse::TransactionResponse(ref resp) => {
+                println!("datatrans: TransactionResponse received - mapping to Charged");
+                (
+                    common_enums::AttemptStatus::Charged,
+                    Some(resp.transaction_id.clone()),
+                )
+            },
+            DatatransResponse::ThreeDSResponse(ref resp) => {
+                println!("datatrans: ThreeDSResponse received - checking capture method");
+                println!("datatrans: Capture method from request: {:?}", data.request.capture_method);
+                
+                // Handle capture method properly for 3DS responses
+                let status = match data.request.capture_method {
+                    Some(common_enums::CaptureMethod::Manual) => {
+                        println!("datatrans: Manual capture - mapping to Authorized status");
+                        common_enums::AttemptStatus::Authorized
+                    },
+                    Some(common_enums::CaptureMethod::Automatic) 
+                    | Some(common_enums::CaptureMethod::SequentialAutomatic) 
+                    | None => {
+                        println!("datatrans: Automatic capture - mapping to AuthenticationPending status");
+                        common_enums::AttemptStatus::AuthenticationPending
+                    },
+                    Some(common_enums::CaptureMethod::ManualMultiple) => {
+                        println!("datatrans: Manual multiple capture - mapping to Authorized status");
+                        common_enums::AttemptStatus::Authorized
+                    },
+                    Some(common_enums::CaptureMethod::Scheduled) => {
+                        println!("datatrans: Scheduled capture - mapping to Authorized status");
+                        common_enums::AttemptStatus::Authorized
+                    },
+                };
+                
+                (status, Some(resp.transaction_id.clone()))
+            },
+            DatatransResponse::ErrorResponse(_) => {
+                println!("datatrans: ErrorResponse received - mapping to Failure");
+                (
+                    common_enums::AttemptStatus::Failure,
+                    None,
+                )
+            },
         };
         
         let mut response_data = data.clone();
