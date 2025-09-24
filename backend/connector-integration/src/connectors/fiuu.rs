@@ -608,6 +608,7 @@ impl<
         let input_data = FiuuRouterData {
             connector: self.to_owned(),
             router_data: req.clone(),
+            _phantom: std::marker::PhantomData,
         };
         let request = bridge.request_body(input_data)?;
         let form_data = <FiuuPaymentSyncRequest as GetFormData>::get_form_data(&request);

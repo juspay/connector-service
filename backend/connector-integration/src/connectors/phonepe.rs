@@ -309,6 +309,7 @@ macros::macro_connector_implementation!(
             let connector_router_data = PhonepeRouterData {
                 connector: self.clone(),
                 router_data: req,
+                _phantom: std::marker::PhantomData,
             };
             let connector_req = phonepe::PhonepePaymentsRequest::try_from(&connector_router_data)?;
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
@@ -356,6 +357,7 @@ macros::macro_connector_implementation!(
             let connector_router_data = PhonepeRouterData {
                 connector: self.clone(),
                 router_data: req,
+                _phantom: std::marker::PhantomData,
             };
             let connector_req = phonepe::PhonepeSyncRequest::try_from(&connector_router_data)?;
 

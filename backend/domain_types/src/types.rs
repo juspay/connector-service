@@ -117,6 +117,7 @@ pub struct Connectors {
     pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
     pub cryptopay: ConnectorParams,
+    pub datatrans: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

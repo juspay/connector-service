@@ -141,6 +141,7 @@ macro_rules! expand_fn_get_request_body {
                 let input_data = [<$connector RouterData>] {
                     connector: self.to_owned(),
                     router_data: req.clone(),
+                    _phantom: std::marker::PhantomData,
                 };
                 let request = bridge.request_body(input_data)?;
                 let form_data = <$curl_req as GetFormData>::get_form_data(&request);
@@ -168,6 +169,7 @@ macro_rules! expand_fn_get_request_body {
                 let input_data = [< $connector RouterData >] {
                     connector: self.to_owned(),
                     router_data: req.clone(),
+                    _phantom: std::marker::PhantomData,
                 };
                 let request = bridge.request_body(input_data)?;
                 Ok(Some(macro_types::RequestContent::$content_type(Box::new(request))))
@@ -682,6 +684,7 @@ macro_rules! expand_connector_input_data {
             pub struct [<$connector RouterData>]<RD: FlowTypes, $generics: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> {
                 pub connector: $connector<$generics>,
                 pub router_data: RD,
+                _phantom: std::marker::PhantomData<$generics>,
             }
             impl<RD: FlowTypes, $generics: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> FlowTypes for [<$connector RouterData>]<RD, $generics> { //here too
                 type Flow = RD::Flow;
@@ -738,6 +741,7 @@ macro_rules! create_all_prerequisites {
                         ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
                     >,
                 )*
+                _phantom: std::marker::PhantomData<$generic_type>,
             }
 
             impl<$generic_type: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> Clone for $connector<$generic_type> {
@@ -749,6 +753,7 @@ macro_rules! create_all_prerequisites {
                         $(
                             [<$flow_name:snake>]: self.[<$flow_name:snake>],
                         )*
+                        _phantom: std::marker::PhantomData,
                     }
                 }
             }
@@ -765,6 +770,7 @@ macro_rules! create_all_prerequisites {
                                     [<$flow_response Templating>], $generic_type
                                 >(PhantomData),
                         )*
+                        _phantom: std::marker::PhantomData,
                     }
                 }
                 $($function_def)*
