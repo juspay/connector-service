@@ -1,0 +1,2152 @@
+# Connector Migration Task: EaseBuzz
+
+You are tasked with migrating a payment connector from euler-api-txns (Haskell) to UCS v2 (Rust).
+
+## Source System Analysis
+The Haskell connector has the following structure:
+
+### Request/Response Types
+```haskell
+data TB a
+  = TB a Bool
+  deriving anyclass (Newtype (TB a))
+```
+
+```haskell
+data TA a
+  = TA a (StrMap Text) Bool
+  deriving anyclass (Newtype (TA a))
+```
+
+```haskell
+data EaseBuzzUpiAuthParams = EaseBuzzUpiAuthParams {mandateRegRefId :: Text, tr :: Text}
+  deriving anyclass (Newtype (EaseBuzzUpiAuthParams))
+
+instance ToJSON EaseBuzzUpiAuthParams where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzUpiAuthParams where
+  parseJSON = defaultDecode
+
+-- -----------------------------  InitiatePayment API -------------------------
+```
+
+```haskell
+data EaseBuzzInitiatePaymentRequest = EaseBuzzInitiatePaymentRequest
+```
+
+```haskell
+data SurchargeDetails = SurchargeDetails {base_amount :: Maybe Number, surcharge_amount :: Number, gst_amount :: Maybe Number}
+  deriving anyclass (Newtype (SurchargeDetails))
+```
+
+```haskell
+data EaseBuzzInitiatePaymentResponse = EaseBuzzInitiatePaymentResponse {status :: Int, error_desc :: Maybe Text, _data :: Text}
+  deriving anyclass (Newtype (EaseBuzzInitiatePaymentResponse))
+
+-- ----------------------------- Seamless Transaction API ------------------------
+```
+
+```haskell
+data EaseBuzzSeamlessTxnRequest = EaseBuzzSeamlessTxnRequest
+```
+
+```haskell
+data EaseBuzzSeamlessTxnResponse = EaseBuzzSeamlessTxnResponse
+```
+
+```haskell
+data CustomText = CustomText Text
+  deriving stock (HsPrelude.Eq, Show)
+
+instance FromJSON CustomText where
+  parseJSON (String t) = pure $ CustomText t
+  parseJSON (Bool b) = pure $ CustomText (if b then "true" else "false")
+  parseJSON (Number n) = pure $ CustomText (show n)
+  parseJSON _ = HsPrelude.fail "Expected a boolean or string for CustomText"
+
+instance ToJSON CustomText where
+  toJSON (CustomText t) = String t
+```
+
+```haskell
+data EaseBuzzUpiIntentResponse = EaseBuzzUpiIntentResponse {status :: Bool, msg_desc :: Text, qr_link :: Maybe Text, msg_title :: Text}
+  deriving anyclass (Newtype (EaseBuzzUpiIntentResponse))
+```
+
+```haskell
+data EaseBuzzMandateStatusUpdateWebhook = EaseBuzzMandateStatusUpdateWebhook
+```
+
+```haskell
+data EaseBuzzPresentmentStatusUpdateWebhook = EaseBuzzPresentmentStatusUpdateWebhook
+```
+
+```haskell
+data EaseBuzzNotificationStatusUpdateWebhook = EaseBuzzNotificationStatusUpdateWebhook
+```
+
+```haskell
+data EaseBuzzWebhookTypes
+  = RefundWebhook EaseBuzzRefundWebhookResponse
+  | MandateStatusUpdateWebhookResp EaseBuzzMandateStatusUpdateWebhook
+  | PresentmentStatusUpdateWebhookResp EaseBuzzPresentmentStatusUpdateWebhook
+  | SeamlessTxnResp EaseBuzzSeamlessTxnResponse
+  | MandateSyncValidRes MandateRetrieveResponseData
+  | DebitRequestRetrieveRes DebitRequestRetrieveResponseData
+  | NotificationStatusUpdateWebhookResp EaseBuzzNotificationStatusUpdateWebhook
+```
+
+```haskell
+data EasebuzzResponse
+  = TxnResp EaseBuzzSeamlessTxnResponse
+  | SyncResp EaseBuzzTxnSyncResponse
+  | AuthzResp EasebuzzAuthZResponse
+  | MandateRedirectionResp MandateRedirectionResponseType
+  | MandateRegSyncResp EaseBuzzRetriveMandateResp
+  | MandateSyncValid MandateRetrieveResponseData
+  | DebitRequestRetrieveResp DebitRequestRetrieveResponseData
+  | MandateStatusUpdateWebhook EaseBuzzMandateStatusUpdateWebhook
+  | PresentmentStatusUpdateWebhook EaseBuzzPresentmentStatusUpdateWebhook
+  | MandateSyncFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EasebuzzResponse))
+```
+
+```haskell
+data EasebuzzAuthZRequest = EasebuzzAuthZRequest
+  {
+```
+
+```haskell
+data EasebuzzAuthZResponse
+  = ValidAuthZResponse EasebuzzOnlyAuthZResponse
+  | EasebuzzRedirectAuthzErrorResponse EasebuzzAuthZErrorResponse
+  deriving anyclass (Newtype (EasebuzzAuthZResponse))
+```
+
+```haskell
+data DeviceInformation = DeviceInformation
+  {
+```
+
+```haskell
+data PaymentInformation = PaymentInformation
+  {
+```
+
+```haskell
+data AuthZData = AuthZData
+  {
+```
+
+```haskell
+data EasebuzzOnlyAuthZResponse = EasebuzzOnlyAuthZResponse
+  {
+```
+
+```haskell
+data EasebuzzAuthZErrorResponse = EasebuzzAuthZErrorResponse {status :: Bool, _data :: ErrorMsg}
+  deriving anyclass (Newtype (EasebuzzAuthZErrorResponse))
+```
+
+```haskell
+data ErrorMsg = ErrorMsg {error_msg :: Text}
+  deriving anyclass (Newtype (ErrorMsg))
+
+
+instance ToJSON EasebuzzOnlyAuthZResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzOnlyAuthZResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzOnlyAuthZResponse where
+  validate = pure
+
+instance Validatable EaseBuzzAccessKeyRequest where
+  validate = pure
+
+instance Validatable EaseBuzUpiAutoPayReq where
+  validate = pure
+
+instance Validatable EaseBuzzAccessKeyResponse where
+  validate = pure
+
+instance Validatable EaseBuzzMandateRetrieveRequest where
+  validate = pure
+
+instance ToJSON AuthZData where
+  toJSON = defaultEncode
+
+instance FromJSON AuthZData where
+  parseJSON = defaultDecode
+
+instance Validatable AuthZData where
+  validate = pure
+
+instance ToJSON EasebuzzAuthZErrorResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzAuthZErrorResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzAuthZErrorResponse where
+  validate = pure
+  
+instance ToJSON ErrorMsg where
+  toJSON = defaultEncode
+
+instance FromJSON ErrorMsg where
+  parseJSON = defaultDecode
+
+instance Validatable ErrorMsg where
+  validate = pure
+-- ----------------------------- Transaction Sync API -----------------------------
+```
+
+```haskell
+data EaseBuzzTxnSyncRequest = EaseBuzzTxnSyncRequest {txnid :: Text, amount :: Number, email :: Text, phone :: Text, key :: Text, hash :: Text}
+  deriving anyclass (Newtype (EaseBuzzTxnSyncRequest))
+```
+
+```haskell
+data EaseBuzzTxnSyncResponse = EaseBuzzTxnSyncResponse {status :: Bool, msg :: TxnSyncMessageType}
+  deriving anyclass (Newtype (EaseBuzzTxnSyncResponse))
+```
+
+```haskell
+data TxnSyncMessageType
+  = TxnSyncSuccessMessage EaseBuzzSeamlessTxnResponse
+  | TxnSyncErrorMessage Text
+  deriving anyclass (Newtype (TxnSyncMessageType))
+
+-- ----------------------------- Post txn split settlement API -----------------------------
+```
+
+```haskell
+data TransactionArr = TransactionArr
+```
+
+```haskell
+data CreateDelaySettlementRequest = CreateDelaySettlementRequest
+  {
+```
+
+```haskell
+data DelayedSettlementResponse = DelayedSettlementResponse
+  {
+```
+
+```haskell
+data Notes = Notes
+  {
+```
+
+```haskell
+data TransactionArrResponse = TransactionArrResponse
+```
+
+```haskell
+data ErrorResponse = ErrorResponse
+  {
+```
+
+```haskell
+data EasebuzzCreateSettlementResponse' = EasebuzzCreateSettlementResponse' {code :: Int, status :: Text, response :: EasebuzzCreateSettlementResponse}
+  deriving anyclass (Newtype (EasebuzzCreateSettlementResponse'))
+
+-- ----------------------------- Settlement Status check ----------------
+```
+
+```haskell
+data SettlementStatusCheckReq = SettlementStatusCheckReq
+  {
+```
+
+```haskell
+data SettlementInfo = SettlementInfo
+  {
+```
+
+```haskell
+data TransactionArrOfSettlement = TransactionArrOfSettlement
+  {
+```
+
+```haskell
+data DelayedSettlementStatusCheckRes = DelayedSettlementStatusCheckRes
+  {
+```
+
+```haskell
+data EaseBuzzRefundRequest = EaseBuzzRefundRequest
+```
+
+```haskell
+data EaseBuzzRefundRequestJSON = EaseBuzzRefundRequestJSON
+```
+
+```haskell
+data EaseBuzzRefundResponse = EaseBuzzRefundResponse {status :: Bool, reason :: Maybe Text, easebuzz_id :: Maybe Text, refund_id :: Maybe Text, refund_amount :: Maybe Number}
+  deriving anyclass (Newtype (EaseBuzzRefundResponse))
+
+-- ----------------------------- Refund Sync API -----------------------------
+```
+
+```haskell
+data EaseBuzzRefundSyncRequest = EaseBuzzRefundSyncRequest {key :: Text, easebuzz_id :: Text, hash :: Text, merchant_refund_id :: Text}
+  deriving anyclass (Newtype (EaseBuzzRefundSyncRequest))
+```
+
+```haskell
+data EaseBuzzRefundSyncFailureResponse = EaseBuzzRefundSyncFailureResponse {status :: Text, message :: Text}
+  deriving anyclass (Newtype (EaseBuzzRefundSyncFailureResponse))
+```
+
+```haskell
+data EaseBuzzRefundSyncValidationErrorResponse = EaseBuzzRefundSyncValidationErrorResponse {validation_errors :: Maybe Value, status :: Bool, error_code :: Maybe Text, error_desc :: Maybe Text}
+  deriving anyclass (Newtype (EaseBuzzRefundSyncValidationErrorResponse))
+```
+
+```haskell
+data EaseBuzzRefundSyncSuccessResponse = EaseBuzzRefundSyncSuccessResponse {txnid :: Text, easebuzz_id :: Text, net_amount_debit :: Text, amount :: Text, refunds :: Maybe ([RefundSyncType])}
+  deriving anyclass (Newtype (EaseBuzzRefundSyncSuccessResponse))
+```
+
+```haskell
+data RefundSyncType = RefundSyncType {refund_id :: Text, refund_status :: Text, merchant_refund_id :: Text, merchant_refund_date :: Text, refund_settled_date :: Maybe Foreign, refund_amount :: Text, arn_number :: Maybe Foreign}
+  deriving anyclass (Newtype (RefundSyncType))
+```
+
+```haskell
+data EaseBuzzRefundSync = EaseBuzzRefundSync {code :: Int, status :: Text, response :: EaseBuzzRefundSyncResponse}
+  deriving anyclass (Newtype (EaseBuzzRefundSync))
+```
+
+```haskell
+data GatewayAuthRequestParameters = GatewayAuthRequestParameters
+```
+
+```haskell
+data GatewayAuthRequestParametersCardless = GatewayAuthRequestParametersCardless
+```
+
+```haskell
+data EMIObject = EMIObject
+```
+
+```haskell
+data GetEMIOptionRequest = GetEMIOptionRequest
+```
+
+```haskell
+data EMIInstanceForBank = EMIInstanceForBank
+```
+
+```haskell
+data EMIForABank = EMIForABank
+```
+
+```haskell
+data EMICodeList
+  = EMICodeList (StrMap Text)
+  deriving anyclass (Newtype (EMICodeList))
+```
+
+```haskell
+data GetEMIOptionResponse = GetEMIOptionResponse
+```
+
+```haskell
+data EaseBuzzRefundSyncResponse
+  = EaseBuzzRefundSyncSuccessResp EaseBuzzRefundSyncSuccessResponse
+  | EaseBuzzRefundSyncFailureResp EaseBuzzRefundSyncFailureResponse
+  | EaseBuzzRefundSyncValidationErrorResp EaseBuzzRefundSyncValidationErrorResponse
+  deriving anyclass (Newtype (EaseBuzzRefundSyncResponse))
+
+-- -----------------------webhook ----------------
+```
+
+```haskell
+data EasebuzzSyncAndWebhookResponse
+  = WebhookResponse EaseBuzzSeamlessTxnResponse
+  | TxnSyncResponse EaseBuzzTxnSyncResponse
+  | MandateSyncValidResp MandateRetrieveResponseData
+  | MandateSyncFailResponse EaseBuzzFailureType
+  | MandatePaymentSyncResp  DebitRequestRetrieveResponseData
+  deriving anyclass (Newtype (EasebuzzSyncAndWebhookResponse))
+
+-- --------------------emi plans ------------------
+```
+
+```haskell
+data EasebuzzPlansRequest
+  = EasebuzzPlansRequest
+```
+
+```haskell
+data EasebuzzPlansResp
+  = ValidEasebuzzPlansResp EasebuzzPlansResponse
+  | EasebuzzPlansErrorResp EasebuzzPlansErrorResponse
+  deriving anyclass (Newtype (EasebuzzPlansResp))
+```
+
+```haskell
+data EasebuzzPlansErrorResponse
+  = EasebuzzPlansErrorResponse
+```
+
+```haskell
+data EasebuzzPlansResponse
+  = EasebuzzPlansResponse
+```
+
+```haskell
+data EaseBuzzRefundWebhookResponse = EaseBuzzRefundWebhookResponse
+```
+
+```haskell
+data RefundWebhookResponse = RefundWebhookResponse
+```
+
+```haskell
+data EasebuzzPlans
+  = EasebuzzPlans
+```
+
+```haskell
+data EasebuzzOffer
+  = EasebuzzOffer
+```
+
+```haskell
+data EaseBuzzAccessKeyRequest = EaseBuzzAccessKeyRequest
+```
+
+```haskell
+data EaseBuzzAccessKeyResponse = EaseBuzzAccessKeyResponse
+```
+
+```haskell
+data MandateRedirectionResponseType = MandateRedirectionResponseType
+```
+
+```haskell
+data EaseBuzzCreateMandateRequest = EaseBuzzCreateMandateRequest
+```
+
+```haskell
+data EaseBuzzMandateRetrieveRequest = EaseBuzzMandateRetrieveRequest
+```
+
+```haskell
+data EaseBuzzMandateRetrieveResponse = EaseBuzzMandateRetrieveResponse
+```
+
+```haskell
+data MandateRetrieveResponseData = MandateRetrieveResponseData
+```
+
+```haskell
+data EaseBuzzFailureType = EaseBuzzFailureType
+```
+
+```haskell
+data ResponseMetaData = ResponseMetaData
+```
+
+```haskell
+data MandateType = MandateType
+```
+
+```haskell
+data NotificationType = NotificationType
+```
+
+```haskell
+data EaseBuzzRetriveMandateResp
+  = RetriveSuccessResponse EaseBuzzMandateRetrieveResponse
+  | RetriveFailureResponse EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzRetriveMandateResp))
+
+instance ToJSON EaseBuzzRetriveMandateResp where
+  toJSON (RetriveSuccessResponse s) = toJSON s
+  toJSON (RetriveFailureResponse s) = toJSON s
+
+instance FromJSON EaseBuzzRetriveMandateResp where
+  parseJSON str = (RetriveSuccessResponse <$> (parseJSON str)) <|> (RetriveFailureResponse <$> (parseJSON str))
+
+instance Validatable EaseBuzzRetriveMandateResp where
+  validate = pure
+
+instance RestEndpoint (TA EaseBuzzMandateRetrieveRequest) EaseBuzzRetriveMandateResp where
+  makeRequest (TA req routeParam testMode) headers = defaultMakeRequest GET (addRouteParam (getEndpointForReqAndEnv MandateRetrieve testMode) routeParam) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+```
+
+```haskell
+data EaseExecuteMandateRequest = EaseExecuteMandateRequest
+```
+
+```haskell
+data EaseBuzzDebitRequestResponse = EaseBuzzDebitRequestResponse
+```
+
+```haskell
+data DebitRequestResponseData = DebitRequestResponseData
+```
+
+```haskell
+data EaseBuzzExecuteMandateResp
+  = ExecuteMandateSuccessResp EaseBuzzDebitRequestResponse
+  | ExecuteMandateFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzExecuteMandateResp))
+
+instance ToJSON EaseBuzzExecuteMandateResp where
+  toJSON (ExecuteMandateSuccessResp s) = toJSON s
+  toJSON (ExecuteMandateFailResp s) = toJSON s
+
+instance FromJSON EaseBuzzExecuteMandateResp where
+  parseJSON str = (ExecuteMandateSuccessResp <$> (parseJSON str)) <|> (ExecuteMandateFailResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzExecuteMandateResp where
+  validate = pure
+
+instance RestEndpoint (TB EaseExecuteMandateRequest) EaseBuzzExecuteMandateResp where 
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv PresentmentRequestInitiate testMode) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+```
+
+```haskell
+data EaseBuzzDebitRequestRetrieve = EaseBuzzDebitRequestRetrieve
+```
+
+```haskell
+data EaseBuzzDebitRequestRetrieveResponse = EaseBuzzDebitRequestRetrieveResponse
+```
+
+```haskell
+data DebitRequestRetrieveResponseData = DebitRequestRetrieveResponseData
+```
+
+```haskell
+data EaseBuzzMandatePaymentRetriveResp
+  = MandatePaymentRetriveSuccessResponse EaseBuzzDebitRequestRetrieveResponse
+  | MandatePaymentRetriveFailureResponse EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzMandatePaymentRetriveResp))
+
+instance ToJSON EaseBuzzMandatePaymentRetriveResp where
+  toJSON (MandatePaymentRetriveSuccessResponse s) = toJSON s
+  toJSON (MandatePaymentRetriveFailureResponse s) = toJSON s
+
+instance FromJSON EaseBuzzMandatePaymentRetriveResp where
+  parseJSON str = (MandatePaymentRetriveSuccessResponse <$> (parseJSON str)) <|> (MandatePaymentRetriveFailureResponse <$> (parseJSON str))
+
+instance Validatable EaseBuzzMandatePaymentRetriveResp where
+  validate = pure
+
+instance RestEndpoint (TA EaseBuzzDebitRequestRetrieve) EaseBuzzMandatePaymentRetriveResp where
+  makeRequest (TA req routeParam testMode) headers = defaultMakeRequest GET (addRouteParam (getEndpointForReqAndEnv DebitRequestRetrieve testMode) routeParam) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+```
+
+```haskell
+data EaseBuzUpiAutoPayReq = EaseBuzUpiAutoPayReq
+```
+
+```haskell
+data EaseBuzUpiAutoPayResponse = EaseBuzUpiAutoPayResponse
+```
+
+```haskell
+data EaseBuzzUpiAutoPayResp
+  = UpiAutoPaySuccessResp EaseBuzUpiAutoPayResponse
+  | UpiAutoPayFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzUpiAutoPayResp))
+
+instance ToJSON EaseBuzzUpiAutoPayResp where
+  toJSON (UpiAutoPaySuccessResp s) = toJSON s
+  toJSON (UpiAutoPayFailResp s) = toJSON s
+
+instance FromJSON EaseBuzzUpiAutoPayResp where
+  parseJSON str = (UpiAutoPaySuccessResp <$> (parseJSON str)) <|> (UpiAutoPayFailResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzUpiAutoPayResp where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzUpiAutoPayReq) EaseBuzzUpiAutoPayResp where 
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv UpiAutopay testMode) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+```
+
+```haskell
+data EaseBuzzUpiAutoPayIntentReq = EaseBuzzUpiAutoPayIntentReq
+```
+
+```haskell
+data EaseBuzzUpiAutoPayIntentResponse = EaseBuzzUpiAutoPayIntentResponse
+```
+
+```haskell
+data EaseBuzzUpiAutoPayIntentResp
+  = UpiAutoPayIntentSuccessResp EaseBuzzUpiAutoPayIntentResponse
+  | UpiAutoPayIntentFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzUpiAutoPayIntentResp))
+
+instance ToJSON EaseBuzzUpiAutoPayIntentResp where
+  toJSON (UpiAutoPayIntentSuccessResp s) = toJSON s
+  toJSON (UpiAutoPayIntentFailResp s) = toJSON s
+
+instance FromJSON EaseBuzzUpiAutoPayIntentResp where
+  parseJSON str = (UpiAutoPayIntentSuccessResp <$> (parseJSON str)) <|> (UpiAutoPayIntentFailResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzUpiAutoPayIntentResp where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzzUpiAutoPayIntentReq) EaseBuzzUpiAutoPayIntentResp where 
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv UpiAutopay testMode) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+```
+
+```haskell
+data EaseBuzzNotificationRequest = EaseBuzzNotificationRequest
+```
+
+```haskell
+data EaseBuzzNotificationResponse = EaseBuzzNotificationResponse
+```
+
+```haskell
+data EaseBuzzNotificationResponsetype = EaseBuzzNotificationResponsetype
+```
+
+```haskell
+data SchedulerType = SchedulerType
+```
+
+```haskell
+data EaseBuzzNotificationResp
+  = NotificationSuccessResp EaseBuzzNotificationResponse
+  | NotificationFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzNotificationResp))
+
+instance ToJSON EaseBuzzNotificationResp where
+  toJSON (NotificationSuccessResp s) = toJSON s
+  toJSON (NotificationFailResp s) = toJSON s
+
+instance FromJSON EaseBuzzNotificationResp where
+  parseJSON str = (NotificationSuccessResp <$> (parseJSON str)) <|> (NotificationFailResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzNotificationResp where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzzNotificationRequest) EaseBuzzNotificationResp where 
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv NotificationReq testMode) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+
+------------------ Notification Sync ------------------
+```
+
+```haskell
+data EaseBuzzMandateNotificationSyncRequest = EaseBuzzMandateNotificationSyncRequest { key :: Text}
+  deriving anyclass (Newtype (EaseBuzzMandateNotificationSyncRequest))  
+  deriving stock (Generic, Show)
+
+instance ToJSON EaseBuzzMandateNotificationSyncRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzMandateNotificationSyncRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzMandateNotificationSyncRequest where
+  validate = pure
+```
+
+```haskell
+data EaseBuzzNotificationSyncResp
+  = NotificationSyncSuccessResponse EaseBuzzMandateNotificationSyncResponse
+  | NotificationSyncFailureResponse EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzNotificationSyncResp))
+
+instance ToJSON EaseBuzzNotificationSyncResp where
+  toJSON (NotificationSyncSuccessResponse s) = toJSON s
+  toJSON (NotificationSyncFailureResponse s) = toJSON s
+
+instance FromJSON EaseBuzzNotificationSyncResp where
+  parseJSON str = (NotificationSyncSuccessResponse <$> (parseJSON str)) <|> (NotificationSyncFailureResponse <$> (parseJSON str))
+
+instance Validatable EaseBuzzNotificationSyncResp where
+  validate = pure
+```
+
+```haskell
+data EaseBuzzMandateNotificationSyncResponse = EaseBuzzMandateNotificationSyncResponse
+```
+
+```haskell
+data EaseBuzzUpiExecuteMandateRequest = EaseBuzzUpiExecuteMandateRequest
+```
+
+```haskell
+data EaseBuzzUpiExecutionResponse = EaseBuzzUpiExecutionResponse
+```
+
+```haskell
+data EaseBuzzUpiExecuteResp
+  = UpiExecuteSuccessResp EaseBuzzUpiExecutionResponse
+  | UpiExecuteFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzUpiExecuteResp))
+
+instance ToJSON EaseBuzzUpiExecuteResp where
+  toJSON (UpiExecuteSuccessResp s) = toJSON s
+  toJSON (UpiExecuteFailResp s) = toJSON s
+
+instance FromJSON EaseBuzzUpiExecuteResp where
+  parseJSON str = (UpiExecuteSuccessResp <$> (parseJSON str)) <|> (UpiExecuteFailResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzUpiExecuteResp where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzzUpiExecuteMandateRequest) EaseBuzzUpiExecuteResp where 
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv UpiMandateExecute testMode) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+```
+
+```haskell
+data EasebuzzRevokeMandateRequest = EasebuzzRevokeMandateRequest
+```
+
+```haskell
+data EaseBuzzRevokeMandateResponse = EaseBuzzRevokeMandateResponse
+```
+
+```haskell
+data EaseBuzzRevokeMandateResp
+  = RevokeSuccessResp EaseBuzzRevokeMandateResponse
+  | RevokeFailResp EaseBuzzFailureType
+  deriving anyclass (Newtype (EaseBuzzRevokeMandateResp))
+
+instance ToJSON EaseBuzzRevokeMandateResp where
+  toJSON (RevokeSuccessResp s) = toJSON s
+  toJSON (RevokeFailResp s) = toJSON s
+
+instance FromJSON EaseBuzzRevokeMandateResp where
+  parseJSON str = (RevokeSuccessResp <$> (parseJSON str)) <|> (RevokeFailResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzRevokeMandateResp where
+  validate = pure
+
+instance RestEndpoint (TA EasebuzzRevokeMandateRequest) EaseBuzzRevokeMandateResp where 
+  makeRequest (TA req routeParams testMode) headers = defaultMakeRequest POST (addRouteParam (getEndpointForReqAndEnv RevokeMandate testMode) routeParams) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+
+instance ToJSON EaseBuzzAccessKeyRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzAccessKeyRequest where
+  parseJSON = defaultDecode  
+
+instance ToJSON EaseBuzzAccessKeyResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzAccessKeyResponse where
+  parseJSON = defaultDecode
+
+instance ToJSON EaseBuzzMandateRetrieveRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzMandateRetrieveRequest where
+  parseJSON = defaultDecode
+
+instance ToJSON ResponseMetaData where
+  toJSON = defaultEncode
+
+instance FromJSON ResponseMetaData where
+  parseJSON = defaultDecode  
+
+instance ToJSON EaseExecuteMandateRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseExecuteMandateRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseExecuteMandateRequest where
+  validate = pure
+
+instance ToJSON DebitRequestResponseData where
+  toJSON = defaultEncode
+
+instance FromJSON DebitRequestResponseData where
+  parseJSON = defaultDecode     
+
+instance ToJSON EaseBuzzDebitRequestRetrieve where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzDebitRequestRetrieve where
+  parseJSON = defaultDecode 
+
+instance Validatable EaseBuzzDebitRequestRetrieve where
+  validate = pure
+
+instance ToJSON DebitRequestRetrieveResponseData where
+  toJSON = defaultEncode
+
+instance FromJSON DebitRequestRetrieveResponseData where
+  parseJSON = defaultDecode          
+
+Nau.deriveGenerics
+  [  ''Gateway.EaseBuzz.Types.TB
+  ,  ''Gateway.EaseBuzz.Types.TA
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzResponse
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzCreateSettlementResponse
+  ,  ''Gateway.EaseBuzz.Types.TxnSyncMessageType
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzRefundSyncResponse
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzSyncAndWebhookResponse
+  ,  ''Gateway.EaseBuzz.Types.GetEMIOptionResponse
+  ,  ''Gateway.EaseBuzz.Types.EMIForABank
+  ,  ''Gateway.EaseBuzz.Types.GetEMIOptionRequest
+  ,  ''Gateway.EaseBuzz.Types.EMIInstanceForBank
+  ,  ''Gateway.EaseBuzz.Types.EMICodeList
+  ,  ''Gateway.EaseBuzz.Types.EMIObject
+  ,  ''Gateway.EaseBuzz.Types.GatewayAuthRequestParameters
+  ,  ''Gateway.EaseBuzz.Types.GatewayAuthRequestParametersCardless
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzPlansErrorResponse
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzOffer
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzPlans
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzPlansResponse
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzPlansResp
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzPlansRequest
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzAuthZResponse
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzAuthZRequest
+  ,  ''Gateway.EaseBuzz.Types.DeviceInformation
+  ,  ''Gateway.EaseBuzz.Types.PaymentInformation
+  ,  ''Gateway.EaseBuzz.Types.AuthZData
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzOnlyAuthZResponse
+  ,  ''Gateway.EaseBuzz.Types.EasebuzzAuthZErrorResponse
+  ,  ''Gateway.EaseBuzz.Types.ErrorMsg
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzRetriveMandateResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzExecuteMandateResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzMandatePaymentRetriveResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzUpiAutoPayResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzNotificationResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzUpiExecuteResp
+  ,  ''Gateway.EaseBuzz.Types.CustomText
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzRevokeMandateResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzUpiAutoPayIntentResp
+  ,  ''Gateway.EaseBuzz.Types.EaseBuzzWebhookTypes
+  ]
+
+instance Money EASEBUZZ where
+  amountFormat EASEBUZZ = EffectiveAmount
+  amountCalculationLogic EASEBUZZ = BaseAmount
+
+instance ToJSON EasebuzzPlansRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzPlansRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzPlansRequest where
+  validate = pure
+
+instance ToJSON EasebuzzPlansResp where
+  toJSON (ValidEasebuzzPlansResp s) = toJSON s
+  toJSON (EasebuzzPlansErrorResp s) = toJSON s
+
+instance FromJSON EasebuzzPlansResp where
+  parseJSON str = (ValidEasebuzzPlansResp <$> (parseJSON str)) <|> (EasebuzzPlansErrorResp <$> (parseJSON str))
+
+instance Validatable EasebuzzPlansResp where
+  validate = pure
+
+instance ToJSON EasebuzzPlansResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzPlansResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzPlansResponse where
+  validate = pure
+
+instance ToJSON EasebuzzPlans where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzPlans where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzPlans where
+  validate = pure
+
+instance ToJSON EasebuzzOffer where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzOffer where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzOffer where
+  validate = pure
+
+instance ToJSON EasebuzzPlansErrorResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzPlansErrorResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzPlansErrorResponse where
+  validate = pure
+
+instance RestEndpoint (TB EasebuzzPlansRequest) EasebuzzPlansResp where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv EasebuzGetPlans testMode) headers req
+  decodeResponse = extractResponse >>> decodeJSON
+
+instance RestEndpoint (TB SettlementStatusCheckReq) DelayedSettlementStatusCheckRes where
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv DelayedSettlementStatus testMode) headers req
+  decodeResponse = extractResponse >>> defaultDecodeResponse
+
+instance ToJSON a => ToJSON (TB a) where
+  toJSON = defaultEncode
+
+instance FromJSON a => FromJSON (TB a) where
+  parseJSON = defaultDecode
+
+instance Validatable a => Validatable (TB a) where
+  validate = pure
+
+instance ToJSON a => ToJSON (TA a) where
+  toJSON = defaultEncode
+
+instance FromJSON a => FromJSON (TA a) where
+  parseJSON = defaultDecode
+
+instance Validatable a => Validatable (TA a) where
+  validate = pure
+
+instance ToJSON EaseBuzzInitiatePaymentRequest where
+  toJSON = defaultEncode
+
+instance ToJSON SurchargeDetails where
+  toJSON = defaultEncode
+
+instance FromJSON SurchargeDetails where
+  parseJSON = defaultDecode
+
+instance ToJSON EMIForABank where
+  toJSON = defaultEncode
+
+instance FromJSON EMIObject where
+  parseJSON = defaultDecode
+
+instance ToJSON GatewayAuthRequestParameters where
+  toJSON = defaultEncode
+
+instance FromJSON GatewayAuthRequestParameters where
+  parseJSON = defaultDecode
+
+instance ToJSON GatewayAuthRequestParametersCardless where
+  toJSON = defaultEncode
+
+instance FromJSON GatewayAuthRequestParametersCardless where
+  parseJSON = defaultDecode
+
+instance FromJSON EMICodeList where
+  parseJSON = defaultDecode
+
+instance FromJSON EMIForABank where
+  parseJSON = defaultDecode
+
+instance ToJSON EMIInstanceForBank where
+  toJSON = defaultEncode
+
+instance ToJSON EMIObject where
+  toJSON = defaultEncode
+
+instance FromJSON EMIInstanceForBank where
+  parseJSON = defaultDecode
+
+instance Validatable GetEMIOptionRequest where
+  validate = pure
+
+instance Validatable GetEMIOptionResponse where
+  validate = pure
+
+instance FromJSON EaseBuzzInitiatePaymentRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzInitiatePaymentRequest where
+  validate = pure
+
+instance ToJSON EaseBuzzInitiatePaymentResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzInitiatePaymentResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzInitiatePaymentResponse where
+  validate = pure
+
+instance ToJSON GetEMIOptionRequest where
+  toJSON = defaultEncode
+
+instance FromJSON GetEMIOptionRequest where
+  parseJSON = defaultDecode
+
+instance FromJSON GetEMIOptionResponse where
+  parseJSON = defaultDecode
+
+instance ToJSON GetEMIOptionResponse where
+  toJSON = defaultEncode
+
+instance RestEndpoint (TB GetEMIOptionRequest) GetEMIOptionResponse where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv GetEMIOptions testMode) headers req
+  decodeResponse = defaultDecodeResponse <<< extractResponse
+
+instance RestEndpoint (TB EaseBuzzInitiatePaymentRequest) EaseBuzzInitiatePaymentResponse where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv EaseBuzInitiatePayment testMode) headers req
+  decodeResponse = defaultDecodeResponse <<< extractResponse
+
+instance ToJSON EaseBuzzSeamlessTxnRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzSeamlessTxnRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzSeamlessTxnRequest where
+  validate = pure
+
+instance ToJSON EasebuzzAuthZRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzAuthZRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzAuthZRequest where
+  validate = pure
+
+instance ToJSON DeviceInformation where
+  toJSON = defaultEncode
+
+instance FromJSON DeviceInformation where
+  parseJSON = defaultDecode
+
+instance Validatable DeviceInformation where
+  validate = pure
+
+instance ToJSON PaymentInformation where
+  toJSON = defaultEncode
+
+instance FromJSON PaymentInformation where
+  parseJSON = defaultDecode
+
+instance Validatable PaymentInformation where
+  validate = pure
+
+instance ToJSON EaseBuzzSeamlessTxnResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzSeamlessTxnResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzSeamlessTxnResponse where
+  validate = pure
+
+instance ToJSON EaseBuzzUpiIntentResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzUpiIntentResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzUpiIntentResponse where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzzSeamlessTxnRequest) EaseBuzzUpiIntentResponse where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv EasebuzSeamlessTransaction testMode) headers req
+  decodeResponse = defaultDecodeResponse <<< extractResponse
+
+instance ToJSON EasebuzzResponse where
+  toJSON (TxnResp s) = toJSON s
+  toJSON (SyncResp s) = toJSON s
+  toJSON (AuthzResp s) = toJSON s
+  toJSON (MandateRedirectionResp s) = toJSON s
+  toJSON (MandateRegSyncResp s) = toJSON s
+  toJSON (MandateSyncValid s) = toJSON s
+  toJSON (MandateSyncFailResp s) = toJSON s
+  toJSON (DebitRequestRetrieveResp s) = toJSON s
+  toJSON (MandateStatusUpdateWebhook s) = toJSON s
+  toJSON (PresentmentStatusUpdateWebhook s) = toJSON s
+
+instance FromJSON EasebuzzResponse where
+  parseJSON str = (PresentmentStatusUpdateWebhook <$> (parseJSON str)) <|> (MandateStatusUpdateWebhook <$> (parseJSON str)) <|> (TxnResp <$> (parseJSON str)) <|> (SyncResp <$> (parseJSON str)) <|> (AuthzResp <$> (parseJSON str)) <|> (DebitRequestRetrieveResp <$> (parseJSON str)) <|> (MandateRedirectionResp <$> (parseJSON str)) <|> (MandateRegSyncResp <$> (parseJSON str)) <|> (MandateSyncValid <$> (parseJSON str)) <|> (MandateSyncFailResp <$> (parseJSON str))
+
+instance ToJSON EaseBuzzWebhookTypes where
+  toJSON (RefundWebhook s) = toJSON s
+  toJSON (MandateStatusUpdateWebhookResp s) = toJSON s
+  toJSON (PresentmentStatusUpdateWebhookResp s) = toJSON s
+  toJSON (SeamlessTxnResp s) = toJSON s
+  toJSON (MandateSyncValidRes s) = toJSON s
+  toJSON (DebitRequestRetrieveRes s) = toJSON s
+  toJSON (NotificationStatusUpdateWebhookResp s) = toJSON s
+
+instance FromJSON EaseBuzzWebhookTypes where
+  parseJSON str = (SeamlessTxnResp <$> (parseJSON str)) <|> (RefundWebhook <$> (parseJSON str)) <|> (MandateStatusUpdateWebhookResp <$> (parseJSON str)) <|> (PresentmentStatusUpdateWebhookResp <$> (parseJSON str))  <|> (DebitRequestRetrieveRes <$> (parseJSON str))  <|> (MandateSyncValidRes <$> (parseJSON str)) <|> (NotificationStatusUpdateWebhookResp <$> (parseJSON str))
+
+instance ToJSON EasebuzzAuthZResponse where
+  toJSON (ValidAuthZResponse s) = toJSON s
+  toJSON (EasebuzzRedirectAuthzErrorResponse s) = toJSON s
+
+instance FromJSON EasebuzzAuthZResponse where
+  parseJSON str = (ValidAuthZResponse <$> (parseJSON str)) <|> (EasebuzzRedirectAuthzErrorResponse <$> (parseJSON str))
+
+instance ToJSON EasebuzzCreateSettlementResponse where
+  toJSON (InitateResponse s) = toJSON s
+  toJSON (FailureResponse s) = toJSON s
+
+instance FromJSON EasebuzzCreateSettlementResponse where
+  parseJSON str = (InitateResponse <$> (parseJSON str)) <|> (FailureResponse <$> (parseJSON str))
+
+instance Validatable EasebuzzCreateSettlementResponse where
+  validate = pure
+
+instance ToJSON EaseBuzzTxnSyncRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzTxnSyncRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzTxnSyncRequest where
+  validate = pure
+
+instance ToJSON EaseBuzzTxnSyncResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzTxnSyncResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzTxnSyncResponse where
+  validate = pure
+
+instance ToJSON TxnSyncMessageType where
+  toJSON (TxnSyncSuccessMessage s) = toJSON s
+  toJSON (TxnSyncErrorMessage s) = toJSON s
+
+instance FromJSON TxnSyncMessageType where
+  parseJSON str = (TxnSyncSuccessMessage <$> (parseJSON str)) <|> (TxnSyncErrorMessage <$> (parseJSON str))
+
+instance RestEndpoint (TB EaseBuzzTxnSyncRequest) EaseBuzzTxnSyncResponse where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv EasebuzTxnSync testMode) headers req
+  decodeResponse = defaultDecodeResponse <<< extractResponse
+
+instance ToJSON EaseBuzzRefundRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzRefundRequest where
+  validate = pure
+
+instance ToJSON EaseBuzzRefundRequestJSON where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundRequestJSON where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzRefundRequestJSON where
+  validate = pure
+
+instance RestEndpoint (TB CreateDelaySettlementRequest) EasebuzzCreateSettlementResponse' where
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv DelayedSettlement testMode) headers req
+  decodeResponse = defaultDecodeResponse
+
+instance ToJSON TransactionArr where
+  toJSON = defaultEncode
+
+instance FromJSON TransactionArr where
+  parseJSON = defaultDecode
+
+instance Validatable TransactionArr where
+  validate = pure
+
+instance ToJSON CreateDelaySettlementRequest where
+  toJSON = defaultEncode
+
+instance FromJSON CreateDelaySettlementRequest where
+  parseJSON = defaultDecode
+
+instance Validatable CreateDelaySettlementRequest where
+  validate = pure
+
+instance ToJSON TransactionArrResponse where
+  toJSON = defaultEncode
+
+instance FromJSON TransactionArrResponse where
+  parseJSON = defaultDecode
+
+instance Validatable TransactionArrResponse where
+  validate = pure
+
+instance ToJSON SettlementInfo where
+  toJSON = defaultEncode
+
+instance FromJSON SettlementInfo where
+  parseJSON = defaultDecode
+
+instance Validatable SettlementInfo where
+  validate = pure
+
+instance ToJSON TransactionArrOfSettlement where
+  toJSON = defaultEncode
+
+instance FromJSON TransactionArrOfSettlement where
+  parseJSON = defaultDecode
+
+instance Validatable TransactionArrOfSettlement where
+  validate = pure
+
+instance ToJSON DelayedSettlementStatusCheckRes where
+  toJSON = defaultEncode
+
+instance FromJSON DelayedSettlementStatusCheckRes where
+  parseJSON = defaultDecode
+
+instance Validatable DelayedSettlementStatusCheckRes where
+  validate = pure
+
+instance ToJSON SettlementStatusCheckReq where
+  toJSON = defaultEncode
+
+instance FromJSON SettlementStatusCheckReq where
+  parseJSON = defaultDecode
+
+instance Validatable SettlementStatusCheckReq where
+  validate = pure
+
+instance ToJSON ErrorResponse where
+  toJSON = defaultEncode
+
+instance FromJSON ErrorResponse where
+  parseJSON = defaultDecode
+
+instance Validatable ErrorResponse where
+  validate = pure
+
+instance ToJSON Notes where
+  toJSON = defaultEncode
+
+instance FromJSON Notes where
+  parseJSON = defaultDecode
+
+instance Validatable Notes where
+  validate = pure
+
+instance ToJSON DelayedSettlementResponse where
+  toJSON = defaultEncode
+
+instance FromJSON DelayedSettlementResponse where
+  parseJSON = defaultDecode
+
+instance Validatable DelayedSettlementResponse where
+  validate = pure
+
+instance ToJSON EaseBuzzRefundResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundResponse where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzRefundResponse where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzzRefundRequest) EaseBuzzRefundResponse where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv EaseBuzRefund testMode) headers req
+  decodeResponse = defaultDecodeResponse <<< extractResponse
+
+instance RestEndpoint (TB EaseBuzzRefundRequestJSON) EaseBuzzRefundResponse where
+  makeRequest (TB req testMode) headers = defaultMakeRequest POST (getEndpointForReqAndEnv EaseBuzRefund testMode) headers req
+  decodeResponse = defaultDecodeResponse <<< extractResponse
+
+instance ToJSON EaseBuzzRefundSyncRequest where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundSyncRequest where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzRefundSyncRequest where
+  validate = pure
+
+instance ToJSON EaseBuzzRefundSyncFailureResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundSyncFailureResponse where
+  parseJSON = defaultDecode
+
+instance ToJSON EaseBuzzRefundSyncSuccessResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundSyncSuccessResponse where
+  parseJSON = defaultDecode
+
+instance ToJSON EaseBuzzRefundSyncValidationErrorResponse where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundSyncValidationErrorResponse where
+  parseJSON = defaultDecode
+
+instance ToJSON RefundSyncType where
+  toJSON = defaultEncode
+
+instance FromJSON RefundSyncType where
+  parseJSON = defaultDecode
+
+instance ToJSON EaseBuzzRefundSync where
+  toJSON = defaultEncode
+
+instance FromJSON EaseBuzzRefundSync where
+  parseJSON = defaultDecode
+
+instance Validatable EaseBuzzRefundSync where
+  validate = pure
+
+instance ToJSON EasebuzzCreateSettlementResponse' where
+  toJSON = defaultEncode
+
+instance FromJSON EasebuzzCreateSettlementResponse' where
+  parseJSON = defaultDecode
+
+instance Validatable EasebuzzCreateSettlementResponse' where
+  validate = pure
+
+instance ToJSON EaseBuzzRefundSyncResponse where
+  toJSON (EaseBuzzRefundSyncSuccessResp s)          = toJSON s
+  toJSON (EaseBuzzRefundSyncFailureResp s)          = toJSON s
+  toJSON (EaseBuzzRefundSyncValidationErrorResp s)  = toJSON s
+
+instance FromJSON EaseBuzzRefundSyncResponse where
+  parseJSON str = (EaseBuzzRefundSyncSuccessResp <$> (parseJSON str)) <|> (EaseBuzzRefundSyncFailureResp <$> (parseJSON str))  <|> (EaseBuzzRefundSyncValidationErrorResp <$> (parseJSON str))
+
+instance Validatable EaseBuzzRefundSyncResponse where
+  validate = pure
+
+instance RestEndpoint (TB EaseBuzzRefundSyncRequest) EaseBuzzRefundSync where
+  makeRequest (TB req testMode) headers = urlEncodedMakeRequestBody POST (getEndpointForReqAndEnv EaseBuzRefundSync testMode) headers req
+  decodeResponse = defaultDecodeResponse
+
+instance ToJSON EasebuzzSyncAndWebhookResponse where
+  toJSON (WebhookResponse s) = toJSON s
+  toJSON (TxnSyncResponse s) = toJSON s
+  toJSON (MandateSyncValidResp s) = toJSON s
+  toJSON (MandateSyncFailResponse s) = toJSON s
+  toJSON (MandatePaymentSyncResp s) = toJSON s
+
+instance FromJSON EasebuzzSyncAndWebhookResponse where
+  parseJSON str = (WebhookResponse <$> (parseJSON str)) <|> (TxnSyncResponse <$> (parseJSON str)) <|> (MandateSyncValidResp <$> (parseJSON str)) <|> (MandateSyncFailResponse <$> (parseJSON str)) <|> (MandatePaymentSyncResp <$> (parseJSON str))
+```
+
+```haskell
+data EasebuzzSubMerchantMetadata = EasebuzzSubMerchantMetadata
+```
+
+
+### Endpoints.hs
+```haskell
+{-# LANGUAGE TypeApplications #-}
+--
+
+module Gateway.EaseBuzz.Endpoints where
+
+import  qualified Nau.Runtime as Nau
+    ( HasCallStack, deriveGenerics )
+import  NauPrelude ( Bool(..), Text, Newtype )
+import  qualified PS.Prelude ()
+
+
+data EasebuzzEndpoints
+  = EaseBuzInitiatePayment
+  | EasebuzSeamlessTransaction
+  | EasebuzTxnSync
+  | EaseBuzRefund
+  | EaseBuzRefundSync
+  | GetEMIOptions
+  | EasebuzGetPlans
+  | DelayedSettlement
+  | DelayedSettlementStatus
+  | EasebuzzAuthzRequest
+  | GenerateAccessKey
+  | MandateCreation
+  | MandateRetrieve
+  | PresentmentRequestInitiate
+  | DebitRequestRetrieve
+  | UpiAutopay
+  | NotificationReq
+  | UpiMandateExecute
+  | RevokeMandate
+  | MandateNotificationSyncReq
+  deriving anyclass (Newtype (EasebuzzEndpoints))
+
+getEndpointForReqAndEnv :: Nau.HasCallStack => EasebuzzEndpoints -> Bool -> Text
+getEndpointForReqAndEnv EaseBuzInitiatePayment True = "https://testpay.easebuzz.in/payment/initiateLink"
+getEndpointForReqAndEnv EaseBuzInitiatePayment False = "https://pay.easebuzz.in/payment/initiateLink"
+getEndpointForReqAndEnv EasebuzSeamlessTransaction True = "https://testpay.easebuzz.in/initiate_seamless_payment/"
+getEndpointForReqAndEnv EasebuzSeamlessTransaction False = "https://pay.easebuzz.in/initiate_seamless_payment/"
+getEndpointForReqAndEnv EasebuzTxnSync True = "https://testdashboard.easebuzz.in/transaction/v1/retrieve"
+getEndpointForReqAndEnv EasebuzTxnSync False = "https://dashboard.easebuzz.in/transaction/v1/retrieve"
+getEndpointForReqAndEnv EaseBuzRefund True = "https://testdashboard.easebuzz.in/transaction/v2/refund"
+getEndpointForReqAndEnv EaseBuzRefund False = "https://dashboard.easebuzz.in/transaction/v2/refund"
+getEndpointForReqAndEnv EaseBuzRefundSync True = "https://testdashboard.easebuzz.in/refund/v1/retrieve"
+getEndpointForReqAndEnv EaseBuzRefundSync False = "https://dashboard.easebuzz.in/refund/v1/retrieve"
+getEndpointForReqAndEnv GetEMIOptions True = "https://testpay.easebuzz.in/v1/getEMIOptions"
+getEndpointForReqAndEnv GetEMIOptions False = "https://pay.easebuzz.in/v1/getEMIOptions" 
+getEndpointForReqAndEnv EasebuzGetPlans False = "https://pay.easebuzz.in/emi/v1/retrieve" 
+getEndpointForReqAndEnv EasebuzGetPlans True = "https://testpay.easebuzz.in/emi/v1/retrieve" 
+getEndpointForReqAndEnv DelayedSettlement True = "https://testdashboard.easebuzz.in/settlements/v1/ondemand/initiate/"
+getEndpointForReqAndEnv DelayedSettlement False = "https://dashboard.easebuzz.in/settlements/v1/ondemand/initiate/"
+getEndpointForReqAndEnv DelayedSettlementStatus True = "https://testdashboard.easebuzz.in/settlements/v1/ondemand/status/"
+getEndpointForReqAndEnv DelayedSettlementStatus False = "https://dashboard.easebuzz.in/settlements/v1/ondemand/status/"
+getEndpointForReqAndEnv EasebuzzAuthzRequest True = "https://testpay.easebuzz.in/payment/v1/capture/direct"
+getEndpointForReqAndEnv EasebuzzAuthzRequest False = "https://pay.easebuzz.in/payment/v1/capture/direct"
+
+
+-- both true and false API's are same
+
+getEndpointForReqAndEnv GenerateAccessKey True = "https://sandboxapi.easebuzz.in/autocollect/v1/access-key/generate/"
+getEndpointForReqAndEnv GenerateAccessKey False = "https://api.easebuzz.in/autocollect/v1/access-key/generate/"
+
+getEndpointForReqAndEnv MandateCreation True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/"
+getEndpointForReqAndEnv MandateCreation False = "https://api.easebuzz.in/autocollect/v1/mandate/"
+
+getEndpointForReqAndEnv MandateRetrieve True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/:txnId/"
+getEndpointForReqAndEnv MandateRetrieve False = "https://api.easebuzz.in/autocollect/v1/mandate/:txnId/"
+
+getEndpointForReqAndEnv PresentmentRequestInitiate True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/presentment/"
+getEndpointForReqAndEnv PresentmentRequestInitiate False = "https://api.easebuzz.in/autocollect/v1/mandate/presentment/"
+
+getEndpointForReqAndEnv DebitRequestRetrieve True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/presentment/:txnId/"
+getEndpointForReqAndEnv DebitRequestRetrieve False = "https://api.easebuzz.in/autocollect/v1/mandate/presentment/:txnId/"
+
+getEndpointForReqAndEnv UpiAutopay True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/process/"
+getEndpointForReqAndEnv UpiAutopay False = "https://api.easebuzz.in/autocollect/v1/mandate/process/"
+
+getEndpointForReqAndEnv NotificationReq True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/notify/"
+getEndpointForReqAndEnv NotificationReq False = "https://api.easebuzz.in/autocollect/v1/mandate/notify/"
+
+getEndpointForReqAndEnv UpiMandateExecute True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/execute/"
+getEndpointForReqAndEnv UpiMandateExecute False = "https://api.easebuzz.in/autocollect/v1/mandate/execute/"
+
+getEndpointForReqAndEnv RevokeMandate True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/:mandateId/status_update/"
+getEndpointForReqAndEnv RevokeMandate False = "https://api.easebuzz.in/autocollect/v1/mandate/:mandateId/status_update/"
+
+getEndpointForReqAndEnv MandateNotificationSyncReq True = "https://sandboxapi.easebuzz.in/autocollect/v1/mandate/notification/:notificationReqId/"
+getEndpointForReqAndEnv MandateNotificationSyncReq False = "https://api.easebuzz.in/autocollect/v1/mandate/notification/:notificationReqId/"
+
+Nau.deriveGenerics
+  [ ''Gateway.EaseBuzz.Endpoints.EasebuzzEndpoints
+  ]
+
+```
+
+### Flow Functions
+Transaction flows found: getGatewayCode, readCardType, initiateTxn, initiateEMITxn, initEaseBuzzEmandateTxn, initEaseBuzzAccessTokenRequest, initiateNormalTxn, getSdkParams, initEaseBuzzEmandateIntentTxn, sendCollectRequest, initEaseBuzzEmandateCollectTxn, makeFailurePgrInfo, getPaymentMode, syncWithGateway, callSyncWithGateway, verifyMessageIntegrityV2, getPGRInfo, setupMandate, getEaseBuzzGatewayParams, initEaseBuzzInitiatePayment, initEaseBuzzGetEMIOptions, initEaseBuzzGetEMIPlans, initEaseBuzztxnSyncRequest, initEaseBuzzRefundRequest, initEaseBuzzRefundRequestJSON, initEaseBuzzRefundSyncRequest, initUpiIntentRequest, initEaseBuzzAccessKeyRequest, initEaseBuzzUpiAutoPayIntentRequest, initEaseBuzzUpiAutoPayCollectRequest, initEaseBuzzMandateRegRetriveRequest, initEaseBuzzExecuteMandateRequest, initEaseBuzzUpiExecuteMandateRequest, initEaseBuzzNotificationRequest, initEaseBuzzRevokeMandateRequest, initEaseBuzzMandatePaymentRetriveRequest, initEaseBuzzNotificationSyncRequest, getEaseBuzzDetails, easeBuzzTxnSync, normalTxnSync, callTxnSync, updateGatewayTxnData, mandatePaymentSync, callEaseBuzzMandatePaymentStatus, updateGatewayTxnDataForMandatePayment, mandateRegiSync, callEaseBuzzMandateRegisterStatus, updateGatewayTxnDataForMandateReg, updateGwTxnDataInState, recordPgResponse, getPaymentGatewayResponse, isPaymentSuccessful, isPendingTransaction, easeBuzzRefundRequest, easeBuzzRefundSyncRequest, extractWebhookResponse, extractWebHookEvent, extractTxnDetailIdFromWebhookResponse, callGetStatusResponseForWebhook, getStatusResponseForWebhook, verifyWebhookResponse, updateGatewayTxnDataWithWebhookResponse, verifyMandateStatusWebhook, extractNotificationWebhookResponse, getEmiMapping, preTxnValidator, filterEMIPlan, filterEMIPlanCardless, validateEmiPlanCardless, validateEmiPlan, extractUpiTransactionMode, extractUpiTransactionModeInSync, initateSplitSettelemt, syncTrasnfer, initDelayedSettelemt, initDelayedSettelemtStatusCheck, initEasebuzzSdkOnlyAuthZRequest, authorizeThreeDSTransaction, initNotificationRequest, callInitNotification, makeRequestAndCallNotificationApi, getNotificationEffectiveAmountWithCurr, initNotificationSyncRequest, callNotificationStatus, isMandateRegisterStatusIsSuccess, callMandateFirstExecution, updateGatewayTxnData, executeMandate, getGsmLookupDetailsFromPgr, checkMandateStatus, callEaseBuzzMandateRevokeApi, initiateAutoRevokeMandate, autoRevokeMandateToken, revokeMandateToken
+
+
+## Target System Patterns
+UCS v2 uses these patterns:
+
+### Macro System
+```rust
+use std::marker::PhantomData;
+
+use common_utils::{errors::CustomResult, ext_traits::BytesExt};
+use domain_types::{errors, router_data_v2::RouterDataV2};
+use error_stack::ResultExt;
+
+use crate::types;
+
+pub trait FlowTypes {
+    type Flow;
+    type FlowCommonData;
+    type Request;
+    type Response;
+}
+
+impl<F, FCD, Req, Resp> FlowTypes for RouterDataV2<F, FCD, Req, Resp> {
+    type Flow = F;
+    type FlowCommonData = FCD;
+    type Request = Req;
+    type Response = Resp;
+}
+
+impl<F, FCD, Req, Resp> FlowTypes for &RouterDataV2<F, FCD, Req, Resp> {
+    type Flow = F;
+    type FlowCommonData = FCD;
+    type Request = Req;
+    type Response = Resp;
+}
+
+pub trait GetFormData {
+    fn get_form_data(&self) -> reqwest::multipart::Form;
+}
+
+pub struct NoRequestBody;
+pub struct NoRequestBodyTemplating;
+
+impl<F, FCD, Req, Resp> TryFrom<RouterDataV2<F, FCD, Req, Resp>> for NoRequestBody {
+    type Error = error_stack::Report<errors::ConnectorError>;
+
+    fn try_from(_value: RouterDataV2<F, FCD, Req, R...
+```
+
+### Example Implementations
+
+#### nexinets
+```rust
+pub mod transformers;
+use std::fmt::Debug;
+
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
+use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
+    },
+    errors,
+    payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_t...
+```
+
+#### noon
+```rust
+use std::fmt::Debug;
+
+use base64::Engine;
+use common_enums::AttemptStatus;
+use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, ConnectorSpecifications, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
+    },
+    errors,
+    payment_method_data::PaymentMethodDataTypes,
+    router_data::{ConnectorAuthT...
+```
+
+
+## Migration Task
+Generate a complete UCS v2 connector for EaseBuzz that:
+
+1. **MANDATORY: Uses UCS v2 macro framework** - NO manual implementations allowed
+2. **Preserves ALL features** from the Haskell implementation  
+3. **Uses proper UCS v2 macros** with correct syntax from the beginning
+4. **Applies guard rails** (Secret<String> for sensitive data, MinorUnit for amounts, Email/Currency/CountryAlpha2 types)
+5. **Implements all payment flows** found in the source
+6. **Maintains business logic parity** with the original
+
+## ⚠️ CRITICAL: MACRO FRAMEWORK IS MANDATORY
+
+**YOU MUST USE THE UCS v2 MACRO FRAMEWORK - NO EXCEPTIONS**
+
+- ❌ **DO NOT** write manual trait implementations
+- ❌ **DO NOT** implement `ConnectorServiceTrait` manually  
+- ❌ **DO NOT** implement `PaymentAuthorizeV2` manually
+- ✅ **DO** use `create_all_prerequisites!` macro for all setup
+- ✅ **DO** use `macro_connector_implementation!` macro for all trait implementations
+- ✅ **START WITH MACROS** from the very beginning of your implementation
+
+## 🚨 CRITICAL: NEVER HARDCODE REQUEST BODY VALUES
+
+**MANDATORY: All request body values must be extracted dynamically from router data**
+
+Based on the cashtocode connector pattern in `/Users/shivral.somani/Documents/Repos/hyperswitch/ucs/connector-service/backend/connector-integration/src/connectors/cashtocode/transformers.rs`, you must:
+
+### ❌ PROHIBITED - Never Hardcode These Values:
+```rust
+// ❌ WRONG - Hardcoded values (these will be rejected)
+amount: 1000,                          // Never hardcode amounts
+currency: "USD",                       // Never hardcode currency strings  
+user_id: "test_user_123",             // Never hardcode user IDs
+transaction_id: "fixed_txn_id",       // Never hardcode transaction IDs
+merchant_id: "merchant_123",          // Never hardcode merchant IDs
+api_key: "sk_test_12345",             // Never hardcode API keys
+customer_email: "test@example.com",   // Never hardcode email addresses
+return_url: "https://example.com",    // Never hardcode URLs
+```
+
+### ✅ MANDATORY - Use Router Data Functions:
+```rust
+// ✅ CORRECT - Dynamic extraction from router data
+impl<T> TryFrom<RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>> 
+    for ConnectorPaymentsRequest {
+    
+    fn try_from(item: RouterDataV2<...>) -> Result<Self, Self::Error> {
+        // Amount: Use amount converter (never hardcode)
+        let amount = item.connector.amount_converter.convert(
+            item.router_data.request.minor_amount,
+            item.router_data.request.currency,
+        )?;
+        
+        // Currency: Extract from router data
+        let currency = item.router_data.request.currency;
+        
+        // Customer ID: Extract using getter function
+        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        
+        // Transaction ID: Use connector request reference ID
+        let transaction_id = item.router_data.resource_common_data.connector_request_reference_id;
+        
+        // Return URL: Extract using getter function
+        let return_url = item.router_data.request.get_router_return_url()?;
+        
+        // Email: Extract from request data
+        let email = item.router_data.request.email.clone();
+        
+        // Authentication: Extract from connector auth type
+        let auth_credentials = get_auth_credentials(&item.router_data.connector_auth_type)?;
+        
+        Ok(Self {
+            amount,
+            currency,
+            user_id: Secret::new(customer_id),
+            transaction_id,
+            requested_url: return_url.clone(),
+            cancel_url: return_url,
+            email,
+            // All values extracted dynamically - NEVER hardcoded
+        })
+    }
+}
+```
+
+### 🔍 Required Extraction Functions (Use These Patterns):
+```rust
+// Customer data extraction
+let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+
+// Amount conversion using proper converter
+let amount = item.connector.amount_converter.convert(
+    item.router_data.request.minor_amount,
+    item.router_data.request.currency,
+)?;
+
+// URL extraction
+let return_url = item.router_data.request.get_router_return_url()?;
+
+// Authentication extraction (implement custom function)
+fn get_auth_credentials(auth_type: &ConnectorAuthType) -> Result<AuthData, ConnectorError> {
+    // Extract API keys, merchant IDs, etc. from auth_type
+    // Use patterns from cashtocode connector (lines 39-56)
+}
+
+// Email extraction
+let email = item.router_data.request.email.clone();
+
+// Browser info extraction  
+let browser_info = item.router_data.request.browser_info.clone();
+
+// IP address extraction
+let ip_address = item.router_data.request.get_ip_address_as_optional();
+```
+
+### 🎯 Key Router Data Access Patterns:
+- `item.router_data.request.minor_amount` - Payment amount in minor units
+- `item.router_data.request.currency` - Currency enum
+- `item.router_data.resource_common_data.get_customer_id()?` - Customer ID
+- `item.router_data.resource_common_data.connector_request_reference_id` - Transaction reference
+- `item.router_data.request.get_router_return_url()?` - Return/redirect URL
+- `item.router_data.request.email` - Customer email
+- `item.router_data.connector_auth_type` - Authentication credentials
+- `item.router_data.request.browser_info` - Browser information
+- `item.router_data.request.payment_method_type` - Payment method type
+
+### 🚨 VALIDATION CHECKPOINT:
+Before implementing your connector, verify:
+1. ✅ NO hardcoded amounts, currencies, or IDs
+2. ✅ ALL values extracted from `item.router_data.*` fields  
+3. ✅ Authentication data extracted from `connector_auth_type`
+4. ✅ Amount conversion uses proper `amount_converter.convert()`
+5. ✅ Customer data uses `get_customer_id()` function
+6. ✅ URLs use `get_router_return_url()` function
+7. ✅ Transaction IDs use `connector_request_reference_id`
+
+
+## CRITICAL UCS v2 Syntax Requirements
+
+⚠️ **REMINDER: ALL IMPLEMENTATIONS MUST USE MACROS - NO MANUAL CODE**
+
+### 1. MANDATORY Macro Usage Patterns (WITH generic_type parameter):
+
+**Step 1: ALWAYS start with create_all_prerequisites! macro**
+```rust
+// CRITICAL: This macro MUST be the foundation of your connector
+// DO NOT write any manual trait implementations
+// Implement all flows from the original connector
+macros::create_all_prerequisites!(
+    connector_name: {connector_name},
+    generic_type: T,
+    api: [
+        (
+            flow: Authorize,
+            request_body: {connector_name}PaymentsRequest,
+            response_body: {connector_name}PaymentsResponse,
+            router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: PSync,
+            request_body: {connector_name}PaymentsSyncRequest,
+            response_body: {connector_name}PaymentsResponse,
+            router_data: RouterDataV2<PSync, PaymentSyncData, PaymentsSyncData, PaymentsResponseData>,
+        )
+    ],
+    amount_converters: [
+        amount_converter: StringMinorUnit  // CRITICAL: Choose based on connector API requirements
+    ],
+    member_functions: {{ /* functions */ }}
+);
+
+**Step 2: MANDATORY implementation macro for each flow**
+```rust
+// CRITICAL: Use this macro for EVERY flow (Authorize, PSync, etc.)
+// DO NOT implement traits manually - this macro does everything
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: {connector_name},
+    curl_request: Json({connector_name}PaymentsRequest),
+    curl_response: {connector_name}PaymentsResponse,
+    flow_name: Authorize,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthorizeData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {{ /* custom functions only */ }}
+);
+```
+
+### 2. PROHIBITED Manual Implementations:
+
+❌ **NEVER write these - macros handle everything:**
+```rust
+// ❌ FORBIDDEN - DO NOT WRITE MANUAL IMPLEMENTATIONS
+impl<T> ConnectorServiceTrait<T> for MyConnector<T> { /* ... */ }
+impl<T> PaymentAuthorizeV2<T> for MyConnector<T> { /* ... */ }
+impl<T> PaymentSyncV2<T> for MyConnector<T> { /* ... */ }
+
+// ❌ FORBIDDEN - DO NOT DEFINE STRUCTS MANUALLY  
+pub struct MyConnector<T> {
+    amount_converter: &'static (dyn AmountConverterTrait<Output = String> + Sync),
+    // ...
+}
+```
+
+### 3. Type Usage (All connectors are generic):
+- ✅ `PaymentsAuthorizeData<T>` (domain types use generics)
+- ✅ `SetupMandateRequestData<T>` (domain types use generics)
+- ✅ `RouterDataV2<Flow, FlowData, PaymentsAuthorizeData<T>, ResponseData>`
+- ✅ `generic_type: T` parameter in macros (REQUIRED for UCS v2)
+- ✅ Trait bounds: `[PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize]`
+
+### 4. Connector Structure (Generated by Macros):
+
+✅ **The macros automatically generate these for you:**
+```rust
+// ✅ AUTOMATICALLY GENERATED by create_all_prerequisites! macro
+pub struct {connector_name}<T> {{
+    amount_converter: &'static (dyn AmountConverterTrait<Output = String> + Sync),
+    connector_name: &'static str,
+    payment_method_data: PhantomData<T>,
+}}
+
+// ✅ AUTOMATICALLY GENERATED by macro_connector_implementation! macro  
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    ConnectorServiceTrait<T> for {connector_name}<T> {{ /* auto-generated */ }}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    PaymentAuthorizeV2<T> for {connector_name}<T> {{ /* auto-generated */ }}
+
+// ✅ YOU ONLY NEED TO IMPLEMENT: ConnectorCommon (if custom logic needed)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    ConnectorCommon for {connector_name}<T> {{ /* your custom logic only */ }}
+```
+
+### 5. Dependencies & Imports:
+- Add `hex = "0.4"` to Cargo.toml if using hex encoding
+- Use `common_utils::crypto` for AES encryption  
+- Import all required types from `domain_types`
+- Use `hyperswitch_masking::Secret` for sensitive data
+- Import `PaymentMethodDataTypes` from `domain_types::payment_method_data`
+- Import `serde::Serialize` for trait bounds
+
+### 6. Amount Framework Implementation:
+**CRITICAL: Proper amount handling using UCS v2 amount framework**
+
+**⚠️ MANDATORY: Check that connector uses UCS v2 macro framework**
+Before implementing any connector, verify that it uses the mandatory UCS v2 macro framework:
+- ✅ Must use `create_all_prerequisites!` macro (NO exceptions)
+- ✅ Must use `macro_connector_implementation!` macro (NO exceptions) 
+- ❌ NEVER implement traits manually (`ConnectorServiceTrait`, `PaymentAuthorizeV2`, etc.)
+- ❌ NEVER define connector struct manually
+
+If the connector does NOT use macros, it must be migrated to the macro framework first.
+
+**📖 Read CashToCode connector for reference:**
+Examine `/Users/shivral.somani/Documents/Repos/hyperswitch/ucs/connector-service/backend/connector-integration/src/connectors/cashtocode.rs` and its transformers to understand proper UCS v2 macro framework implementation patterns.
+
+The amount framework in UCS v2 is essential for proper monetary value handling. Follow the Cashtocode pattern:
+
+#### Amount Converter Configuration:
+```rust
+// In create_all_prerequisites! macro - Choose the correct converter based on connector requirements
+amount_converters: [
+    amount_converter: StringMinorUnit    // If connector expects amount in minor units as string
+    // OR
+    amount_converter: StringMajorUnit    // If connector expects amount in major units as string  
+    // OR
+    amount_converter: MinorUnit          // If connector expects amount as integer minor units
+],
+```
+
+**How to choose the right amount converter:**
+1. **StringMinorUnit**: Connector API expects amount as string in minor units (e.g., "1000" for $10.00)
+2. **StringMajorUnit**: Connector API expects amount as string in major units (e.g., "10.00" for $10.00)  
+3. **MinorUnit**: Connector API expects amount as integer in minor units (e.g., 1000 for $10.00)
+
+#### Amount Conversion in Transformers:
+```rust
+// CRITICAL: Check your original Haskell connector to determine the correct amount format
+// Then choose the appropriate amount converter and access method:
+
+// Example 1: If connector expects string amounts (most common)
+impl TryFrom<&ConnectorRouterData<&PaymentsAuthorizeData<T>>> for ConnectorPaymentsRequest {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    
+    fn try_from(item: &ConnectorRouterData<&PaymentsAuthorizeData<T>>) -> Result<Self, Self::Error> {
+        // Use get_amount_as_string() - works with both StringMinorUnit and StringMajorUnit
+        let amount = item.amount.get_amount_as_string();
+        let currency = item.router_data.request.currency.to_string();
+        
+        Ok(Self { amount, currency, /* ... other fields */ })
+    }
+}
+
+// Example 2: If connector expects integer amounts (rare)
+impl TryFrom<&ConnectorRouterData<&PaymentsAuthorizeData<T>>> for ConnectorPaymentsRequest {
+    fn try_from(item: &ConnectorRouterData<&PaymentsAuthorizeData<T>>) -> Result<Self, Self::Error> {
+        // Use get_amount_as_i64() - only works with MinorUnit converter
+        let amount = item.amount.get_amount_as_i64();
+        
+        Ok(Self { amount, /* ... other fields */ })
+    }
+}
+```
+
+#### Response Amount Handling:
+```rust
+// When processing connector responses
+impl<T> TryFrom<CashtocodePaymentsResponse> for PaymentsResponseData {
+    type Error = error_stack::Report<errors::ConnectorError>;
+    
+    fn try_from(response: CashtocodePaymentsResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            // Use MinorUnit::from_major_unit_as_i64 for response amounts
+            amount_received: response.amount.map(|amt| {
+                MinorUnit::from_major_unit_as_i64(amt)
+            }),
+            // ... other fields
+        })
+    }
+}
+```
+
+#### Key Amount Framework Rules:
+1. **Choose the correct amount converter** based on your connector's API requirements
+2. **Use `get_amount_as_string()`** for string-based connectors (StringMinorUnit/StringMajorUnit)
+3. **Use `get_amount_as_i64()`** for integer-based connectors (MinorUnit only)
+4. **Check the original Haskell connector** to understand the expected amount format
+5. **Never use raw integers or strings** for amount fields in domain types
+6. **Currency is handled as enum** - use `.to_string()` for API calls
+7. **Amount converter determines the format** - StringMinorUnit gives minor units, StringMajorUnit gives major units
+
+### 7. Type Safety and Guard Rails:
+**CRITICAL: Use proper domain types instead of raw strings**
+
+#### Type Matching Strategy:
+**When implementing request/response structs, prioritize using existing function return types:**
+1. **Check for existing functions**: Look for functions that return specific types (e.g., `get_ip_address() -> IpAddr`)
+2. **Use the exact same type**: Make struct field use the same type as the function return type
+3. **Only use `Secret<>` for sensitive data**: Wrap only API keys, tokens, passwords in `Secret<String>`
+
+#### Examples:
+```rust
+// If your connector has these functions:
+// fn get_ip_address() -> std::net::IpAddr
+// fn get_merchant_id() -> MerchantId  
+// fn get_customer_email() -> Email
+// fn get_api_key() -> String (sensitive)
+
+// Then your struct should match these types exactly:
+#[derive(Debug, serde::Serialize)]
+pub struct ConnectorRequest {
+    ip_address: std::net::IpAddr,      // Use exact function return type
+    merchant_id: MerchantId,           // Use exact function return type
+    customer_email: Email,             // Use exact function return type
+    api_key: Secret<String>,           // Only wrap sensitive strings in Secret<>
+    amount: MinorUnit,                 // Always MinorUnit for money
+}
+```
+
+#### Standard Domain Types:
+- `MinorUnit` for all monetary amounts (never String or i64 for money)
+- `Email` type for email addresses 
+- `Currency` enum for currency fields
+- `CountryAlpha2` for country codes
+- `PhoneNumber` type for phone numbers
+- `Secret<String>` ONLY for API keys, tokens, passwords, other sensitive string data
+- **CRITICAL**: If types exist for specific functions, use those types directly
+- Never expose Secret-wrapped values in logs or responses
+
+### 8. Error Handling:
+- Use proper `CustomResult<_, errors::ConnectorError>`
+- Implement comprehensive error response parsing
+- Map all status codes correctly from Haskell implementation
+
+### 9. API Tag Implementation:
+**CRITICAL: Implement `get_api_tag` function correctly**
+- Study Razorpay's implementation of `get_api_tag` as a reference
+- Ensure proper API endpoint identification for different flows
+- Map each flow (Authorize, PSync, RSync, etc.) to the correct API tag
+- This is essential for proper routing and API versioning
+
+## 🚨 CRITICAL COMPILATION FIXES - MANDATORY
+
+**The following fixes are MANDATORY for successful compilation. These are based on real-world implementation experience:**
+
+### 1. Correct IP Address Handling
+**CRITICAL: Use the correct IP address function and type handling:**
+```rust
+// CORRECT: Use get_ip_address_as_optional() which returns Option<Secret<String, IpAddress>>
+let ip_address = item.router_data.request.get_ip_address_as_optional()
+    .map(|ip| ip.expose())  // Call expose() to get the string value
+    .unwrap_or_else(|| "127.0.0.1".to_string());
+
+// Use this ip_address variable in your request struct
+Ok(Self {
+    ipaddress: ip_address,  // Use the string directly
+    // ... other fields
+})
+```
+
+### 2. Correct User Agent Handling
+```rust
+let user_agent = item.router_data.request.browser_info
+    .as_ref()
+    .and_then(|info| info.user_agent.clone())
+    .unwrap_or_else(|| "Mozilla/5.0".to_string());
+```
+
+### 3. Correct Test Mode Handling
+```rust
+// OLD (will fail): req.resource_common_data.is_sandbox()
+// NEW (correct): 
+let is_test = req.resource_common_data.test_mode.unwrap_or(false);
+```
+
+### 4. Correct ID Handling
+```rust
+// Customer ID
+let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+let customer_id_string = customer_id.get_string_repr();
+
+// Transaction ID
+let transaction_id = item.router_data.request.connector_transaction_id
+    .get_connector_transaction_id()
+    .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+```
+
+### 5. Required Additional Imports and Types
+```rust
+// CRITICAL: Import ALL required flow types and data types
+use domain_types::{
+    connector_flow::{
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
+        Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+    },
+    connector_types::{
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeFlowData, DisputeResponseData,
+        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
+        PaymentVoidData, PaymentsCaptureData, PaymentsAuthorizeData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData, RefundSyncData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, DisputeDefendData,
+    },
+    // ... other imports
+};
+```
+
+### 6. Stub Types for All Flows
+**CRITICAL: Create stub types for flows not implemented yet:**
+```rust
+// Stub types for unsupported flows - MANDATORY to avoid compilation errors
+#[derive(Debug, Clone, Serialize)]
+pub struct {connector_name}VoidRequest;
+#[derive(Debug, Clone)]
+pub struct {connector_name}VoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct {connector_name}CaptureRequest;
+#[derive(Debug, Clone)]
+pub struct {connector_name}CaptureResponse;
+
+// Add similar stubs for: Refund, RSync, CreateOrder, SessionToken, SetupMandate, RepeatPayment, Accept, DefendDispute, SubmitEvidence
+```
+
+### 7. ALL Flow API Declarations
+**CRITICAL: Include ALL flows in create_all_prerequisites! macro:**
+```rust
+macros::create_all_prerequisites!(
+    connector_name: {connector_name},
+    generic_type: T,
+    api: [
+        // Your implemented flows
+        (flow: Authorize, request_body: {connector_name}PaymentsRequest, response_body: {connector_name}PaymentsResponse, router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>),
+        (flow: PSync, request_body: {connector_name}PaymentsSyncRequest, response_body: {connector_name}PaymentsSyncResponse, router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>),
+        // MANDATORY: Add all other flows even if not implemented
+        (flow: Void, request_body: {connector_name}VoidRequest, response_body: {connector_name}VoidResponse, router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>),
+        (flow: Capture, request_body: {connector_name}CaptureRequest, response_body: {connector_name}CaptureResponse, router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>),
+        // ... Add ALL flows listed in the imports
+    ],
+    // ... rest of macro
+);
+```
+
+### 8. Manual Trait Implementations for All Flows
+**CRITICAL: Add trait implementations for all connector_types:**
+```rust
+// MANDATORY: Implement all connector_types traits even for unused flows
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    connector_types::PaymentOrderCreate for {connector_name}<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    connector_types::PaymentSessionToken for {connector_name}<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    connector_types::PaymentVoidV2 for {connector_name}<T> {}
+// ... Add ALL trait implementations
+```
+
+### 9. Not-Implemented Flow Handlers
+**CRITICAL: Add manual implementations that return NotImplemented errors:**
+```rust
+macro_rules! impl_not_implemented_flow {
+    ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
+        impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for {connector_name}<T>
+        {
+            fn build_request_v2(
+                &self,
+                _req: &RouterDataV2<$flow, $common_data, $req, $resp>,
+            ) -> CustomResult<Option<common_utils::request::Request>, errors::ConnectorError> {
+                let flow_name = stringify!($flow);
+                Err(errors::ConnectorError::NotImplemented(flow_name.to_string()).into())
+            }
+        }
+    };
+}
+
+// Use macro for all unimplemented flows
+impl_not_implemented_flow!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+impl_not_implemented_flow!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
+// ... Add all unimplemented flows
+```
+
+### 10. Source Verification Stubs
+**CRITICAL: Add impl_source_verification_stub! for ALL flows:**
+```rust
+// Add this for EVERY flow defined in your create_all_prerequisites! macro
+impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
+impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
+impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
+// ... Add for ALL flows
+```
+
+### 11. ConnectorEnum Registration
+**CRITICAL: Add your connector to types.rs and payment.proto files**
+
+## 🚨 FINAL VERIFICATION STEP
+
+**CRITICAL: Before considering your implementation complete, you MUST verify that `cargo check` passes:**
+
+```bash
+# Navigate to the UCS connector-service directory
+cd /path/to/ucs/connector-service
+
+# Run cargo check to verify compilation
+cargo check
+
+# If build fails, fix all compilation errors before proceeding
+```
+
+**⛔ BLOCKER**: Your connector implementation is NOT complete until `cargo check` passes without any errors or warnings.
+
+## 📝 CHANGELOG.md Requirements
+
+**MANDATORY**: Create or update CHANGELOG.md with the following format:
+
+```markdown
+# Changelog
+
+## [Date] - {connector_name.title()} Connector Addition
+
+### Added
+- New {connector_name} connector implementation
+- Payment methods supported: [list all supported methods]
+- Transaction flows: [list all flows like authorize, capture, refund, etc.]
+
+### Files Created/Modified
+- `src/connectors/{connector_name.lower()}.rs` - Main connector implementation
+- `src/connectors/{connector_name.lower()}/transformers.rs` - Request/response transformers
+- `src/connectors/{connector_name.lower()}/constants.rs` - API constants and endpoints
+- `src/connectors.rs` - Added connector registration
+- `src/types.rs` - Added connector to ConnectorEnum
+
+### Technical Details
+- Migrated from Hyperswitch/Euler Haskell implementation
+- Uses UCS v2 macro framework for trait implementations
+- Implements proper error handling and status mapping
+- Full type safety with guard rails
+```
+
+## Required Files
+Generate these files:
+1. `src/connectors/{connector_name.lower()}.rs` - Main connector file
+2. `src/connectors/{connector_name.lower()}/transformers.rs` - Data transformers  
+3. `src/connectors/{connector_name.lower()}/constants.rs` - API constants
+4. Update `src/connectors.rs` to register the new connector
+5. **CRITICAL**: Register the connector in the `ConnectorEnum` enum
+6. **MANDATORY**: Create/update `CHANGELOG.md` with all major changes made
+
+## Success Criteria
+- ✅ **MANDATORY: Uses UCS v2 macro framework** - NO manual trait implementations
+- ✅ Compiles without errors (CRITICAL!)
+- ✅ All payment methods from Haskell version are supported
+- ✅ All transaction flows work identically
+- ✅ Proper error handling and status mapping
+- ✅ Complete type safety with guard rails
+- ✅ **Proper amount framework implementation** using correct amount converter and access methods
+- ✅ Register connector in `src/connectors.rs`
+- ✅ **Register connector in ConnectorEnum** for proper type system integration
+- ✅ **MANDATORY: Document all changes in CHANGELOG.md** - Include connector addition, files created, major implementation details
+- ✅ **🚨 FINAL VERIFICATION: `cargo check` must pass without errors** - CRITICAL BLOCKER
