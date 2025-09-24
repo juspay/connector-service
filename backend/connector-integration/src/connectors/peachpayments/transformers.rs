@@ -24,6 +24,8 @@ use time::OffsetDateTime;
 use super::PeachpaymentsRouterData;
 use crate::types::ResponseRouterData;
 
+const CHARGE_METHOD: &str = "ecommerce_card_payment_only";
+
 impl TryFrom<&Option<pii::SecretSerdeValue>> for PeachPaymentsConnectorMetadataObject {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
@@ -363,10 +365,10 @@ impl<
                 // Generate current timestamp for sendDateTime (ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ)
                 let send_date_time = OffsetDateTime::now_utc()
                     .format(&time::format_description::well_known::Iso8601::DEFAULT)
-                    .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
                 Ok(Self {
-                    charge_method: "ecommerce_card_payment_only".to_string(),
+                    charge_method: CHARGE_METHOD.to_string(),
                     reference_id: item
                         .router_data
                         .resource_common_data
@@ -405,7 +407,7 @@ impl<
     ) -> Result<Self, Self::Error> {
         let send_date_time = OffsetDateTime::now_utc()
             .format(&time::format_description::well_known::Iso8601::DEFAULT)
-            .map_err(|_| errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         Ok(Self {
             payment_method: PaymentMethod::EcommerceCardPaymentOnly,
             send_date_time,
