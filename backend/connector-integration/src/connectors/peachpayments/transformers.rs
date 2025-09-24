@@ -1,4 +1,5 @@
 use crate::utils;
+use common_enums::AttemptStatus;
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     pii,
@@ -24,8 +25,6 @@ use time::OffsetDateTime;
 use super::PeachpaymentsRouterData;
 use crate::types::ResponseRouterData;
 
-const CHARGE_METHOD: &str = "ecommerce_card_payment_only";
-
 impl TryFrom<&Option<pii::SecretSerdeValue>> for PeachPaymentsConnectorMetadataObject {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(meta_data: &Option<pii::SecretSerdeValue>) -> Result<Self, Self::Error> {
@@ -48,7 +47,7 @@ pub struct PeachpaymentsPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    pub charge_method: String,
+    pub charge_method: PaymentMethod,
     pub reference_id: String,
     pub ecommerce_card_payment_only_transaction_data: EcommerceCardPaymentOnlyTransactionData<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -276,11 +275,10 @@ fn get_card_expiry_year_2_digit(
     expiry_year: Secret<String>,
 ) -> Result<Secret<String>, errors::ConnectorError> {
     let year = expiry_year.peek();
-    Ok(Secret::new(
-        year.get(year.len() - 2..)
-            .ok_or(errors::ConnectorError::RequestEncodingFailed)?
-            .to_string(),
-    ))
+    if year.len() < 2 {
+        return Err(errors::ConnectorError::RequestEncodingFailed);
+    }
+    Ok(Secret::new(year[year.len() - 2..].to_string()))
 }
 
 impl<
@@ -379,7 +377,7 @@ impl<
                     .change_context(errors::ConnectorError::RequestEncodingFailed)?;
 
                 Ok(Self {
-                    charge_method: CHARGE_METHOD.to_string(),
+                    charge_method: PaymentMethod::EcommerceCardPaymentOnly,
                     reference_id: item
                         .router_data
                         .resource_common_data
@@ -556,14 +554,6 @@ pub struct EcommerceCardPaymentOnlyResponseData {
     pub trace_id: Option<String>,
 }
 
-fn is_payment_success(value: Option<&String>) -> bool {
-    if let Some(val) = value {
-        val == "00" || val == "08" || val == "X94"
-    } else {
-        false
-    }
-}
-
 fn get_error_code(response_code: Option<&ResponseCode>) -> String {
     response_code
         .and_then(|code| code.value())
@@ -623,19 +613,15 @@ impl<
         let status = common_enums::AttemptStatus::from(item.response.transaction_result);
 
         // Check if it's an error response
-        let response = if !is_payment_success(
-            item.response
-                .response_code
-                .as_ref()
-                .and_then(|code| code.value()),
-        ) {
+        let response = if status == AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: get_error_code(item.response.response_code.as_ref()),
                 message: get_error_message(item.response.response_code.as_ref()),
                 reason: item
                     .response
                     .ecommerce_card_payment_only_transaction_data
-                    .and_then(|data| data.description),
+                    .as_ref()
+                    .and_then(|data| data.description.clone()),
                 status_code: item.http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.transaction_id.clone()),
@@ -717,12 +703,7 @@ impl<F, T> TryFrom<ResponseRouterData<PeachpaymentsConfirmResponse, Self>>
         let status = common_enums::AttemptStatus::from(item.response.transaction_result);
 
         // Check if it's an error response
-        let response = if !is_payment_success(
-            item.response
-                .response_code
-                .as_ref()
-                .and_then(|code| code.value()),
-        ) {
+        let response = if status == AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: get_error_code(item.response.response_code.as_ref()),
                 message: get_error_message(item.response.response_code.as_ref()),
@@ -782,19 +763,15 @@ impl
         let status = common_enums::AttemptStatus::from(item.response.transaction_result);
 
         // Check if it's an error response
-        let response = if !is_payment_success(
-            item.response
-                .response_code
-                .as_ref()
-                .and_then(|code| code.value()),
-        ) {
+        let response = if status == AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: get_error_code(item.response.response_code.as_ref()),
                 message: get_error_message(item.response.response_code.as_ref()),
                 reason: item
                     .response
                     .ecommerce_card_payment_only_transaction_data
-                    .and_then(|data| data.description),
+                    .as_ref()
+                    .and_then(|data| data.description.clone()),
                 status_code: item.http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.transaction_id.clone()),
@@ -846,19 +823,15 @@ impl
         let status = common_enums::AttemptStatus::from(item.response.transaction_result);
 
         // Check if it's an error response
-        let response = if !is_payment_success(
-            item.response
-                .response_code
-                .as_ref()
-                .and_then(|code| code.value()),
-        ) {
+        let response = if status == AttemptStatus::Failure {
             Err(ErrorResponse {
                 code: get_error_code(item.response.response_code.as_ref()),
                 message: get_error_message(item.response.response_code.as_ref()),
                 reason: item
                     .response
                     .ecommerce_card_payment_only_transaction_data
-                    .and_then(|data| data.description),
+                    .as_ref()
+                    .and_then(|data| data.description.clone()),
                 status_code: item.http_code,
                 attempt_status: Some(status),
                 connector_transaction_id: Some(item.response.transaction_id.clone()),
