@@ -999,7 +999,7 @@ fn extract_raw_connector_request(connector_request: &Request) -> String {
         Some(request) => {
             let inner_value = request.get_inner_value();
             serde_json::from_str(&inner_value.expose()).unwrap_or_else(|_| {
-                tracing::debug!("failed to parse JSON body in extract_raw_connector_request");
+                tracing::warn!("failed to parse JSON body in extract_raw_connector_request");
                 json!({ "error": "failed to parse JSON body" })
             })
         }
