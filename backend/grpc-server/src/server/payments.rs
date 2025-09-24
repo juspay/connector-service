@@ -1,12 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use common_enums;
-use common_utils::{
-    errors::CustomResult,
-    events::{EventConfig, FlowName},
-    lineage,
-    pii::SecretSerdeValue,
-};
+use common_utils::{errors::CustomResult, events::FlowName, lineage, SecretSerdeValue};
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
@@ -50,7 +45,7 @@ use grpc_api_types::payments::{
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
     PaymentServiceVoidResponse, RefundResponse, WebhookTransformationStatus,
 };
-use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface};
+use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
@@ -312,7 +307,6 @@ impl Payments {
                             &connector.to_string(),
                             service_name,
                             event_params,
-                            &payload,
                         )
                         .await?;
 
@@ -396,9 +390,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::Authorize,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id,
             lineage_ids,
             reference_id,
@@ -551,15 +542,11 @@ impl Payments {
         };
 
         // Create event processing parameters
-        let external_event_config = EventConfig::default();
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
             flow_name: FlowName::CreateOrder,
-            event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
-            )),
+            event_config: &self.config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -657,15 +644,11 @@ impl Payments {
         };
 
         // Execute connector processing
-        let external_event_config = EventConfig::default();
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
             flow_name: FlowName::CreateOrder,
-            event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
-            )),
+            event_config: &self.config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -754,15 +737,11 @@ impl Payments {
         };
 
         // Create event processing parameters
-        let external_event_config = EventConfig::default();
         let external_event_params = EventProcessingParams {
             connector_name,
             service_name,
             flow_name: FlowName::CreateSessionToken,
-            event_config: &external_event_config,
-            raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
-            )),
+            event_config: &self.config.events,
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -823,7 +802,6 @@ impl Payments {
             + Sync
             + domain_types::types::CardConversionHelper<T>
             + 'static,
-        P,
     >(
         &self,
         connector_data: ConnectorData<T>,
@@ -832,10 +810,8 @@ impl Payments {
         connector_name: &str,
         service_name: &str,
         event_params: EventParams<'_>,
-        payload: &P,
     ) -> Result<AccessTokenResponseData, PaymentAuthorizationError>
     where
-        P: Clone + ErasedMaskSerialize,
         AccessTokenRequestData:
             for<'a> ForeignTryFrom<&'a ConnectorAuthType, Error = ApplicationErrorResponse>,
     {
@@ -881,9 +857,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::CreateAccessToken,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                payload.masked_serialize().unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -1019,9 +992,6 @@ impl Payments {
             service_name,
             flow_name: FlowName::PaymentMethodToken,
             event_config: &self.config.events,
-            raw_request_data: Some(SecretSerdeValue::new(
-                serde_json::to_value(payload).unwrap_or_default(),
-            )),
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
@@ -1189,8 +1159,8 @@ impl PaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
-        grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(request, &service_name, self.config.clone(), FlowName::Authorize, |request, metadata_payload| {
             let service_name = service_name.clone();
             Box::pin(async move {
                 let utils::MetadataPayload {connector, ref request_id, ..} = metadata_payload;
@@ -1207,9 +1177,9 @@ impl PaymentService for Payments {
                                     Some(grpc_api_types::payments::card_payment_method_type::CardType::CreditProxy(proxy_card_details)) | Some(grpc_api_types::payments::card_payment_method_type::CardType::DebitProxy(proxy_card_details)) => {
                                         let token_data = proxy_card_details.to_token_data();
                                         match Box::pin(self.process_authorization_internal::<VaultTokenHolder>(
-                                            payload,
+                                            payload.clone(),
                                             connector,
-                                            connector_auth_details,
+                                            connector_auth_details.clone(),
                                             &metadata,
                                             &metadata_payload,
                                             &service_name,
@@ -1231,9 +1201,9 @@ impl PaymentService for Payments {
                                     _ => {
                                         tracing::info!("REGULAR: Processing regular payment (no injector)");
                                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                            payload,
+                                            payload.clone(),
                                             connector,
-                                            connector_auth_details,
+                                            connector_auth_details.clone(),
                                             &metadata,
                                             &metadata_payload,
                                             &service_name,
@@ -1256,9 +1226,9 @@ impl PaymentService for Payments {
                             }
                             _ => {
                                 match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                                    payload,
+                                    payload.clone(),
                                     connector,
-                                    connector_auth_details,
+                                    connector_auth_details.clone(),
                                     &metadata,
                                     &metadata_payload,
                                     &service_name,
@@ -1275,9 +1245,9 @@ impl PaymentService for Payments {
                     }
                     _ => {
                         match Box::pin(self.process_authorization_internal::<DefaultPCIHolder>(
-                            payload,
+                            payload.clone(),
                             connector,
-                            connector_auth_details,
+                            connector_auth_details.clone(),
                             &metadata,
                             &metadata_payload,
                             &service_name,
@@ -1328,12 +1298,13 @@ impl PaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "PaymentService".to_string());
 
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            FlowName::Psync,
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -1411,7 +1382,6 @@ impl PaymentService for Payments {
                                         &connector.to_string(),
                                         &service_name,
                                         event_params,
-                                        &payload,
                                     )
                                     .await
                                     .map_err(|e| {
@@ -1458,9 +1428,6 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
@@ -1522,7 +1489,19 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceVoidRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status> {
-        self.internal_void_payment(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::Void,
+            |request, _metadata_payload| async move { self.internal_void_payment(request).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -1554,14 +1533,16 @@ impl PaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "PaymentService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            FlowName::IncomingWebhook,
             |request, metadata_payload| {
                 async move {
                     let connector = metadata_payload.connector;
+                    let _request_id = &metadata_payload.request_id;
                     let connector_auth_details = metadata_payload.connector_auth_type;
                     let payload = request.into_inner();
                     let request_details = payload
@@ -1573,6 +1554,7 @@ impl PaymentService for Payments {
                         .map_err(|e| e.into_grpc_status())?;
                     let webhook_secrets = payload
                         .webhook_secrets
+                        .clone()
                         .map(|details| {
                             domain_types::connector_types::ConnectorWebhookSecrets::foreign_try_from(
                                 details,
@@ -1667,6 +1649,7 @@ impl PaymentService for Payments {
                         response_ref_id: None,
                         transformation_status: webhook_transformation_status.into(),
                     };
+
                     Ok(tonic::Response::new(response))
                 }
             },
@@ -1699,7 +1682,19 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceRefundRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status> {
-        self.internal_refund(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::Refund,
+            |request, _metadata_payload| async move { self.internal_refund(request).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -1731,11 +1726,12 @@ impl PaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "PaymentService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            FlowName::DefendDispute,
             |_request, _metadata_payload| async {
                 let response = DisputeResponse {
                     ..Default::default()
@@ -1771,7 +1767,21 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceCaptureResponse>, tonic::Status> {
-        self.internal_payment_capture(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::Capture,
+            |request, _metadata_payload| async move {
+                self.internal_payment_capture(request).await
+            },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -1804,11 +1814,12 @@ impl PaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "PaymentService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            FlowName::SetupMandate,
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -1884,16 +1895,12 @@ impl PaymentService for Payments {
                         request: setup_mandate_request_data,
                         response: Err(ErrorResponse::default()),
                     };
-                    // Create event processing parameters
-                    let event_config = EventConfig::default();
+
                     let event_params = EventProcessingParams {
                         connector_name: &connector.to_string(),
                         service_name: &service_name,
                         flow_name: FlowName::SetupMandate,
-                        event_config: &event_config,
-                        raw_request_data: Some(SecretSerdeValue::new(
-                            serde_json::to_value(payload).unwrap_or_default(),
-                        )),
+                        event_config: &self.config.events,
                         request_id: &request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
@@ -1951,11 +1958,12 @@ impl PaymentService for Payments {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "PaymentService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            FlowName::RepeatPayment,
             |request, metadata_payload| {
                 let service_name = service_name.clone();
                 Box::pin(async move {
@@ -2008,9 +2016,6 @@ impl PaymentService for Payments {
                         service_name: &service_name,
                         flow_name: FlowName::RepeatPayment,
                         event_config: &self.config.events,
-                        raw_request_data: Some(SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
