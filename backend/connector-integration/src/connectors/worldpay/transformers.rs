@@ -2,11 +2,11 @@ use base64::{engine::general_purpose::STANDARD, Engine};
 use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, Void, Refund, RSync},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
-        ResponseId,
+        RefundSyncData, ResponseId,
     },
     errors,
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -82,7 +82,7 @@ pub struct WorldpayMerchant {
     pub entity: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayValue {
     pub currency: String,
@@ -177,19 +177,6 @@ pub struct WorldpayVoidResponse {
     pub links: WorldpayLinks,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct WorldpayRefundRequest {
-    pub value: Option<WorldpayValue>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WorldpayRefundResponse {
-    pub outcome: String,
-    pub transaction_reference: String,
-    #[serde(rename = "_links")]
-    pub links: WorldpayLinks,
-}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct WorldpaySyncRequest {}
@@ -203,6 +190,28 @@ pub struct WorldpaySyncResponse {
     pub links: WorldpayLinks,
     #[serde(rename = "_actions")]
     pub actions: Option<WorldpayActions>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorldpayRefundRequest {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldpayRefundResponse {
+    pub outcome: String,
+    #[serde(rename = "_links")]
+    pub links: WorldpayLinks,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WorldpayRefundSyncRequest {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldpayRefundSyncResponse {
+    pub outcome: String,
+    #[serde(rename = "_links")]
+    pub links: WorldpayLinks,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -403,49 +412,6 @@ impl
     }
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
-    for WorldpayRefundRequest
-{
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
-    fn try_from(
-        item: super::WorldpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
-    ) -> Result<Self, Self::Error> {
-        let item = &item.router_data;
-        Ok(Self {
-            value: Some(WorldpayValue {
-                currency: item.request.currency.to_string(),
-                amount: item.request.minor_refund_amount,
-            }),
-        })
-    }
-}
-
-impl
-    TryFrom<
-        ResponseRouterData<WorldpayRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
-    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
-{
-    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<WorldpayRefundResponse, RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>,
-    ) -> Result<Self, Self::Error> {
-        let status = match item.response.outcome.as_str() {
-            "sentForRefund" => RefundStatus::Success,
-            _ => RefundStatus::Pending,
-        };
-
-        let connector_refund_id = extract_transaction_id(&item.response.links.self_link.href)
-            .unwrap_or_else(|| item.response.transaction_reference.clone());
-
-        let mut router_data = item.router_data;
-        router_data.response = Ok(RefundsResponseData {
-            connector_refund_id,
-            refund_status: status,
-            status_code: item.http_code,
-        });
-        Ok(router_data)
-    }
-}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>, T>>
     for WorldpaySyncRequest
@@ -472,7 +438,6 @@ impl
             "sentForSettlement" => AttemptStatus::Charged,
             "refused" => AttemptStatus::Failure,
             "sentForCancellation" => AttemptStatus::Voided,
-            "sentForRefund" | "sentForPartialRefund" => AttemptStatus::Charged,
             _ => AttemptStatus::Pending,
         };
 
@@ -489,6 +454,106 @@ impl
             network_txn_id: None,
             connector_response_reference_id: Some(item.response.transaction_reference),
             incremental_authorization_allowed: None,
+            status_code: item.http_code,
+        });
+        Ok(router_data)
+    }
+}
+
+
+
+
+// Refund Request Transformer
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>>
+    for WorldpayRefundRequest
+{
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    fn try_from(
+        _item: super::WorldpayRouterData<RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        // Worldpay uses empty body for full refunds
+        Ok(Self {})
+    }
+}
+
+// Refund Response Transformer
+impl
+    TryFrom<
+        ResponseRouterData<
+            WorldpayRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>
+{
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            WorldpayRefundResponse,
+            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let refund_status = match item.response.outcome.as_str() {
+            "sentForRefund" | "sentForPartialRefund" => RefundStatus::Pending,
+            "refunded" => RefundStatus::Success,
+            "refused" | "failed" => RefundStatus::Failure,
+            _ => RefundStatus::Pending,
+        };
+
+        let connector_refund_id = extract_transaction_id(&item.response.links.self_link.href)
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let mut router_data = item.router_data;
+        router_data.response = Ok(RefundsResponseData {
+            connector_refund_id,
+            refund_status,
+            status_code: item.http_code,
+        });
+        Ok(router_data)
+    }
+}
+
+// Refund Sync Request Transformer
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> TryFrom<super::WorldpayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>>
+    for WorldpayRefundSyncRequest
+{
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    fn try_from(
+        _item: super::WorldpayRouterData<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>, T>,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {})
+    }
+}
+
+// Refund Sync Response Transformer
+impl
+    TryFrom<
+        ResponseRouterData<
+            WorldpayRefundSyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    > for RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
+{
+    type Error = error_stack::Report<domain_types::errors::ConnectorError>;
+    fn try_from(
+        item: ResponseRouterData<
+            WorldpayRefundSyncResponse,
+            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let refund_status = match item.response.outcome.as_str() {
+            "sentForRefund" | "sentForPartialRefund" => RefundStatus::Pending,
+            "refunded" => RefundStatus::Success,
+            "refused" | "failed" => RefundStatus::Failure,
+            _ => RefundStatus::Pending,
+        };
+
+        let connector_refund_id = extract_transaction_id(&item.response.links.self_link.href)
+            .unwrap_or_else(|| "unknown".to_string());
+
+        let mut router_data = item.router_data;
+        router_data.response = Ok(RefundsResponseData {
+            connector_refund_id,
+            refund_status,
             status_code: item.http_code,
         });
         Ok(router_data)

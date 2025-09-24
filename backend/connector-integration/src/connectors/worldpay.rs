@@ -5,11 +5,12 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Authorize, Capture, PSync, Refund, Void,
+        Authorize, Capture, PSync, Void, Refund, RSync,
     },
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        RefundSyncData,
     },
     errors,
     payment_method_data::{PaymentMethodDataTypes},
@@ -27,8 +28,10 @@ use serde::Serialize;
 use transformers as worldpay;
 use transformers::{
     WorldpayPaymentRequest, WorldpayPaymentResponse, WorldpayCaptureRequest, WorldpayCaptureResponse,
-    WorldpayVoidRequest, WorldpayVoidResponse, WorldpayRefundRequest, WorldpayRefundResponse,
+    WorldpayVoidRequest, WorldpayVoidResponse,
     WorldpaySyncRequest, WorldpaySyncResponse,
+    WorldpayRefundRequest, WorldpayRefundResponse,
+    WorldpayRefundSyncRequest, WorldpayRefundSyncResponse,
 };
 
 use super::macros;
@@ -39,8 +42,6 @@ pub(crate) mod headers {
     pub(crate) const AUTHORIZATION: &str = "Authorization";
     pub(crate) const WP_API_VERSION: &str = "WP-Api-Version";
 }
-
-
 
 
 impl<
@@ -113,6 +114,7 @@ impl<
     }
 }
 
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::ConnectorServiceTrait<T> for Worldpay<T> {}
 
@@ -122,14 +124,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentSyncV2 for Worldpay<T> {}
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::connector_types::RefundV2 for Worldpay<T> {}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentCapture for Worldpay<T> {}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentVoidV2 for Worldpay<T> {}
+
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::SubmitEvidenceV2 for Worldpay<T> {}
@@ -140,8 +141,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::AcceptDispute for Worldpay<T> {}
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::connector_types::RefundSyncV2 for Worldpay<T> {}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::PaymentSessionToken for Worldpay<T> {}
@@ -167,6 +166,12 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::connector_types::ValidationTrait for Worldpay<T> {}
 
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::connector_types::RefundV2 for Worldpay<T> {}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::connector_types::RefundSyncV2 for Worldpay<T> {}
+
 macros::create_all_prerequisites!(
     connector_name: Worldpay,
     generic_type: T,
@@ -190,16 +195,22 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
+            flow: PSync,
+            request_body: WorldpaySyncRequest,
+            response_body: WorldpaySyncResponse,
+            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
             flow: Refund,
             request_body: WorldpayRefundRequest,
             response_body: WorldpayRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
-            flow: PSync,
-            request_body: WorldpaySyncRequest,
-            response_body: WorldpaySyncResponse,
-            router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            flow: RSync,
+            request_body: WorldpayRefundSyncRequest,
+            response_body: WorldpayRefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
     amount_converters: [],
@@ -220,13 +231,6 @@ macros::create_all_prerequisites!(
         pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
             req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> &'a str {
-            &req.resource_common_data.connectors.worldpay.base_url
-        }
-
-        pub fn connector_base_url_refunds<'a, F, Req, Res>(
-            &self,
-            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
         ) -> &'a str {
             &req.resource_common_data.connectors.worldpay.base_url
         }
@@ -319,34 +323,6 @@ macros::macro_connector_implementation!(
     }
 );
 
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Worldpay,
-    curl_request: Json(WorldpayRefundRequest),
-    curl_response: WorldpayRefundResponse,
-    flow_name: Refund,
-    resource_common_data: RefundFlowData,
-    flow_request: RefundsData,
-    flow_response: RefundsResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            self.build_headers(req)
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_tx_id = &req.request.connector_transaction_id;
-            Ok(format!("{}api/payments/{}/refunds", self.connector_base_url_refunds(req), connector_tx_id))
-        }
-    }
-);
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -376,6 +352,65 @@ macros::macro_connector_implementation!(
         }
     }
 );
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Worldpay,
+    curl_request: Json(WorldpayRefundRequest),
+    curl_response: WorldpayRefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let payment_id = &req.request.connector_transaction_id;
+            Ok(format!("{}api/payments/{}/refunds", &req.resource_common_data.connectors.worldpay.base_url, payment_id))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Worldpay,
+    curl_request: Json(WorldpayRefundSyncRequest),
+    curl_response: WorldpayRefundSyncResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let refund_id = &req.request.connector_refund_id;
+            Ok(format!("{}api/payments/{}", &req.resource_common_data.connectors.worldpay.base_url, refund_id))
+        }
+    }
+);
+
 
 // Empty implementations for advanced flows not supported by Worldpay
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
@@ -468,17 +503,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::RSync,
-        RefundFlowData,
-        domain_types::connector_types::RefundSyncData,
-        RefundsResponseData,
-    > for Worldpay<T>
-{
-}
+
 
 // SourceVerification implementations for all flows
+
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         Authorize,
@@ -519,25 +547,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 {
 }
 
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        Refund,
-        RefundFlowData,
-        RefundsData,
-        RefundsResponseData,
-    > for Worldpay<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        domain_types::connector_flow::RSync,
-        RefundFlowData,
-        domain_types::connector_types::RefundSyncData,
-        RefundsResponseData,
-    > for Worldpay<T>
-{
-}
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -625,6 +634,27 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         PaymentFlowData,
         domain_types::connector_types::RepeatPaymentData,
         PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+// Empty SourceVerification implementations for refund flows (required by ConnectorIntegrationV2)
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::Refund,
+        domain_types::connector_types::RefundFlowData,
+        domain_types::connector_types::RefundsData,
+        domain_types::connector_types::RefundsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::RSync,
+        domain_types::connector_types::RefundFlowData,
+        domain_types::connector_types::RefundSyncData,
+        domain_types::connector_types::RefundsResponseData,
     > for Worldpay<T>
 {
 }
