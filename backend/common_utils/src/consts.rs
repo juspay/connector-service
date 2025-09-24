@@ -41,6 +41,8 @@ pub const X_CONNECTOR: &str = "x-connector";
 pub const X_MERCHANT_ID: &str = "x-merchant-id";
 /// Header key for reference identification
 pub const X_REFERENCE_ID: &str = "x-reference-id";
+/// Header key for UCS dry run mode
+pub const X_UCS_DRY_RUN: &str = "x-ucs-dry-run";
 
 // =============================================================================
 // Authentication Headers (Internal)

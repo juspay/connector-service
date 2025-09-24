@@ -156,9 +156,11 @@ impl ConnectorMandateReferenceId {
     }
 }
 
-pub trait RawConnectorResponse {
+pub trait RawConnectorRequestResponse {
     fn set_raw_connector_response(&mut self, response: Option<String>);
     fn get_raw_connector_response(&self) -> Option<String>;
+    fn set_raw_connector_request(&mut self, request: Option<String>);
+    fn get_raw_connector_request(&self) -> Option<String>;
 }
 
 pub trait ConnectorResponseHeaders {
@@ -179,6 +181,13 @@ pub trait ConnectorResponseHeaders {
             })
             .unwrap_or_default()
     }
+}
+
+/// Trait for builder methods that provide controlled mutation
+pub trait ConnectorDataBuilder: Sized {
+    fn set_raw_connector_request_builder(self, request: Option<String>) -> Self;
+    fn set_raw_connector_response_builder(self, response: Option<String>) -> Self;
+    fn set_connector_response_headers_builder(self, headers: Option<http::HeaderMap>) -> Self;
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone, Eq, PartialEq)]
@@ -287,6 +296,7 @@ pub struct PaymentFlowData {
     pub external_latency: Option<u128>,
     pub connectors: Connectors,
     pub raw_connector_response: Option<String>,
+    pub raw_connector_request: Option<String>,
     pub vault_headers: Option<std::collections::HashMap<String, Secret<String>>>,
 }
 
@@ -732,13 +742,21 @@ impl PaymentFlowData {
     }
 }
 
-impl RawConnectorResponse for PaymentFlowData {
+impl RawConnectorRequestResponse for PaymentFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
 
     fn get_raw_connector_response(&self) -> Option<String> {
         self.raw_connector_response.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, request: Option<String>) {
+        self.raw_connector_request = request;
+    }
+
+    fn get_raw_connector_request(&self) -> Option<String> {
+        self.raw_connector_request.clone()
     }
 }
 
@@ -749,6 +767,23 @@ impl ConnectorResponseHeaders for PaymentFlowData {
 
     fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
         self.connector_response_headers.as_ref()
+    }
+}
+
+impl ConnectorDataBuilder for PaymentFlowData {
+    fn set_raw_connector_request_builder(mut self, request: Option<String>) -> Self {
+        self.raw_connector_request = request;
+        self
+    }
+
+    fn set_raw_connector_response_builder(mut self, response: Option<String>) -> Self {
+        self.raw_connector_response = response;
+        self
+    }
+
+    fn set_connector_response_headers_builder(mut self, headers: Option<http::HeaderMap>) -> Self {
+        self.connector_response_headers = headers;
+        self
     }
 }
 
@@ -1168,13 +1203,21 @@ pub struct RefundFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
 }
 
-impl RawConnectorResponse for RefundFlowData {
+impl RawConnectorRequestResponse for RefundFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
 
     fn get_raw_connector_response(&self) -> Option<String> {
         self.raw_connector_response.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, _request: Option<String>) {
+        // RefundFlowData doesn't have raw_connector_request field, so we ignore this
+    }
+
+    fn get_raw_connector_request(&self) -> Option<String> {
+        None
     }
 }
 
@@ -1185,6 +1228,23 @@ impl ConnectorResponseHeaders for RefundFlowData {
 
     fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
         self.connector_response_headers.as_ref()
+    }
+}
+
+impl ConnectorDataBuilder for RefundFlowData {
+    fn set_raw_connector_request_builder(self, _request: Option<String>) -> Self {
+        // RefundFlowData doesn't have raw_connector_request field, so we ignore this
+        self
+    }
+
+    fn set_raw_connector_response_builder(mut self, response: Option<String>) -> Self {
+        self.raw_connector_response = response;
+        self
+    }
+
+    fn set_connector_response_headers_builder(mut self, headers: Option<http::HeaderMap>) -> Self {
+        self.connector_response_headers = headers;
+        self
     }
 }
 
@@ -1836,13 +1896,21 @@ pub struct DisputeFlowData {
     pub connector_response_headers: Option<http::HeaderMap>,
 }
 
-impl RawConnectorResponse for DisputeFlowData {
+impl RawConnectorRequestResponse for DisputeFlowData {
     fn set_raw_connector_response(&mut self, response: Option<String>) {
         self.raw_connector_response = response;
     }
 
     fn get_raw_connector_response(&self) -> Option<String> {
         self.raw_connector_response.clone()
+    }
+
+    fn set_raw_connector_request(&mut self, _request: Option<String>) {
+        // DisputeFlowData doesn't have raw_connector_request field, so we ignore this
+    }
+
+    fn get_raw_connector_request(&self) -> Option<String> {
+        None
     }
 }
 
@@ -1853,6 +1921,23 @@ impl ConnectorResponseHeaders for DisputeFlowData {
 
     fn get_connector_response_headers(&self) -> Option<&http::HeaderMap> {
         self.connector_response_headers.as_ref()
+    }
+}
+
+impl ConnectorDataBuilder for DisputeFlowData {
+    fn set_raw_connector_request_builder(self, _request: Option<String>) -> Self {
+        // DisputeFlowData doesn't have raw_connector_request field, so we ignore this
+        self
+    }
+
+    fn set_raw_connector_response_builder(mut self, response: Option<String>) -> Self {
+        self.raw_connector_response = response;
+        self
+    }
+
+    fn set_connector_response_headers_builder(mut self, headers: Option<http::HeaderMap>) -> Self {
+        self.connector_response_headers = headers;
+        self
     }
 }
 

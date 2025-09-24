@@ -114,6 +114,7 @@ impl DisputeService for Disputes {
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        ucs_dry_run,
                         ..
                     } = metadata_payload;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -171,6 +172,7 @@ impl DisputeService for Disputes {
                         event_params,
                         None,
                         common_enums::CallConnectorAction::Trigger,
+                        ucs_dry_run,
                     )
                     .await
                     .switch()
@@ -306,6 +308,7 @@ impl DisputeService for Disputes {
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        ucs_dry_run,
                         ..
                     } = metadata_payload;
 
@@ -365,6 +368,7 @@ impl DisputeService for Disputes {
                         event_params,
                         None,
                         common_enums::CallConnectorAction::Trigger,
+                        ucs_dry_run,
                     )
                     .await
                     .switch()

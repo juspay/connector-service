@@ -1630,10 +1630,6 @@ impl<
             http_code,
             Operation::Authorize,
             router_data.request.capture_method,
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1641,9 +1637,7 @@ impl<
         let mut new_router_data = router_data;
 
         // Update the status in resource_common_data
-        let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
-        new_router_data.resource_common_data = resource_common_data;
+        new_router_data.resource_common_data.status = status;
 
         // Set the response
         new_router_data.response = response_result;
@@ -1671,10 +1665,6 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
             http_code,
             Operation::Capture,
             None,
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1682,9 +1672,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetCaptureResponse, Self>>
         let mut new_router_data = router_data;
 
         // Update the status in resource_common_data
-        let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
-        new_router_data.resource_common_data = resource_common_data;
+        new_router_data.resource_common_data.status = status;
 
         // Set the response
         new_router_data.response = response_result;
@@ -1711,10 +1699,6 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
             http_code,
             Operation::Void,
             None,
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1722,9 +1706,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetVoidResponse, Self>>
         let mut new_router_data = router_data;
 
         // Update the status in resource_common_data
-        let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
-        new_router_data.resource_common_data = resource_common_data;
+        new_router_data.resource_common_data.status = status;
 
         // Set the response
         new_router_data.response = response_result;
@@ -1753,10 +1735,6 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
             http_code,
             Operation::Authorize,
             Some(enums::CaptureMethod::Automatic),
-            router_data
-                .resource_common_data
-                .raw_connector_response
-                .clone(),
         )
         .change_context(HsInterfacesConnectorError::ResponseHandlingFailed)?;
 
@@ -1764,9 +1742,7 @@ impl<F> TryFrom<ResponseRouterData<AuthorizedotnetRepeatPaymentResponse, Self>>
         let mut new_router_data = router_data;
 
         // Update the status in resource_common_data
-        let mut resource_common_data = new_router_data.resource_common_data.clone();
-        resource_common_data.status = status;
-        new_router_data.resource_common_data = resource_common_data;
+        new_router_data.resource_common_data.status = status;
 
         // Set the response
         new_router_data.response = response_result;
@@ -1974,7 +1950,6 @@ fn create_error_response(
     error_message: String,
     status: AttemptStatus,
     connector_transaction_id: Option<String>,
-    _raw_connector_response: Option<String>,
 ) -> ErrorResponse {
     ErrorResponse {
         status_code: http_status_code,
@@ -2121,7 +2096,6 @@ pub fn convert_to_payments_response_data_or_error(
     http_status_code: u16,
     operation: Operation,
     capture_method: Option<enums::CaptureMethod>,
-    raw_connector_response: Option<String>,
 ) -> Result<(AttemptStatus, Result<PaymentsResponseData, ErrorResponse>), HsInterfacesConnectorError>
 {
     let status = get_hs_status(response, http_status_code, operation, capture_method);
@@ -2162,7 +2136,6 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 Some(trans_res.transaction_id.clone()),
-                raw_connector_response.clone(),
             ))
         }
         Some(TransactionResponse::AuthorizedotnetTransactionResponseError(_)) => {
@@ -2173,7 +2146,6 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 None,
-                raw_connector_response.clone(),
             ))
         }
         None if status == AttemptStatus::Voided && operation == Operation::Void => {
@@ -2196,7 +2168,6 @@ pub fn convert_to_payments_response_data_or_error(
                 error_message,
                 status,
                 None,
-                raw_connector_response.clone(),
             ))
         }
     };

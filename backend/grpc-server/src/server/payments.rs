@@ -163,6 +163,7 @@ impl Payments {
         service_name: &str,
         request_id: &str,
         token_data: Option<TokenData>,
+        ucs_dry_run: bool,
     ) -> Result<PaymentServiceAuthorizeResponse, PaymentAuthorizationError> {
         //get connector data
         let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -194,148 +195,158 @@ impl Payments {
 
         let lineage_ids = &metadata_payload.lineage_ids;
         let reference_id = &metadata_payload.reference_id;
-        let should_do_order_create = connector_data.connector.should_do_order_create();
 
-        let payment_flow_data = if should_do_order_create {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                request_id,
-                lineage_ids,
-                reference_id,
+        // Skip all composite API calls during UCS dry run
+        let payment_flow_data = if !metadata_payload.ucs_dry_run {
+            let should_do_order_create = connector_data.connector.should_do_order_create();
+
+            let payment_flow_data = if should_do_order_create {
+                let event_params = EventParams {
+                    _connector_name: &connector.to_string(),
+                    _service_name: service_name,
+                    request_id,
+                    lineage_ids,
+                    reference_id,
+                };
+
+                let order_id = self
+                    .handle_order_creation(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &payload,
+                        &connector.to_string(),
+                        service_name,
+                        event_params,
+                    )
+                    .await?;
+
+                tracing::info!("Order created successfully with order_id: {}", order_id);
+                payment_flow_data.set_order_reference_id(Some(order_id))
+            } else {
+                payment_flow_data
             };
 
-            let order_id = self
-                .handle_order_creation(
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                    event_params,
-                )
-                .await?;
+            let should_do_session_token = connector_data.connector.should_do_session_token();
 
-            tracing::info!("Order created successfully with order_id: {}", order_id);
-            payment_flow_data.set_order_reference_id(Some(order_id))
-        } else {
+            let payment_flow_data = if should_do_session_token {
+                let event_params = EventParams {
+                    _connector_name: &connector.to_string(),
+                    _service_name: service_name,
+                    request_id,
+                    lineage_ids,
+                    reference_id,
+                };
+
+                let payment_session_data = self
+                    .handle_session_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        &payload,
+                        &connector.to_string(),
+                        service_name,
+                        event_params,
+                    )
+                    .await?;
+                tracing::info!(
+                    "Session Token created successfully with session_id: {}",
+                    payment_session_data.session_token
+                );
+                payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
+            } else {
+                payment_flow_data
+            };
+
+            // Extract access token from Hyperswitch request
+            let cached_access_token = payload.access_token.clone();
+
+            // Check if connector supports access tokens
+            let should_do_access_token = connector_data.connector.should_do_access_token();
+
+            // Conditional token generation - ONLY if not provided in request
+            let payment_flow_data = if should_do_access_token {
+                let access_token_data = match cached_access_token {
+                    Some(token) => {
+                        // If provided cached token - use it, don't generate new one
+                        tracing::info!("Using cached access token from Hyperswitch");
+                        Some(AccessTokenResponseData {
+                            access_token: token,
+                            token_type: None,
+                            expires_in: None,
+                        })
+                    }
+                    None => {
+                        // No cached token - generate fresh one
+                        tracing::info!("No cached access token found, generating new token");
+                        let event_params = EventParams {
+                            _connector_name: &connector.to_string(),
+                            _service_name: service_name,
+                            request_id,
+                            lineage_ids,
+                            reference_id,
+                        };
+
+                        let access_token_data = self
+                            .handle_access_token(
+                                connector_data.clone(),
+                                &payment_flow_data,
+                                connector_auth_details.clone(),
+                                &connector.to_string(),
+                                service_name,
+                                event_params,
+                                &payload,
+                            )
+                            .await?;
+
+                        tracing::info!(
+                            "Access token created successfully with expiry: {:?}",
+                            access_token_data.expires_in
+                        );
+
+                        Some(access_token_data)
+                    }
+                };
+
+                // Store in flow data for connector API calls
+                payment_flow_data.set_access_token(access_token_data)
+            } else {
+                // Connector doesn't support access tokens
+                payment_flow_data
+            };
+
+            let should_do_payment_method_token =
+                connector_data.connector.should_do_payment_method_token();
+
+            let payment_flow_data = if should_do_payment_method_token {
+                let event_params = EventParams {
+                    _connector_name: &connector.to_string(),
+                    _service_name: service_name,
+                    request_id,
+                    lineage_ids,
+                    reference_id,
+                };
+                let payment_method_token_data = self
+                    .handle_payment_session_token(
+                        connector_data.clone(),
+                        &payment_flow_data,
+                        connector_auth_details.clone(),
+                        event_params,
+                        &payload,
+                        &connector.to_string(),
+                        service_name,
+                    )
+                    .await?;
+                tracing::info!("Payment Method Token created successfully");
+                payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
+            } else {
+                payment_flow_data
+            };
+
             payment_flow_data
-        };
-
-        let should_do_session_token = connector_data.connector.should_do_session_token();
-
-        let payment_flow_data = if should_do_session_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                request_id,
-                lineage_ids,
-                reference_id,
-            };
-
-            let payment_session_data = self
-                .handle_session_token(
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                    event_params,
-                )
-                .await?;
-            tracing::info!(
-                "Session Token created successfully with session_id: {}",
-                payment_session_data.session_token
-            );
-            payment_flow_data.set_session_token_id(Some(payment_session_data.session_token))
         } else {
-            payment_flow_data
-        };
-
-        // Extract access token from Hyperswitch request
-        let cached_access_token = payload.access_token.clone();
-
-        // Check if connector supports access tokens
-        let should_do_access_token = connector_data.connector.should_do_access_token();
-
-        // Conditional token generation - ONLY if not provided in request
-        let payment_flow_data = if should_do_access_token {
-            let access_token_data = match cached_access_token {
-                Some(token) => {
-                    // If provided cached token - use it, don't generate new one
-                    tracing::info!("Using cached access token from Hyperswitch");
-                    Some(AccessTokenResponseData {
-                        access_token: token,
-                        token_type: None,
-                        expires_in: None,
-                    })
-                }
-                None => {
-                    // No cached token - generate fresh one
-                    tracing::info!("No cached access token found, generating new token");
-                    let event_params = EventParams {
-                        _connector_name: &connector.to_string(),
-                        _service_name: service_name,
-                        request_id,
-                        lineage_ids,
-                        reference_id,
-                    };
-
-                    let access_token_data = self
-                        .handle_access_token(
-                            connector_data.clone(),
-                            &payment_flow_data,
-                            connector_auth_details.clone(),
-                            &connector.to_string(),
-                            service_name,
-                            event_params,
-                            &payload,
-                        )
-                        .await?;
-
-                    tracing::info!(
-                        "Access token created successfully with expiry: {:?}",
-                        access_token_data.expires_in
-                    );
-
-                    Some(access_token_data)
-                }
-            };
-
-            // Store in flow data for connector API calls
-            payment_flow_data.set_access_token(access_token_data)
-        } else {
-            // Connector doesn't support access tokens
-            payment_flow_data
-        };
-
-        let should_do_payment_method_token =
-            connector_data.connector.should_do_payment_method_token();
-
-        let payment_flow_data = if should_do_payment_method_token {
-            let event_params = EventParams {
-                _connector_name: &connector.to_string(),
-                _service_name: service_name,
-                request_id,
-                lineage_ids,
-                reference_id,
-            };
-            let payment_method_token_data = self
-                .handle_payment_session_token(
-                    connector_data.clone(),
-                    &payment_flow_data,
-                    connector_auth_details.clone(),
-                    event_params,
-                    &payload,
-                    &connector.to_string(),
-                    service_name,
-                )
-                .await?;
-            tracing::info!("Payment Method Token created successfully");
-            payment_flow_data.set_payment_method_token(Some(payment_method_token_data.token))
-        } else {
+            // UCS dry run: skip all composite API calls, use original payment_flow_data
+            tracing::info!("UCS dry run: skipping all composite API calls (order creation, session token, access token, payment method token)");
             payment_flow_data
         };
 
@@ -392,6 +403,7 @@ impl Payments {
             event_params,
             token_data,
             common_enums::CallConnectorAction::Trigger,
+            ucs_dry_run,
         )
         .await;
 
@@ -553,6 +565,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
+            false,
         )
         .await
         .map_err(
@@ -597,6 +610,7 @@ impl Payments {
         payload: &PaymentServiceRegisterRequest,
         connector_name: &str,
         service_name: &str,
+        ucs_dry_run: bool,
     ) -> Result<String, tonic::Status> {
         // Get connector integration
         let connector_integration: BoxedConnectorIntegrationV2<
@@ -659,6 +673,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
+            ucs_dry_run,
         )
         .await
         .switch()
@@ -756,6 +771,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
+            false,
         )
         .await
         .switch()
@@ -876,6 +892,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
+            false,
         )
         .await
         .switch()
@@ -1013,6 +1030,7 @@ impl Payments {
             external_event_params,
             None,
             common_enums::CallConnectorAction::Trigger,
+            false,
         )
         .await
         .switch()
@@ -1127,7 +1145,7 @@ impl PaymentService for Payments {
         grpc_logging_wrapper(request, &service_name, self.config.clone(), |request, metadata_payload| {
             let service_name = service_name.clone();
             Box::pin(async move {
-                let utils::MetadataPayload {connector, ref request_id, ..} = metadata_payload;
+                let utils::MetadataPayload {connector, ref request_id, ucs_dry_run, ..} = metadata_payload;
                 let metadata = request.metadata().clone();
                 let connector_auth_details =
                     auth_from_metadata(&metadata).map_err(|e| e.into_grpc_status())?;
@@ -1149,6 +1167,7 @@ impl PaymentService for Payments {
                                             &service_name,
                                             request_id,
                                             Some(token_data),
+                                            ucs_dry_run,
                                         ))
                                         .await
                                         {
@@ -1173,6 +1192,7 @@ impl PaymentService for Payments {
                                             &service_name,
                                             request_id,
                                             None,
+                                            ucs_dry_run,
                                         ))
                                         .await
                                         {
@@ -1198,6 +1218,7 @@ impl PaymentService for Payments {
                                     &service_name,
                                     request_id,
                                     None,
+                                    ucs_dry_run,
                                 ))
                                 .await
                                 {
@@ -1217,6 +1238,7 @@ impl PaymentService for Payments {
                             &service_name,
                             request_id,
                             None,
+                            ucs_dry_run,
                         ))
                         .await
                         {
@@ -1274,6 +1296,7 @@ impl PaymentService for Payments {
                     let utils::MetadataPayload {
                         connector,
                         ref request_id,
+                        ucs_dry_run,
                         ..
                     } = metadata_payload;
                     let connector_auth_details =
@@ -1306,68 +1329,78 @@ impl PaymentService for Payments {
                     ))
                     .into_grpc_status()?;
 
-                    // Extract access token from Hyperswitch request
-                    let cached_access_token = payload.access_token.clone();
+                    // Skip access token generation during UCS dry run
+                    let payment_flow_data = if !ucs_dry_run {
+                        // Extract access token from Hyperswitch request
+                        let cached_access_token = payload.access_token.clone();
 
-                    // Check if connector supports access tokens
-                    let should_do_access_token = connector_data.connector.should_do_access_token();
+                        // Check if connector supports access tokens
+                        let should_do_access_token =
+                            connector_data.connector.should_do_access_token();
 
-                    // Conditional token generation - ONLY if not provided in request
-                    let payment_flow_data = if should_do_access_token {
-                        let access_token_data = match cached_access_token {
-                            Some(token) => {
-                                // If provided cached token - use it, don't generate new one
-                                tracing::info!("Using cached access token from Hyperswitch");
-                                Some(AccessTokenResponseData {
-                                    access_token: token,
-                                    token_type: None,
-                                    expires_in: None,
-                                })
-                            }
-                            None => {
-                                // No cached token - generate fresh one
-                                tracing::info!(
-                                    "No cached access token found, generating new token"
-                                );
-                                let event_params = EventParams {
-                                    _connector_name: &connector.to_string(),
-                                    _service_name: &service_name,
-                                    request_id,
-                                    lineage_ids: &metadata_payload.lineage_ids,
-                                    reference_id: &metadata_payload.reference_id,
-                                };
+                        // Conditional token generation - ONLY if not provided in request
+                        if should_do_access_token {
+                            let access_token_data = match cached_access_token {
+                                Some(token) => {
+                                    // If provided cached token - use it, don't generate new one
+                                    tracing::info!("Using cached access token from Hyperswitch");
+                                    Some(AccessTokenResponseData {
+                                        access_token: token,
+                                        token_type: None,
+                                        expires_in: None,
+                                    })
+                                }
+                                None => {
+                                    // No cached token - generate fresh one
+                                    tracing::info!(
+                                        "No cached access token found, generating new token"
+                                    );
+                                    let event_params = EventParams {
+                                        _connector_name: &connector.to_string(),
+                                        _service_name: &service_name,
+                                        request_id,
+                                        lineage_ids: &metadata_payload.lineage_ids,
+                                        reference_id: &metadata_payload.reference_id,
+                                    };
 
-                                let access_token_data = self
-                                    .handle_access_token(
-                                        connector_data.clone(),
-                                        &payment_flow_data,
-                                        connector_auth_details.clone(),
-                                        &connector.to_string(),
-                                        &service_name,
-                                        event_params,
-                                        &payload,
-                                    )
-                                    .await
-                                    .map_err(|e| {
-                                        let message = e.error_message.unwrap_or_else(|| {
-                                            "Access token creation failed".to_string()
-                                        });
-                                        tonic::Status::internal(message)
-                                    })?;
+                                    let access_token_data = self
+                                        .handle_access_token(
+                                            connector_data.clone(),
+                                            &payment_flow_data,
+                                            connector_auth_details.clone(),
+                                            &connector.to_string(),
+                                            &service_name,
+                                            event_params,
+                                            &payload,
+                                        )
+                                        .await
+                                        .map_err(|e| {
+                                            let message = e.error_message.unwrap_or_else(|| {
+                                                "Access token creation failed".to_string()
+                                            });
+                                            tonic::Status::internal(message)
+                                        })?;
 
-                                tracing::info!(
-                                    "Access token created successfully with expiry: {:?}",
-                                    access_token_data.expires_in
-                                );
+                                    tracing::info!(
+                                        "Access token created successfully with expiry: {:?}",
+                                        access_token_data.expires_in
+                                    );
 
-                                Some(access_token_data)
-                            }
-                        };
+                                    Some(access_token_data)
+                                }
+                            };
 
-                        // Store in flow data for connector API calls
-                        payment_flow_data.set_access_token(access_token_data)
+                            // Store in flow data for connector API calls
+                            payment_flow_data.set_access_token(access_token_data)
+                        } else {
+                            // Connector doesn't support access tokens
+                            payment_flow_data
+                        }
                     } else {
-                        // Connector doesn't support access tokens
+                        // UCS dry run: skip access token generation for sync
+                        tracing::info!(
+                            "UCS dry run: skipping access token generation for payment sync"
+                        );
                         payment_flow_data
                     };
 
@@ -1416,6 +1449,7 @@ impl PaymentService for Payments {
                             event_params,
                             None,
                             consume_or_trigger_flow,
+                            ucs_dry_run,
                         )
                         .await
                         .switch()
@@ -1751,6 +1785,7 @@ impl PaymentService for Payments {
                     let connector_auth_details = metadata_payload.connector_auth_type;
                     let metadata = request.metadata().clone();
                     let payload = request.into_inner();
+                    let ucs_dry_run = metadata_payload.ucs_dry_run;
 
                     //get connector data
                     let connector_data = ConnectorData::get_connector_by_name(&connector);
@@ -1773,30 +1808,39 @@ impl PaymentService for Payments {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let should_do_order_create = connector_data.connector.should_do_order_create();
+                    // Skip order creation during UCS dry run
+                    let order_id = if !metadata_payload.ucs_dry_run {
+                        let should_do_order_create =
+                            connector_data.connector.should_do_order_create();
 
-                    let order_id = if should_do_order_create {
-                        let event_params = EventParams {
-                            _connector_name: &connector.to_string(),
-                            _service_name: &service_name,
-                            request_id: &request_id,
-                            lineage_ids: &metadata_payload.lineage_ids,
-                            reference_id: &metadata_payload.reference_id,
-                        };
+                        if should_do_order_create {
+                            let event_params = EventParams {
+                                _connector_name: &connector.to_string(),
+                                _service_name: &service_name,
+                                request_id: &request_id,
+                                lineage_ids: &metadata_payload.lineage_ids,
+                                reference_id: &metadata_payload.reference_id,
+                            };
 
-                        Some(
-                            self.handle_order_creation_for_setup_mandate(
-                                connector_data.clone(),
-                                &payment_flow_data,
-                                connector_auth_details.clone(),
-                                event_params,
-                                &payload,
-                                &connector.to_string(),
-                                &service_name,
+                            Some(
+                                self.handle_order_creation_for_setup_mandate(
+                                    connector_data.clone(),
+                                    &payment_flow_data,
+                                    connector_auth_details.clone(),
+                                    event_params,
+                                    &payload,
+                                    &connector.to_string(),
+                                    &service_name,
+                                    ucs_dry_run,
+                                )
+                                .await?,
                             )
-                            .await?,
-                        )
+                        } else {
+                            None
+                        }
                     } else {
+                        // UCS dry run: skip order creation for setup mandate
+                        tracing::info!("UCS dry run: skipping order creation for setup mandate");
                         None
                     };
                     let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
@@ -1841,6 +1885,7 @@ impl PaymentService for Payments {
                         event_params,
                         None, // token_data - None for non-proxy payments
                         common_enums::CallConnectorAction::Trigger,
+                        ucs_dry_run,
                     )
                     .await
                     .switch()
@@ -1898,6 +1943,7 @@ impl PaymentService for Payments {
                     let connector_auth_details = metadata_payload.connector_auth_type;
                     let metadata = request.metadata().clone();
                     let payload = request.into_inner();
+                    let ucs_dry_run = metadata_payload.ucs_dry_run;
 
                     //get connector data
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -1958,6 +2004,7 @@ impl PaymentService for Payments {
                         event_params,
                         None, // token_data - None for non-proxy payments
                         common_enums::CallConnectorAction::Trigger,
+                        ucs_dry_run,
                     )
                     .await
                     .switch()

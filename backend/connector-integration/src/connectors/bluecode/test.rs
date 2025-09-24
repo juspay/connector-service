@@ -90,6 +90,7 @@ mod tests {
                     },
                     external_latency: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
@@ -225,6 +226,7 @@ mod tests {
                     },
                     external_latency: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                     raw_connector_response: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {

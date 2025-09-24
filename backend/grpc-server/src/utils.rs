@@ -1,7 +1,9 @@
 use std::{str::FromStr, sync::Arc};
 
 use common_utils::{
-    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
+    consts::{
+        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_UCS_DRY_RUN,
+    },
     errors::CustomResult,
     events::FlowName,
     lineage::LineageIds,
@@ -129,6 +131,7 @@ pub struct MetadataPayload {
     pub lineage_ids: LineageIds<'static>,
     pub connector_auth_type: ConnectorAuthType,
     pub reference_id: Option<String>,
+    pub ucs_dry_run: bool,
 }
 
 pub fn get_metadata_payload(
@@ -142,6 +145,7 @@ pub fn get_metadata_payload(
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
     let connector_auth_type = auth_from_metadata(metadata)?;
     let reference_id = reference_id_from_metadata(metadata)?;
+    let ucs_dry_run = get_ucs_dry_run(metadata);
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -150,6 +154,7 @@ pub fn get_metadata_payload(
         lineage_ids,
         connector_auth_type,
         reference_id,
+        ucs_dry_run,
     })
 }
 
@@ -210,6 +215,14 @@ pub fn reference_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<Option<String>, ApplicationErrorResponse> {
     parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
+}
+
+pub fn get_ucs_dry_run(metadata: &metadata::MetadataMap) -> bool {
+    parse_optional_metadata(metadata, X_UCS_DRY_RUN)
+        .ok()
+        .flatten()
+        .and_then(|value| value.parse::<bool>().ok())
+        .unwrap_or(false)
 }
 
 pub fn auth_from_metadata(
@@ -498,6 +511,7 @@ macro_rules! implement_connector_operation {
                 event_params,
                 None,
                 common_enums::CallConnectorAction::Trigger,
+                metadata_payload.ucs_dry_run,
             )
             .await
             .switch()

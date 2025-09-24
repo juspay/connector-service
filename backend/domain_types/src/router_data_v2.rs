@@ -13,3 +13,22 @@ pub struct RouterDataV2<Flow, ResourceCommonData, FlowSpecificRequest, FlowSpeci
     /// Contains flow-specific data that the connector responds with.
     pub response: Result<FlowSpecificResponse, ErrorResponse>,
 }
+
+impl<Flow, ResourceCommonData, FlowSpecificRequest, FlowSpecificResponse>
+    RouterDataV2<Flow, ResourceCommonData, FlowSpecificRequest, FlowSpecificResponse>
+{
+    /// Builder method to set the response field
+    pub fn set_response(mut self, response: Result<FlowSpecificResponse, ErrorResponse>) -> Self {
+        self.response = response;
+        self
+    }
+
+    /// Builder method to update resource common data
+    pub fn update_resource_common_data<F>(mut self, updater: F) -> Self
+    where
+        F: FnOnce(ResourceCommonData) -> ResourceCommonData,
+    {
+        self.resource_common_data = updater(self.resource_common_data);
+        self
+    }
+}
