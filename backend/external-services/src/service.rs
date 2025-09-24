@@ -7,7 +7,7 @@ use common_utils::{
     request::{Method, Request, RequestContent},
 };
 use domain_types::{
-    connector_types::{ConnectorResponseHeaders, RawConnectorResponse},
+    connector_types::{ConnectorResponseHeaders, RawConnectorRequestResponse},
     errors::{ApiErrorResponse, ConnectorError},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
@@ -142,7 +142,7 @@ where
     Resp: Clone + 'static + std::fmt::Debug,
     ResourceCommonData: Clone
         + 'static
-        + RawConnectorResponse
+        + RawConnectorRequestResponse
         + ConnectorResponseHeaders
         + ConnectorRequestReference
         + AdditionalHeaders,
