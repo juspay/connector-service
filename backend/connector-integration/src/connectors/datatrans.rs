@@ -293,7 +293,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
         match response {
             Ok(error_res) => {
-                event_builder.map(|i| i.set_error_response_body(&error_res));
+                if let Some(i) = event_builder {
+                    i.set_error_response_body(&error_res);
+                }
                 Ok(ErrorResponse {
                     status_code: res.status_code,
                     code: error_res.error.code.clone(),
@@ -413,7 +415,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         println!("datatrans: Response parsed successfully: {:?}", response);
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response);
+        }
         
         // Create the response with proper capture method handling
         let (status, transaction_id) = match response {
@@ -556,7 +560,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
         };
         
         println!("datatrans: Sync response parsed successfully: {:?}", response);
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response);
+        }
         
         let mut response_data = data.clone();
         response_data.response = Ok(domain_types::connector_types::PaymentsResponseData::TransactionResponse {
@@ -689,7 +695,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
         
         println!("datatrans: Void response parsed successfully: {:?}", response);
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response);
+        }
         
         let mut response_data = data.clone();
         response_data.response = Ok(domain_types::connector_types::PaymentsResponseData::TransactionResponse {
@@ -827,7 +835,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         };
         
         println!("datatrans: Capture response parsed successfully: {:?}", response);
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response);
+        }
         
         // Use the transformer to convert the response
         let response_router_data = crate::types::ResponseRouterData {
@@ -922,7 +932,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
         
         println!("datatrans: Refund response parsed successfully: {:?}", response);
-        event_builder.map(|i| i.set_response_body(&response));
+        if let Some(i) = event_builder {
+            i.set_response_body(&response);
+        }
         
         let mut response_data = data.clone();
         response_data.response = Ok(domain_types::connector_types::RefundsResponseData {
