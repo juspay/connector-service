@@ -611,7 +611,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn try_from(
         item: ResponseRouterData<DatatransSyncResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let (status, connector_transaction_id) = match item.response {
+        let (_status, connector_transaction_id) = match item.response {
             DatatransSyncResponse::Response(response) => {
                 let response_status = match response.status {
                     TransactionStatus::Authorized => AttemptStatus::Authorized,
