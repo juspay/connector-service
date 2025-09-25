@@ -642,16 +642,31 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
     ) -> CustomResult<Option<common_utils::Request>, errors::ConnectorError> {
-        println!("datatrans: Building void request");
-        Ok(Some(
-            RequestBuilder::new()
-                .method(common_utils::Method::Post)
-                .url(&self.get_url(req)?)
-                .attach_default_headers()
-                .headers(self.get_headers(req)?)
-                .set_body(self.get_request_body(req)?.unwrap_or(common_utils::RequestContent::Json(Box::new(serde_json::json!({})))))
-                .build(),
-        ))
+        println!("datatrans: *** BUILDING VOID REQUEST ***");
+        println!("datatrans: Building void request for transaction: {:?}", req.request.connector_transaction_id);
+        
+        let url = self.get_url(req)?;
+        let headers = self.get_headers(req)?;
+        let body = self.get_request_body(req)?.unwrap_or(common_utils::RequestContent::Json(Box::new(serde_json::json!({}))));
+        
+        println!("datatrans: Final void request - URL: {}", url);
+        println!("datatrans: Final void request - Headers: {:?}", headers);
+        println!("datatrans: Final void request - Body: {:?}", body);
+        
+        let request = RequestBuilder::new()
+            .method(common_utils::Method::Post)
+            .url(&url)
+            .attach_default_headers()
+            .headers(headers)
+            .set_body(body)
+            .build();
+            
+        println!("datatrans: Final void request built successfully: {:?}", request.method);
+        println!("datatrans: *** VOID REQUEST READY TO SEND ***");
+        println!("datatrans: *** FRAMEWORK SHOULD NOW EXECUTE HTTP REQUEST ***");
+        println!("datatrans: *** EXPECTING handle_response_v2 TO BE CALLED NEXT ***");
+        
+        Ok(Some(request))
     }
 
     fn handle_response_v2(
@@ -660,6 +675,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>, errors::ConnectorError> {
+        println!("datatrans: *** VOID RESPONSE HANDLER CALLED ***");
+        println!("datatrans: *** THIS LOG SHOULD APPEAR IF HANDLER IS CALLED ***");
         println!("datatrans: Handling void response with status: {}", res.status_code);
         println!("datatrans: Void response body: {}", String::from_utf8_lossy(&res.response));
         

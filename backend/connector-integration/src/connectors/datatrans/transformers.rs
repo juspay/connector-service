@@ -674,9 +674,11 @@ impl<F>
             .to_string();
         
         println!("datatrans: Setting capture status to: {:?}", status);
+        println!("datatrans: Status as u32: {}", status as u32);
         println!("datatrans: Using transaction ID: {}", connector_transaction_id);
+        println!("datatrans: About to create PaymentsResponseData with status: {:?}", status);
 
-        Ok(Self {
+        let result = Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
                 redirection_data: None,
@@ -692,7 +694,13 @@ impl<F>
                 ..item.router_data.resource_common_data
             },
             ..item.router_data
-        })
+        };
+        
+        println!("datatrans: Final RouterDataV2 status: {:?}", result.resource_common_data.status);
+        println!("datatrans: Final RouterDataV2 status as u32: {}", result.resource_common_data.status as u32);
+        println!("datatrans: *** CAPTURE TRANSFORMER COMPLETED SUCCESSFULLY ***");
+        
+        Ok(result)
     }
 }
 
