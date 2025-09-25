@@ -58,36 +58,47 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 
     env:
         RUSTFLAGS: "-D warnings"
+        RUN_TESTS: ${{ (github.event_name == 'push') || ((github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name)) || (github.event_name == 'merge_group') }}
 
     steps:
+      - name: Skip tests for PRs from forks
+        if: ${{ env.RUN_TESTS == 'false' }}
+        shell: bash
+        run: echo 'Skipping tests for PRs from forks'
+
       - name: Checkout code
+        if: ${{ env.RUN_TESTS == 'true' }}
         uses: actions/checkout@v4
 
       - name: Install Rust
+        if: ${{ env.RUN_TESTS == 'true' }}
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
 
       - name: Install Protoc
+        if: ${{ env.RUN_TESTS == 'true' }}
         uses: arduino/setup-protoc@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: Swatinem/rust-cache@v2.7.8
+        if: ${{ env.RUN_TESTS == 'true' }}
         with:
           cache-on-failure: true
 
       - name: Install nextest
+        if: ${{ env.RUN_TESTS == 'true' }}
         uses: taiki-e/install-action@v2
         with:
           tool: nextest
           checksum: true
 
       - name: Download Encrypted Connector Credentials from S3 and Decrypt
+        if: ${{ env.RUN_TESTS == 'true' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CONNECTOR_CREDS_AWS_ACCESS_KEY_ID }}
           AWS_REGION: ${{ secrets.CONNECTOR_CREDS_AWS_REGION }}
@@ -98,18 +109,13 @@ jobs:
           S3_SOURCE_FILE_NAME: "9f00461f-5a48-4f9c-aa8c-3510e4cb7d9c.json.gpg"
         shell: bash
         run: |
-          # Skip credential download for forks or when secrets are not available
-          if [[ -z "$AWS_ACCESS_KEY_ID" || -z "$CONNECTOR_AUTH_PASSPHRASE" ]]; then
-            echo "Skipping credential download - secrets not available (likely a fork PR)"
-            exit 0
-          fi
-
           mkdir -p ".github/secrets" ".github/test"
 
           aws s3 cp "${CONNECTOR_CREDS_S3_BUCKET_URI}/${S3_SOURCE_FILE_NAME}" ".github/secrets/${DESTINATION_FILE_NAME}"
           gpg --quiet --batch --yes --decrypt --passphrase="${CONNECTOR_AUTH_PASSPHRASE}" --output ".github/test/creds.json" ".github/secrets/${DESTINATION_FILE_NAME}"
 
       - name: Set connector credentials path in environment
+        if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
         run: |
           # Only set the environment variable if the credentials file exists
@@ -121,6 +127,7 @@ jobs:
           fi
 
       - name: Run Tests
+        if: ${{ env.RUN_TESTS == 'true' }}
         shell: bash
         run: cargo nextest run --config-file .nextest.toml --profile ci
 
