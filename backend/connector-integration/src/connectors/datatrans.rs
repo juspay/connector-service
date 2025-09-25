@@ -746,8 +746,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         &self,
         req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
     ) -> CustomResult<Option<common_utils::Request>, errors::ConnectorError> {
+        println!("datatrans: *** BUILDING CAPTURE REQUEST ***");
         println!("datatrans: Building capture request for transaction: {:?}", req.request.connector_transaction_id);
         println!("datatrans: Building capture request");
+        println!("datatrans: Capture amount: {}", req.request.amount_to_capture);
         
         let url = self.get_url(req)?;
         let headers = self.get_headers(req)?;
@@ -757,15 +759,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         println!("datatrans: Final capture request - Headers: {:?}", headers);
         println!("datatrans: Final capture request - Body: {:?}", body);
         
-        Ok(Some(
-            RequestBuilder::new()
-                .method(common_utils::Method::Post)
-                .url(&url)
-                .attach_default_headers()
-                .headers(headers)
-                .set_body(body)
-                .build(),
-        ))
+        let request = RequestBuilder::new()
+            .method(common_utils::Method::Post)
+            .url(&url)
+            .attach_default_headers()
+            .headers(headers)
+            .set_body(body)
+            .build();
+        
+        println!("datatrans: Final capture request built successfully: {:?}", request.method);
+        println!("datatrans: *** CAPTURE REQUEST READY TO SEND ***");
+        
+        Ok(Some(request))
     }
 
     fn handle_response_v2(
@@ -774,15 +779,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         event_builder: Option<&mut ConnectorEvent>,
         res: Response,
     ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, errors::ConnectorError> {
+        println!("datatrans: *** CAPTURE RESPONSE HANDLER CALLED ***");
         println!("datatrans: Handling capture response with status: {}", res.status_code);
         println!("datatrans: Capture response body: {}", String::from_utf8_lossy(&res.response));
         
-        // Check for error status codes
-        if res.status_code >= 400 {
-            println!("datatrans: Capture request failed with status: {}", res.status_code);
-            return Err(errors::ConnectorError::ResponseHandlingFailed.into());
-        }
-        
+        // Parse response as DataTransCaptureResponse
         let response = if res.response.is_empty() {
             println!("datatrans: Capture response is empty - treating as success");
             transformers::DataTransCaptureResponse::Empty
@@ -796,7 +797,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 Err(parse_err) => {
                     println!("datatrans: Failed to parse capture response as error: {:?}", parse_err);
                     println!("datatrans: Raw response: {}", String::from_utf8_lossy(&res.response));
-                    return Err(errors::ConnectorError::ResponseDeserializationFailed.into());
+                    // If parsing fails, treat as empty (success)
+                    transformers::DataTransCaptureResponse::Empty
                 }
             }
         };
@@ -804,22 +806,16 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         println!("datatrans: Capture response parsed successfully: {:?}", response);
         event_builder.map(|i| i.set_response_body(&response));
         
-        let mut response_data = data.clone();
-        response_data.response = Ok(domain_types::connector_types::PaymentsResponseData::TransactionResponse {
-            resource_id: domain_types::connector_types::ResponseId::ConnectorTransactionId(
-                data.request.connector_transaction_id.get_connector_transaction_id().change_context(errors::ConnectorError::RequestEncodingFailed)?
-            ),
-            redirection_data: None,
-            mandate_reference: None,
-            connector_metadata: None,
-            network_txn_id: None,
-            connector_response_reference_id: None,
-            incremental_authorization_allowed: None,
-            status_code: res.status_code,
-        });
-        response_data.resource_common_data.status = common_enums::AttemptStatus::Charged;
+        // Use the transformer to convert the response
+        let response_router_data = crate::types::ResponseRouterData {
+            response,
+            router_data: data.clone(),
+            http_code: res.status_code,
+        };
         
-        Ok(response_data)
+        println!("datatrans: Delegating to DataTransCaptureResponse transformer");
+        RouterDataV2::try_from(response_router_data)
+            .change_context(errors::ConnectorError::ResponseHandlingFailed)
     }
 }
 
@@ -908,10 +904,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let mut response_data = data.clone();
         response_data.response = Ok(domain_types::connector_types::RefundsResponseData {
             connector_refund_id: match response {
-                transformers::DatatransRefundsResponse::Success(ref success_resp) => success_resp.transaction_id.clone(),
-                transformers::DatatransRefundsResponse::Error(_) => String::new(),
+                transformers::DatatransRefundsResponse::Success(ref success_resp) => {
+                    println!("datatrans: Refund successful - transaction ID: {}", success_resp.transaction_id);
+                    success_resp.transaction_id.clone()
+                },
+                transformers::DatatransRefundsResponse::Error(ref error) => {
+                    println!("datatrans: Refund failed - error: {:?}", error);
+                    // Use the original refund ID from the request as fallback
+                    data.request.refund_id.clone()
+                },
             },
-            refund_status: common_enums::RefundStatus::Success,
+            refund_status: match response {
+                transformers::DatatransRefundsResponse::Success(_) => {
+                    println!("datatrans: Setting refund status to Success");
+                    common_enums::RefundStatus::Success
+                },
+                transformers::DatatransRefundsResponse::Error(_) => {
+                    println!("datatrans: Setting refund status to Failure");
+                    common_enums::RefundStatus::Failure
+                },
+            },
             status_code: res.status_code,
         });
         

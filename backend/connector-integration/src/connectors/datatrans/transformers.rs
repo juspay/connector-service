@@ -9,12 +9,13 @@ use domain_types::{
     connector_flow::{Authorize, Capture, Refund, SetupMandate},
     connector_types::{
         PaymentFlowData, RefundFlowData, PaymentsAuthorizeData, PaymentsSyncData,
-        PaymentsCaptureData, RefundsData,
+        PaymentsCaptureData, PaymentVoidData, RefundsData,
         SetupMandateRequestData, PaymentsResponseData, RefundsResponseData,
         ResponseId,
     },
     errors::ConnectorError,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{Secret, PeekInterface};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -599,66 +600,8 @@ impl<F>
     }
 }
 
-// Implementation for PaymentsCaptureData
-impl<F>
-    TryFrom<ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<DatatransResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
-    ) -> Result<Self, Self::Error> {
-        println!("datatrans: *** USING PaymentsCaptureData IMPLEMENTATION ***");
-        println!("datatrans: Starting capture response transformation");
-        println!("datatrans: HTTP status code: {}", item.http_code);
-        println!("datatrans: Response type: {:?}", item.response);
-        
-        let (status, connector_transaction_id) = match item.response {
-            DatatransResponse::TransactionResponse(response) => {
-                println!("datatrans: Received TransactionResponse - mapping to Charged status");
-                println!("datatrans: Transaction ID: {}", response.transaction_id);
-                (
-                    AttemptStatus::Charged,
-                    Some(response.transaction_id),
-                )
-            },
-            DatatransResponse::ThreeDSResponse(response) => {
-                println!("datatrans: Received ThreeDSResponse - mapping to Charged status for capture");
-                println!("datatrans: Transaction ID: {}", response.transaction_id);
-                println!("datatrans: 3DS Enrolled: {}", response.three_ds_enrolled.enrolled);
-                
-                // For capture flows, 3DS completion means payment is captured
-                (
-                    AttemptStatus::Charged,
-                    Some(response.transaction_id),
-                )
-            },
-            DatatransResponse::ErrorResponse(_error) => {
-                println!("datatrans: Received ErrorResponse - mapping to Failure status");
-                (
-                    AttemptStatus::Failure,
-                    None,
-                )
-            },
-        };
-
-        Ok(Self {
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    connector_transaction_id.unwrap_or_default(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: None,
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
-}
+// NOTE: PaymentsCaptureData response transformation is handled directly in the connector's handle_response_v2 method
+// The DataTransCaptureResponse implementation below is the correct one to use
 
 impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     TryFrom<ResponseRouterData<DatatransSyncResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>>
@@ -700,24 +643,42 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<DataTransCaptureResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+impl<F>
+    TryFrom<ResponseRouterData<DataTransCaptureResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<DataTransCaptureResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>,
+        item: ResponseRouterData<DataTransCaptureResponse, RouterDataV2<F, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let _status = match item.response {
-            DataTransCaptureResponse::Empty => AttemptStatus::Charged,
-            DataTransCaptureResponse::Error(_) => AttemptStatus::Failure,
+        println!("datatrans: *** USING DataTransCaptureResponse TRANSFORMER IMPLEMENTATION ***");
+        println!("datatrans: Capture response transformation - HTTP status: {}", item.http_code);
+        println!("datatrans: Capture response type: {:?}", item.response);
+        println!("datatrans: *** TRANSFORMER CALLED - THIS SHOULD APPEAR IN LOGS ***");
+        
+        let status = match item.response {
+            DataTransCaptureResponse::Empty => {
+                println!("datatrans: Capture response is Empty - mapping to Charged status");
+                AttemptStatus::Charged
+            },
+            DataTransCaptureResponse::Error(ref error) => {
+                println!("datatrans: Capture response is Error - mapping to Failure status: {:?}", error);
+                AttemptStatus::Failure
+            },
         };
+        
+        // Get the transaction ID from the router data (it should be available from the original request)
+        let connector_transaction_id = item.router_data.request.connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(ConnectorError::MissingConnectorTransactionID)?
+            .to_string();
+        
+        println!("datatrans: Setting capture status to: {:?}", status);
+        println!("datatrans: Using transaction ID: {}", connector_transaction_id);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    String::new(), // TODO: Get actual connector transaction ID
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -726,29 +687,47 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
+            resource_common_data: domain_types::connector_types::PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<DataTransCancelResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>>
-    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
+impl<F>
+    TryFrom<ResponseRouterData<DataTransCancelResponse, RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>>
+    for RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<DataTransCancelResponse, RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>>,
+        item: ResponseRouterData<DataTransCancelResponse, RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let _status = match item.response {
-            DataTransCancelResponse::Empty => AttemptStatus::Voided,
-            DataTransCancelResponse::Error(_) => AttemptStatus::VoidFailed,
+        println!("datatrans: *** USING DataTransCancelResponse IMPLEMENTATION ***");
+        println!("datatrans: Void response transformation - HTTP status: {}", item.http_code);
+        println!("datatrans: Void response type: {:?}", item.response);
+        
+        let status = match item.response {
+            DataTransCancelResponse::Empty => {
+                println!("datatrans: Void response is Empty - mapping to Voided status");
+                AttemptStatus::Voided
+            },
+            DataTransCancelResponse::Error(ref error) => {
+                println!("datatrans: Void response is Error - mapping to VoidFailed status: {:?}", error);
+                AttemptStatus::VoidFailed
+            },
         };
+        
+        // Get the transaction ID from the router data (it should be available from the original request)
+        let connector_transaction_id = item.router_data.request.connector_transaction_id.clone();
+        
+        println!("datatrans: Setting void status to: {:?}", status);
+        println!("datatrans: Using transaction ID: {}", connector_transaction_id);
 
         Ok(Self {
             response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    String::new(), // TODO: Get actual connector transaction ID
-                ),
+                resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
                 redirection_data: None,
                 mandate_reference: None,
                 connector_metadata: None,
@@ -757,30 +736,54 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
                 incremental_authorization_allowed: None,
                 status_code: item.http_code,
             }),
+            resource_common_data: domain_types::connector_types::PaymentFlowData {
+                status,
+                ..item.router_data.resource_common_data
+            },
             ..item.router_data
         })
     }
 }
 
-impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<ResponseRouterData<DatatransRefundsResponse, RouterDataV2<F, RefundFlowData, T, RefundsResponseData>>>
-    for RouterDataV2<F, RefundFlowData, T, RefundsResponseData>
+impl<F>
+    TryFrom<ResponseRouterData<DatatransRefundsResponse, RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>>
+    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<DatatransRefundsResponse, RouterDataV2<F, RefundFlowData, T, RefundsResponseData>>,
+        item: ResponseRouterData<DatatransRefundsResponse, RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>>,
     ) -> Result<Self, Self::Error> {
+        println!("datatrans: *** USING DatatransRefundsResponse IMPLEMENTATION ***");
+        println!("datatrans: Refund response transformation - HTTP status: {}", item.http_code);
+        println!("datatrans: Refund response type: {:?}", item.response);
+        
         let (status, connector_refund_id) = match item.response {
-            DatatransRefundsResponse::Success(response) => (
-                common_enums::RefundStatus::Success,
-                Some(response.transaction_id),
-            ),
-            DatatransRefundsResponse::Error(_) => (common_enums::RefundStatus::Failure, None),
+            DatatransRefundsResponse::Success(response) => {
+                println!("datatrans: Refund Success response - transaction ID: {}", response.transaction_id);
+                (
+                    common_enums::RefundStatus::Success,
+                    Some(response.transaction_id),
+                )
+            },
+            DatatransRefundsResponse::Error(ref error) => {
+                println!("datatrans: Refund Error response: {:?}", error);
+                (common_enums::RefundStatus::Failure, None)
+            },
         };
+        
+        let final_refund_id = connector_refund_id.clone().unwrap_or_else(|| {
+            // Fallback: use the original refund ID from the request
+            let fallback_id = item.router_data.request.refund_id.clone();
+            println!("datatrans: No connector refund ID from response, using request refund ID: {}", fallback_id);
+            fallback_id
+        });
+        
+        println!("datatrans: Final refund status: {:?}", status);
+        println!("datatrans: Final refund ID: {}", final_refund_id);
 
         Ok(Self {
             response: Ok(RefundsResponseData {
-                connector_refund_id: connector_refund_id.unwrap_or_default(),
+                connector_refund_id: final_refund_id,
                 refund_status: status,
                 status_code: item.http_code,
             }),

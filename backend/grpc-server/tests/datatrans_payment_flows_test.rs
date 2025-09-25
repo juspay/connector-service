@@ -39,7 +39,7 @@ const TEST_DATATRANS_API_KEY_ENV: &str = "TEST_DATATRANS_API_KEY";
 const TEST_DATATRANS_KEY1_ENV: &str = "TEST_DATATRANS_KEY1";
 
 const TEST_AMOUNT: i64 = 1000;
-const TEST_CARD_NUMBER: &str = "4242424242424242";
+const TEST_CARD_NUMBER: &str = "4000000000000002"; // Non-3DS test card
 const TEST_CARD_EXP_MONTH: &str = "10";
 const TEST_CARD_EXP_YEAR: &str = "2030";
 const TEST_CARD_CVC: &str = "123";
@@ -660,7 +660,7 @@ async fn test_refund_sync() {
                 .await
                 .expect("gRPC refund call failed")
                 .into_inner();
-
+                println!("Refund response status: {:?}", refund_response);
             // Extract the refund ID
             let refund_id = refund_response.refund_id.clone();
 
