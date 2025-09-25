@@ -16,12 +16,12 @@ buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"
-port = 8000
+port = 8006
 type = "grpc"
 
 [metrics]
 host = "127.0.0.1"
-port = 8080
+port = 8086
 
 [proxy]
 # http_url = "http proxy url"                   # Proxy all HTTP traffic via this proxy
@@ -54,6 +54,7 @@ braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
 helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://sandbox.dlocal.com/"
 
 # Generic Events Configuration
 [events]
