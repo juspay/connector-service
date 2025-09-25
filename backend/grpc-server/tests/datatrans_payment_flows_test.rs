@@ -21,10 +21,9 @@ use grpc_api_types::{
         payment_service_client::PaymentServiceClient, refund_service_client::RefundServiceClient,
         AcceptanceType, Address, AuthenticationType, BrowserInformation, CaptureMethod, 
         CardDetails, CardPaymentMethodType, CountryAlpha2, Currency, CustomerAcceptance,
-        FutureUsage, Identifier, MandateReference, PaymentAddress, PaymentMethod, 
+        FutureUsage, Identifier, PaymentAddress, PaymentMethod, 
         PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse, PaymentServiceCaptureRequest, 
         PaymentServiceGetRequest, PaymentServiceRefundRequest, PaymentServiceRegisterRequest,
-        PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
         PaymentServiceVoidRequest, PaymentStatus, RefundServiceGetRequest, RefundStatus,
     },
 };

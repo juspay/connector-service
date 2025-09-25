@@ -466,7 +466,7 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         println!("datatrans: HTTP status code: {}", item.http_code);
         println!("datatrans: Response type: {:?}", item.response);
         
-        let (status, connector_transaction_id) = match item.response {
+        let (_status, connector_transaction_id) = match item.response {
             DatatransResponse::TransactionResponse(response) => {
                 println!("datatrans: Received TransactionResponse - mapping to Charged status");
                 println!("datatrans: Transaction ID: {}", response.transaction_id);
@@ -553,7 +553,7 @@ impl<F>
         println!("datatrans: HTTP status code: {}", item.http_code);
         println!("datatrans: Response type: {:?}", item.response);
         
-        let (status, connector_transaction_id) = match item.response {
+        let (_status, connector_transaction_id) = match item.response {
             DatatransResponse::TransactionResponse(response) => {
                 println!("datatrans: Received TransactionResponse - mapping to Charged status");
                 println!("datatrans: Transaction ID: {}", response.transaction_id);
@@ -613,14 +613,14 @@ impl<F, T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ) -> Result<Self, Self::Error> {
         let (status, connector_transaction_id) = match item.response {
             DatatransSyncResponse::Response(response) => {
-                let status = match response.status {
+                let response_status = match response.status {
                     TransactionStatus::Authorized => AttemptStatus::Authorized,
                     TransactionStatus::Settled => AttemptStatus::Charged,
                     TransactionStatus::Failed => AttemptStatus::Failure,
                     TransactionStatus::Canceled => AttemptStatus::Voided,
                     _ => AttemptStatus::Pending,
                 };
-                (status, Some(response.transaction_id))
+                (response_status, Some(response.transaction_id))
             }
             DatatransSyncResponse::Error(_) => (AttemptStatus::Failure, None),
         };
