@@ -203,6 +203,7 @@ fn create_payment_authorize_request(
         device_model: None,
         accept_language: None,
         time_zone_offset_minutes: None,
+        referer: None,
     };
     request.browser_info = Some(browser_info);
 

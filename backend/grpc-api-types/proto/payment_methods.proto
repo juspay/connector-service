@@ -42,7 +42,7 @@ message PaymentMethod {
     OnlineBankingPaymentMethodType online_banking = 7;   // Online banking payment methods
     // BNPLPaymentMethodType bnpl = 8;                      // Buy now, pay later payment methods - TODO: Not yet supported
     // MobilePaymentMethodType mobile_payment = 9;          // Mobile payment methods - TODO: Not yet supported
-    // CryptoCurrencyPaymentMethodType crypto = 10;         // Cryptocurrency payment methods - TODO: Not yet supported
+    CryptoCurrencyPaymentMethodType crypto = 10;         // Cryptocurrency payment methods - SUPPORTED
     // CashVoucherPaymentMethodType cash_voucher = 11;      // Cash and voucher payment methods - TODO: Not yet supported
     // DirectDebitPaymentMethodType direct_debit = 12;      // Direct debit payment methods - TODO: Not yet supported
     // OtherPaymentMethodType other = 13;                   // Other payment methods - TODO: Not yet supported
@@ -187,14 +187,10 @@ message MobilePaymentMethodType {
 }
 */
 
-// Cryptocurrency payment methods category - TODO: Not yet supported
-/*
+// Cryptocurrency payment methods category
 message CryptoCurrencyPaymentMethodType {
-  oneof crypto_type {
-    CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
-  }
+  CryptoCurrency crypto_currency = 1;                      // Generic cryptocurrency payment
 }
-*/
 
 // Cash and voucher payment methods category - TODO: Not yet supported
 // Includes convenience store payments and voucher systems
@@ -836,10 +832,8 @@ message Vipps {
 */
 
 // ============================================================================
-// CRYPTOCURRENCY PAYMENT METHODS - TODO: Not yet supported
+// CRYPTOCURRENCY PAYMENT METHODS
 // ============================================================================
-
-/*
 
 // Generic cryptocurrency payment
 message CryptoCurrency {
@@ -849,7 +843,6 @@ message CryptoCurrency {
   // Blockchain network
   optional string network = 2;
 }
-*/
 
 // ============================================================================
 // CASH/VOUCHER PAYMENT METHODS - TODO: Not yet supported

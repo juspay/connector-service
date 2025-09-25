@@ -921,6 +921,7 @@ message BrowserInformation {
   optional string accept_header = 9;
   optional string user_agent = 10;
   optional string accept_language = 14;
+  optional string referer = 15;
   
   // Device Information
   optional string ip_address = 8;
@@ -1188,6 +1189,9 @@ message PaymentServiceAuthorizeResponse {
   
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 14; // Raw request from the connector for debugging
 }
 
 // Request message for synchronizing payment status.
@@ -1253,6 +1257,9 @@ message PaymentServiceGetResponse {
 
   // Raw Response
   optional string raw_connector_response = 25; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 29; // Raw request to the connector for debugging
 }
 
 // Request message for voiding a payment.
@@ -1289,6 +1296,9 @@ message PaymentServiceVoidResponse {
 
   // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for capturing a payment.
@@ -1331,6 +1341,9 @@ message PaymentServiceCaptureResponse {
 
   // State Information
   optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for processing a refund.
@@ -1405,6 +1418,9 @@ message RefundResponse {
 
   // Raw Response
   optional string raw_connector_response = 21; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 25; // Raw request to the connector for debugging
 }
 
 // Request message for creating a dispute.
@@ -1450,6 +1466,9 @@ message DisputeResponse {
   
   // Reference
   optional Identifier response_ref_id = 17; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 20; // Raw request to the connector for debugging
 }
 
 // Request message for setting up a mandate.
@@ -1530,6 +1549,9 @@ message PaymentServiceRegisterResponse {
   
   // State Information
   optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
+
+  // Raw Request
+  optional string raw_connector_request = 13; // Raw request to the connector for debugging
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction).
@@ -1587,6 +1609,9 @@ message PaymentServiceRepeatEverythingResponse {
   
   // Raw Response
   optional string raw_connector_response = 7; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 11; // Raw request to the connector for debugging
 }
 
 // Request message for PaymentService.Transform RPC
@@ -1788,6 +1813,9 @@ message DisputeServiceSubmitEvidenceResponse {
   
   // Reference
   optional Identifier response_ref_id = 7; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 10; // Raw request to the connector for debugging
 }
 
 // Request message for retrieving dispute information.
@@ -1919,6 +1947,9 @@ message DisputeDefendResponse {
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for accepting a dispute.
@@ -1944,6 +1975,9 @@ message AcceptDisputeResponse {
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // ============================================================================

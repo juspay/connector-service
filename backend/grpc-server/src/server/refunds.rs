@@ -18,7 +18,6 @@ use grpc_api_types::payments::{
     RefundServiceTransformRequest, RefundServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
-use hyperswitch_masking::ErasedMaskSerialize;
 
 use crate::{
     configs::Config,
@@ -82,7 +81,19 @@ impl RefundService for Refunds {
         &self,
         request: tonic::Request<RefundServiceGetRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status> {
-        self.internal_get(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "RefundService".to_string());
+        utils::grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            common_utils::events::FlowName::Rsync,
+            |request, _metadata_payload| async move { self.internal_get(request).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -112,11 +123,12 @@ impl RefundService for Refunds {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "RefundService".to_string());
         utils::grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
+            common_utils::events::FlowName::IncomingWebhook,
             |request, metadata_payload| async move {
                 let connector = metadata_payload.connector;
                 let connector_auth_details = metadata_payload.connector_auth_type;

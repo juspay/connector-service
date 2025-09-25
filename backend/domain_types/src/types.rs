@@ -70,7 +70,7 @@ use crate::{
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
         PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RawConnectorResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RawConnectorRequestResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
         RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
         SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
         WebhookDetailsResponse,
@@ -116,6 +116,7 @@ pub struct Connectors {
     pub braintree: ConnectorParams,
     pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
+    pub cryptopay: ConnectorParams,
     pub rapyd: ConnectorParams,
 }
 
@@ -477,6 +478,23 @@ impl<
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Crypto(crypto) => {
+                    let crypto_currency = crypto.crypto_currency.ok_or_else( || {
+                        ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "INVALID_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "crypto_currency is required".to_owned(),
+                            error_object: None,
+                        })
+                    })?;
+
+                    Ok(PaymentMethodData::Crypto(
+                        payment_method_data::CryptoData {
+                            pay_currency: crypto_currency.pay_currency,
+                            network: crypto_currency.network,
+                        },
+                    ))
+                }
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -667,6 +685,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         },
                     }
                 }
+                grpc_api_types::payments::payment_method::PaymentMethod::Crypto(_) => Ok(Some(PaymentMethodType::CryptoCurrency)),
             },
             None => Err(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
@@ -1535,6 +1554,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers,
         })
@@ -1596,6 +1616,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -1663,6 +1684,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -1725,6 +1747,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -1764,6 +1787,9 @@ pub fn generate_create_order_response(
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
     let response = match transaction_response {
         Ok(response) => {
             // For successful order creation, return basic success response
@@ -1782,6 +1808,7 @@ pub fn generate_create_order_response(
                 error_code: None,
                 status_code: 200,
                 raw_connector_response,
+                raw_connector_request,
                 response_headers: router_data_v2
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
@@ -1817,6 +1844,7 @@ pub fn generate_create_order_response(
                     .get_connector_response_headers_as_map(),
                 connector_metadata: std::collections::HashMap::new(),
                 raw_connector_response,
+                raw_connector_request,
                 state: None,
             }
         }
@@ -1840,7 +1868,12 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
         .resource_common_data
         .get_connector_response_headers_as_map();
     let grpc_status = grpc_api_types::payments::PaymentStatus::foreign_from(status);
-    let raw_connector_response = router_data_v2.resource_common_data.raw_connector_response;
+    let raw_connector_response = router_data_v2
+        .resource_common_data
+        .get_raw_connector_response();
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
 
     // Create state with access token if available in payment flow data
     let state = router_data_v2
@@ -1934,6 +1967,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                     error_message: None,
                     error_code: None,
                     raw_connector_response,
+                    raw_connector_request,
                     status_code: status_code as u32,
                     response_headers,
                     state,
@@ -1969,6 +2003,7 @@ pub fn generate_payment_authorize_response<T: PaymentMethodDataTypes>(
                 status_code: err.status_code as u32,
                 response_headers,
                 raw_connector_response,
+                raw_connector_request,
                 connector_metadata: std::collections::HashMap::new(),
                 state,
             }
@@ -2129,6 +2164,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -2254,6 +2290,10 @@ pub fn generate_payment_void_response(
             }),
         });
 
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -2286,6 +2326,7 @@ pub fn generate_payment_void_response(
                     response_headers: router_data_v2
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
+                    raw_connector_request,
                     state,
                 })
             }
@@ -2322,6 +2363,7 @@ pub fn generate_payment_void_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 state: None,
+                raw_connector_request,
             })
         }
     }
@@ -2357,6 +2399,10 @@ pub fn generate_payment_sync_response(
                 token_type: token_data.token_type.clone(),
             }),
         });
+
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
 
     match transaction_response {
         Ok(response) => match response {
@@ -2412,6 +2458,7 @@ pub fn generate_payment_sync_response(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    raw_connector_request,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -2463,6 +2510,7 @@ pub fn generate_payment_sync_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 state,
+                raw_connector_request,
             })
         }
     }
@@ -2530,6 +2578,7 @@ impl
                 &value.request_ref_id,
             ),
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2560,6 +2609,7 @@ impl
             refund_id: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2587,6 +2637,7 @@ impl
                 &value.request_ref_id,
             ),
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2617,6 +2668,7 @@ impl
             refund_id: Some(value.refund_id),
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2657,6 +2709,10 @@ pub fn generate_accept_dispute_response(
         .resource_common_data
         .get_connector_response_headers_as_map();
 
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     match dispute_response {
         Ok(response) => {
             let grpc_status =
@@ -2671,6 +2727,7 @@ pub fn generate_accept_dispute_response(
                 response_ref_id: None,
                 status_code: response.status_code as u32,
                 response_headers,
+                raw_connector_request,
             })
         }
         Err(e) => {
@@ -2685,6 +2742,7 @@ pub fn generate_accept_dispute_response(
                 response_ref_id: None,
                 status_code: e.status_code as u32,
                 response_headers,
+                raw_connector_request,
             })
         }
     }
@@ -2707,6 +2765,7 @@ impl ForeignTryFrom<(grpc_api_types::payments::AcceptDisputeRequest, Connectors)
                 &value.request_ref_id,
             ),
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2738,6 +2797,7 @@ impl
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2756,6 +2816,10 @@ pub fn generate_submit_evidence_response(
         .resource_common_data
         .get_connector_response_headers_as_map();
 
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     match dispute_response {
         Ok(response) => {
             let grpc_status =
@@ -2771,6 +2835,7 @@ pub fn generate_submit_evidence_response(
                 response_ref_id: None,
                 status_code: response.status_code as u32,
                 response_headers,
+                raw_connector_request,
             })
         }
         Err(e) => {
@@ -2789,6 +2854,7 @@ pub fn generate_submit_evidence_response(
                 response_ref_id: None,
                 status_code: e.status_code as u32,
                 response_headers,
+                raw_connector_request,
             })
         }
     }
@@ -2817,6 +2883,7 @@ impl
                 &value.request_ref_id,
             ),
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2848,6 +2915,7 @@ impl
             connector_dispute_id: value.dispute_id,
             defense_reason_code: None,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -2860,6 +2928,10 @@ pub fn generate_refund_sync_response(
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
+
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
 
     match refunds_response {
         Ok(response) => {
@@ -2897,6 +2969,7 @@ pub fn generate_refund_sync_response(
                 status_code: response.status_code as u32,
                 response_headers,
                 state: None,
+                raw_connector_request,
             })
         }
         Err(e) => {
@@ -2946,6 +3019,7 @@ pub fn generate_refund_sync_response(
                 status_code: e.status_code as u32,
                 response_headers,
                 state: None,
+                raw_connector_request,
             })
         }
     }
@@ -3011,6 +3085,7 @@ impl ForeignTryFrom<WebhookDetailsResponse> for PaymentServiceGetResponse {
             raw_connector_response: None,
             response_headers,
             state: None,
+            raw_connector_request: None,
         })
     }
 }
@@ -3092,6 +3167,7 @@ impl ForeignTryFrom<RefundWebhookDetailsResponse> for RefundResponse {
             status_code: value.status_code as u32,
             response_headers,
             state: None,
+            raw_connector_request: None,
         })
     }
 }
@@ -3142,6 +3218,7 @@ impl ForeignTryFrom<DisputeWebhookDetailsResponse> for DisputeResponse {
             }),
             status_code: value.status_code as u32,
             response_headers,
+            raw_connector_request: None,
         })
     }
 }
@@ -3369,6 +3446,10 @@ pub fn generate_refund_response(
     // RefundFlowData doesn't have access_token field, so no state to return
     let state = None;
 
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     match refund_response {
         Ok(response) => {
             let status = response.refund_status;
@@ -3401,6 +3482,7 @@ pub fn generate_refund_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 state,
+                raw_connector_request,
             })
         }
         Err(e) => {
@@ -3442,6 +3524,7 @@ pub fn generate_refund_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 state,
+                raw_connector_request,
             })
         }
     }
@@ -3547,6 +3630,7 @@ impl
             connector_http_status_code: None,
             external_latency: None,
             connectors,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -3600,6 +3684,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -3628,6 +3713,10 @@ pub fn generate_payment_capture_response(
                 token_type: token_data.token_type.clone(),
             }),
         });
+
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
 
     match transaction_response {
         Ok(response) => match response {
@@ -3661,6 +3750,7 @@ pub fn generate_payment_capture_response(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    raw_connector_request,
                 })
             }
             _ => Err(report!(ApplicationErrorResponse::InternalServerError(
@@ -3696,6 +3786,7 @@ pub fn generate_payment_capture_response(
                     .resource_common_data
                     .get_connector_response_headers_as_map(),
                 state,
+                raw_connector_request,
             })
         }
     }
@@ -3767,6 +3858,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -3853,6 +3945,7 @@ impl ForeignTryFrom<PaymentServiceRegisterRequest> for SetupMandateRequestData<D
                 os_version: info.os_version,
                 device_model: info.device_model,
                 accept_language: info.accept_language,
+                referer: info.referer,
             }),
             email,
             customer_name: None,
@@ -3954,6 +4047,11 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 token_type: token_data.token_type.clone(),
             }),
         });
+
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     let response = match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -4023,6 +4121,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    raw_connector_request,
                 }
             }
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4053,6 +4152,7 @@ pub fn generate_setup_mandate_response<T: PaymentMethodDataTypes>(
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
             state,
+            raw_connector_request,
         },
     };
     Ok(response)
@@ -4073,6 +4173,7 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
                 &value.request_ref_id,
             ),
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -4104,6 +4205,7 @@ impl
             connector_dispute_id: value.dispute_id,
             defense_reason_code: Some(value.reason_code.unwrap_or_default()),
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
         })
     }
@@ -4133,6 +4235,10 @@ pub fn generate_defend_dispute_response(
 ) -> Result<DisputeDefendResponse, error_stack::Report<ApplicationErrorResponse>> {
     let defend_dispute_response = router_data_v2.response;
 
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     match defend_dispute_response {
         Ok(response) => Ok(DisputeDefendResponse {
             dispute_id: response.connector_dispute_id,
@@ -4145,6 +4251,7 @@ pub fn generate_defend_dispute_response(
             response_headers: router_data_v2
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
+            raw_connector_request,
         }),
         Err(e) => Ok(DisputeDefendResponse {
             dispute_id: e
@@ -4159,6 +4266,7 @@ pub fn generate_defend_dispute_response(
             response_headers: router_data_v2
                 .resource_common_data
                 .get_connector_response_headers_as_map(),
+            raw_connector_request,
         }),
     }
 }
@@ -4452,6 +4560,7 @@ impl ForeignTryFrom<grpc_api_types::payments::BrowserInformation> for BrowserInf
             os_version: value.os_version,
             device_model: value.device_model,
             accept_language: value.accept_language,
+            referer: value.referer,
         })
     }
 }
@@ -4684,6 +4793,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })
@@ -4720,6 +4830,11 @@ pub fn generate_repeat_payment_response(
     let raw_connector_response = router_data_v2
         .resource_common_data
         .get_raw_connector_response();
+
+    let raw_connector_request = router_data_v2
+        .resource_common_data
+        .get_raw_connector_request();
+
     match transaction_response {
         Ok(response) => match response {
             PaymentsResponseData::TransactionResponse {
@@ -4748,6 +4863,7 @@ pub fn generate_repeat_payment_response(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    raw_connector_request,
                 },
             ),
             _ => Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -4784,6 +4900,7 @@ pub fn generate_repeat_payment_response(
                         .resource_common_data
                         .get_connector_response_headers_as_map(),
                     state,
+                    raw_connector_request,
                 },
             )
         }
