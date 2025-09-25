@@ -7,7 +7,6 @@ mod common;
 
 use std::{
     env,
-    fs,
     str::FromStr,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -23,7 +22,6 @@ use grpc_api_types::{
     },
 };
 use hyperswitch_masking::Secret;
-use serde_json::Value;
 use tonic::{transport::Channel, Request};
 use uuid::Uuid;
 
@@ -59,57 +57,14 @@ const TEST_CARD_CVC: &str = "123";
 const TEST_CARD_HOLDER: &str = "Test User";
 const TEST_EMAIL: &str = "customer@example.com";
 
-// Struct to hold credentials from JSON file
-#[derive(Debug)]
-struct NovalnetCredentials {
-    api_key: String,
-    key1: String,
-    api_secret: String,
-}
-
-// Helper function to read Novalnet credentials from JSON file
-fn read_novalnet_credentials_from_json() -> Option<NovalnetCredentials> {
-    // Check if CONNECTOR_AUTH_FILE_PATH environment variable is set
-    let auth_file_path = env::var("CONNECTOR_AUTH_FILE_PATH").ok()?;
-    
-    // Read the JSON file
-    let file_content = fs::read_to_string(&auth_file_path).ok()?;
-    
-    // Parse the JSON
-    let json: Value = serde_json::from_str(&file_content).ok()?;
-    
-    // Navigate to novalnet.connector_account_details
-    let novalnet_details = json
-        .get("novalnet")?
-        .get("connector_account_details")?;
-    
-    // Extract the required fields
-    let api_key = novalnet_details.get("api_key")?.as_str()?.to_string();
-    let key1 = novalnet_details.get("key1")?.as_str()?.to_string();
-    let api_secret = novalnet_details.get("api_secret")?.as_str()?.to_string();
-    
-    Some(NovalnetCredentials {
-        api_key,
-        key1,
-        api_secret,
-    })
-}
-
 fn add_novalnet_metadata<T>(request: &mut Request<T>) {
-    // Try to get credentials from JSON file first, fall back to environment variables
-    let (api_key, key1, api_secret) = if let Some(creds) = read_novalnet_credentials_from_json() {
-        // Use credentials from JSON file
-        (creds.api_key, creds.key1, creds.api_secret)
-    } else {
-        // Fall back to environment variables
-        let api_key = env::var(NOVALNET_API_KEY_ENV)
-            .expect("TEST_NOVALNET_API_KEY environment variable is required when JSON credentials are not available");
-        let key1 = env::var(NOVALNET_KEY1_ENV)
-            .unwrap_or_else(|_| panic!("Environment variable {NOVALNET_KEY1_ENV} must be set when JSON credentials are not available"));
-        let api_secret = env::var(NOVALNET_API_SECRET_ENV)
-            .unwrap_or_else(|_| panic!("Environment variable {NOVALNET_API_SECRET_ENV} must be set when JSON credentials are not available"));
-        (api_key, key1, api_secret)
-    };
+    // Get API credentials from environment variables - throw error if not set
+    let api_key = env::var(NOVALNET_API_KEY_ENV)
+        .expect("TEST_NOVALNET_API_KEY environment variable is required");
+    let key1 = env::var(NOVALNET_KEY1_ENV)
+        .unwrap_or_else(|_| panic!("Environment variable {NOVALNET_KEY1_ENV} must be set"));
+    let api_secret = env::var(NOVALNET_API_SECRET_ENV)
+        .unwrap_or_else(|_| panic!("Environment variable {NOVALNET_API_SECRET_ENV} must be set"));
 
     request.metadata_mut().append(
         "x-connector",
@@ -207,48 +162,6 @@ async fn test_health() {
             grpc_api_types::health_check::health_check_response::ServingStatus::Serving
         );
     });
-}
-
-// Test for credential reading functionality
-#[test]
-fn test_novalnet_credential_reading() {
-    // Test the JSON credential reading function with mock environment variable
-    let test_json_content = r#"
-    {
-        "novalnet": {
-            "connector_account_details": {
-                "auth_type": "SignatureKey",
-                "api_key": "test_api_key_from_json",
-                "key1": "test_key1_from_json",
-                "api_secret": "test_api_secret_from_json"
-            }
-        }
-    }
-    "#;
-    
-    // Create a temporary file
-    let temp_file = env::temp_dir().join("test_creds.json");
-    fs::write(&temp_file, test_json_content).expect("Failed to write test JSON file");
-    
-    // Set the environment variable to point to our test file
-    env::set_var("CONNECTOR_AUTH_FILE_PATH", &temp_file);
-    
-    // Test reading credentials
-    let creds = read_novalnet_credentials_from_json();
-    assert!(creds.is_some(), "Should be able to read credentials from JSON");
-    
-    let creds = creds.unwrap();
-    assert_eq!(creds.api_key, "test_api_key_from_json");
-    assert_eq!(creds.key1, "test_key1_from_json");
-    assert_eq!(creds.api_secret, "test_api_secret_from_json");
-    
-    // Clean up
-    fs::remove_file(&temp_file).ok();
-    env::remove_var("CONNECTOR_AUTH_FILE_PATH");
-    
-    // Test fallback when environment variable is not set
-    let creds_none = read_novalnet_credentials_from_json();
-    assert!(creds_none.is_none(), "Should return None when CONNECTOR_AUTH_FILE_PATH is not set");
 }
 
 // Test payment authorization with auto capture
