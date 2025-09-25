@@ -74,6 +74,8 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: Swatinem/rust-cache@v2.7.8
+        with:
+          cache-on-failure: true
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
