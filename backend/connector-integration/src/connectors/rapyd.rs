@@ -149,13 +149,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        println!("Rapyd build_error_response called:");
-        println!("  Status Code: {}", res.status_code);
-        println!(
-            "  Response Body: {}",
-            String::from_utf8_lossy(&res.response)
-        );
-
         let response: RapydPaymentsResponse = res
             .response
             .parse_struct("ErrorResponse")
@@ -303,11 +296,6 @@ macros::create_all_prerequisites!(
                 ("timestamp".to_string(), timestamp.to_string().into()),
                 ("signature".to_string(), signature.into()),
             ];
-
-            println!("Rapyd Headers being sent:");
-            for (name, _value) in &headers {
-                println!("  {}: [VALUE_PRESENT]", name);
-            }
             Ok(headers)
         }
 
@@ -345,22 +333,10 @@ macros::create_all_prerequisites!(
                 body
             );
 
-            // Debug logging
-            println!("Rapyd Signature Debug:");
-            println!("  Method: {}", http_method);
-            println!("  URL Path: {}", url_path);
-            println!("  Salt: {}", salt);
-            println!("  Timestamp: {}", timestamp);
-            println!("  Access Key: {}", access_key.peek());
-            println!("  Body: {}", body);
-            println!("  To Sign: {}", to_sign);
-
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
             let tag = ring::hmac::sign(&key, to_sign.as_bytes());
             let hmac_sign = hex::encode(tag);
             let signature_value = BASE64_ENGINE.encode(hmac_sign);
-
-            println!("  Signature: {}", signature_value);
 
             Ok(signature_value)
         }
@@ -497,10 +473,6 @@ macros::macro_connector_implementation!(
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
-            println!("Void URL debug:");
-            println!("  Full URL: {}", url);
-            println!("  Base URL: {}", self.connector_base_url_payments(req));
-            println!("  URL Path: {}", url_path);
             let body = self.get_request_body(req)?
                 .map(|content| {
                     let raw_body = content.get_inner_value().expose();

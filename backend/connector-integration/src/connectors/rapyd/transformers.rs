@@ -146,11 +146,6 @@ impl<F>
             RouterDataV2<F, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        println!("Rapyd Void Response Debug:");
-        println!("  HTTP Code: {}", item.http_code);
-        println!("  Response Status: {:?}", item.response.status);
-        println!("  Response Data: {:?}", item.response.data);
-
         let (status, response) = match &item.response.data {
             Some(data) => {
                 let attempt_status =
@@ -198,7 +193,6 @@ impl<F>
                 // For void operations, if HTTP status indicates success, treat as voided
                 // Rapyd DELETE operations might not return data field but still be successful
                 if item.http_code >= 200 && item.http_code < 300 {
-                    println!("  Void operation successful based on HTTP status");
                     (
                         common_enums::AttemptStatus::Voided,
                         Ok(PaymentsResponseData::TransactionResponse {
@@ -215,7 +209,6 @@ impl<F>
                         }),
                     )
                 } else {
-                    println!("  Void operation failed based on HTTP status");
                     (
                         common_enums::AttemptStatus::Failure,
                         Err(ErrorResponse {
