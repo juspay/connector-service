@@ -69,6 +69,7 @@ mod tests {
                     connector_response_headers: None,
                     raw_connector_response: None,
                     vault_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
@@ -239,6 +240,7 @@ mod tests {
                     connector_response_headers: None,
                     raw_connector_response: None,
                     vault_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: Secret::new(api_key),
