@@ -46,7 +46,7 @@ const TEST_EMAIL: &str = "customer@example.com";
 fn get_unique_amount() -> i64 {
     // Use timestamp to create unique amounts between 1000-9999 cents ($10-$99.99)
     let timestamp = get_timestamp();
-    1000 + (timestamp % 9000) as i64
+    1000 + i64::try_from(timestamp % 9000).unwrap_or(0)
 }
 
 // Helper function to get current timestamp with microseconds for uniqueness
@@ -147,7 +147,7 @@ fn extract_request_ref_id(response: &PaymentServiceAuthorizeResponse) -> String 
 // Helper function to create browser info with IP address (required for Helcim)
 fn create_test_browser_info() -> BrowserInformation {
     BrowserInformation {
-        ip_address: Some("192.168.1.1".to_string().into()),
+        ip_address: Some("192.168.1.1".to_string()),
         user_agent: Some(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36".to_string(),
         ),
@@ -161,6 +161,7 @@ fn create_test_browser_info() -> BrowserInformation {
         time_zone_offset_minutes: Some(-300), // EST timezone offset
         java_enabled: Some(false),
         java_script_enabled: Some(true),
+        referer: Some("https://example.com".to_string()),
         os_type: None,
         os_version: None,
         device_model: None,
@@ -178,9 +179,9 @@ fn create_test_billing_address() -> PaymentAddress {
         billing_address: Some(Address {
             first_name: Some("John".to_string().into()),
             last_name: Some("Doe".to_string().into()),
-            phone_number: Some(format!("123456{:04}", unique_suffix).into()),
+            phone_number: Some(format!("123456{unique_suffix:04}").into()),
             phone_country_code: Some("+1".to_string()),
-            email: Some(format!("customer{}@example.com", unique_suffix).into()),
+            email: Some(format!("customer{unique_suffix}@example.com").into()),
             line1: Some(format!("{} Main St", 100 + unique_suffix).into()),
             line2: Some("Apt 4B".to_string().into()),
             line3: None,
