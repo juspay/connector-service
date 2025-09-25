@@ -16,12 +16,12 @@ buffer_limit = 100000
 
 [server]
 host = "127.0.0.1"
-port = 8006
+port = 8000
 type = "grpc"
 
 [metrics]
 host = "127.0.0.1"
-port = 8086
+port = 8080
 
 [proxy]
 # http_url = "http proxy url"                   # Proxy all HTTP traffic via this proxy
