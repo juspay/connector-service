@@ -582,7 +582,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize + Def
                     transformers::TransactionStatus::Settled => common_enums::AttemptStatus::Charged,
                     transformers::TransactionStatus::Canceled => common_enums::AttemptStatus::Voided,
                     transformers::TransactionStatus::Failed => common_enums::AttemptStatus::Failure,
-                    transformers::TransactionStatus::Initialized => common_enums::AttemptStatus::AuthenticationPending,
+                    transformers::TransactionStatus::Initialized => common_enums::AttemptStatus::Authorized,
                     transformers::TransactionStatus::Authenticated => common_enums::AttemptStatus::Authorized,
                     transformers::TransactionStatus::Transmitted => common_enums::AttemptStatus::Pending,
                     transformers::TransactionStatus::ChallengeOngoing => common_enums::AttemptStatus::AuthenticationPending,
@@ -737,8 +737,10 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
             payment_method_data: std::marker::PhantomData::<domain_types::payment_method_data::DefaultPCIHolder>,
         };
         let datatrans_req = transformers::DataPaymentCaptureRequest::try_from(datatrans_router_data)?;
+        println!("datatrans: Capture request object: {:?}", datatrans_req);
         let body = common_utils::RequestContent::Json(Box::new(datatrans_req));
         println!("datatrans: Capture request body created successfully");
+        println!("datatrans: Capture request body type: {:?}", std::any::type_name_of_val(&body));
         Ok(Some(body))
     }
 
@@ -769,8 +771,11 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         
         println!("datatrans: Final capture request built successfully: {:?}", request.method);
         println!("datatrans: *** CAPTURE REQUEST READY TO SEND ***");
+        println!("datatrans: *** REQUEST BUILDING COMPLETED - RETURNING TO FRAMEWORK ***");
         
-        Ok(Some(request))
+        let result = Ok(Some(request));
+        println!("datatrans: *** RETURNING RESULT: {:?} ***", result.is_ok());
+        result
     }
 
     fn handle_response_v2(
@@ -780,6 +785,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         res: Response,
     ) -> CustomResult<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, errors::ConnectorError> {
         println!("datatrans: *** CAPTURE RESPONSE HANDLER CALLED ***");
+        println!("datatrans: *** THIS LOG SHOULD APPEAR IF HANDLER IS CALLED ***");
         println!("datatrans: Handling capture response with status: {}", res.status_code);
         println!("datatrans: Capture response body: {}", String::from_utf8_lossy(&res.response));
         
