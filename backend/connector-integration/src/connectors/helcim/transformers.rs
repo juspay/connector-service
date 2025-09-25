@@ -13,7 +13,7 @@ use domain_types::{
     router_request_types::SyncRequestType,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{PeekInterface, Secret};
+use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
 use crate::{connectors::helcim::HelcimRouterData, types::ResponseRouterData};
@@ -150,11 +150,8 @@ impl<
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => HelcimCard {
-                card_expiry: Secret::new(format!(
-                    "{}{}",
-                    card.card_exp_month.peek(),
-                    &card.card_exp_year.peek()[2..]
-                )),
+                card_expiry: card
+                    .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
                 card_number: card.card_number.clone(),
                 card_c_v_v: card.card_cvc.clone(),
             },
@@ -624,11 +621,8 @@ impl<
     ) -> Result<Self, Self::Error> {
         let card_data = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(card) => HelcimCard {
-                card_expiry: Secret::new(format!(
-                    "{}{}",
-                    card.card_exp_month.peek(),
-                    &card.card_exp_year.peek()[2..]
-                )),
+                card_expiry: card
+                    .get_card_expiry_month_year_2_digit_with_delimiter("".to_string())?,
                 card_number: card.card_number.clone(),
                 card_c_v_v: card.card_cvc.clone(),
             },
