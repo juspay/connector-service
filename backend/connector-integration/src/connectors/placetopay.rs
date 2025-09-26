@@ -7,18 +7,19 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, ResponseId, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData, SupportedPaymentMethodsExt,
+        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -226,7 +227,20 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Placetopay<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Placetopay<T>
+{
+}
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Placetopay<T>
+{
+}
 // Finally implement ConnectorServiceTrait
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Placetopay<T>
@@ -589,7 +603,35 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Placetopay<T>
 {
 }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Placetopay<T>
+{
+}
 
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Placetopay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Placetopay<T>
+{
+}
 // SourceVerification implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -739,115 +781,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Placetopay<T>
 {
 }
-
-// Connector Specifications
-use common_enums::AttemptStatus;
-use common_enums::{CaptureMethod, CardNetwork, EventClass, PaymentMethod, PaymentMethodType};
-use common_utils::pii::SecretSerdeValue;
-use domain_types::connector_types::ConnectorSpecifications;
-use domain_types::payment_method_data::DefaultPCIHolder;
-use domain_types::types::{
-    CardSpecificFeatures, ConnectorInfo, FeatureStatus, PaymentConnectorCategory,
-    PaymentMethodDetails, PaymentMethodSpecificFeatures, SupportedPaymentMethods,
-};
-use interfaces::connector_types::ConnectorValidation;
-use std::sync::LazyLock;
-
-static PLACETOPAY_SUPPORTED_PAYMENT_METHODS: LazyLock<SupportedPaymentMethods> =
-    LazyLock::new(|| {
-        let placetopay_supported_capture_methods =
-            vec![CaptureMethod::Automatic, CaptureMethod::Manual];
-
-        let placetopay_supported_card_network = vec![
-            CardNetwork::AmericanExpress,
-            CardNetwork::DinersClub,
-            CardNetwork::Discover,
-            CardNetwork::JCB,
-            CardNetwork::Maestro,
-            CardNetwork::Mastercard,
-            CardNetwork::Visa,
-        ];
-
-        let mut placetopay_supported_payment_methods = SupportedPaymentMethods::new();
-
-        placetopay_supported_payment_methods.add(
-            PaymentMethod::Card,
-            PaymentMethodType::Credit,
-            PaymentMethodDetails {
-                mandates: FeatureStatus::NotSupported,
-                refunds: FeatureStatus::Supported,
-                supported_capture_methods: placetopay_supported_capture_methods.clone(),
-                specific_features: Some(PaymentMethodSpecificFeatures::Card(
-                    CardSpecificFeatures {
-                        three_ds: FeatureStatus::NotSupported,
-                        no_three_ds: FeatureStatus::Supported,
-                        supported_card_networks: placetopay_supported_card_network.clone(),
-                    },
-                )),
-            },
-        );
-
-        placetopay_supported_payment_methods.add(
-            PaymentMethod::Card,
-            PaymentMethodType::Debit,
-            PaymentMethodDetails {
-                mandates: FeatureStatus::NotSupported,
-                refunds: FeatureStatus::Supported,
-                supported_capture_methods: placetopay_supported_capture_methods.clone(),
-                specific_features: Some(PaymentMethodSpecificFeatures::Card(
-                    CardSpecificFeatures {
-                        three_ds: FeatureStatus::NotSupported,
-                        no_three_ds: FeatureStatus::Supported,
-                        supported_card_networks: placetopay_supported_card_network.clone(),
-                    },
-                )),
-            },
-        );
-
-        placetopay_supported_payment_methods
-    });
-
-static PLACETOPAY_CONNECTOR_INFO: ConnectorInfo = ConnectorInfo {
-    display_name: "PlaceToPay",
-    description: "PlaceToPay is a Latin American payment gateway that provides secure online payment processing services for businesses across the region.",
-    connector_type: PaymentConnectorCategory::PaymentGateway,
-};
-
-static PLACETOPAY_SUPPORTED_WEBHOOK_FLOWS: &[EventClass] =
-    &[EventClass::Payments, EventClass::Refunds];
-
-impl ConnectorSpecifications for Placetopay<DefaultPCIHolder> {
-    fn get_connector_about(&self) -> Option<&'static ConnectorInfo> {
-        Some(&PLACETOPAY_CONNECTOR_INFO)
-    }
-
-    fn get_supported_payment_methods(&self) -> Option<&'static SupportedPaymentMethods> {
-        Some(&PLACETOPAY_SUPPORTED_PAYMENT_METHODS)
-    }
-
-    fn get_supported_webhook_flows(&self) -> Option<&'static [EventClass]> {
-        Some(PLACETOPAY_SUPPORTED_WEBHOOK_FLOWS)
-    }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Placetopay<T>
+{
 }
 
-impl ConnectorValidation for Placetopay<DefaultPCIHolder> {
-    fn validate_psync_reference_id(
-        &self,
-        data: &PaymentsSyncData,
-        _is_three_ds: bool,
-        _status: AttemptStatus,
-        _connector_meta_data: Option<SecretSerdeValue>,
-    ) -> CustomResult<(), errors::ConnectorError> {
-        if !matches!(data.connector_transaction_id, ResponseId::NoResponseId) {
-            return Ok(());
-        }
-        Err(errors::ConnectorError::MissingRequiredField {
-            field_name: "connector_transaction_id",
-        }
-        .into())
-    }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Placetopay<T>
+{
+}
 
-    fn is_webhook_source_verification_mandatory(&self) -> bool {
-        false
-    }
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Placetopay<T>
+{
 }
