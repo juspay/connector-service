@@ -118,6 +118,7 @@ pub struct Connectors {
     pub volt: ConnectorParams,
     pub bluecode: ConnectorParams,
     pub cryptopay: ConnectorParams,
+    pub helcim: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -468,6 +469,13 @@ impl<
                                 country: open_banking_uk.country.and_then(|c| CountryAlpha2::from_str(&c).ok()),
                             }))
                         }
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFpx(fpx)) => {
+                            Ok(PaymentMethodData::BankRedirect(payment_method_data::BankRedirectData::OnlineBankingFpx{
+                                issuer: common_enums::BankNames::foreign_try_from(
+                                    fpx.issuer(),
+                                )?,
+                            }))
+                        }
                         _ => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -476,6 +484,19 @@ impl<
                                 error_object: None,
                             })))
                         },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MobilePayment(mobile_payment_type) => {
+                    match mobile_payment_type.mobile_payment_type {
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_)) => {
+                            Ok(PaymentMethodData::RealTimePayment(Box::new(payment_method_data::RealTimePaymentData::DuitNow {  })))
+                        }
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "This mobile payment type is not yet supported".to_owned(),
+                            error_object: None,
+                        })))
                     }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Crypto(crypto) => {
@@ -675,6 +696,9 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                         Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OpenBankingUk(_)) => {
                             Ok(Some(PaymentMethodType::OpenBankingUk))
                         },
+                        Some(grpc_api_types::payments::online_banking_payment_method_type::OnlineBankingType::OnlineBankingFpx(_))=>{
+                            Ok(Some(PaymentMethodType::OnlineBankingFpx))
+                        }
                         _ => {
                             Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
                                 sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
@@ -683,6 +707,19 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentMethod> for Option<PaymentM
                                 error_object: None,
                             })))
                         },
+                    }
+                }
+                grpc_api_types::payments::payment_method::PaymentMethod::MobilePayment(mobile_payment_type) => {
+                    match mobile_payment_type.mobile_payment_type {
+                        Some(grpc_api_types::payments::mobile_payment_method_type::MobilePaymentType::DuitNow(_)) =>{
+                            Ok(Some(PaymentMethodType::DuitNow))
+                        }
+                        _ => Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                            sub_code: "UNSUPPORTED_PAYMENT_METHOD".to_owned(),
+                            error_identifier: 400,
+                            error_message: "This mobile payment type is not yet supported".to_owned(),
+                            error_object: None,
+                        })))
                     }
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::Crypto(_) => Ok(Some(PaymentMethodType::CryptoCurrency)),
@@ -1084,7 +1121,7 @@ impl<
             complete_authorize_url: None,
             setup_future_usage: None,
             mandate_id: None,
-            off_session: None,
+            off_session: value.off_session,
             order_category: value.order_category,
             session_token: None,
             access_token: value.access_token,
@@ -4902,6 +4939,219 @@ pub fn generate_repeat_payment_response(
                     raw_connector_request,
                 },
             )
+        }
+    }
+}
+
+impl ForeignTryFrom<grpc_api_types::payments::BankNames> for common_enums::BankNames {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: grpc_api_types::payments::BankNames,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        match value {
+            grpc_api_types::payments::BankNames::Unspecified => {
+                Err(report!(ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "UNSPECIFIED_BANK_NAME".to_owned(),
+                    error_identifier: 401,
+                    error_message: "Bank name must be specified".to_owned(),
+                    error_object: None,
+                })))
+            }
+            grpc_api_types::payments::BankNames::AmericanExpress => Ok(Self::AmericanExpress),
+            grpc_api_types::payments::BankNames::AffinBank => Ok(Self::AffinBank),
+            grpc_api_types::payments::BankNames::AgroBank => Ok(Self::AgroBank),
+            grpc_api_types::payments::BankNames::AllianceBank => Ok(Self::AllianceBank),
+            grpc_api_types::payments::BankNames::AmBank => Ok(Self::AmBank),
+            grpc_api_types::payments::BankNames::BankOfAmerica => Ok(Self::BankOfAmerica),
+            grpc_api_types::payments::BankNames::BankOfChina => Ok(Self::BankOfChina),
+            grpc_api_types::payments::BankNames::BankIslam => Ok(Self::BankIslam),
+            grpc_api_types::payments::BankNames::BankMuamalat => Ok(Self::BankMuamalat),
+            grpc_api_types::payments::BankNames::BankRakyat => Ok(Self::BankRakyat),
+            grpc_api_types::payments::BankNames::BankSimpananNasional => {
+                Ok(Self::BankSimpananNasional)
+            }
+            grpc_api_types::payments::BankNames::Barclays => Ok(Self::Barclays),
+            grpc_api_types::payments::BankNames::BlikPsp => Ok(Self::BlikPSP),
+            grpc_api_types::payments::BankNames::CapitalOne => Ok(Self::CapitalOne),
+            grpc_api_types::payments::BankNames::Chase => Ok(Self::Chase),
+            grpc_api_types::payments::BankNames::Citi => Ok(Self::Citi),
+            grpc_api_types::payments::BankNames::CimbBank => Ok(Self::CimbBank),
+            grpc_api_types::payments::BankNames::Discover => Ok(Self::Discover),
+            grpc_api_types::payments::BankNames::NavyFederalCreditUnion => {
+                Ok(Self::NavyFederalCreditUnion)
+            }
+            grpc_api_types::payments::BankNames::PentagonFederalCreditUnion => {
+                Ok(Self::PentagonFederalCreditUnion)
+            }
+            grpc_api_types::payments::BankNames::SynchronyBank => Ok(Self::SynchronyBank),
+            grpc_api_types::payments::BankNames::WellsFargo => Ok(Self::WellsFargo),
+            grpc_api_types::payments::BankNames::AbnAmro => Ok(Self::AbnAmro),
+            grpc_api_types::payments::BankNames::AsnBank => Ok(Self::AsnBank),
+            grpc_api_types::payments::BankNames::Bunq => Ok(Self::Bunq),
+            grpc_api_types::payments::BankNames::Handelsbanken => Ok(Self::Handelsbanken),
+            grpc_api_types::payments::BankNames::HongLeongBank => Ok(Self::HongLeongBank),
+            grpc_api_types::payments::BankNames::HsbcBank => Ok(Self::HsbcBank),
+            grpc_api_types::payments::BankNames::Ing => Ok(Self::Ing),
+            grpc_api_types::payments::BankNames::Knab => Ok(Self::Knab),
+            grpc_api_types::payments::BankNames::KuwaitFinanceHouse => Ok(Self::KuwaitFinanceHouse),
+            grpc_api_types::payments::BankNames::Moneyou => Ok(Self::Moneyou),
+            grpc_api_types::payments::BankNames::Rabobank => Ok(Self::Rabobank),
+            grpc_api_types::payments::BankNames::Regiobank => Ok(Self::Regiobank),
+            grpc_api_types::payments::BankNames::Revolut => Ok(Self::Revolut),
+            grpc_api_types::payments::BankNames::SnsBank => Ok(Self::SnsBank),
+            grpc_api_types::payments::BankNames::TriodosBank => Ok(Self::TriodosBank),
+            grpc_api_types::payments::BankNames::VanLanschot => Ok(Self::VanLanschot),
+            grpc_api_types::payments::BankNames::ArzteUndApothekerBank => {
+                Ok(Self::ArzteUndApothekerBank)
+            }
+            grpc_api_types::payments::BankNames::AustrianAnadiBankAg => {
+                Ok(Self::AustrianAnadiBankAg)
+            }
+            grpc_api_types::payments::BankNames::BankAustria => Ok(Self::BankAustria),
+            grpc_api_types::payments::BankNames::Bank99Ag => Ok(Self::Bank99Ag),
+            grpc_api_types::payments::BankNames::BankhausCarlSpangler => {
+                Ok(Self::BankhausCarlSpangler)
+            }
+            grpc_api_types::payments::BankNames::BankhausSchelhammerUndSchatteraAg => {
+                Ok(Self::BankhausSchelhammerUndSchatteraAg)
+            }
+            grpc_api_types::payments::BankNames::BankMillennium => Ok(Self::BankMillennium),
+            grpc_api_types::payments::BankNames::BawagPskAg => Ok(Self::BawagPskAg),
+            grpc_api_types::payments::BankNames::BksBankAg => Ok(Self::BksBankAg),
+            grpc_api_types::payments::BankNames::BrullKallmusBankAg => Ok(Self::BrullKallmusBankAg),
+            grpc_api_types::payments::BankNames::BtvVierLanderBank => Ok(Self::BtvVierLanderBank),
+            grpc_api_types::payments::BankNames::CapitalBankGraweGruppeAg => {
+                Ok(Self::CapitalBankGraweGruppeAg)
+            }
+            grpc_api_types::payments::BankNames::CeskaSporitelna => Ok(Self::CeskaSporitelna),
+            grpc_api_types::payments::BankNames::Dolomitenbank => Ok(Self::Dolomitenbank),
+            grpc_api_types::payments::BankNames::EasybankAg => Ok(Self::EasybankAg),
+            grpc_api_types::payments::BankNames::EPlatbyVub => Ok(Self::EPlatbyVUB),
+            grpc_api_types::payments::BankNames::ErsteBankUndSparkassen => {
+                Ok(Self::ErsteBankUndSparkassen)
+            }
+            grpc_api_types::payments::BankNames::FrieslandBank => Ok(Self::FrieslandBank),
+            grpc_api_types::payments::BankNames::HypoAlpeadriabankInternationalAg => {
+                Ok(Self::HypoAlpeadriabankInternationalAg)
+            }
+            grpc_api_types::payments::BankNames::HypoNoeLbFurNiederosterreichUWien => {
+                Ok(Self::HypoNoeLbFurNiederosterreichUWien)
+            }
+            grpc_api_types::payments::BankNames::HypoOberosterreichSalzburgSteiermark => {
+                Ok(Self::HypoOberosterreichSalzburgSteiermark)
+            }
+            grpc_api_types::payments::BankNames::HypoTirolBankAg => Ok(Self::HypoTirolBankAg),
+            grpc_api_types::payments::BankNames::HypoVorarlbergBankAg => {
+                Ok(Self::HypoVorarlbergBankAg)
+            }
+            grpc_api_types::payments::BankNames::HypoBankBurgenlandAktiengesellschaft => {
+                Ok(Self::HypoBankBurgenlandAktiengesellschaft)
+            }
+            grpc_api_types::payments::BankNames::KomercniBanka => Ok(Self::KomercniBanka),
+            grpc_api_types::payments::BankNames::MBank => Ok(Self::MBank),
+            grpc_api_types::payments::BankNames::MarchfelderBank => Ok(Self::MarchfelderBank),
+            grpc_api_types::payments::BankNames::Maybank => Ok(Self::Maybank),
+            grpc_api_types::payments::BankNames::OberbankAg => Ok(Self::OberbankAg),
+            grpc_api_types::payments::BankNames::OsterreichischeArzteUndApothekerbank => {
+                Ok(Self::OsterreichischeArzteUndApothekerbank)
+            }
+            grpc_api_types::payments::BankNames::OcbcBank => Ok(Self::OcbcBank),
+            grpc_api_types::payments::BankNames::PayWithIng => Ok(Self::PayWithING),
+            grpc_api_types::payments::BankNames::PlaceZipko => Ok(Self::PlaceZIPKO),
+            grpc_api_types::payments::BankNames::PlatnoscOnlineKartaPlatnicza => {
+                Ok(Self::PlatnoscOnlineKartaPlatnicza)
+            }
+            grpc_api_types::payments::BankNames::PosojilnicaBankEGen => {
+                Ok(Self::PosojilnicaBankEGen)
+            }
+            grpc_api_types::payments::BankNames::PostovaBanka => Ok(Self::PostovaBanka),
+            grpc_api_types::payments::BankNames::PublicBank => Ok(Self::PublicBank),
+            grpc_api_types::payments::BankNames::RaiffeisenBankengruppeOsterreich => {
+                Ok(Self::RaiffeisenBankengruppeOsterreich)
+            }
+            grpc_api_types::payments::BankNames::RhbBank => Ok(Self::RhbBank),
+            grpc_api_types::payments::BankNames::SchelhammerCapitalBankAg => {
+                Ok(Self::SchelhammerCapitalBankAg)
+            }
+            grpc_api_types::payments::BankNames::StandardCharteredBank => {
+                Ok(Self::StandardCharteredBank)
+            }
+            grpc_api_types::payments::BankNames::SchoellerbankAg => Ok(Self::SchoellerbankAg),
+            grpc_api_types::payments::BankNames::SpardaBankWien => Ok(Self::SpardaBankWien),
+            grpc_api_types::payments::BankNames::SporoPay => Ok(Self::SporoPay),
+            grpc_api_types::payments::BankNames::SantanderPrzelew24 => Ok(Self::SantanderPrzelew24),
+            grpc_api_types::payments::BankNames::TatraPay => Ok(Self::TatraPay),
+            grpc_api_types::payments::BankNames::Viamo => Ok(Self::Viamo),
+            grpc_api_types::payments::BankNames::VolksbankGruppe => Ok(Self::VolksbankGruppe),
+            grpc_api_types::payments::BankNames::VolkskreditbankAg => Ok(Self::VolkskreditbankAg),
+            grpc_api_types::payments::BankNames::VrBankBraunau => Ok(Self::VrBankBraunau),
+            grpc_api_types::payments::BankNames::UobBank => Ok(Self::UobBank),
+            grpc_api_types::payments::BankNames::PayWithAliorBank => Ok(Self::PayWithAliorBank),
+            grpc_api_types::payments::BankNames::BankiSpoldzielcze => Ok(Self::BankiSpoldzielcze),
+            grpc_api_types::payments::BankNames::PayWithInteligo => Ok(Self::PayWithInteligo),
+            grpc_api_types::payments::BankNames::BnpParibasPoland => Ok(Self::BNPParibasPoland),
+            grpc_api_types::payments::BankNames::BankNowySa => Ok(Self::BankNowySA),
+            grpc_api_types::payments::BankNames::CreditAgricole => Ok(Self::CreditAgricole),
+            grpc_api_types::payments::BankNames::PayWithBos => Ok(Self::PayWithBOS),
+            grpc_api_types::payments::BankNames::PayWithCitiHandlowy => {
+                Ok(Self::PayWithCitiHandlowy)
+            }
+            grpc_api_types::payments::BankNames::PayWithPlusBank => Ok(Self::PayWithPlusBank),
+            grpc_api_types::payments::BankNames::ToyotaBank => Ok(Self::ToyotaBank),
+            grpc_api_types::payments::BankNames::VeloBank => Ok(Self::VeloBank),
+            grpc_api_types::payments::BankNames::ETransferPocztowy24 => {
+                Ok(Self::ETransferPocztowy24)
+            }
+            grpc_api_types::payments::BankNames::PlusBank => Ok(Self::PlusBank),
+            grpc_api_types::payments::BankNames::BankiSpbdzielcze => Ok(Self::BankiSpbdzielcze),
+            grpc_api_types::payments::BankNames::BankNowyBfgSa => Ok(Self::BankNowyBfgSa),
+            grpc_api_types::payments::BankNames::GetinBank => Ok(Self::GetinBank),
+            grpc_api_types::payments::BankNames::BlikPoland => Ok(Self::Blik),
+            grpc_api_types::payments::BankNames::NoblePay => Ok(Self::NoblePay),
+            grpc_api_types::payments::BankNames::IdeaBank => Ok(Self::IdeaBank),
+            grpc_api_types::payments::BankNames::EnveloBank => Ok(Self::EnveloBank),
+            grpc_api_types::payments::BankNames::NestPrzelew => Ok(Self::NestPrzelew),
+            grpc_api_types::payments::BankNames::MbankMtransfer => Ok(Self::MbankMtransfer),
+            grpc_api_types::payments::BankNames::Inteligo => Ok(Self::Inteligo),
+            grpc_api_types::payments::BankNames::PbacZIpko => Ok(Self::PbacZIpko),
+            grpc_api_types::payments::BankNames::BnpParibas => Ok(Self::BnpParibas),
+            grpc_api_types::payments::BankNames::BankPekaoSa => Ok(Self::BankPekaoSa),
+            grpc_api_types::payments::BankNames::VolkswagenBank => Ok(Self::VolkswagenBank),
+            grpc_api_types::payments::BankNames::AliorBank => Ok(Self::AliorBank),
+            grpc_api_types::payments::BankNames::Boz => Ok(Self::Boz),
+            grpc_api_types::payments::BankNames::BangkokBank => Ok(Self::BangkokBank),
+            grpc_api_types::payments::BankNames::KrungsriBank => Ok(Self::KrungsriBank),
+            grpc_api_types::payments::BankNames::KrungThaiBank => Ok(Self::KrungThaiBank),
+            grpc_api_types::payments::BankNames::TheSiamCommercialBank => {
+                Ok(Self::TheSiamCommercialBank)
+            }
+            grpc_api_types::payments::BankNames::KasikornBank => Ok(Self::KasikornBank),
+            grpc_api_types::payments::BankNames::OpenBankSuccess => Ok(Self::OpenBankSuccess),
+            grpc_api_types::payments::BankNames::OpenBankFailure => Ok(Self::OpenBankFailure),
+            grpc_api_types::payments::BankNames::OpenBankCancelled => Ok(Self::OpenBankCancelled),
+            grpc_api_types::payments::BankNames::Aib => Ok(Self::Aib),
+            grpc_api_types::payments::BankNames::BankOfScotland => Ok(Self::BankOfScotland),
+            grpc_api_types::payments::BankNames::DanskeBank => Ok(Self::DanskeBank),
+            grpc_api_types::payments::BankNames::FirstDirect => Ok(Self::FirstDirect),
+            grpc_api_types::payments::BankNames::FirstTrust => Ok(Self::FirstTrust),
+            grpc_api_types::payments::BankNames::Halifax => Ok(Self::Halifax),
+            grpc_api_types::payments::BankNames::Lloyds => Ok(Self::Lloyds),
+            grpc_api_types::payments::BankNames::Monzo => Ok(Self::Monzo),
+            grpc_api_types::payments::BankNames::NatWest => Ok(Self::NatWest),
+            grpc_api_types::payments::BankNames::NationwideBank => Ok(Self::NationwideBank),
+            grpc_api_types::payments::BankNames::RoyalBankOfScotland => {
+                Ok(Self::RoyalBankOfScotland)
+            }
+            grpc_api_types::payments::BankNames::Starling => Ok(Self::Starling),
+            grpc_api_types::payments::BankNames::TsbBank => Ok(Self::TsbBank),
+            grpc_api_types::payments::BankNames::TescoBank => Ok(Self::TescoBank),
+            grpc_api_types::payments::BankNames::UlsterBank => Ok(Self::UlsterBank),
+            grpc_api_types::payments::BankNames::Yoursafe => Ok(Self::Yoursafe),
+            grpc_api_types::payments::BankNames::N26 => Ok(Self::N26),
+            grpc_api_types::payments::BankNames::NationaleNederlanden => {
+                Ok(Self::NationaleNederlanden)
+            }
         }
     }
 }

@@ -4,6 +4,20 @@ All notable changes to Connector Service will be documented here.
 
 - - -
 
+## 2025.09.25.1
+
+### Features
+
+- **connector:** [HELCIM] Connector Integration ([#173](https://github.com/juspay/connector-service/pull/173)) ([`f7ab3e6`](https://github.com/juspay/connector-service/commit/f7ab3e6206a673a4736850df3a67a3bf5224841f))
+
+### Miscellaneous Tasks
+
+- Added OnlineBankingFpx, DuitNow payment methods support ([#198](https://github.com/juspay/connector-service/pull/198)) ([`b42f059`](https://github.com/juspay/connector-service/commit/b42f059f85a7820f16946daaa51ce2e5817cf532))
+
+**Full Changelog:** [`2025.09.25.0...2025.09.25.1`](https://github.com/juspay/connector-service/compare/2025.09.25.0...2025.09.25.1)
+
+- - -
+
 ## 2025.09.25.0
 
 ### Features

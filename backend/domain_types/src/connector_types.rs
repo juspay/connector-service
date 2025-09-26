@@ -64,6 +64,7 @@ pub enum ConnectorEnum {
     Volt,
     Bluecode,
     Cryptopay,
+    Helcim,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -94,6 +95,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Volt => Ok(Self::Volt),
             grpc_api_types::payments::Connector::Bluecode => Ok(Self::Bluecode),
             grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
+            grpc_api_types::payments::Connector::Helcim => Ok(Self::Helcim),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),
@@ -795,6 +797,18 @@ impl PaymentVoidData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -964,6 +978,11 @@ impl<T: PaymentMethodDataTypes> PaymentsAuthorizeData<T> {
                 .ip_address
                 .map(|ip| Secret::new(ip.to_string()))
         })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
     // fn get_original_amount(&self) -> i64 {
     //     self.surcharge_details
@@ -1764,6 +1783,18 @@ impl RefundsData {
             .clone()
             .and_then(|browser_info| browser_info.language)
     }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1802,6 +1833,18 @@ impl PaymentsCaptureData {
         self.browser_info
             .clone()
             .and_then(|browser_info| browser_info.language)
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
 }
 
@@ -1862,6 +1905,18 @@ impl<T: PaymentMethodDataTypes> SetupMandateRequestData<T> {
         self.router_return_url
             .clone()
             .ok_or_else(missing_field_err("return_url"))
+    }
+    pub fn get_ip_address_as_optional(&self) -> Option<Secret<String, IpAddress>> {
+        self.browser_info.clone().and_then(|browser_info| {
+            browser_info
+                .ip_address
+                .map(|ip| Secret::new(ip.to_string()))
+        })
+    }
+
+    pub fn get_ip_address(&self) -> Result<Secret<String, IpAddress>, Error> {
+        self.get_ip_address_as_optional()
+            .ok_or_else(missing_field_err("browser_info.ip_address"))
     }
 }
 
