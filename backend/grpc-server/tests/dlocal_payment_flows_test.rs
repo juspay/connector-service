@@ -13,7 +13,6 @@ use std::{
 };
 
 use cards::CardNumber;
-use common_enums;
 use grpc_api_types::{
     health_check::{health_client::HealthClient, HealthCheckRequest},
     payments::{
@@ -583,12 +582,6 @@ async fn test_refund_sync() {
 
             // Extract the transaction ID
             let transaction_id = extract_transaction_id(&auth_response);
-
-            // Skip refund sync if payment was rejected in sandbox
-            if auth_response.status == i32::from(PaymentStatus::AuthenticationFailed) {
-                println!("Payment was rejected in sandbox - skipping refund sync test");
-                return;
-            }
 
             // Add 5-second delay before refund request
             sleep(Duration::from_secs(5)).await;
