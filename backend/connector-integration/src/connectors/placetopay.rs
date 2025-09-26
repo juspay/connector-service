@@ -23,11 +23,12 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data::ErrorResponse,
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::Maskable;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -36,21 +37,17 @@ use interfaces::{
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
-    PlacetopayCaptureRequest, PlacetopayPSyncResponse, PlacetopayPaymentsRequest,
-    PlacetopayPaymentsResponse, PlacetopayPsyncRequest, PlacetopayRSyncResponse,
-    PlacetopayRefundRequest, PlacetopayRefundResponse, PlacetopayRsyncRequest,
-    PlacetopayVoidRequest,
+    self as placetopay, PlacetopayNextActionRequest,
+    PlacetopayNextActionRequest as PlacetopayVoidRequest, PlacetopayPaymentsRequest,
+    PlacetopayPaymentsResponse as PlacetopayPSyncResponse, PlacetopayPaymentsResponse,
+    PlacetopayPaymentsResponse as PlacetopayCaptureResponse,
+    PlacetopayPaymentsResponse as PlacetopayVoidResponse, PlacetopayPsyncRequest,
+    PlacetopayRefundRequest, PlacetopayRefundResponse as PlacetopayRSyncResponse,
+    PlacetopayRefundResponse, PlacetopayRsyncRequest,
 };
-
-// Unique type aliases to avoid duplicate templating type definitions
-pub type PlacetopayCaptureResponse = PlacetopayPaymentsResponse;
-pub type PlacetopayVoidResponse = PlacetopayPaymentsResponse;
-use transformers as placetopay;
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
-
-pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -75,7 +72,7 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Capture,
-            request_body: PlacetopayCaptureRequest,
+            request_body: PlacetopayNextActionRequest,
             response_body: PlacetopayCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
@@ -258,20 +255,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         common_enums::CurrencyUnit::Minor
     }
 
-    fn get_auth_header(
-        &self,
-        auth_type: &ConnectorAuthType,
-    ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-        let _auth = placetopay::PlacetopayAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
-
-        // Placetopay uses custom auth in request body, not headers
-        Ok(vec![])
-    }
-
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        let url = connectors.placetopay.base_url.as_ref();
-        url
+        connectors.placetopay.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -282,7 +267,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: placetopay::PlacetopayErrorResponse = res
             .response
             .parse_struct("PlacetopayErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
@@ -331,9 +316,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
-            let full_url = format!("{}/process", base_url);
-            Ok(full_url)
+            Ok(format!("{}/process", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -362,9 +345,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
-            let full_url = format!("{}/query", base_url);
-            Ok(full_url)
+             Ok(format!("{}/query", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -373,7 +354,7 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Placetopay,
-    curl_request: Json(PlacetopayCaptureRequest),
+    curl_request: Json(PlacetopayNextActionRequest),
     curl_response: PlacetopayCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
@@ -393,9 +374,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
-            let full_url = format!("{}/transaction", base_url);
-            Ok(full_url)
+            Ok(format!("{}/transaction", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -424,9 +403,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_payments(req).trim_end_matches('/');
-            let full_url = format!("{}/transaction", base_url);
-            Ok(full_url)
+            Ok(format!("{}/transaction", self.connector_base_url_payments(req)))
         }
     }
 );
@@ -455,9 +432,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
-            let full_url = format!("{}/transaction", base_url);
-            Ok(full_url)
+            Ok(format!("{}/transaction", self.connector_base_url_refunds(req)))
         }
     }
 );
@@ -486,9 +461,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url_refunds(req).trim_end_matches('/');
-            let full_url = format!("{}/query", base_url);
-            Ok(full_url)
+            Ok(format!("{}/query", self.connector_base_url_refunds(req)))
         }
     }
 );

@@ -1,11 +1,10 @@
 use common_utils::types::MinorUnit;
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, PaymentMethodToken, RSync, Refund, Void},
+    connector_flow::{Authorize, Capture, PSync, RSync, Void},
     connector_types::{
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        ResponseId,
+        PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
+        RefundsResponseData, ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes, RawCardNumber},
@@ -18,26 +17,7 @@ use hyperswitch_masking::{PeekInterface, Secret};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-use crate::connectors::placetopay::PlacetopayRouterData as MacroPlacetopayRouterData;
-use crate::types::ResponseRouterData;
-
-#[derive(Debug, Serialize)]
-pub struct PlacetopayRouterData<T, U> {
-    pub amount: MinorUnit,
-    pub router_data: T,
-    pub payment_method_data: std::marker::PhantomData<U>,
-}
-
-impl<T, U> TryFrom<(MinorUnit, T)> for PlacetopayRouterData<T, U> {
-    type Error = domain_types::errors::ConnectorError;
-    fn try_from((amount, item): (MinorUnit, T)) -> Result<Self, Self::Error> {
-        Ok(Self {
-            amount,
-            router_data: item,
-            payment_method_data: std::marker::PhantomData,
-        })
-    }
-}
+use crate::{connectors::placetopay::PlacetopayRouterData, types::ResponseRouterData};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -192,35 +172,20 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        let browser_info = item
-            .router_data
-            .request
-            .get_browser_info()
-            .unwrap_or_else(|_| domain_types::router_request_types::BrowserInformation::default());
-        let ip_address = browser_info
-            .get_ip_address()
-            .unwrap_or_else(|_| Secret::new("127.0.0.1".to_string()));
-        let user_agent = browser_info
-            .get_user_agent()
-            .unwrap_or_else(|_| "PlaceToPay-Connector/1.0".to_string());
-
+        let browser_info = item.router_data.request.get_browser_info()?;
+        let ip_address = browser_info.get_ip_address()?;
+        let user_agent = browser_info.get_user_agent()?;
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
-
-        let description = item
-            .router_data
-            .resource_common_data
-            .get_description()
-            .unwrap_or_else(|_| "Payment transaction".to_string());
         let payment = PlacetopayPayment {
             reference: item
                 .router_data
                 .resource_common_data
                 .connector_request_reference_id
                 .clone(),
-            description,
+            description: item.router_data.resource_common_data.get_description()?,
             amount: PlacetopayAmount {
                 currency: item.router_data.request.currency,
-                total: item.amount,
+                total: item.router_data.request.minor_amount,
             },
         };
 
@@ -228,15 +193,12 @@ impl<
             PaymentMethodData::Card(req_card) => {
                 let card = PlacetopayCard {
                     number: req_card.card_number.clone(),
-                    expiration: format!(
-                        "{}/{}",
-                        req_card.card_exp_month.peek(),
-                        req_card.card_exp_year.peek()
-                    )
-                    .into(),
+                    expiration: req_card
+                        .clone()
+                        .get_card_expiry_month_year_2_digit_with_delimiter("/".to_owned())?,
                     cvv: req_card.card_cvc.clone(),
                 };
-                let request = Self {
+                Ok(Self {
                     ip_address,
                     user_agent,
                     auth,
@@ -244,9 +206,7 @@ impl<
                     instrument: PlacetopayInstrument {
                         card: card.to_owned(),
                     },
-                };
-
-                Ok(request)
+                })
             }
             PaymentMethodData::Wallet(_)
             | PaymentMethodData::CardRedirect(_)
@@ -275,7 +235,6 @@ impl<
     }
 }
 
-// TryFrom implementation for macro-generated PlacetopayRouterData type
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -285,143 +244,32 @@ impl<
             + Serialize,
     >
     TryFrom<
-        MacroPlacetopayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
+        PlacetopayRouterData<
+            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
-    > for PlacetopayPaymentsRequest<T>
+    > for PlacetopayNextActionRequest
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: MacroPlacetopayRouterData<
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Convert macro type to our transformers type
-        let amount = MinorUnit::new(item.router_data.request.amount);
-        let transformers_item = PlacetopayRouterData {
-            amount,
-            router_data: item.router_data,
-            payment_method_data: std::marker::PhantomData,
-        };
-        // Use existing implementation
-        Self::try_from(transformers_item)
-    }
-}
-
-// Add TryFrom for macro-generated RouterData - PSync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        MacroPlacetopayRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for PlacetopayPsyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: MacroPlacetopayRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Use existing implementation that takes &RouterDataV2
-        PlacetopayPsyncRequest::try_from(&item.router_data)
-    }
-}
-
-// Add TryFrom for macro-generated RouterData - Capture
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        MacroPlacetopayRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    > for PlacetopayCaptureRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: MacroPlacetopayRouterData<
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Use existing implementation that takes &RouterDataV2
-        PlacetopayCaptureRequest::try_from(&item.router_data)
-    }
-}
-
-// Add TryFrom for macro-generated RouterData - Void
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        MacroPlacetopayRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for PlacetopayVoidRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: MacroPlacetopayRouterData<
+        item: PlacetopayRouterData<
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
             T,
         >,
     ) -> Result<Self, Self::Error> {
-        // Use existing implementation that takes &RouterDataV2
-        PlacetopayVoidRequest::try_from(&item.router_data)
-    }
-}
-
-// Add TryFrom for macro-generated RouterData - Refund
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        MacroPlacetopayRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    > for PlacetopayRefundRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: MacroPlacetopayRouterData<
-            RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Use existing implementation that takes &RouterDataV2
-        PlacetopayRefundRequest::try_from(&item.router_data)
-    }
-}
-
-// Add TryFrom for macro-generated RouterData - RSync
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        MacroPlacetopayRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for PlacetopayRsyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: MacroPlacetopayRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        // Use existing implementation that takes &RouterDataV2
-        PlacetopayRsyncRequest::try_from(&item.router_data)
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
+        let internal_reference = item
+            .router_data
+            .request
+            .connector_transaction_id
+            .parse::<u64>()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+        let action = PlacetopayNextAction::Void;
+        Ok(Self {
+            auth,
+            internal_reference,
+            action,
+        })
     }
 }
 
@@ -468,12 +316,6 @@ pub struct PlacetopayPaymentsResponse {
     authorization: Option<String>,
 }
 
-// Type aliases for different flows - all using the same underlying response types
-pub type PlacetopayPSyncResponse = PlacetopayPaymentsResponse;
-pub type PlacetopayCaptureResponse = PlacetopayPaymentsResponse;
-pub type PlacetopayVoidResponse = PlacetopayPaymentsResponse;
-pub type PlacetopayRSyncResponse = PlacetopayRefundResponse;
-
 // Authorize flow uses the unified payment response handling with capture method consideration
 impl<
         T: PaymentMethodDataTypes
@@ -507,30 +349,17 @@ impl<
             >,
         >,
     ) -> Result<Self, Self::Error> {
-        // For authorize, consider capture method to determine correct status
-        let capture_method = item
-            .router_data
-            .request
-            .capture_method
-            .unwrap_or(common_enums::CaptureMethod::Automatic);
-
-        let status = match (item.response.status.status, capture_method) {
-            (
-                PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok,
-                common_enums::CaptureMethod::Manual,
-            ) => common_enums::AttemptStatus::Authorized,
-            (PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok, _) => {
-                common_enums::AttemptStatus::Charged
-            }
-            (other_status, _) => common_enums::AttemptStatus::from(other_status),
-        };
-
         Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(item.response.status.status),
+                ..item.router_data.resource_common_data
+            },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.internal_reference.to_string(),
                 ),
                 redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: item
                     .response
                     .authorization
@@ -539,13 +368,8 @@ impl<
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                mandate_reference: None,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }
@@ -558,17 +382,32 @@ pub struct PlacetopayPsyncRequest {
     internal_reference: u64,
 }
 
-impl TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>
-    for PlacetopayPsyncRequest
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        PlacetopayRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for PlacetopayPsyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        item: PlacetopayRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
     ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
+        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
 
         let internal_reference = item
+            .router_data
             .request
             .get_connector_transaction_id()?
             .parse::<u64>()
@@ -597,29 +436,17 @@ impl
             RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // For PSync, we need to be more careful about status mapping
-        // The test expects manual capture payments to remain in AUTHORIZED state
-        // Since we can't reliably determine the original capture method from PSync request,
-        // we'll use a simpler approach: if the API returns APPROVED, map to AUTHORIZED
-        // This matches the test expectation for manual capture scenarios
-
-        // Use consistent status mapping for PSync flow - favor AUTHORIZED for APPROVED responses
-        let status = match item.response.status.status {
-            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
-                common_enums::AttemptStatus::Authorized
-            }
-            PlacetopayTransactionStatus::Pending
-            | PlacetopayTransactionStatus::PendingValidation
-            | PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
-            other_status => common_enums::AttemptStatus::from(other_status),
-        };
-
         Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(item.response.status.status),
+                ..item.router_data.resource_common_data
+            },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.internal_reference.to_string(),
                 ),
                 redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: item
                     .response
                     .authorization
@@ -628,13 +455,8 @@ impl
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                mandate_reference: None,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }
@@ -656,23 +478,17 @@ impl
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // Use consistent status mapping for Capture flow
-        let status = match item.response.status.status {
-            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
-                common_enums::AttemptStatus::Charged
-            }
-            PlacetopayTransactionStatus::Pending
-            | PlacetopayTransactionStatus::PendingValidation
-            | PlacetopayTransactionStatus::PendingProcess => common_enums::AttemptStatus::Pending,
-            other_status => common_enums::AttemptStatus::from(other_status),
-        };
-
         Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(item.response.status.status),
+                ..item.router_data.resource_common_data
+            },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.internal_reference.to_string(),
                 ),
                 redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: item
                     .response
                     .authorization
@@ -681,22 +497,13 @@ impl
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                mandate_reference: None,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }
 }
 
-// Capture flow uses the unified payment response handling
-// Note: The specific status adjustment for capture (if needed) should be done at the flow level
-
-// Void flow uses the unified payment response handling with status override
 impl
     TryFrom<
         ResponseRouterData<
@@ -712,20 +519,17 @@ impl
             RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        // For void, successful operations should result in Voided status
-        let status = match item.response.status.status {
-            PlacetopayTransactionStatus::Approved | PlacetopayTransactionStatus::Ok => {
-                common_enums::AttemptStatus::Voided
-            }
-            other_status => common_enums::AttemptStatus::from(other_status),
-        };
-
         Ok(Self {
+            resource_common_data: PaymentFlowData {
+                status: common_enums::AttemptStatus::from(item.response.status.status),
+                ..item.router_data.resource_common_data
+            },
             response: Ok(PaymentsResponseData::TransactionResponse {
                 resource_id: ResponseId::ConnectorTransactionId(
                     item.response.internal_reference.to_string(),
                 ),
                 redirection_data: None,
+                mandate_reference: None,
                 connector_metadata: item
                     .response
                     .authorization
@@ -734,13 +538,8 @@ impl
                 network_txn_id: None,
                 connector_response_reference_id: None,
                 incremental_authorization_allowed: None,
-                mandate_reference: None,
                 status_code: item.http_code,
             }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
             ..item.router_data
         })
     }
@@ -752,21 +551,6 @@ pub struct PlacetopayNextActionRequest {
     auth: PlacetopayAuth,
     internal_reference: u64,
     action: PlacetopayNextAction,
-    ip_address: Secret<String, common_utils::pii::IpAddress>,
-    user_agent: String,
-}
-
-// PlaceToPay transaction endpoint capture request
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PlacetopayCaptureRequest {
-    auth: PlacetopayAuth,
-    internal_reference: u64,
-    action: PlacetopayNextAction,
-    amount: PlacetopayAmount,
-    authorization: Option<String>,
-    ip_address: Secret<String, common_utils::pii::IpAddress>,
-    user_agent: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -779,283 +563,41 @@ pub enum PlacetopayNextAction {
     Checkout,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            (),
+            T,
         >,
     > for PlacetopayNextActionRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
-
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-            (),
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
             .router_data
             .request
-            .get_connector_transaction_id()?
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::RequestEncodingFailed)?
             .parse::<u64>()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let action = PlacetopayNextAction::Checkout;
-        // Add default IP address and user agent for capture operations
-        // PaymentsCaptureData doesn't have browser info, so we use defaults
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let user_agent = "PlaceToPay-Connector/1.0".to_string();
-
         Ok(Self {
             auth,
             internal_reference,
             action,
-            ip_address,
-            user_agent,
-        })
-    }
-}
-
-// PlaceToPay transaction endpoint TryFrom for capture request
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for PlacetopayCaptureRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
-
-        let internal_reference = item
-            .request
-            .get_connector_transaction_id()?
-            .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-
-        // Use Reverse action for capture operations
-        let action = PlacetopayNextAction::Reverse;
-
-        let amount = PlacetopayAmount {
-            currency: item.request.currency,
-            total: item.request.minor_amount_to_capture,
-        };
-
-        // Extract authorization code from connector metadata
-        let authorization = match item.resource_common_data.connector_meta_data {
-            Some(ref metadata) => {
-                // Try to extract authorization code from metadata
-                let metadata_value = metadata.peek();
-                if metadata_value.is_string() {
-                    metadata_value.as_str().map(|s| s.to_string())
-                } else if let Some(auth_obj) = metadata_value.as_object() {
-                    // If it's an object, try to get the authorization field
-                    auth_obj
-                        .get("authorization")
-                        .or_else(|| auth_obj.get("auth"))
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                } else {
-                    // Try to serialize the metadata to string as fallback
-                    serde_json::to_string(metadata_value).ok()
-                }
-            }
-            None => None,
-        };
-
-        // WORKAROUND: Use hardcoded authorization code if not available
-        // This is needed because the test framework doesn't properly propagate
-        // connector metadata between test operations
-        let final_authorization = authorization.clone().or_else(|| Some("000000".to_string()));
-
-        // Add default IP address and user agent for capture operations
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let user_agent = "PlaceToPay-Connector/1.0".to_string();
-
-        Ok(Self {
-            auth,
-            internal_reference,
-            action,
-            amount,
-            authorization: final_authorization,
-            ip_address,
-            user_agent,
-        })
-    }
-}
-
-// Keep the old implementation for backward compatibility
-impl TryFrom<&RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>>
-    for PlacetopayNextActionRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
-        let internal_reference = item
-            .request
-            .get_connector_transaction_id()?
-            .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let action = PlacetopayNextAction::Checkout;
-        // Add default IP address and user agent for legacy capture operations
-        // PaymentsCaptureData doesn't have browser info, so we use defaults
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let user_agent = "PlaceToPay-Connector/1.0".to_string();
-
-        Ok(Self {
-            auth,
-            internal_reference,
-            action,
-            ip_address,
-            user_agent,
-        })
-    }
-}
-
-impl
-    TryFrom<
-        PlacetopayRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            (),
-        >,
-    > for PlacetopayNextActionRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: PlacetopayRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            (),
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
-        let internal_reference = item
-            .router_data
-            .request
-            .connector_transaction_id
-            .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let action = PlacetopayNextAction::Void;
-
-        // Add default IP address and user agent for void operations
-        // PaymentVoidData doesn't have browser info, so we use defaults
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let user_agent = "PlaceToPay-Connector/1.0".to_string();
-
-        Ok(Self {
-            auth,
-            internal_reference,
-            action,
-            ip_address,
-            user_agent,
-        })
-    }
-}
-
-// Add TryFrom for macro-generated RouterData
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for PlacetopayNextActionRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
-        let internal_reference = item
-            .request
-            .connector_transaction_id
-            .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let action = PlacetopayNextAction::Void;
-
-        // Add default IP address and user agent for void operations
-        // PaymentVoidData doesn't have browser info, so we use defaults
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let user_agent = "PlaceToPay-Connector/1.0".to_string();
-
-        Ok(Self {
-            auth,
-            internal_reference,
-            action,
-            ip_address,
-            user_agent,
-        })
-    }
-}
-
-// VOID TYPES - Specific structure for void operations without amount
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PlacetopayVoidRequest {
-    auth: PlacetopayAuth,
-    internal_reference: u64,
-    action: PlacetopayNextAction,
-    authorization: Option<String>,
-    ip_address: Secret<String>,
-    user_agent: String,
-}
-
-// Add TryFrom for void operations using the specific void request structure
-impl TryFrom<&RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>>
-    for PlacetopayVoidRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-
-    fn try_from(
-        item: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
-        let internal_reference = item
-            .request
-            .connector_transaction_id
-            .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        let action = PlacetopayNextAction::Reverse;
-
-        // Extract authorization code from connector metadata
-        let authorization = match item.resource_common_data.connector_meta_data {
-            Some(ref metadata) => {
-                // Try to extract authorization code from metadata
-                let metadata_value = metadata.peek();
-                if metadata_value.is_string() {
-                    metadata_value.as_str().map(|s| s.to_string())
-                } else if let Some(auth_obj) = metadata_value.as_object() {
-                    // If it's an object, try to get the authorization field
-                    auth_obj
-                        .get("authorization")
-                        .or_else(|| auth_obj.get("auth"))
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                } else {
-                    // Try to serialize the metadata to string as fallback
-                    serde_json::to_string(metadata_value).ok()
-                }
-            }
-            None => None,
-        };
-
-        // WORKAROUND: Use hardcoded authorization code if not available
-        // This is needed because the test framework doesn't properly propagate
-        // connector metadata between test operations
-        let final_authorization = authorization.clone().or_else(|| Some("000000".to_string()));
-
-        // Add IP address and user agent for void operations
-        let ip_address = Secret::new("127.0.0.1".to_string());
-        let user_agent = "PlaceToPay-Connector/1.0".to_string();
-
-        Ok(Self {
-            auth,
-            internal_reference,
-            action,
-            authorization: final_authorization,
-            ip_address,
-            user_agent,
         })
     }
 }
@@ -1070,16 +612,24 @@ pub struct PlacetopayRefundRequest {
     authorization: Option<String>,
 }
 
-impl<F>
+impl<
+        F,
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
-        PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, ()>,
+        PlacetopayRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     > for PlacetopayRefundRequest
 {
     type Error = error_stack::Report<errors::ConnectorError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>,
-            (),
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         if item.router_data.request.minor_refund_amount
@@ -1095,94 +645,14 @@ impl<F>
                 .change_context(errors::ConnectorError::RequestEncodingFailed)?;
             let action = PlacetopayNextAction::Reverse;
             let authorization = match item.router_data.request.connector_metadata.clone() {
-                Some(metadata) => {
-                    // Try to extract authorization code from metadata
-                    if metadata.is_string() {
-                        metadata.as_str().map(|s| s.to_string())
-                    } else if let Some(auth_obj) = metadata.as_object() {
-                        // If it's an object, try to get the authorization field
-                        auth_obj
-                            .get("authorization")
-                            .or_else(|| auth_obj.get("auth"))
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string())
-                    } else {
-                        // Try to serialize the metadata to string as fallback
-                        serde_json::to_string(&metadata).ok()
-                    }
-                }
+                Some(metadata) => metadata.as_str().map(|auth| auth.to_string()),
                 None => None,
             };
-
-            // WORKAROUND: Use hardcoded authorization code if not available
-            // This is needed because the test framework doesn't properly propagate
-            // connector metadata between test operations
-            let final_authorization = authorization.clone().or_else(|| Some("000000".to_string()));
-
             Ok(Self {
                 auth,
                 internal_reference,
                 action,
-                authorization: final_authorization,
-            })
-        } else {
-            Err(errors::ConnectorError::NotSupported {
-                message: "Partial Refund".to_string(),
-                connector: "placetopay",
-            }
-            .into())
-        }
-    }
-}
-
-// Add TryFrom for macro-generated RouterData
-impl TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>>
-    for PlacetopayRefundRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        if item.request.minor_refund_amount == item.request.minor_payment_amount {
-            let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
-
-            let internal_reference = item
-                .request
-                .connector_transaction_id
-                .parse::<u64>()
-                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-            let action = PlacetopayNextAction::Reverse;
-
-            let authorization = match item.request.connector_metadata.clone() {
-                Some(metadata) => {
-                    // Try to extract authorization code from metadata
-                    if metadata.is_string() {
-                        metadata.as_str().map(|s| s.to_string())
-                    } else if let Some(auth_obj) = metadata.as_object() {
-                        // If it's an object, try to get the authorization field
-                        auth_obj
-                            .get("authorization")
-                            .or_else(|| auth_obj.get("auth"))
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string())
-                    } else {
-                        // Try to serialize the metadata to string as fallback
-                        serde_json::to_string(&metadata).ok()
-                    }
-                }
-                None => None,
-            };
-
-            // WORKAROUND: Use hardcoded authorization code if not available
-            // This is needed because the test framework doesn't properly propagate
-            // connector metadata between test operations
-            let final_authorization = authorization.clone().or_else(|| Some("000000".to_string()));
-
-            Ok(Self {
-                auth,
-                internal_reference,
-                action,
-                authorization: final_authorization,
+                authorization,
             })
         } else {
             Err(errors::ConnectorError::NotSupported {
@@ -1262,45 +732,31 @@ pub struct PlacetopayRsyncRequest {
     internal_reference: u64,
 }
 
-impl
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
     TryFrom<
         PlacetopayRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            (),
+            T,
         >,
     > for PlacetopayRsyncRequest
 {
-    type Error = error_stack::Report<errors::ConnectorError>;
+    type Error = error_stack::Report<ConnectorError>;
     fn try_from(
         item: PlacetopayRouterData<
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            (),
+            T,
         >,
     ) -> Result<Self, Self::Error> {
         let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
         let internal_reference = item
             .router_data
-            .request
-            .connector_transaction_id
-            .parse::<u64>()
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
-        Ok(Self {
-            auth,
-            internal_reference,
-        })
-    }
-}
-
-// Add TryFrom for macro-generated RouterData
-impl TryFrom<&RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>>
-    for PlacetopayRsyncRequest
-{
-    type Error = error_stack::Report<errors::ConnectorError>;
-    fn try_from(
-        item: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.connector_auth_type)?;
-        let internal_reference = item
             .request
             .connector_transaction_id
             .parse::<u64>()
@@ -1348,139 +804,4 @@ pub struct PlacetopayError {
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PlacetopayErrorStatus {
     Failed,
-}
-
-// TOKEN TYPES
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PlacetopayTokenRequest<
-    T: PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + Serialize,
-> {
-    auth: PlacetopayAuth,
-    instrument: PlacetopayInstrument<T>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PlacetopayTokenResponse {
-    status: PlacetopayStatusResponse,
-    token: Option<String>,
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        PlacetopayRouterData<
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-            T,
-        >,
-    > for PlacetopayTokenRequest<T>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: PlacetopayRouterData<
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let auth = PlacetopayAuth::try_from(&item.router_data.connector_auth_type)?;
-        match item.router_data.request.payment_method_data.clone() {
-            PaymentMethodData::Card(req_card) => {
-                let card = PlacetopayCard {
-                    number: req_card.card_number.clone(),
-                    expiration: format!(
-                        "{}/{}",
-                        req_card.card_exp_month.peek(),
-                        req_card.card_exp_year.peek()
-                    )
-                    .into(),
-                    cvv: req_card.card_cvc.clone(),
-                };
-                Ok(Self {
-                    auth,
-                    instrument: PlacetopayInstrument {
-                        card: card.to_owned(),
-                    },
-                })
-            }
-            _ => Err(errors::ConnectorError::NotImplemented(
-                utils::get_unimplemented_payment_method_error_message("Placetopay"),
-            )
-            .into()),
-        }
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PlacetopayTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    >
-    for RouterDataV2<
-        PaymentMethodToken,
-        PaymentFlowData,
-        PaymentMethodTokenizationData<T>,
-        PaymentMethodTokenResponse,
-    >
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PlacetopayTokenResponse,
-            RouterDataV2<
-                PaymentMethodToken,
-                PaymentFlowData,
-                PaymentMethodTokenizationData<T>,
-                PaymentMethodTokenResponse,
-            >,
-        >,
-    ) -> Result<Self, Self::Error> {
-        let status = common_enums::AttemptStatus::from(item.response.status.status);
-
-        Ok(Self {
-            response: Ok(PaymentMethodTokenResponse {
-                token: item.response.token.unwrap_or_default(),
-            }),
-            resource_common_data: PaymentFlowData {
-                status,
-                ..item.router_data.resource_common_data
-            },
-            ..item.router_data
-        })
-    }
 }
