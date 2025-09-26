@@ -2319,7 +2319,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                                 grpc_api_types::payments::HttpMethod::foreign_from(
                                                     method,
                                                 )
-                                                    as i32,
+                                                .into(),
                                             form_fields,
                                         },
                                     ),
@@ -2371,7 +2371,7 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                                         grpc_api_types::payments::FormData {
                                             endpoint: ddc_url,
                                             method: grpc_api_types::payments::HttpMethod::Post
-                                                as i32,
+                                                .into(),
                                             form_fields,
                                         },
                                     ),
@@ -2399,11 +2399,11 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                         id_type: Some(grpc_api_types::payments::identifier::IdType::Id(id)),
                     }
                 }),
-                status: grpc_status as i32,
+                status: grpc_status.into(),
                 error_message: None,
                 error_code: None,
                 raw_connector_response,
-                status_code: status_code as u32,
+                status_code: status_code.into(),
                 response_headers,
                 network_txn_id: None,
                 state: None,
@@ -2432,10 +2432,10 @@ pub fn generate_payment_pre_authenticate_response<T: PaymentMethodDataTypes>(
                 redirection_data: None,
                 network_txn_id: None,
                 response_ref_id: None,
-                status: status as i32,
+                status: status.into(),
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                status_code: err.status_code as u32,
+                status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
                 connector_metadata: HashMap::new(),
@@ -2492,7 +2492,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                                                 grpc_api_types::payments::HttpMethod::foreign_from(
                                                     method,
                                                 )
-                                                    as i32,
+                                                .into(),
                                             form_fields,
                                         },
                                     ),
@@ -2544,7 +2544,7 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                                         grpc_api_types::payments::FormData {
                                             endpoint: ddc_url,
                                             method: grpc_api_types::payments::HttpMethod::Post
-                                                as i32,
+                                                .into(),
                                             form_fields,
                                         },
                                     ),
@@ -2602,11 +2602,11 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                             .map(|s| s.to_string()),
                     }
                 }),
-                status: grpc_status as i32,
+                status: grpc_status.into(),
                 error_message: None,
                 error_code: None,
                 raw_connector_response,
-                status_code: status_code as u32,
+                status_code: status_code.into(),
                 response_headers,
                 network_txn_id: None,
                 state: None,
@@ -2636,10 +2636,10 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                 network_txn_id: None,
                 response_ref_id: None,
                 authentication_data: None,
-                status: status as i32,
+                status: status.into(),
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                status_code: err.status_code as u32,
+                status_code: err.status_code.into(),
                 raw_connector_response,
                 response_headers,
                 connector_metadata: HashMap::new(),
@@ -2696,7 +2696,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                                                 grpc_api_types::payments::HttpMethod::foreign_from(
                                                     method,
                                                 )
-                                                    as i32,
+                                                .into(),
                                             form_fields,
                                         },
                                     ),
@@ -2748,7 +2748,7 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                                         grpc_api_types::payments::FormData {
                                             endpoint: ddc_url,
                                             method: grpc_api_types::payments::HttpMethod::Post
-                                                as i32,
+                                                .into(),
                                             form_fields,
                                         },
                                     ),
@@ -2808,11 +2808,11 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                     }
                 }),
                 incremental_authorization_allowed: None,
-                status: grpc_status as i32,
+                status: grpc_status.into(),
                 error_message: None,
                 error_code: None,
                 raw_connector_response,
-                status_code: status_code as u32,
+                status_code: status_code.into(),
                 response_headers,
                 state: None,
             },
@@ -2842,10 +2842,10 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                 response_ref_id: None,
                 authentication_data: None,
                 incremental_authorization_allowed: None,
-                status: status as i32,
+                status: status.into(),
                 error_message: Some(err.message),
                 error_code: Some(err.code),
-                status_code: err.status_code as u32,
+                status_code: err.status_code.into(),
                 response_headers,
                 raw_connector_response,
                 connector_metadata: HashMap::new(),
