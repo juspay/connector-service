@@ -1,4 +1,4 @@
-use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit};
+use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit, FloatMajorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
@@ -25,17 +25,6 @@ use std::fmt::Debug;
 use super::RapydRouterData;
 use crate::types::ResponseRouterData;
 
-// Custom serializer for amount to ensure it's a string
-fn serialize_amount_as_string<S>(amount: &MinorUnit, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    // Convert amount to string without decimal points for minor units
-    serializer.serialize_str(&amount.to_string())
-}
-
-// Response type conversions
-// Capture Response - should set status to CHARGED when successful
 impl<F>
     TryFrom<
         ResponseRouterData<
@@ -271,8 +260,7 @@ pub struct RapydPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    #[serde(serialize_with = "serialize_amount_as_string")]
-    pub amount: MinorUnit,
+    pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -467,8 +455,16 @@ impl<
         ))?;
 
         let return_url = item.router_data.resource_common_data.get_return_url();
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
-            amount: item.router_data.request.minor_amount,
+            amount,
             currency: item.router_data.request.currency,
             payment_method,
             capture,

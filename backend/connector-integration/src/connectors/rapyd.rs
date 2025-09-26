@@ -1,7 +1,9 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_utils::{consts::NO_ERROR_MESSAGE, errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{
+    consts::NO_ERROR_MESSAGE, errors::CustomResult, ext_traits::ByteSliceExt, FloatMajorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
@@ -46,7 +48,8 @@ use transformers::{
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::STANDARD;
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -264,7 +267,9 @@ macros::create_all_prerequisites!(
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: FloatMajorUnit
+    ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
             &self,
@@ -335,7 +340,7 @@ macros::create_all_prerequisites!(
 
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
             let tag = ring::hmac::sign(&key, to_sign.as_bytes());
-            let signature_value = BASE64_ENGINE.encode(tag.as_ref());
+            let signature_value = BASE64_ENGINE_URL_SAFE.encode(tag.as_ref());
 
             Ok(signature_value)
         }
@@ -366,7 +371,7 @@ macros::macro_connector_implementation!(
             let body = self.get_request_body(req)?
                 .map(|content| content.get_inner_value().expose())
                 .unwrap_or_default();
-            self.build_headers(req, "post", url_path, &body)
+            self.build_headers(req, "delete", url_path, &body)
         }
         fn get_url(
             &self,
