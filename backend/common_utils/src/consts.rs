@@ -42,6 +42,12 @@ pub const X_MERCHANT_ID: &str = "x-merchant-id";
 /// Header key for reference identification
 pub const X_REFERENCE_ID: &str = "x-reference-id";
 
+pub const X_SOURCE: &str = "x-source";
+
+pub const X_CONNECTOR_SERVICE: &str = "connector-service";
+
+pub const X_FLOW: &str = "x-flow";
+
 // =============================================================================
 // Authentication Headers (Internal)
 // =============================================================================

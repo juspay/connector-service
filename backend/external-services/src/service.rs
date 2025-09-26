@@ -68,6 +68,7 @@ use common_utils::{
 use error_stack::{report, ResultExt};
 use hyperswitch_masking::{ErasedMaskSerialize, ExposeInterface, Maskable};
 // TokenData is now imported from hyperswitch_injector
+use common_utils::consts;
 use injector::{injector_core, HttpMethod, TokenData};
 use interfaces::{
     connector_integration_v2::BoxedConnectorIntegrationV2,
@@ -188,7 +189,7 @@ where
             Ok(response)
         }
         common_enums::CallConnectorAction::Trigger => {
-            let connector_request = connector.build_request_v2(&router_data)?;
+            let mut connector_request = connector.build_request_v2(&router_data.clone())?;
 
             let mut updated_router_data = router_data.clone();
             updated_router_data = match &connector_request {
@@ -200,7 +201,26 @@ where
                 }
                 None => updated_router_data,
             };
+            connector_request = connector_request.map(|mut req| {
+                req.add_header(
+                    consts::X_REQUEST_ID,
+                    Maskable::Masked(Secret::new(event_params.request_id.to_string())),
+                );
+                req.add_header(
+                    consts::X_SOURCE,
+                    Maskable::Masked(Secret::new(consts::X_CONNECTOR_SERVICE.to_string())),
+                );
+                req.add_header(
+                    consts::X_FLOW,
+                    Maskable::Masked(Secret::new(event_params.flow_name.to_string())),
+                );
 
+                req.add_header(
+                    consts::X_CONNECTOR,
+                    Maskable::Masked(Secret::new(event_params.connector_name.to_string())),
+                );
+                req
+            });
             let headers = connector_request
                 .as_ref()
                 .map(|connector_request| connector_request.headers.clone())
