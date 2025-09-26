@@ -53,14 +53,13 @@ impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
     fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         let placetopay_auth = PlacetopayAuthType::try_from(auth_type)?;
 
-        let nonce_bytes: [u8; 16] =
-            common_utils::crypto::generate_cryptographically_secure_random_bytes();
+        let nonce_bytes = domain_types::utils::generate_random_bytes(16);
         let now = common_utils::date_time::date_as_yyyymmddthhmmssmmmz()
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
         let nonce_b64 =
-            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, nonce_bytes);
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, nonce_bytes.clone());
 
         let mut hasher = ring::digest::Context::new(&ring::digest::SHA256);
         hasher.update(&nonce_bytes);
