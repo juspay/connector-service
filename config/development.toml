@@ -53,6 +53,7 @@ mifinity.base_url = "https://demo.mifinity.com/"
 braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
+helcim.base_url = "https://api.helcim.com/"
 placetopay.base_url = "https://test.placetopay.com/rest/gateway/"
 
 # Generic Events Configuration
@@ -72,13 +73,14 @@ field_prefix = "lineage_"
 "gateway" = "connector"
 "action" = "flow_type"
 "entity" = "flow_type"
-"message.latency" = "latency"
+"message.latency" = "latency_ms"
 "message.request_time" = "timestamp"
 "message.res_code" = "status_code"
 "message.url" = "url"
 "message.stage" = "stage"
 "message.req_body" = "connector_request_data"
 "message.res_body" = "connector_response_data"
+"udf_txn_uuid" = "reference_id"
 
 [events.static_values]
 "hostname" = "connector-service"
@@ -86,7 +88,3 @@ field_prefix = "lineage_"
 "category" = "OUTGOING_API"
 "message.req_type" = "EXTERNAL"
 "message.log_type" = "API_CALL"
-
-[events.extractions]
-"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"x-request-id" = "req.metadata.x-request-id"

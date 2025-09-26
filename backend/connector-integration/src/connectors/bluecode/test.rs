@@ -91,6 +91,7 @@ mod tests {
                     external_latency: None,
                     connector_response_headers: None,
                     raw_connector_response: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
                     api_key: Secret::new(api_key),
@@ -226,6 +227,7 @@ mod tests {
                     external_latency: None,
                     connector_response_headers: None,
                     raw_connector_response: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::HeaderKey {
                     api_key: Secret::new(api_key),

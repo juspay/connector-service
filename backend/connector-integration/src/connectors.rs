@@ -62,5 +62,8 @@ pub use self::bluecode::Bluecode;
 pub mod cryptopay;
 pub use self::cryptopay::Cryptopay;
 
+pub mod helcim;
+pub use self::helcim::Helcim;
+
 pub mod placetopay;
 pub use self::placetopay::Placetopay;
