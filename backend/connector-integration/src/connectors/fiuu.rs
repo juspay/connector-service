@@ -1,48 +1,55 @@
 pub mod transformers;
 
-use std::{collections::HashMap, fmt::Debug};
+use std::{any::type_name, borrow::Cow, collections::HashMap, fmt::Debug};
 
 use bytes::Bytes;
 use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{
+    crypto::{self, GenerateDigest, VerifySignature},
+    errors::CustomResult,
+    ext_traits::{ByteSliceExt, BytesExt},
+    types::StringMajorUnit,
+};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
-        ConnectorSpecifications, DisputeDefendData, DisputeFlowData, DisputeResponseData,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData,
-        PaymentMethodTokenResponse, PaymentMethodTokenizationData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
+        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
+        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, RequestDetails,
         SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        SubmitEvidenceData, WebhookDetailsResponse,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data::ErrorResponse,
+    router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::Response,
     types::Connectors,
     utils,
 };
 use error_stack::ResultExt;
-use hyperswitch_masking::{Maskable, Secret};
+use hyperswitch_masking::{ExposeInterface, Maskable, PeekInterface, Secret};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 use transformers::{
     self as fiuu, FiuuPaymentCancelRequest, FiuuPaymentCancelResponse, FiuuPaymentResponse,
     FiuuPaymentSyncRequest, FiuuPaymentsRequest, FiuuPaymentsResponse, FiuuRefundRequest,
-    FiuuRefundResponse, FiuuRefundSyncRequest, FiuuRefundSyncResponse, PaymentCaptureRequest,
-    PaymentCaptureResponse,
+    FiuuRefundResponse, FiuuRefundSyncRequest, FiuuRefundSyncResponse, FiuuWebhooksResponse,
+    PaymentCaptureRequest, PaymentCaptureResponse,
 };
 
 use super::macros;
@@ -204,16 +211,6 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::IncomingWebhook for Fiuu<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
     > connector_types::RepeatPaymentV2 for Fiuu<T>
 {
 }
@@ -225,6 +222,40 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentTokenV2<T> for Fiuu<T>
+{
+}
+
+// Authentication trait implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPreAuthenticateV2<T> for Fiuu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Fiuu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Fiuu<T>
 {
 }
 
@@ -380,7 +411,7 @@ impl<
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
         let response: fiuu::FiuuErrorResponse = res
             .response
-            .parse_struct("FiuuErrorResponse")
+            .parse_struct("fiuu::FiuuErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
@@ -672,6 +703,270 @@ impl<
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, macro_types::ConnectorError> {
         self.build_error_response(res, event_builder)
+    }
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::IncomingWebhook for Fiuu<T>
+{
+    fn get_webhook_source_verification_signature(
+        &self,
+        request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
+            parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?
+        } else {
+            request
+                .body
+                .parse_struct("fiuu::FiuuWebhooksResponse")
+                .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?
+        };
+
+        let signature = match resource {
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhooks_payment_response) => {
+                webhooks_payment_response.skey
+            }
+            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhooks_refunds_response) => {
+                webhooks_refunds_response.signature
+            }
+        };
+        hex::decode(signature.expose())
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_webhook_source_verification_message(
+        &self,
+        request: &RequestDetails,
+        connector_webhook_secrets: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+        let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
+            parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?
+        } else {
+            request
+                .body
+                .parse_struct("fiuu::FiuuWebhooksResponse")
+                .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?
+        };
+        let verification_message = match resource {
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhooks_payment_response) => {
+                let key0 = format!(
+                    "{}{}{}{}{}{}",
+                    webhooks_payment_response.tran_id,
+                    webhooks_payment_response.order_id,
+                    webhooks_payment_response.status,
+                    webhooks_payment_response.domain.clone().peek(),
+                    webhooks_payment_response.amount.get_amount_as_string(),
+                    webhooks_payment_response.currency
+                );
+                let md5_key0 = hex::encode(
+                    crypto::Md5
+                        .generate_digest(key0.as_bytes())
+                        .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)?,
+                );
+                let key1 = format!(
+                    "{}{}{}{}{}",
+                    webhooks_payment_response.paydate,
+                    webhooks_payment_response.domain.peek(),
+                    md5_key0,
+                    webhooks_payment_response
+                        .appcode
+                        .map_or("".to_string(), |appcode| appcode.expose()),
+                    String::from_utf8_lossy(&connector_webhook_secrets.secret)
+                );
+                key1
+            }
+            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhooks_refunds_response) => {
+                format!(
+                    "{}{}{}{}{}{}{}{}",
+                    webhooks_refunds_response.refund_type,
+                    webhooks_refunds_response.merchant_id.peek(),
+                    webhooks_refunds_response.ref_id,
+                    webhooks_refunds_response.refund_id,
+                    webhooks_refunds_response.txn_id,
+                    webhooks_refunds_response.amount.get_amount_as_string(),
+                    webhooks_refunds_response.status,
+                    String::from_utf8_lossy(&connector_webhook_secrets.secret)
+                )
+            }
+        };
+        Ok(verification_message.as_bytes().to_vec())
+    }
+
+    fn verify_webhook_source(
+        &self,
+        request: RequestDetails,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let algorithm = crypto::Md5;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
+            Some(secrets) => secrets,
+            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?,
+        };
+
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+    }
+
+    fn get_event_type(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<EventType, error_stack::Report<domain_types::errors::ConnectorError>> {
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or(errors::ConnectorError::WebhookSourceVerificationFailed)?;
+
+        let resource: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
+            parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?
+        } else {
+            request
+                .body
+                .parse_struct("fiuu::FiuuWebhooksResponse")
+                .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?
+        };
+
+        match resource {
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhooks_payment_response) => {
+                Ok(EventType::from(webhooks_payment_response.status))
+            }
+            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhooks_refunds_response) => {
+                Ok(EventType::from(webhooks_refunds_response.status))
+            }
+        }
+    }
+
+    fn get_webhook_resource_object(
+        &self,
+        request: RequestDetails,
+    ) -> CustomResult<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        domain_types::errors::ConnectorError,
+    > {
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
+            parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?
+        } else {
+            request
+                .body
+                .parse_struct("fiuu::FiuuWebhooksResponse")
+                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?
+        };
+
+        match payload.clone() {
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(webhook_payment_response) => Ok(
+                Box::new(fiuu::FiuuPaymentResponse::FiuuWebhooksPaymentResponse(
+                    webhook_payment_response,
+                )),
+            ),
+            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => {
+                Ok(Box::new(fiuu::FiuuRefundSyncResponse::Webhook(
+                    webhook_refund_response,
+                )))
+            }
+        }
+    }
+
+    fn process_payment_webhook(
+        &self,
+        _request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<WebhookDetailsResponse, error_stack::Report<domain_types::errors::ConnectorError>>
+    {
+        Ok(WebhookDetailsResponse {
+            resource_id: None,
+            status: common_enums::AttemptStatus::Unknown,
+            connector_response_reference_id: None,
+            error_code: None,
+            error_message: None,
+            raw_connector_response: None,
+            status_code: 200,
+            response_headers: None,
+            mandate_reference: None,
+            transformation_status: common_enums::WebhookTransformationStatus::Incomplete,
+        })
+    }
+
+    fn process_refund_webhook(
+        &self,
+        request: RequestDetails,
+        _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
+        _connector_account_details: Option<ConnectorAuthType>,
+    ) -> Result<
+        RefundWebhookDetailsResponse,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        let header = request
+            .headers
+            .get("content-type")
+            .ok_or(errors::ConnectorError::WebhookBodyDecodingFailed)?;
+
+        let payload: FiuuWebhooksResponse = if header == "application/x-www-form-urlencoded" {
+            parse_and_log_keys_in_url_encoded_response::<FiuuWebhooksResponse>(&request.body);
+            serde_urlencoded::from_bytes::<FiuuWebhooksResponse>(&request.body)
+                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?
+        } else {
+            request
+                .body
+                .parse_struct("fiuu::FiuuWebhooksResponse")
+                .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?
+        };
+
+        let notif = match payload.clone() {
+            FiuuWebhooksResponse::FiuuWebhookPaymentResponse(_) => {
+                Err(errors::ConnectorError::WebhookBodyDecodingFailed)
+            }
+            FiuuWebhooksResponse::FiuuWebhookRefundResponse(webhook_refund_response) => Ok(
+                fiuu::FiuuRefundSyncResponse::Webhook(webhook_refund_response),
+            ),
+        }?;
+
+        let response = RefundWebhookDetailsResponse::try_from(notif)
+            .change_context(errors::ConnectorError::WebhookBodyDecodingFailed);
+
+        response.map(|mut response| {
+            response.raw_connector_response =
+                Some(String::from_utf8_lossy(&request.body).to_string());
+            response
+        })
     }
 }
 
@@ -1074,6 +1369,110 @@ impl<
 {
 }
 
+// Authentication flow ConnectorIntegrationV2 implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiuu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiuu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiuu<T>
+{
+}
+
+// Authentication flow SourceVerification implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiuu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiuu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Fiuu<T>
+{
+}
+
 fn parse_response<T>(data: &[u8]) -> Result<T, errors::ConnectorError>
 where
     T: for<'de> Deserialize<'de>,
@@ -1114,4 +1513,38 @@ where
     })?;
 
     Ok(response)
+}
+
+pub fn parse_and_log_keys_in_url_encoded_response<T>(data: &[u8]) {
+    match std::str::from_utf8(data) {
+        Ok(query_str) => {
+            let loggable_keys = [
+                "status",
+                "orderid",
+                "tranID",
+                "nbcb",
+                "amount",
+                "currency",
+                "paydate",
+                "channel",
+                "error_desc",
+                "error_code",
+                "extraP",
+            ];
+            let keys: Vec<(Cow<'_, str>, String)> =
+                url::form_urlencoded::parse(query_str.as_bytes())
+                    .map(|(key, value)| {
+                        if loggable_keys.contains(&key.to_string().as_str()) {
+                            (key, value.to_string())
+                        } else {
+                            (key, "SECRET".to_string())
+                        }
+                    })
+                    .collect();
+            info!("Keys in {} response\n{:?}", type_name::<T>(), keys);
+        }
+        Err(err) => {
+            error!("Failed to convert bytes to string: {:?}", err);
+        }
+    }
 }
