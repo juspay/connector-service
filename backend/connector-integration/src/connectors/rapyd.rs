@@ -24,6 +24,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
+use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -33,6 +34,7 @@ use rand::distributions::{Alphanumeric, DistString};
 use serde::Serialize;
 use serde_json;
 use std::fmt::Debug;
+use tracing;
 use transformers::{
     CaptureRequest, RapydAuthType, RapydAuthorizeResponse, RapydCaptureResponse, RapydPSyncRequest,
     RapydPSyncResponse, RapydPaymentsRequest, RapydPaymentsResponse, RapydRSyncRequest,
@@ -131,7 +133,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         auth_type: &ConnectorAuthType,
     ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
         let auth = RapydAuthType::try_from(auth_type)
-            .map_err(|_| errors::ConnectorError::FailedToObtainAuthType)?;
+            .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
 
         // Return basic auth headers - signature will be added in get_headers method
         Ok(vec![(
@@ -152,7 +154,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         let response: RapydPaymentsResponse = res
             .response
             .parse_struct("ErrorResponse")
-            .map_err(|_| errors::ConnectorError::ResponseDeserializationFailed)?;
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
@@ -437,7 +439,15 @@ macros::macro_connector_implementation!(
                     // Ensure compact JSON with no whitespace
                     match serde_json::from_str::<serde_json::Value>(&raw_body) {
                         Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(_) => raw_body,
+                        Err(err) => {
+                            tracing::warn!(
+                                target: "rapyd_capture",
+                                error = ?err,
+                                raw_body = %raw_body,
+                                "Failed to parse JSON for compact formatting, using raw body"
+                            );
+                            raw_body
+                        }
                     }
                 })
                 .unwrap_or_default();
@@ -479,7 +489,15 @@ macros::macro_connector_implementation!(
                     // Ensure compact JSON with no whitespace
                     match serde_json::from_str::<serde_json::Value>(&raw_body) {
                         Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(_) => raw_body,
+                        Err(err) => {
+                            tracing::warn!(
+                                target: "rapyd_void",
+                                error = ?err,
+                                raw_body = %raw_body,
+                                "Failed to parse JSON for compact formatting, using raw body"
+                            );
+                            raw_body
+                        }
                     }
                 })
                 .unwrap_or_default();
@@ -520,7 +538,15 @@ macros::macro_connector_implementation!(
                     // Ensure compact JSON with no whitespace
                     match serde_json::from_str::<serde_json::Value>(&raw_body) {
                         Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(_) => raw_body,
+                        Err(err) => {
+                            tracing::warn!(
+                                target: "rapyd_refund",
+                                error = ?err,
+                                raw_body = %raw_body,
+                                "Failed to parse JSON for compact formatting, using raw body"
+                            );
+                            raw_body
+                        }
                     }
                 })
                 .unwrap_or_default();
