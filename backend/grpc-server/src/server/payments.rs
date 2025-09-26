@@ -5,9 +5,11 @@ use common_utils::{errors::CustomResult, events::FlowName, lineage, SecretSerdeV
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
-        SetupMandate, Void,
+        Authenticate, Authenticate, Authorize, Authorize, Capture, Capture, CreateAccessToken,
+        CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken, CreateSessionToken, PSync,
+        PSync, PaymentMethodToken, PaymentMethodToken, PostAuthenticate, PostAuthenticate,
+        PreAuthenticate, PreAuthenticate, Refund, Refund, RepeatPayment, RepeatPayment,
+        SetupMandate, SetupMandate, Void, Void,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorResponseHeaders,
@@ -25,9 +27,10 @@ use domain_types::{
     router_data_v2::RouterDataV2,
     router_response_types,
     types::{
-        generate_payment_capture_response, generate_payment_sync_response,
-        generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_payment_authenticate_response, generate_payment_capture_response,
+        generate_payment_post_authenticate_response, generate_payment_pre_authenticate_response,
+        generate_payment_sync_response, generate_payment_void_response, generate_refund_response,
+        generate_repeat_payment_response, generate_setup_mandate_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
 };
