@@ -119,6 +119,7 @@ pub struct Connectors {
     pub bluecode: ConnectorParams,
     pub cryptopay: ConnectorParams,
     pub helcim: ConnectorParams,
+    pub rapyd: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]

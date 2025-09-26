@@ -64,3 +64,6 @@ pub use self::cryptopay::Cryptopay;
 
 pub mod helcim;
 pub use self::helcim::Helcim;
+
+pub mod rapyd;
+pub use self::rapyd::Rapyd;
