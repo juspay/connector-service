@@ -120,6 +120,7 @@ pub struct Connectors {
     pub cryptopay: ConnectorParams,
     pub helcim: ConnectorParams,
     pub dlocal: ConnectorParams,
+    pub placetopay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
