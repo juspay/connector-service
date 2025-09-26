@@ -53,5 +53,20 @@ pub use self::noon::Noon;
 pub mod braintree;
 pub use self::braintree::Braintree;
 
+pub mod volt;
+pub use self::volt::Volt;
+
+pub mod bluecode;
+pub use self::bluecode::Bluecode;
+
+pub mod cryptopay;
+pub use self::cryptopay::Cryptopay;
+
+pub mod dlocal;
+pub use self::dlocal::Dlocal;
+
+pub mod helcim;
+pub use self::helcim::Helcim;
+
 pub mod cybersource;
 pub use self::cybersource::Cybersource;

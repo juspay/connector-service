@@ -99,6 +99,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -153,6 +154,7 @@ mod tests {
                         user_agent: Some(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                         ),
+                        referer: None,
                         os_type: None,
                         os_version: None,
                         device_model: None,
@@ -267,6 +269,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -387,6 +390,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -529,6 +533,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -583,6 +588,7 @@ mod tests {
                         user_agent: Some(
                             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string(),
                         ),
+                        referer: None,
                         os_type: None,
                         os_version: None,
                         device_model: None,
@@ -838,6 +844,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -887,6 +894,7 @@ mod tests {
                             .to_string(),
                     ),
                     user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                    referer: None,
                     os_type: None,
                     os_version: None,
                     device_model: None,
@@ -1013,6 +1021,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1062,6 +1071,7 @@ mod tests {
                             .to_string(),
                     ),
                     user_agent: Some("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)".to_string()),
+                    referer: None,
                     os_type: None,
                     os_version: None,
                     device_model: None,
@@ -1190,6 +1200,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1287,6 +1298,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1389,6 +1401,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1530,6 +1543,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1650,6 +1664,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1759,6 +1774,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),

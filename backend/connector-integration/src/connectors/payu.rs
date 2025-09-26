@@ -1,13 +1,18 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::{enums, CurrencyUnit};
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
+        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
+        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
+        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
+        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
@@ -33,7 +38,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::fmt::Debug;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -220,6 +224,8 @@ impl<
     > connector_types::PaymentTokenV2<T> for Payu<T>
 {
 }
+
+// Authentication trait implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -230,6 +236,7 @@ impl<
     > connector_types::PaymentPreAuthenticateV2<T> for Payu<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -240,6 +247,7 @@ impl<
     > connector_types::PaymentAuthenticateV2<T> for Payu<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -886,7 +894,6 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
     >
     ConnectorIntegrationV2<
@@ -904,7 +911,6 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
     >
     ConnectorIntegrationV2<
@@ -922,7 +928,6 @@ impl<
             + std::marker::Sync
             + std::marker::Send
             + 'static
-            + Serialize
             + Serialize,
     >
     ConnectorIntegrationV2<
@@ -934,21 +939,19 @@ impl<
 {
 }
 
-// SourceVerification implementations for authentication flows
+// Authentication source verification stubs
 impl_source_verification_stub!(
     PreAuthenticate,
     PaymentFlowData,
     PaymentsPreAuthenticateData<T>,
     PaymentsResponseData
 );
-
 impl_source_verification_stub!(
     Authenticate,
     PaymentFlowData,
     PaymentsAuthenticateData<T>,
     PaymentsResponseData
 );
-
 impl_source_verification_stub!(
     PostAuthenticate,
     PaymentFlowData,

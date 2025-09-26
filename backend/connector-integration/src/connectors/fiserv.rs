@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD_ENGINE, Engine};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
@@ -8,9 +10,12 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
+        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
+        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
+        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
+        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
@@ -38,7 +43,6 @@ use interfaces::{
 };
 use ring::hmac;
 use serde::Serialize;
-use std::fmt::Debug;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -242,6 +246,7 @@ impl<
     > connector_types::PaymentTokenV2<T> for Fiserv<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -252,6 +257,7 @@ impl<
     > connector_types::PaymentPreAuthenticateV2<T> for Fiserv<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -262,6 +268,7 @@ impl<
     > connector_types::PaymentAuthenticateV2<T> for Fiserv<T>
 {
 }
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1061,7 +1068,6 @@ impl<
 {
 }
 
-// ConnectorIntegrationV2 implementations for authentication flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1113,7 +1119,6 @@ impl<
 {
 }
 
-// SourceVerification implementations for authentication flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

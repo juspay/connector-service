@@ -5,9 +5,12 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
+        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
+        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
+        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
+        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
@@ -737,7 +740,7 @@ impl<
 {
 }
 
-// Authentication flow implementations
+// ConnectorIntegrationV2 implementations for authentication flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,

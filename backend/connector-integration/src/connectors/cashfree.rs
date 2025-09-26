@@ -1,6 +1,8 @@
 pub mod test;
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use cashfree::{
     CashfreeOrderCreateRequest, CashfreeOrderCreateResponse, CashfreePaymentRequest,
     CashfreePaymentResponse,
@@ -9,9 +11,12 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
+        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
+        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
+        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
+        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
@@ -40,7 +45,6 @@ use interfaces::{
     verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
 use serde::Serialize;
-use std::fmt::Debug;
 use transformers as cashfree;
 
 use super::macros;
@@ -54,6 +58,39 @@ pub(crate) mod headers {
 }
 
 // Trait implementations will be added after the macro creates the struct
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPreAuthenticateV2<T> for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Cashfree<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Cashfree<T>
+{
+}
+
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -763,6 +800,7 @@ impl_source_verification_stub!(
     PaymentMethodTokenResponse
 );
 
+// Authentication flow ConnectorIntegrationV2 implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -814,6 +852,7 @@ impl<
 {
 }
 
+// Authentication flow SourceVerification implementations
 impl_source_verification_stub!(
     PreAuthenticate,
     PaymentFlowData,

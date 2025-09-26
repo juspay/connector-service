@@ -9,9 +9,12 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
-        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
-        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
+        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
+        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
+        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
+        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
+        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
+        SubmitEvidence, SubmitEvidence, Void, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
@@ -691,7 +694,6 @@ impl<
 {
 }
 
-// Authentication trait implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1470,7 +1472,6 @@ impl<
 {
 }
 
-// Authentication flow implementations
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1522,7 +1523,6 @@ impl<
 {
 }
 
-// SourceVerification implementations for authentication flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug

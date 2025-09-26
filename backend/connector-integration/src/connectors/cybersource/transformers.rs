@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::{OptionExt},
+    ext_traits::OptionExt,
     pii,
     types::{SemanticVersion, StringMajorUnit},
 };
@@ -4397,9 +4397,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data
-                    .request
-                    .amount,
+                item.router_data.request.amount,
                 item.router_data.request.currency.unwrap(),
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -4412,12 +4410,18 @@ impl<
             )?,
         };
 
-        let transaction_id = redirect_response.params.ok_or(errors::ConnectorError::MissingRequiredField {
-        field_name: "params.transaction_id",
-    })?
-    .expose();
+        let transaction_id = redirect_response
+            .params
+            .ok_or(errors::ConnectorError::MissingRequiredField {
+                field_name: "params.transaction_id",
+            })?
+            .expose();
         let order_information = OrderInformation { amount_details };
-        let device_information = item.router_data.request.browser_info.as_ref()
+        let device_information = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
             .map(CybersourceDeviceInformation::from_browser_info);
 
         Ok(Self {
@@ -4724,9 +4728,13 @@ impl<
             amount_details,
             bill_to: Some(bill_to),
         };
-        let device_information = item.router_data.request.browser_info.as_ref()
+        let device_information = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
             .map(CybersourceDeviceInformation::from_browser_info);
-        println!("The device info is {:?}",device_information);
+        println!("The device info is {:?}", device_information);
 
         Ok(Self {
             payment_information,
