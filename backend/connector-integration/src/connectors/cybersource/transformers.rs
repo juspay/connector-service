@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
-    ext_traits::{OptionExt, ValueExt},
+    ext_traits::{OptionExt},
     pii,
     types::{SemanticVersion, StringMajorUnit},
 };
@@ -4398,9 +4398,8 @@ impl<
             .amount_converter
             .convert(
                 item.router_data
-                    .resource_common_data
-                    .minor_amount_captured
-                    .unwrap(),
+                    .request
+                    .amount,
                 item.router_data.request.currency.unwrap(),
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -4413,24 +4412,23 @@ impl<
             )?,
         };
 
-        let redirect_payload: CybersourceRedirectionAuthResponse = redirect_response
-            .payload
-            .ok_or(errors::ConnectorError::MissingConnectorRedirectionPayload {
-                field_name: "request.redirect_response.payload",
-            })?
-            .peek()
-            .clone()
-            .parse_value("CybersourceRedirectionAuthResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let transaction_id = redirect_response.params.ok_or(errors::ConnectorError::MissingRequiredField {
+        field_name: "params.transaction_id",
+    })?
+    .expose();
         let order_information = OrderInformation { amount_details };
+        let device_information = item.router_data.request.browser_info.as_ref()
+            .map(CybersourceDeviceInformation::from_browser_info);
+
         Ok(Self {
             payment_information,
             client_reference_information,
             consumer_authentication_information:
                 CybersourceConsumerAuthInformationValidateRequest {
-                    authentication_transaction_id: redirect_payload.transaction_id,
+                    authentication_transaction_id: transaction_id,
                 },
             order_information,
+            device_information,
         })
     }
 }
@@ -4726,6 +4724,10 @@ impl<
             amount_details,
             bill_to: Some(bill_to),
         };
+        let device_information = item.router_data.request.browser_info.as_ref()
+            .map(CybersourceDeviceInformation::from_browser_info);
+        println!("The device info is {:?}",device_information);
+
         Ok(Self {
             payment_information,
             client_reference_information,
@@ -4739,6 +4741,7 @@ impl<
                 reference_id,
             },
             order_information,
+            device_information,
         })
     }
 }
