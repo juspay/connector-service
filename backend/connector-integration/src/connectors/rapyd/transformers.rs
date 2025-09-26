@@ -1,6 +1,6 @@
 use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, PSync, RSync, Void},
+    connector_flow::{Authorize, Capture},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
@@ -954,93 +954,5 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
             }),
             ..item.router_data
         })
-    }
-}
-
-// Error Response
-#[derive(Debug, Deserialize)]
-pub struct RapydErrorResponse {
-    pub status: Status,
-}
-
-// Type aliases for different flows to avoid macro conflicts
-pub type RapydAuthorizeResponse = RapydPaymentsResponse;
-pub type RapydPSyncResponse = RapydPaymentsResponse;
-pub type RapydCaptureResponse = RapydPaymentsResponse;
-pub type RapydVoidResponse = RapydPaymentsResponse;
-
-// Void Request - for payment cancellation
-#[derive(Debug, Serialize, Clone)]
-pub struct VoidRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-}
-
-// Request type aliases to avoid macro conflicts
-pub type RapydPSyncRequest = EmptyRequest;
-pub type RapydVoidRequest = VoidRequest;
-pub type RapydRSyncRequest = EmptyRequest;
-
-// Response type aliases for refund flows
-pub type RapydRefundResponse = RefundResponse;
-pub type RapydRSyncResponse = RefundResponse;
-
-// Additional TryFrom implementations for EmptyRequest (used by type aliases)
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        RapydRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    > for EmptyRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        _item: RapydRouterData<
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(EmptyRequest)
-    }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        RapydRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    > for VoidRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: RapydRouterData<
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(VoidRequest {
-            description: item.router_data.request.cancellation_reason.clone(),
-        })
-    }
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    TryFrom<
-        RapydRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    > for EmptyRequest
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        _item: RapydRouterData<
-            RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
-            T,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(EmptyRequest)
     }
 }

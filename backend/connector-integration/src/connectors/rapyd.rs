@@ -36,10 +36,11 @@ use serde_json;
 use std::fmt::Debug;
 use tracing;
 use transformers::{
-    CaptureRequest, RapydAuthType, RapydAuthorizeResponse, RapydCaptureResponse, RapydPSyncRequest,
-    RapydPSyncResponse, RapydPaymentsRequest, RapydPaymentsResponse, RapydRSyncRequest,
-    RapydRSyncResponse, RapydRefundRequest, RapydRefundResponse, RapydVoidRequest,
-    RapydVoidResponse,
+    CaptureRequest, RapydAuthType, RapydPaymentsRequest,
+    RapydPaymentsResponse as RapydCaptureResponse, RapydPaymentsResponse as RapydPSyncResponse,
+    RapydPaymentsResponse, RapydPaymentsResponse as RapydVoidResponse,
+    RapydPaymentsResponse as RapydAuthorizeResponse, RapydRefundRequest, RefundResponse,
+    RefundResponse as RapydRSyncResponse,
 };
 
 use super::macros;
@@ -237,7 +238,6 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: PSync,
-            request_body: RapydPSyncRequest,
             response_body: RapydPSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
@@ -249,19 +249,17 @@ macros::create_all_prerequisites!(
         ),
         (
             flow: Void,
-            request_body: RapydVoidRequest,
             response_body: RapydVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Refund,
             request_body: RapydRefundRequest,
-            response_body: RapydRefundResponse,
+            response_body: RefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: RapydRSyncRequest,
             response_body: RapydRSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         )
@@ -337,8 +335,7 @@ macros::create_all_prerequisites!(
 
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
             let tag = ring::hmac::sign(&key, to_sign.as_bytes());
-            let hmac_sign = hex::encode(tag);
-            let signature_value = BASE64_ENGINE.encode(hmac_sign);
+            let signature_value = BASE64_ENGINE.encode(tag.as_ref());
 
             Ok(signature_value)
         }
@@ -349,7 +346,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
     curl_request: Json(RapydPaymentsRequest),
-    curl_response: RapydPaymentsResponse,
+    curl_response: RapydAuthorizeResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -383,7 +380,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(RapydPSyncRequest),
     curl_response: RapydPSyncResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
@@ -417,7 +413,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
     curl_request: Json(CaptureRequest),
-    curl_response: RapydPaymentsResponse,
+    curl_response: RapydCaptureResponse,
     flow_name: Capture,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsCaptureData,
@@ -466,13 +462,12 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(RapydVoidRequest),
     curl_response: RapydVoidResponse,
     flow_name: Void,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
-    http_method: Post,
+    http_method: Delete,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -507,7 +502,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            Ok(format!("{}/v1/payments/{}/cancel", self.connector_base_url_payments(req), req.request.connector_transaction_id))
+            Ok(format!("{}/v1/payments/{}", self.connector_base_url_payments(req), req.request.connector_transaction_id))
         }
     }
 );
@@ -516,7 +511,7 @@ macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
     curl_request: Json(RapydRefundRequest),
-    curl_response: RapydRefundResponse,
+    curl_response: RefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -564,7 +559,6 @@ macros::macro_connector_implementation!(
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Rapyd,
-    curl_request: Json(RapydRSyncRequest),
     curl_response: RapydRSyncResponse,
     flow_name: RSync,
     resource_common_data: RefundFlowData,
