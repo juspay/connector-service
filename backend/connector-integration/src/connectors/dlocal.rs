@@ -48,6 +48,7 @@ use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
+const VERSION: &str = "2.1";
 
 use error_stack::ResultExt;
 
@@ -216,7 +217,7 @@ macros::create_all_prerequisites!(
                     headers::X_TRANS_KEY.to_string(),
                     auth.x_trans_key.into_masked(),
                 ),
-                (headers::X_VERSION.to_string(), "2.1".to_string().into()),
+                (headers::X_VERSION.to_string(), VERSION.to_string().into()),
                 (headers::X_DATE.to_string(), date.into()),
                 (
                     headers::CONTENT_TYPE.to_string(),
