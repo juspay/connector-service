@@ -56,7 +56,7 @@ pub struct PeachpaymentsPaymentsRequest<
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct EcommerceCardPaymentOnlyTransactionData<
     T: PaymentMethodDataTypes
         + std::fmt::Debug
@@ -498,7 +498,7 @@ pub struct PeachpaymentsPaymentsResponse {
 
 // Confirm Transaction Response
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 pub struct PeachpaymentsConfirmResponse {
     pub transaction_id: String,
     pub response_code: Option<ResponseCode>,
@@ -507,7 +507,7 @@ pub struct PeachpaymentsConfirmResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde[rename_all = "camelCase"]]
+#[serde(rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum ResponseCode {
     Text(String),
