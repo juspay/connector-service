@@ -34,14 +34,15 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{self, grpc_logging_wrapper},
+    request::RequestData,
+    utils::{grpc_logging_wrapper, MetadataPayload},
 };
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {
     async fn internal_defend(
         &self,
-        request: tonic::Request<DisputeDefendRequest>,
+        request: RequestData<DisputeDefendRequest>,
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
 }
 
@@ -104,18 +105,18 @@ impl DisputeService for Disputes {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::SubmitEvidence,
-            |request, metadata_payload| {
+            |request_data| {
                 let service_name = service_name.clone();
                 async move {
-                    let payload = request.into_inner();
-                    let utils::MetadataPayload {
+                    let payload = request_data.payload;
+                    let MetadataPayload {
                         connector,
                         request_id,
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
                         ..
-                    } = metadata_payload;
+                    } = &request_data.extracted_metadata;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
 
@@ -136,7 +137,7 @@ impl DisputeService for Disputes {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let connector_auth_details = connector_auth_type;
+                    let _connector_auth_details = connector_auth_type;
 
                     let router_data: RouterDataV2<
                         SubmitEvidence,
@@ -146,7 +147,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type: connector_auth_details,
+                        connector_auth_type: connector_auth_type.clone(),
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -220,8 +221,8 @@ impl DisputeService for Disputes {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::Dsync,
-            |request, _metadata_payload| async {
-                let _payload = request.into_inner();
+            |request_data| async {
+                let _payload = request_data.payload;
                 let response = DisputeResponse {
                     ..Default::default()
                 };
@@ -266,7 +267,7 @@ impl DisputeService for Disputes {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::DefendDispute,
-            |request, _metadata_payload| async move { self.internal_defend(request).await },
+            |request_data| async move { self.internal_defend(request_data).await },
         )
         .await
     }
@@ -307,18 +308,18 @@ impl DisputeService for Disputes {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::AcceptDispute,
-            |request, metadata_payload| {
+            |request_data| {
                 let service_name = service_name.clone();
                 async move {
-                    let payload = request.into_inner();
-                    let utils::MetadataPayload {
+                    let payload = request_data.payload;
+                    let MetadataPayload {
                         connector,
                         request_id,
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
                         ..
-                    } = metadata_payload;
+                    } = &request_data.extracted_metadata;
 
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
@@ -340,7 +341,7 @@ impl DisputeService for Disputes {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let connector_auth_details = connector_auth_type;
+                    let _connector_auth_details = connector_auth_type;
 
                     let router_data: RouterDataV2<
                         Accept,
@@ -350,7 +351,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type: connector_auth_details,
+                        connector_auth_type: connector_auth_type.clone(),
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -423,11 +424,11 @@ impl DisputeService for Disputes {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::IncomingWebhook,
-            |request, metadata_payload| {
+            |request_data| {
                 async move {
-                    let connector = metadata_payload.connector;
-                    let connector_auth_details = metadata_payload.connector_auth_type;
-                    let payload = request.into_inner();
+                    let connector = request_data.extracted_metadata.connector;
+                    let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
+                    let payload = request_data.payload;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)

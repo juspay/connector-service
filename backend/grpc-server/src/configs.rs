@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
-use common_utils::{consts, events::EventConfig};
+use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
+
 
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Config {
@@ -17,6 +18,8 @@ pub struct Config {
     pub events: EventConfig,
     #[serde(default)]
     pub lineage: LineageConfig,
+    #[serde(default)]
+    pub unmasked_headers: HeaderMaskingConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -99,7 +102,8 @@ impl Config {
                     .with_list_parse_key("redis.cluster_urls")
                     .with_list_parse_key("database.tenants")
                     .with_list_parse_key("log.kafka.brokers")
-                    .with_list_parse_key("events.brokers"),
+                    .with_list_parse_key("events.brokers")
+                    .with_list_parse_key("unmasked_headers.keys"),
             )
             .build()?;
 
@@ -175,3 +179,4 @@ pub fn workspace_path() -> PathBuf {
         PathBuf::from(".")
     }
 }
+
