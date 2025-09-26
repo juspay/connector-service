@@ -1220,6 +1220,9 @@ pub struct WebhookDetailsResponse {
     pub status_code: u16,
     pub response_headers: Option<http::HeaderMap>,
     pub transformation_status: common_enums::WebhookTransformationStatus,
+    pub amount_captured: Option<i64>,
+    // minor amount for amount framework
+    pub minor_amount_captured: Option<MinorUnit>,
 }
 
 #[derive(Debug, Clone)]

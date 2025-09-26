@@ -2,6 +2,7 @@ use domain_types::{
     connector_flow::Authorize,
     connector_types::{
         PaymentFlowData, PaymentsAuthorizeData, PaymentsResponseData, PaymentsSyncData, ResponseId,
+        WebhookDetailsResponse,
     },
     payment_method_data::PaymentMethodDataTypes,
 };
@@ -81,6 +82,8 @@ impl<
                     item.router_data.request.minor_amount,
                     item.router_data.request.currency,
                 )?;
+
+                print!("{}",item.router_data.request.get_webhook_url()?);
 
                 Ok(Self {
                     price_amount: amount,
@@ -288,7 +291,7 @@ pub struct CryptopayPaymentResponseData {
     pub network: Option<String>,
     pub uri: Option<String>,
     pub price_amount: Option<StringMajorUnit>,
-    pub price_currency: Option<String>,
+    pub price_currency: Option<common_enums::Currency>,
     pub pay_amount: Option<StringMajorUnit>,
     pub pay_currency: Option<String>,
     pub fee: Option<String>,
@@ -399,6 +402,89 @@ impl<F> TryFrom<ResponseRouterData<CryptopayPaymentsResponse, Self>>
                 response,
                 ..router_data
             }),
+        }
+    }
+}
+
+impl TryFrom<CryptopayWebhookDetails> for WebhookDetailsResponse {
+    type Error = error_stack::Report<ConnectorError>;
+
+    fn try_from(notif: CryptopayWebhookDetails) -> Result<Self, Self::Error> {
+        let status = common_enums::AttemptStatus::from(notif.data.status.clone());
+        if is_payment_failure(status) {
+            Ok(Self {
+                error_code: Some(
+                    notif
+                        .data
+                        .name
+                        .clone()
+                        .unwrap_or(consts::NO_ERROR_CODE.to_string()),
+                ),
+                error_message: Some(
+                    notif
+                        .data
+                        .status_context
+                        .clone()
+                        .unwrap_or(consts::NO_ERROR_MESSAGE.to_string()),
+                ),
+                //reason: notif.data.status_context.clone(),
+                status_code: 200,
+                status: common_enums::AttemptStatus::Failure,
+                resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
+                connector_response_reference_id: None,
+                mandate_reference: None,
+                raw_connector_response: None,
+                response_headers: None,
+                transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                minor_amount_captured: None,
+                amount_captured: None,
+            })
+        } else {
+            let amount_captured_in_minor_units =
+                match (notif.data.price_amount, notif.data.price_currency) {
+                    (Some(amount), Some(currency)) => {
+                        Some(CryptopayAmountConvertor::convert_back(amount, currency)?)
+                    }
+                    _ => None,
+                };
+            match amount_captured_in_minor_units {
+                Some(minor_amount) => {
+                    let amount_captured = Some(minor_amount.get_amount_as_i64());
+                    Ok(Self {
+                        amount_captured,
+                        minor_amount_captured: amount_captured_in_minor_units,
+                        status,
+                        resource_id: Some(ResponseId::ConnectorTransactionId(
+                            notif.data.id.clone(),
+                        )),
+                        mandate_reference: None,
+                        status_code: 200,
+                        connector_response_reference_id: notif
+                            .data
+                            .custom_id
+                            .or(Some(notif.data.id)),
+                        error_code: None,
+                        error_message: None,
+                        raw_connector_response: None,
+                        response_headers: None,
+                        transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                    })
+                }
+                None => Ok(Self {
+                    status,
+                    resource_id: Some(ResponseId::ConnectorTransactionId(notif.data.id.clone())),
+                    mandate_reference: None,
+                    status_code: 200,
+                    connector_response_reference_id: notif.data.custom_id.or(Some(notif.data.id)),
+                    error_code: None,
+                    error_message: None,
+                    raw_connector_response: None,
+                    response_headers: None,
+                    transformation_status: common_enums::WebhookTransformationStatus::Complete,
+                    minor_amount_captured: None,
+                    amount_captured: None,
+                }),
+            }
         }
     }
 }
