@@ -106,13 +106,17 @@ pub struct PhonepePaymentsResponse {
 pub struct PhonepeSyncResponse {
     pub success: bool,
     pub code: String,
-    #[serde(default = "default_error_message")]
+    #[serde(default = "default_sync_error_message")]
     pub message: String,
     #[serde(default)]
     pub data: Option<PhonepeSyncResponseData>,
 }
 
 fn default_error_message() -> String {
+    "Payment processing failed".to_string()
+}
+
+fn default_sync_error_message() -> String {
     "Payment sync failed".to_string()
 }
 
@@ -203,15 +207,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
+        let auth = PhonepeAuthType::try_from(
+            &router_data.connector_auth_type
         )?;
 
         // Use amount converter to get proper amount in minor units
@@ -353,15 +350,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
+        let auth = PhonepeAuthType::try_from(
+            &router_data.connector_auth_type
         )?;
 
         // Use amount converter to get proper amount in minor units
@@ -653,26 +643,6 @@ pub struct PhonepeAuthType {
     pub key_index: String,
 }
 
-impl PhonepeAuthType {
-    pub fn from_auth_type_and_merchant_id(
-        auth_type: &ConnectorAuthType,
-        merchant_id: Secret<String>,
-    ) -> Result<Self, Error> {
-        match auth_type {
-            ConnectorAuthType::SignatureKey {
-                api_key: _,
-                key1,
-                api_secret,
-            } => Ok(Self {
-                merchant_id,
-                salt_key: key1.clone(),
-                key_index: api_secret.peek().clone(), // Use api_secret for key index
-            }),
-            _ => Err(errors::ConnectorError::FailedToObtainAuthType.into()),
-        }
-    }
-}
-
 impl TryFrom<&ConnectorAuthType> for PhonepeAuthType {
     type Error = Error;
 
@@ -749,15 +719,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
+        let auth = PhonepeAuthType::try_from(
+            &router_data.connector_auth_type
         )?;
 
         let merchant_transaction_id = router_data
@@ -807,15 +770,8 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
-            &router_data.connector_auth_type,
-            Secret::new(
-                router_data
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ),
+        let auth = PhonepeAuthType::try_from(
+            &router_data.connector_auth_type
         )?;
 
         let merchant_transaction_id = router_data

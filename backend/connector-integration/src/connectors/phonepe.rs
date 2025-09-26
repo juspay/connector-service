@@ -67,7 +67,7 @@ impl<
     > connector_types::PaymentSessionToken for Phonepe<T>
 {
 }
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentAccessToken for Phonepe<T>
 {
 }
@@ -360,13 +360,7 @@ macros::macro_connector_implementation!(
             let connector_req = phonepe::PhonepeSyncRequest::try_from(&connector_router_data)?;
 
             // Get merchant ID for X-MERCHANT-ID header
-            let auth = phonepe::PhonepeAuthType::from_auth_type_and_merchant_id(&req.connector_auth_type, Secret::new(
-                req
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ))?;
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
 
             headers.push((headers::X_VERIFY.to_string(), connector_req.checksum.into()));
             headers.push((headers::X_MERCHANT_ID.to_string(), auth.merchant_id.peek().to_string().into()));
@@ -386,13 +380,7 @@ macros::macro_connector_implementation!(
                 .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
 
             // Get merchant ID from auth
-            let auth = phonepe::PhonepeAuthType::from_auth_type_and_merchant_id(&req.connector_auth_type, Secret::new(
-                req
-                    .resource_common_data
-                    .merchant_id
-                    .get_string_repr()
-                    .to_string(),
-            ))?;
+            let auth = phonepe::PhonepeAuthType::try_from(&req.connector_auth_type)?;
             let api_endpoint = constants::API_STATUS_ENDPOINT;
             let merchant_id = auth.merchant_id.peek();
             Ok(format!("{base_url}{api_endpoint}/{merchant_id}/{merchant_transaction_id}"))
