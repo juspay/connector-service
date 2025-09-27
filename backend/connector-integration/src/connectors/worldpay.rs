@@ -32,7 +32,7 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
-use transformers::{self as worldpay, WorldpayAuthType};
+use transformers::{self as worldpay};
 use self::requests::{WorldpayPaymentsRequest, WorldpayCaptureRequest, WorldpayRefundRequest};
 use self::response::{
     WorldpayErrorResponse,
@@ -110,6 +110,26 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSessionToken for Worldpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Worldpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAuthenticateV2<T> for Worldpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPreAuthenticateV2<T> for Worldpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentTokenV2<T> for Worldpay<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentAccessToken for Worldpay<T>
 {
 }
 
@@ -557,6 +577,91 @@ impl<
 {
 }
 
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Worldpay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
+    > for Worldpay<T>
+{
+}
+
 // SourceVerification implementations for all flows
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
@@ -684,6 +789,56 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::PostAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::Authenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::PreAuthenticate,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::PaymentMethodToken,
+        PaymentFlowData,
+        domain_types::connector_types::PaymentMethodTokenizationData<T>,
+        domain_types::connector_types::PaymentMethodTokenResponse,
+    > for Worldpay<T>
+{
+}
+
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    interfaces::verification::SourceVerification<
+        domain_types::connector_flow::CreateAccessToken,
+        PaymentFlowData,
+        domain_types::connector_types::AccessTokenRequestData,
+        domain_types::connector_types::AccessTokenResponseData,
     > for Worldpay<T>
 {
 }
