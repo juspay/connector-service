@@ -49,6 +49,7 @@ dlocal.base_url = "https://sandbox.dlocal.com/"
 placetopay.base_url = "https://test.placetopay.com/rest/gateway"
 rapyd.base_url = "https://sandboxapi.rapyd.net"
 aci.base_url = "https://eu-test.oppwa.com/"
+worldpay.base_url = "https://try.access.worldpay.com/"
 
 # Generic Events Configuration
 [events]

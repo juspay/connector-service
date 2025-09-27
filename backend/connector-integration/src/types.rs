@@ -55,6 +55,7 @@ impl<T: PaymentMethodDataTypes + Debug + Default + Send + Sync + 'static + serde
             ConnectorEnum::Placetopay => Box::new(Placetopay::new()),
             ConnectorEnum::Rapyd => Box::new(Rapyd::new()),
             ConnectorEnum::Aci => Box::new(Aci::new()),
+            ConnectorEnum::Worldpay => Box::new(Worldpay::new()),
         }
     }
 }
