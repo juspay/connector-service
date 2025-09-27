@@ -4911,27 +4911,6 @@ impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
-    for ConnectorCustomerData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let email = value
-            .email
-            .and_then(|email_str| Email::try_from(email_str.expose()).ok());
-
-        Ok(Self {
-            customer_id: value.customer_id.map(Secret::new),
-            email: email.map(Secret::new),
-            name: value.customer_name.map(Secret::new),
-            description: None,
-        })
-    }
-}
-
 impl<
         T: PaymentMethodDataTypes
             + Default
@@ -4984,11 +4963,13 @@ impl<
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
-            redirect_response: None, // Will be populated from redirect responses
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
+            setup_future_usage: None,
+            mandate_id: None,
+            setup_mandate_details: None,
             integrity_object: None,
-            email,
-            customer_name: value.customer_name,
-            complete_authorize_url: value.complete_authorize_url,
         })
     }
 }
