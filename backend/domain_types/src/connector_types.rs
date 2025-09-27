@@ -28,9 +28,6 @@ use crate::{
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
-        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
-        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject, SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
