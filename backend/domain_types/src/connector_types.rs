@@ -28,6 +28,9 @@ use crate::{
         PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
         RefundIntegrityObject, RefundSyncIntegrityObject, RepeatPaymentIntegrityObject,
         SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject, SyncRequestType,
+        PaymentSynIntegrityObject, PaymentVoidIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SetupMandateIntegrityObject,
+        SubmitEvidenceIntegrityObject, SyncRequestType,
     },
     router_response_types::RedirectForm,
     types::{
@@ -69,6 +72,7 @@ pub enum ConnectorEnum {
     Placetopay,
     Rapyd,
     Aci,
+    Worldpay,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
@@ -104,6 +108,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Placetopay => Ok(Self::Placetopay),
             grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
             grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
+            grpc_api_types::payments::Connector::Worldpay => Ok(Self::Worldpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
                     sub_code: "UNSPECIFIED_CONNECTOR".to_owned(),

@@ -118,6 +118,7 @@ pub struct Connectors {
     pub placetopay: ConnectorParams,
     pub rapyd: ConnectorParams,
     pub aci: ConnectorParams,
+    pub worldpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -4601,80 +4602,60 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
-    for AccessTokenRequestData
-{
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        _value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        Ok(Self {
-            grant_type: "client_credentials".to_string(),
-        })
-    }
-}
-
-// Generic implementation for access token request from connector auth
-impl ForeignTryFrom<&ConnectorAuthType> for AccessTokenRequestData {
-    type Error = ApplicationErrorResponse;
-
-    fn foreign_try_from(
-        _auth_type: &ConnectorAuthType,
-    ) -> Result<Self, error_stack::Report<Self::Error>> {
-        // Default to client_credentials grant type for OAuth
-        // Connectors can override this with their own specific implementations
-        Ok(Self {
-            grant_type: "client_credentials".to_string(),
-        })
-    }
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + Default
-            + Debug
-            + Send
-            + Eq
-            + PartialEq
-            + serde::Serialize
-            + serde::de::DeserializeOwned
-            + Clone
-            + CardConversionHelper<T>,
-    > ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
-    for PaymentMethodTokenizationData<T>
+    for crate::connector_types::CompleteAuthorizeRequestData
 {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
         value: grpc_api_types::payments::PaymentServiceAuthorizeRequest,
     ) -> Result<Self, error_stack::Report<Self::Error>> {
-        let currency = common_enums::Currency::foreign_try_from(value.currency())?;
-        let customer_acceptance = value.customer_acceptance.clone();
+        let email: Option<Email> = match value.email {
+            Some(ref email_str) => {
+                Some(Email::try_from(email_str.clone().expose()).map_err(|_| {
+                    error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                        sub_code: "INVALID_EMAIL_FORMAT".to_owned(),
+                        error_identifier: 400,
+                        error_message: "Invalid email".to_owned(),
+                        error_object: None,
+                    }))
+                })?)
+            }
+            None => None,
+        };
+
+        let payment_method_data = PaymentMethodData::<crate::payment_method_data::DefaultPCIHolder>::foreign_try_from(
+            value.payment_method.clone().ok_or_else(|| {
+                ApplicationErrorResponse::BadRequest(ApiError {
+                    sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+                    error_identifier: 400,
+                    error_message: "Payment method data is required".to_owned(),
+                    error_object: None,
+                })
+            })?,
+        )
+        .change_context(ApplicationErrorResponse::BadRequest(ApiError {
+            sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
+            error_identifier: 400,
+            error_message: "Payment method data construction failed".to_owned(),
+            error_object: None,
+        }))?;
 
         Ok(Self {
-            amount: common_utils::types::MinorUnit::new(value.amount),
-            currency,
-            payment_method_data: PaymentMethodData::<T>::foreign_try_from(
-                value.payment_method.ok_or_else(|| {
-                    ApplicationErrorResponse::BadRequest(ApiError {
-                        sub_code: "INVALID_PAYMENT_METHOD_DATA".to_owned(),
-                        error_identifier: 400,
-                        error_message: "Payment method data is required".to_owned(),
-                        error_object: None,
-                    })
-                })?,
-            )?,
+            amount: common_utils::types::MinorUnit::new(value.minor_amount),
+            currency: common_enums::Currency::foreign_try_from(value.currency())?,
+            payment_method_data: Some(payment_method_data),
+            capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
+                value.capture_method(),
+            )?),
             browser_info: value
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
-            customer_acceptance: customer_acceptance
-                .map(mandates::CustomerAcceptance::foreign_try_from)
-                .transpose()?,
-            setup_future_usage: None,
-            mandate_id: None,
-            setup_mandate_details: None,
+            redirect_response: None, // Will be populated from redirect responses
             integrity_object: None,
+            email,
+            customer_name: value.customer_name,
+            complete_authorize_url: value.complete_authorize_url,
         })
     }
 }
