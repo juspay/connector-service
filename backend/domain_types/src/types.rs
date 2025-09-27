@@ -4882,6 +4882,7 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     for AccessTokenRequestData
 {
     type Error = ApplicationErrorResponse;
@@ -4983,13 +4984,11 @@ impl<
                 .browser_info
                 .map(BrowserInformation::foreign_try_from)
                 .transpose()?,
-            customer_acceptance: customer_acceptance
-                .map(mandates::CustomerAcceptance::foreign_try_from)
-                .transpose()?,
-            setup_future_usage: None,
-            mandate_id: None,
-            setup_mandate_details: None,
+            redirect_response: None, // Will be populated from redirect responses
             integrity_object: None,
+            email,
+            customer_name: value.customer_name,
+            complete_authorize_url: value.complete_authorize_url,
         })
     }
 }
