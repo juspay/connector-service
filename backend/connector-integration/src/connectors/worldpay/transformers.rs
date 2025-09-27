@@ -214,7 +214,8 @@ fn fetch_payment_instrument<T: PaymentMethodDataTypes + std::fmt::Debug + std::m
             | WalletDataPaymentMethod::SwishQr(_)
             | WalletDataPaymentMethod::WeChatPayQr(_)
             | WalletDataPaymentMethod::Mifinity(_)
-            | WalletDataPaymentMethod::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
+            | WalletDataPaymentMethod::RevolutPay(_)
+            | WalletDataPaymentMethod::BluecodeRedirect {} => Err(errors::ConnectorError::NotImplemented(
                 utils::get_unimplemented_payment_method_error_message("worldpay"),
             )
             .into()),
