@@ -124,6 +124,7 @@ pub struct Connectors {
     pub trustpay: ConnectorParamsWithMoreUrls,
     pub stripe: ConnectorParams,
     pub cybersource: ConnectorParams,
+    pub worldpay: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -4844,7 +4845,6 @@ impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     }
 }
 
-impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceAuthorizeRequest>
     for AccessTokenRequestData
 {
     type Error = ApplicationErrorResponse;
@@ -4944,6 +4944,8 @@ impl<
     }
 }
 
+impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
+    for RepeatPaymentData
 impl ForeignTryFrom<grpc_api_types::payments::PaymentServiceRepeatEverythingRequest>
     for RepeatPaymentData
 {
