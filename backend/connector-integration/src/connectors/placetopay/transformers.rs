@@ -58,8 +58,10 @@ impl TryFrom<&ConnectorAuthType> for PlacetopayAuth {
             .change_context(errors::ConnectorError::RequestEncodingFailed)?;
         let seed = format!("{}+00:00", now.split_at(now.len() - 5).0);
 
-        let nonce_b64 =
-            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, nonce_bytes.clone());
+        let nonce_b64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            nonce_bytes.clone(),
+        );
 
         let mut hasher = ring::digest::Context::new(&ring::digest::SHA256);
         hasher.update(&nonce_bytes);
@@ -316,37 +318,12 @@ pub struct PlacetopayPaymentsResponse {
 }
 
 // Authorize flow uses the unified payment response handling with capture method consideration
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    TryFrom<
-        ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
-    > for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<PlacetopayPaymentsResponse, Self>>
+    for RouterDataV2<F, PaymentFlowData, T, PaymentsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(
-        item: ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<
-                Authorize,
-                PaymentFlowData,
-                PaymentsAuthorizeData<T>,
-                PaymentsResponseData,
-            >,
-        >,
+        item: ResponseRouterData<PlacetopayPaymentsResponse, Self>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             resource_common_data: PaymentFlowData {
@@ -415,131 +392,6 @@ impl<
         Ok(Self {
             auth,
             internal_reference,
-        })
-    }
-}
-
-// PSync flow response handling
-impl
-    TryFrom<
-        ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: common_enums::AttemptStatus::from(item.response.status.status),
-                ..item.router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.internal_reference.to_string(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: item
-                    .response
-                    .authorization
-                    .clone()
-                    .map(|authorization| serde_json::json!(authorization)),
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
-}
-
-// Capture flow response handling
-impl
-    TryFrom<
-        ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: common_enums::AttemptStatus::from(item.response.status.status),
-                ..item.router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.internal_reference.to_string(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: item
-                    .response
-                    .authorization
-                    .clone()
-                    .map(|authorization| serde_json::json!(authorization)),
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
-        })
-    }
-}
-
-impl
-    TryFrom<
-        ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    > for RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(
-        item: ResponseRouterData<
-            PlacetopayPaymentsResponse,
-            RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
-        >,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            resource_common_data: PaymentFlowData {
-                status: common_enums::AttemptStatus::from(item.response.status.status),
-                ..item.router_data.resource_common_data
-            },
-            response: Ok(PaymentsResponseData::TransactionResponse {
-                resource_id: ResponseId::ConnectorTransactionId(
-                    item.response.internal_reference.to_string(),
-                ),
-                redirection_data: None,
-                mandate_reference: None,
-                connector_metadata: item
-                    .response
-                    .authorization
-                    .clone()
-                    .map(|authorization| serde_json::json!(authorization)),
-                network_txn_id: None,
-                connector_response_reference_id: None,
-                incremental_authorization_allowed: None,
-                status_code: item.http_code,
-            }),
-            ..item.router_data
         })
     }
 }

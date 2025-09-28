@@ -296,7 +296,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
     connector: Placetopay,
-    curl_request: Json(PlacetopayPaymentsRequest),
+    curl_request: Json(PlacetopayPaymentsRequest<T>),
     curl_response: PlacetopayPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
