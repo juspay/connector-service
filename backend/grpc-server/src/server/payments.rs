@@ -5,10 +5,9 @@ use common_utils::{errors::CustomResult, events::FlowName, lineage, SecretSerdeV
 use connector_integration::types::ConnectorData;
 use domain_types::{
     connector_flow::{
-        Authenticate, Authorize, Authorize, Capture, Capture, CreateAccessToken, CreateAccessToken,
-        CreateOrder, CreateOrder, CreateSessionToken, CreateSessionToken, PSync, PSync,
-        PaymentMethodToken, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, Refund,
-        RepeatPayment, RepeatPayment, SetupMandate, SetupMandate, Void, Void,
+        Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
+        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
+        SetupMandate, Void,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorResponseHeaders,

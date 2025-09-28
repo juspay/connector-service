@@ -245,7 +245,6 @@ impl<
     > connector_types::RepeatPaymentV2 for Phonepe<T>
 {
 }
-
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
