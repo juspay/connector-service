@@ -116,7 +116,7 @@ impl DisputeService for Disputes {
                         connector_auth_type,
                         reference_id,
                         ..
-                    } = &request_data.extracted_metadata;
+                    } = request_data.extracted_metadata;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
 
@@ -137,8 +137,6 @@ impl DisputeService for Disputes {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let _connector_auth_details = connector_auth_type;
-
                     let router_data: RouterDataV2<
                         SubmitEvidence,
                         DisputeFlowData,
@@ -147,7 +145,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type: connector_auth_type.clone(),
+                        connector_auth_type,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -319,7 +317,7 @@ impl DisputeService for Disputes {
                         connector_auth_type,
                         reference_id,
                         ..
-                    } = &request_data.extracted_metadata;
+                    } = request_data.extracted_metadata;
 
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
@@ -341,8 +339,6 @@ impl DisputeService for Disputes {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let _connector_auth_details = connector_auth_type;
-
                     let router_data: RouterDataV2<
                         Accept,
                         DisputeFlowData,
@@ -351,7 +347,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type: connector_auth_type.clone(),
+                        connector_auth_type,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };

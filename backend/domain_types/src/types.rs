@@ -42,10 +42,7 @@ fn extract_headers_from_metadata(
     let mut vault_headers = HashMap::new();
 
     if let Some(vault_creds) = metadata.get(X_EXTERNAL_VAULT_METADATA) {
-        vault_headers.insert(
-            X_EXTERNAL_VAULT_METADATA.to_string(),
-            vault_creds,
-        );
+        vault_headers.insert(X_EXTERNAL_VAULT_METADATA.to_string(), vault_creds);
     }
 
     if vault_headers.is_empty() {
@@ -1504,12 +1501,8 @@ impl ForeignTryFrom<grpc_api_types::payments::Address> for AddressDetails {
 
 // PhoneDetails conversion removed - phone info is now embedded in Address
 
-impl
-    ForeignTryFrom<(
-        PaymentServiceAuthorizeRequest,
-        Connectors,
-        &MaskedMetadata,
-    )> for PaymentFlowData
+impl ForeignTryFrom<(PaymentServiceAuthorizeRequest, Connectors, &MaskedMetadata)>
+    for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
 
@@ -1728,21 +1721,11 @@ impl
     }
 }
 
-impl
-    ForeignTryFrom<(
-        PaymentServiceVoidRequest,
-        Connectors,
-        &MaskedMetadata,
-    )> for PaymentFlowData
-{
+impl ForeignTryFrom<(PaymentServiceVoidRequest, Connectors, &MaskedMetadata)> for PaymentFlowData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, metadata): (
-            PaymentServiceVoidRequest,
-            Connectors,
-            &MaskedMetadata,
-        ),
+        (value, connectors, metadata): (PaymentServiceVoidRequest, Connectors, &MaskedMetadata),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For void operations, address information is typically not available or required
         // Since this is a PaymentServiceVoidRequest, we use default address values
@@ -4216,21 +4199,11 @@ impl ForeignTryFrom<(DisputeDefendRequest, Connectors)> for DisputeFlowData {
     }
 }
 
-impl
-    ForeignTryFrom<(
-        DisputeDefendRequest,
-        Connectors,
-        &MaskedMetadata,
-    )> for DisputeFlowData
-{
+impl ForeignTryFrom<(DisputeDefendRequest, Connectors, &MaskedMetadata)> for DisputeFlowData {
     type Error = ApplicationErrorResponse;
 
     fn foreign_try_from(
-        (value, connectors, _metadata): (
-            DisputeDefendRequest,
-            Connectors,
-            &MaskedMetadata,
-        ),
+        (value, connectors, _metadata): (DisputeDefendRequest, Connectors, &MaskedMetadata),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         Ok(DisputeFlowData {
             connector_request_reference_id: extract_connector_request_reference_id(
@@ -5457,7 +5430,7 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::PaymentServicePreAuthenticateRequest,
         Connectors,
-        &tonic::metadata::MetadataMap,
+        &common_utils::metadata::MaskedMetadata,
     )> for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
@@ -5466,7 +5439,7 @@ impl
         (value, connectors, metadata): (
             grpc_api_types::payments::PaymentServicePreAuthenticateRequest,
             Connectors,
-            &tonic::metadata::MetadataMap,
+            &common_utils::metadata::MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match value.address {
@@ -5530,7 +5503,7 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::PaymentServiceAuthenticateRequest,
         Connectors,
-        &tonic::metadata::MetadataMap,
+        &common_utils::metadata::MaskedMetadata,
     )> for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
@@ -5539,7 +5512,7 @@ impl
         (value, connectors, metadata): (
             grpc_api_types::payments::PaymentServiceAuthenticateRequest,
             Connectors,
-            &tonic::metadata::MetadataMap,
+            &common_utils::metadata::MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match &value.address {
@@ -5605,7 +5578,7 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::PaymentServicePostAuthenticateRequest,
         Connectors,
-        &tonic::metadata::MetadataMap,
+        &common_utils::metadata::MaskedMetadata,
     )> for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
@@ -5614,7 +5587,7 @@ impl
         (value, connectors, metadata): (
             grpc_api_types::payments::PaymentServicePostAuthenticateRequest,
             Connectors,
-            &tonic::metadata::MetadataMap,
+            &common_utils::metadata::MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         let address = match &value.address {

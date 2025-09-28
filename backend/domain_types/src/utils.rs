@@ -374,7 +374,7 @@ pub fn extract_merchant_id_from_metadata(
                 error_object: None,
             })
         })?;
-    
+
     let merchant_id_str = merchant_id_secret.expose();
 
     Ok(merchant_id_str

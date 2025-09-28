@@ -5,7 +5,6 @@ use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
 
-
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Config {
     pub common: Common,
@@ -179,4 +178,3 @@ pub fn workspace_path() -> PathBuf {
         PathBuf::from(".")
     }
 }
-

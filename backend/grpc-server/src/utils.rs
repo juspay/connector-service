@@ -1,10 +1,7 @@
 use std::{str::FromStr, sync::Arc};
 
 use common_utils::{
-    consts::{
-        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1,
-        X_KEY2,
-    },
+    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
     errors::CustomResult,
     events::{Event, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
@@ -137,8 +134,7 @@ pub fn record_fields_from_header<B: hyper::body::Body>(request: &Request<B>) -> 
 /// 1. Wrap in hyperswitch_masking::Secret<T>
 /// 2. Extract via MaskedMetadata methods instead of adding here
 ///
-#[derive(Clone)]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct MetadataPayload {
     pub tenant_id: String,
     pub request_id: String,
@@ -154,9 +150,7 @@ pub fn get_metadata_payload(
     server_config: Arc<configs::Config>,
 ) -> CustomResult<MetadataPayload, ApplicationErrorResponse> {
     let connector = connector_from_metadata(metadata)?;
-    // Create a temporary MaskedMetadata for merchant_id extraction
-    let temp_masked = common_utils::metadata::MaskedMetadata::new(metadata.clone(), server_config.unmasked_headers.clone());
-    let merchant_id = domain_types::utils::extract_merchant_id_from_metadata(&temp_masked)?;
+    let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
     let request_id = request_id_from_metadata(metadata)?;
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
@@ -165,7 +159,7 @@ pub fn get_metadata_payload(
     Ok(MetadataPayload {
         tenant_id,
         request_id,
-        merchant_id: merchant_id.get_string_repr().to_string(),
+        merchant_id: merchant_id,
         connector,
         lineage_ids,
         connector_auth_type,
@@ -186,6 +180,21 @@ pub fn connector_from_metadata(
             }))
         })
     })
+}
+
+pub fn merchant_id_from_metadata(
+    metadata: &metadata::MetadataMap,
+) -> CustomResult<String, ApplicationErrorResponse> {
+    parse_metadata(metadata, consts::X_MERCHANT_ID)
+        .map(|inner| inner.to_string())
+        .map_err(|e| {
+            Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                sub_code: "MISSING_MERCHANT_ID".to_string(),
+                error_identifier: 400,
+                error_message: format!("Missing merchant ID in request metadata: {e}"),
+                error_object: None,
+            }))
+        })
 }
 
 pub fn request_id_from_metadata(
@@ -422,7 +431,7 @@ where
 
     // Extract metadata_payload before moving request_data
     let metadata_payload = request_data.extracted_metadata.clone();
-    
+
     let result = handler(request_data).await;
     let duration = start_time.elapsed().as_millis();
     current_span.record("response_time", duration);
@@ -442,7 +451,6 @@ where
         }
     };
 
-    // metadata_payload already extracted above
     let mut grpc_event = Event {
         request_id: metadata_payload.request_id.clone(),
         timestamp: chrono::Utc::now().timestamp().into(),
@@ -454,6 +462,7 @@ where
         status_code: grpc_status_code,
         request_data: masked_request_data,
         response_data: masked_response_data,
+        headers: masked_headers,
         additional_fields: std::collections::HashMap::new(),
         lineage_ids: metadata_payload.lineage_ids.clone(),
     };

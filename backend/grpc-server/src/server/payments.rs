@@ -140,17 +140,17 @@ trait PaymentOperationsInternal {
 
     async fn internal_pre_authenticate(
         &self,
-        request: tonic::Request<PaymentServicePreAuthenticateRequest>,
+        request: RequestData<PaymentServicePreAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePreAuthenticateResponse>, tonic::Status>;
 
     async fn internal_authenticate(
         &self,
-        request: tonic::Request<PaymentServiceAuthenticateRequest>,
+        request: RequestData<PaymentServiceAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthenticateResponse>, tonic::Status>;
 
     async fn internal_post_authenticate(
         &self,
-        request: tonic::Request<PaymentServicePostAuthenticateRequest>,
+        request: RequestData<PaymentServicePostAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePostAuthenticateResponse>, tonic::Status>;
 }
 
@@ -2077,7 +2077,19 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServicePreAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePreAuthenticateResponse>, tonic::Status> {
-        self.internal_pre_authenticate(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::PreAuthenticate,
+            |request_data| async move { self.internal_pre_authenticate(request_data).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -2105,7 +2117,19 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServiceAuthenticateResponse>, tonic::Status> {
-        self.internal_authenticate(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::Authenticate,
+            |request_data| async move { self.internal_authenticate(request_data).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -2133,7 +2157,19 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServicePostAuthenticateRequest>,
     ) -> Result<tonic::Response<PaymentServicePostAuthenticateResponse>, tonic::Status> {
-        self.internal_post_authenticate(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::PostAuthenticate,
+            |request_data| async move { self.internal_post_authenticate(request_data).await },
+        )
+        .await
     }
 }
 
