@@ -12,12 +12,9 @@ use common_utils::{
 };
 use domain_types::{
     connector_flow::{
-        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
-        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
-        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
-        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
-        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
-        SubmitEvidence, SubmitEvidence, Void, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
@@ -251,36 +248,6 @@ impl<
 {
 }
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPostAuthenticateV2<T> for Fiuu<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPreAuthenticateV2<T> for Fiuu<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthenticateV2<T> for Fiuu<T>
-{
-}
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -1116,58 +1083,6 @@ impl<
     >
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
     for Fiuu<T>
-{
-}
-
-// Authentication flow implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiuu<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiuu<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Fiuu<T>
 {
 }
 

@@ -6,12 +6,9 @@ use common_enums::AttemptStatus;
 use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Accept, Authenticate, Authenticate, Authorize, Authorize, Capture, Capture,
-        CreateAccessToken, CreateAccessToken, CreateOrder, CreateOrder, CreateSessionToken,
-        CreateSessionToken, DefendDispute, DefendDispute, PSync, PSync, PaymentMethodToken,
-        PaymentMethodToken, PostAuthenticate, PostAuthenticate, PreAuthenticate, PreAuthenticate,
-        RSync, RSync, Refund, Refund, RepeatPayment, RepeatPayment, SetupMandate, SetupMandate,
-        SubmitEvidence, SubmitEvidence, Void, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
@@ -455,37 +452,6 @@ impl<
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Paytm<T>
-{
-}
-
-// SourceVerification implementations for authentication flows
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Paytm<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    verification::SourceVerification<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
     > for Paytm<T>
 {
 }

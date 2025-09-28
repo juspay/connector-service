@@ -297,36 +297,6 @@ impl<
     > connector_types::PaymentTokenV2<T> for Cashtocode<T>
 {
 }
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPreAuthenticateV2<T> for Cashtocode<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentAuthenticateV2<T> for Cashtocode<T>
-{
-}
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > connector_types::PaymentPostAuthenticateV2<T> for Cashtocode<T>
-{
-}
 
 // Authentication trait implementations
 impl<
@@ -932,78 +902,6 @@ impl<
     > for Cashtocode<T>
 {
 }
-
-// Authentication flow ConnectorIntegrationV2 implementations
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PreAuthenticate,
-        PaymentFlowData,
-        PaymentsPreAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Cashtocode<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        Authenticate,
-        PaymentFlowData,
-        PaymentsAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Cashtocode<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        PostAuthenticate,
-        PaymentFlowData,
-        PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Cashtocode<T>
-{
-}
-
-// Authentication flow SourceVerification implementations
-impl_source_verification_stub!(
-    PreAuthenticate,
-    PaymentFlowData,
-    PaymentsPreAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    Authenticate,
-    PaymentFlowData,
-    PaymentsAuthenticateData<T>,
-    PaymentsResponseData
-);
-impl_source_verification_stub!(
-    PostAuthenticate,
-    PaymentFlowData,
-    PaymentsPostAuthenticateData<T>,
-    PaymentsResponseData
-);
 
 fn get_b64_auth_cashtocode(
     payment_method_type: Option<common_enums::PaymentMethodType>,

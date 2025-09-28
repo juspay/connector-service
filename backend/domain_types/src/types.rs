@@ -60,9 +60,8 @@ fn extract_headers_from_metadata(
 // For decoding connector_meta_data and Engine trait - base64 crate no longer needed here
 use crate::{
     connector_flow::{
-        Accept, Authenticate, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute,
-        PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment,
-        SetupMandate, SubmitEvidence, Void,
+        Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync,
+        PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, ConnectorMandateReferenceId,
