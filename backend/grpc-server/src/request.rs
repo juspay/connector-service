@@ -4,7 +4,7 @@ use common_utils::metadata::MaskedMetadata;
 
 use crate::{
     configs,
-    error::IntoGrpcStatus,
+    error::{ResultExtGrpc},
     utils::{get_metadata_payload, MetadataPayload},
 };
 
@@ -18,6 +18,7 @@ pub struct RequestData<T> {
 }
 
 impl<T> RequestData<T> {
+    #[allow(clippy::result_large_err)]
     pub fn from_grpc_request(
         request: tonic::Request<T>,
         config: Arc<configs::Config>,
@@ -26,12 +27,12 @@ impl<T> RequestData<T> {
 
         // Construct MetadataPayload from raw metadata (existing functions need it)
         let metadata_payload =
-            get_metadata_payload(&metadata, config.clone()).map_err(|e| e.into_grpc_status())?;
+            get_metadata_payload(&metadata, config.clone()).into_grpc_status()?;
 
         // Pass tonic metadata and config to MaskedMetadata
         let masked_metadata = MaskedMetadata::new(metadata, config.unmasked_headers.clone());
 
-        Ok(RequestData {
+        Ok(Self {
             payload,
             extracted_metadata: metadata_payload,
             masked_metadata,

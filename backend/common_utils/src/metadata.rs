@@ -55,6 +55,7 @@ impl Default for HeaderMaskingConfig {
 /// - get(key) -> Secret<String> - Forces explicit .expose() call
 /// - get_raw(key) -> String - Raw access
 /// - get_maskable(key) -> Maskable<String> - For logging/observability
+///
 /// Binary headers:
 /// - get_bin(key) -> Secret<Bytes> - Forces explicit .expose() call
 /// - get_bin_raw(key) -> Bytes - Raw access
@@ -121,7 +122,7 @@ impl MaskedMetadata {
         self.raw_metadata
             .get_bin(key)
             .and_then(|value| value.to_bytes().ok())
-            .map(|bytes| Secret::new(bytes))
+            .map(Secret::new)
     }
 
     /// Returns raw Bytes value regardless of config
@@ -156,10 +157,10 @@ impl MaskedMetadata {
                 let masked_value = match entry {
                     tonic::metadata::KeyAndValueRef::Ascii(_, _) => self
                         .get_maskable(key_name)
-                        .map(|maskable| format!("{:?}", maskable)),
+                        .map(|maskable| format!("{maskable:?}")),
                     tonic::metadata::KeyAndValueRef::Binary(_, _) => self
                         .get_bin_maskable(key_name)
-                        .map(|maskable| format!("{:?}", maskable)),
+                        .map(|maskable| format!("{maskable:?}")),
                 };
 
                 masked_value.map(|value| (key_name.to_string(), value))

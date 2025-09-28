@@ -159,7 +159,7 @@ pub fn get_metadata_payload(
     Ok(MetadataPayload {
         tenant_id,
         request_id,
-        merchant_id: merchant_id,
+        merchant_id,
         connector,
         lineage_ids,
         connector_auth_type,

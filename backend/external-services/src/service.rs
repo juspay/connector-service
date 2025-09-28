@@ -209,7 +209,7 @@ where
 
             let event_headers: HashMap<String, String> = headers
                 .iter()
-                .map(|(k, v)| (k.clone(), format!("{:?}", v)))
+                .map(|(k, v)| (k.clone(), format!("{v:?}")))
                 .collect();
 
             let masked_headers = headers

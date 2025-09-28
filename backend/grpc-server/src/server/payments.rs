@@ -1371,9 +1371,9 @@ impl PaymentService for Payments {
                                 let event_params = EventParams {
                                     _connector_name: &connector.to_string(),
                                     _service_name: &service_name,
-                                    request_id: &request_id,
-                                    lineage_ids: &lineage_ids,
-                                    reference_id: &reference_id,
+                                    request_id,
+                                    lineage_ids,
+                                    reference_id,
                                 };
 
                                 let access_token_data = self
