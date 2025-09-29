@@ -48,12 +48,12 @@ use transformers::{
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
-    base64::engine::general_purpose::STANDARD;
-
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
 }
+
+pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
+    base64::engine::general_purpose::STANDARD;
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -340,7 +340,8 @@ macros::create_all_prerequisites!(
 
             let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
             let tag = ring::hmac::sign(&key, to_sign.as_bytes());
-            let signature_value = BASE64_ENGINE_URL_SAFE.encode(tag.as_ref());
+            let hmac_sign = hex::encode(tag);
+            let signature_value = BASE64_ENGINE_URL_SAFE.encode(hmac_sign);
 
             Ok(signature_value)
         }
@@ -371,7 +372,7 @@ macros::macro_connector_implementation!(
             let body = self.get_request_body(req)?
                 .map(|content| content.get_inner_value().expose())
                 .unwrap_or_default();
-            self.build_headers(req, "delete", url_path, &body)
+            self.build_headers(req, "post", url_path, &body)
         }
         fn get_url(
             &self,
@@ -472,7 +473,7 @@ macros::macro_connector_implementation!(
     resource_common_data: PaymentFlowData,
     flow_request: PaymentVoidData,
     flow_response: PaymentsResponseData,
-    http_method: Delete,
+    http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
     other_functions: {
@@ -483,25 +484,8 @@ macros::macro_connector_implementation!(
             let url = self.get_url(req)?;
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
-            let body = self.get_request_body(req)?
-                .map(|content| {
-                    let raw_body = content.get_inner_value().expose();
-                    // Ensure compact JSON with no whitespace
-                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
-                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(err) => {
-                            tracing::warn!(
-                                target: "rapyd_void",
-                                error = ?err,
-                                raw_body = %raw_body,
-                                "Failed to parse JSON for compact formatting, using raw body"
-                            );
-                            raw_body
-                        }
-                    }
-                })
-                .unwrap_or_default();
-            self.build_headers(req, "post", url_path, &body)
+            let body = "";
+            self.build_headers(req, "post", url_path, body)
         }
         fn get_url(
             &self,
@@ -533,22 +517,7 @@ macros::macro_connector_implementation!(
             let url_path = url.strip_prefix(self.connector_base_url_refunds(req))
                 .unwrap_or(&url);
             let body = self.get_request_body(req)?
-                .map(|content| {
-                    let raw_body = content.get_inner_value().expose();
-                    // Ensure compact JSON with no whitespace
-                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
-                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(err) => {
-                            tracing::warn!(
-                                target: "rapyd_refund",
-                                error = ?err,
-                                raw_body = %raw_body,
-                                "Failed to parse JSON for compact formatting, using raw body"
-                            );
-                            raw_body
-                        }
-                    }
-                })
+                .map(|content| content.get_inner_value().expose())
                 .unwrap_or_default();
             self.build_headers(req, "post", url_path, &body)
         }

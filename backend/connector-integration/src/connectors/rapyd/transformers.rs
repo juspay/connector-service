@@ -1,4 +1,4 @@
-use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit, FloatMajorUnit};
+use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
@@ -24,6 +24,11 @@ use std::fmt::Debug;
 
 use super::RapydRouterData;
 use crate::types::ResponseRouterData;
+
+const RAPYD_GOOGLE_PAY_TYPE: &str = "google_pay";
+const RAPYD_APPLE_PAY_TYPE: &str = "apple_pay";
+const RAPYD_AMEX_CARD_TYPE: &str = "in_amex_card";
+const RAPYD_VISA_CARD_TYPE: &str = "by_visa_card";
 
 impl<F>
     TryFrom<
@@ -251,6 +256,14 @@ impl TryFrom<&ConnectorAuthType> for RapydAuthType {
     }
 }
 
+fn serialize_amount_as_string<S>(amount: &MinorUnit, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    // Convert amount to string without decimal points for minor units
+    serializer.serialize_str(&amount.to_string())
+}
+
 #[derive(Default, Debug, Serialize)]
 pub struct RapydPaymentsRequest<
     T: PaymentMethodDataTypes
@@ -260,7 +273,8 @@ pub struct RapydPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    pub amount: FloatMajorUnit,
+    #[serde(serialize_with = "serialize_amount_as_string")]
+    pub amount: MinorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -397,7 +411,7 @@ impl<
         let payment_method = match &item.router_data.request.payment_method_data {
             PaymentMethodData::Card(ref ccard) => {
                 Some(PaymentMethod {
-                    pm_type: "in_amex_card".to_owned(), // Use Amex card type as per hyperswitch implementation
+                    pm_type: RAPYD_AMEX_CARD_TYPE.to_owned(), // Use Amex card type as per hyperswitch implementation
                     fields: Some(PaymentFields {
                         number: ccard.card_number.to_owned(),
                         expiration_month: ccard.card_exp_month.to_owned(),
@@ -416,7 +430,7 @@ impl<
             PaymentMethodData::Wallet(ref wallet_data) => {
                 let digital_wallet = match wallet_data {
                     WalletDataPaymentMethod::GooglePay(data) => Some(RapydWallet {
-                        payment_type: "google_pay".to_string(),
+                        payment_type: RAPYD_GOOGLE_PAY_TYPE.to_string(),
                         token: Some(Secret::new(
                             data.tokenization_data
                                 .get_encrypted_google_pay_token()
@@ -434,14 +448,14 @@ impl<
                                 field_name: "Apple pay encrypted data",
                             })?;
                         Some(RapydWallet {
-                            payment_type: "apple_pay".to_string(),
+                            payment_type: RAPYD_APPLE_PAY_TYPE.to_string(),
                             token: Some(Secret::new(apple_pay_encrypted_data.to_string())),
                         })
                     }
                     _ => None,
                 };
                 Some(PaymentMethod {
-                    pm_type: "by_visa_card".to_string(),
+                    pm_type: RAPYD_VISA_CARD_TYPE.to_string(),
                     fields: None,
                     address: None,
                     digital_wallet,
@@ -455,16 +469,8 @@ impl<
         ))?;
 
         let return_url = item.router_data.resource_common_data.get_return_url();
-        let amount = item
-            .connector
-            .amount_converter
-            .convert(
-                item.router_data.request.minor_amount,
-                item.router_data.request.currency,
-            )
-            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
-            amount,
+            amount: item.router_data.request.minor_amount,
             currency: item.router_data.request.currency,
             payment_method,
             capture,
