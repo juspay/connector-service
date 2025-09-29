@@ -1299,20 +1299,6 @@ pub struct GpayTokenParameters {
     /// The merchant ID registered in the connector associated
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gateway_merchant_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "stripe:version")]
-    pub stripe_version: Option<String>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        rename = "stripe:publishableKey"
-    )]
-    pub stripe_publishable_key: Option<String>,
-    /// The protocol version for encryption
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub protocol_version: Option<String>,
-    /// The public key provided by the merchant
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schema(value_type = Option<String>)]
-    pub public_key: Option<Secret<String>>,
 }
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize, ToSchema)]
 pub struct GpayMerchantInfo {

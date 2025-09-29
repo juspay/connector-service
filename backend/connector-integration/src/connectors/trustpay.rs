@@ -701,7 +701,7 @@ impl<
         let response: trustpay::RefundResponse = res
             .response
             .parse_struct("trustpay RefundResponse")
-            .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_response_body!(event_builder, response);
 

@@ -176,6 +176,7 @@ fn create_payment_authorize_request(
             device_model: None,
             accept_language: None,
             time_zone_offset_minutes: Some(30),
+            referer: None,
         }),
         auth_type: i32::from(AuthenticationType::NoThreeDs),
         request_ref_id: Some(Identifier {
