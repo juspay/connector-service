@@ -286,6 +286,12 @@ impl Payments {
             reference_id,
         };
 
+        // Get API tag for Authorize flow
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::Authorize);
+
         let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -293,6 +299,7 @@ impl Payments {
             None,
             event_params,
             test_context,
+            api_tag,
         )
         .await;
 
@@ -452,6 +459,12 @@ impl Payments {
             reference_id: event_params.reference_id,
         };
 
+        // Get API tag for CreateOrder flow
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::CreateOrder);
+
         let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -459,6 +472,7 @@ impl Payments {
             None,
             external_event_params,
             test_context,
+            api_tag,
         )
         .await
         .map_err(
@@ -551,6 +565,12 @@ impl Payments {
             reference_id: event_params.reference_id,
         };
 
+        // Get API tag for CreateOrder flow (setup mandate)
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::CreateOrder);
+
         let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -558,6 +578,7 @@ impl Payments {
             None,
             external_event_params,
             None, // TODO: Add test context support for setup mandate order creation
+            api_tag,
         )
         .await
         .switch()
@@ -654,6 +675,12 @@ impl Payments {
             None
         };
 
+        // Get API tag for CreateSessionToken flow
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::CreateSessionToken);
+
         let response = execute_connector_processing_step(
             &self.config.proxy,
             connector_integration,
@@ -661,6 +688,7 @@ impl Payments {
             None,
             external_event_params,
             test_context,
+            api_tag,
         )
         .await
         .switch()
@@ -1294,6 +1322,12 @@ impl PaymentService for Payments {
                         reference_id: &metadata_payload.reference_id,
                     };
 
+                    // Get API tag for SetupMandate flow
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag_for_flow(events::FlowName::SetupMandate);
+
                     let response = execute_connector_processing_step(
                         &self.config.proxy,
                         connector_integration,
@@ -1301,6 +1335,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // TODO: Add test context support for setup mandate
+                        api_tag,
                     )
                     .await
                     .switch()
@@ -1410,6 +1445,12 @@ impl PaymentService for Payments {
                         reference_id: &metadata_payload.reference_id,
                     };
 
+                    // Get API tag for RepeatPayment flow
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag_for_flow(events::FlowName::RepeatPayment);
+
                     let response = execute_connector_processing_step(
                         &self.config.proxy,
                         connector_integration,
@@ -1417,6 +1458,7 @@ impl PaymentService for Payments {
                         None,
                         event_params,
                         None, // TODO: Add test context support for repeat payment
+                        api_tag,
                     )
                     .await
                     .switch()
