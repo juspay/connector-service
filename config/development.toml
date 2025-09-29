@@ -33,6 +33,12 @@ bypass_proxy_urls = ["localhost", "local"]
 enabled = false
 mock_server_url = "http://localhost:3000"
 
+[api_tags.tags]
+Authorize = "GW_INIT_INTENT"
+CreateOrder = "GW_CREATE_ORDER"
+SetupMandate = "GW_SETUP_MANDATE"
+RepeatPayment = "GW_REPEAT_PAYMENT"
+CreateSessionToken = "GW_SESSION_TOKEN"
 
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"
