@@ -1,9 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_utils::{
-    consts::NO_ERROR_MESSAGE, errors::CustomResult, ext_traits::ByteSliceExt, FloatMajorUnit,
-};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, StringMinorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -27,7 +25,7 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use error_stack::ResultExt;
+use error_stack::{Report, ResultExt};
 use hyperswitch_masking::{ExposeInterface, Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
@@ -35,9 +33,7 @@ use interfaces::{
 };
 use rand::distributions::{Alphanumeric, DistString};
 use serde::Serialize;
-use serde_json;
 use std::fmt::Debug;
-use tracing;
 use transformers::{
     CaptureRequest, RapydAuthType, RapydPaymentsRequest,
     RapydPaymentsResponse as RapydCaptureResponse, RapydPaymentsResponse as RapydPSyncResponse,
@@ -169,27 +165,32 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: RapydPaymentsResponse = res
-            .response
-            .parse_struct("ErrorResponse")
-            .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
+        let response: Result<RapydPaymentsResponse, Report<common_utils::errors::ParsingError>> =
+            res.response.parse_struct("rapyd ErrorResponse");
 
-        with_error_response_body!(event_builder, response);
-
-        Ok(ErrorResponse {
-            status_code: res.status_code,
-            code: response.status.error_code,
-            message: response
-                .status
-                .status
-                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: response.status.message,
-            attempt_status: None,
-            connector_transaction_id: None,
-            network_decline_code: None,
-            network_advice_code: None,
-            network_error_message: None,
-        })
+        match response {
+            Ok(response_data) => {
+                with_error_response_body!(event_builder, response_data);
+                Ok(ErrorResponse {
+                    status_code: res.status_code,
+                    code: response_data.status.error_code,
+                    message: response_data.status.status.unwrap_or_default(),
+                    reason: response_data.status.message,
+                    attempt_status: None,
+                    connector_transaction_id: None,
+                    network_advice_code: None,
+                    network_decline_code: None,
+                    network_error_message: None,
+                })
+            }
+            Err(error_msg) => {
+                if let Some(event) = event_builder {
+                    event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
+                };
+                tracing::error!(deserialization_error =? error_msg);
+                domain_types::utils::handle_json_response_deserialization_failure(res, "rapyd")
+            }
+        }
     }
 }
 
@@ -282,7 +283,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: FloatMajorUnit
+        amount_converter: StringMinorUnit
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
@@ -450,22 +451,7 @@ macros::macro_connector_implementation!(
             let url_path = url.strip_prefix(self.connector_base_url_payments(req))
                 .unwrap_or(&url);
             let body = self.get_request_body(req)?
-                .map(|content| {
-                    let raw_body = content.get_inner_value().expose();
-                    // Ensure compact JSON with no whitespace
-                    match serde_json::from_str::<serde_json::Value>(&raw_body) {
-                        Ok(json_value) => serde_json::to_string(&json_value).unwrap_or_default(),
-                        Err(err) => {
-                            tracing::warn!(
-                                target: "rapyd_capture",
-                                error = ?err,
-                                raw_body = %raw_body,
-                                "Failed to parse JSON for compact formatting, using raw body"
-                            );
-                            raw_body
-                        }
-                    }
-                })
+                .map(|content| content.get_inner_value().expose())
                 .unwrap_or_default();
             self.build_headers(req, "post", url_path, &body)
         }

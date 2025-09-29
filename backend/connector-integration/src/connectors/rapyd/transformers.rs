@@ -1,4 +1,4 @@
-use common_utils::{ext_traits::OptionExt, request::Method, types::MinorUnit};
+use common_utils::{ext_traits::OptionExt, request::Method, StringMinorUnit};
 use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
@@ -256,14 +256,6 @@ impl TryFrom<&ConnectorAuthType> for RapydAuthType {
     }
 }
 
-fn serialize_amount_as_string<S>(amount: &MinorUnit, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    // Convert amount to string without decimal points for minor units
-    serializer.serialize_str(&amount.to_string())
-}
-
 #[derive(Default, Debug, Serialize)]
 pub struct RapydPaymentsRequest<
     T: PaymentMethodDataTypes
@@ -273,8 +265,7 @@ pub struct RapydPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    #[serde(serialize_with = "serialize_amount_as_string")]
-    pub amount: MinorUnit,
+    pub amount: StringMinorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -420,7 +411,7 @@ impl<
                             .router_data
                             .resource_common_data
                             .get_optional_billing_full_name()
-                            .unwrap_or(Secret::new("Test User".to_string())),
+                            .unwrap_or(Secret::new("".to_string())),
                         cvv: ccard.card_cvc.to_owned(),
                     }),
                     address: None,
@@ -469,8 +460,16 @@ impl<
         ))?;
 
         let return_url = item.router_data.resource_common_data.get_return_url();
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
-            amount: item.router_data.request.minor_amount,
+            amount,
             currency: item.router_data.request.currency,
             payment_method,
             capture,
@@ -764,8 +763,7 @@ impl<F> TryFrom<ResponseRouterData<RapydPaymentsResponse, Self>>
 // Capture Request
 #[derive(Debug, Serialize, Clone)]
 pub struct CaptureRequest {
-    #[serde(serialize_with = "serialize_optional_amount_as_string")]
-    amount: Option<MinorUnit>,
+    amount: Option<StringMinorUnit>,
     receipt_email: Option<Secret<String>>,
     statement_descriptor: Option<String>,
 }
@@ -792,8 +790,16 @@ impl<
             T,
         >,
     ) -> Result<Self, Self::Error> {
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount_to_capture,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
-            amount: Some(item.router_data.request.minor_amount_to_capture),
+            amount: Some(amount),
             receipt_email: None,
             statement_descriptor: None,
         })
@@ -804,23 +810,8 @@ impl<
 #[derive(Default, Debug, Serialize)]
 pub struct RapydRefundRequest {
     pub payment: String,
-    #[serde(serialize_with = "serialize_optional_amount_as_string")]
-    pub amount: Option<MinorUnit>,
+    pub amount: Option<StringMinorUnit>,
     pub currency: Option<common_enums::Currency>,
-}
-
-// Custom serializer for optional amount to ensure it's a string
-fn serialize_optional_amount_as_string<S>(
-    amount: &Option<MinorUnit>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    match amount {
-        Some(amt) => serializer.serialize_str(&amt.to_string()),
-        None => serializer.serialize_none(),
-    }
 }
 
 impl<
@@ -838,13 +829,21 @@ impl<
     fn try_from(
         item: RapydRouterData<RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_payment_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
         Ok(Self {
             payment: item
                 .router_data
                 .request
                 .connector_transaction_id
                 .to_string(),
-            amount: Some(item.router_data.request.minor_refund_amount),
+            amount: Some(amount),
             currency: Some(item.router_data.request.currency),
         })
     }
