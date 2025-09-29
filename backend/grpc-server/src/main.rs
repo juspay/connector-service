@@ -34,10 +34,8 @@ fn verify_other_config_files() {
     for config_file_name in config_file_names {
         config_path.push(config_file_name);
         #[allow(clippy::panic)]
-        let _ =
-            configs::Config::new_with_config_path(Some(config_path.clone())).unwrap_or_else(|_| {
-                panic!("Update {} with the default config values", config_file_name)
-            });
+        let _ = configs::Config::new_with_config_path(Some(config_path.clone()))
+            .unwrap_or_else(|_| panic!("Update {config_file_name} with the default config values"));
         config_path.pop();
     }
 }

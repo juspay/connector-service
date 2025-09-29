@@ -13,8 +13,38 @@ use crate::{
     id_type::{self, ApiKeyId, MerchantConnectorAccountId, ProfileAcquirerId},
     lineage,
     types::TimeRange,
-    SecretSerdeValue,
 };
+
+/// Wrapper type that enforces masked serialization for Serde values
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct MaskedSerdeValue {
+    inner: serde_json::Value,
+}
+
+impl MaskedSerdeValue {
+    pub fn from_masked<T: Serialize>(value: &T) -> Result<Self, serde_json::Error> {
+        let masked_value = hyperswitch_masking::masked_serialize(value)?;
+        Ok(Self {
+            inner: masked_value,
+        })
+    }
+
+    pub fn from_masked_optional<T: Serialize>(value: &T, context: &str) -> Option<Self> {
+        hyperswitch_masking::masked_serialize(value)
+            .map(|masked_value| Self {
+                inner: masked_value,
+            })
+            .inspect_err(|e| {
+                tracing::error!(
+                    error_category = ?e.classify(),
+                    context = context,
+                    "Failed to mask serialize data"
+                );
+            })
+            .ok()
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "flow_type", rename_all = "snake_case")]
@@ -185,15 +215,27 @@ pub struct Event {
     pub connector: String,
     pub url: Option<String>,
     pub stage: EventStage,
-    pub latency: Option<u64>,
-    pub status_code: Option<u16>,
-    pub request_data: Option<SecretSerdeValue>,
-    pub connector_request_data: Option<SecretSerdeValue>,
-    pub connector_response_data: Option<SecretSerdeValue>,
+    pub latency_ms: Option<u64>,
+    pub status_code: Option<i32>,
+    pub request_data: Option<MaskedSerdeValue>,
+    pub response_data: Option<MaskedSerdeValue>,
     #[serde(flatten)]
-    pub additional_fields: HashMap<String, SecretSerdeValue>,
+    pub additional_fields: HashMap<String, MaskedSerdeValue>,
     #[serde(flatten)]
     pub lineage_ids: lineage::LineageIds<'static>,
+}
+
+impl Event {
+    pub fn add_reference_id(&mut self, reference_id: Option<&str>) {
+        reference_id
+            .and_then(|ref_id| {
+                MaskedSerdeValue::from_masked_optional(&ref_id.to_string(), "reference_id")
+            })
+            .map(|masked_ref| {
+                self.additional_fields
+                    .insert("reference_id".to_string(), masked_ref);
+            });
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -215,6 +257,9 @@ pub enum FlowName {
     CreateSessionToken,
     CreateAccessToken,
     PaymentMethodToken,
+    PreAuthenticate,
+    Authenticate,
+    PostAuthenticate,
     Unknown,
 }
 
@@ -238,6 +283,9 @@ impl FlowName {
             Self::PaymentMethodToken => "PaymentMethodToken",
             Self::CreateSessionToken => "CreateSessionToken",
             Self::CreateAccessToken => "CreateAccessToken",
+            Self::PreAuthenticate => "PreAuthenticate",
+            Self::Authenticate => "Authenticate",
+            Self::PostAuthenticate => "PostAuthenticate",
             Self::Unknown => "Unknown",
         }
     }
@@ -246,12 +294,14 @@ impl FlowName {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EventStage {
     ConnectorCall,
+    GrpcRequest,
 }
 
 impl EventStage {
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::ConnectorCall => "CONNECTOR_CALL",
+            Self::GrpcRequest => "GRPC_REQUEST",
         }
     }
 }

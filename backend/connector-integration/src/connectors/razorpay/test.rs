@@ -99,6 +99,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -267,6 +268,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -386,6 +388,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -527,6 +530,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -836,6 +840,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1011,6 +1016,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1188,6 +1194,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1286,6 +1293,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "dummy_api_key".to_string().into(),
@@ -1389,6 +1397,7 @@ mod tests {
                     },
                     vault_headers: None,
                     connector_response_headers: None,
+                    raw_connector_request: None,
                 },
                 connector_auth_type: ConnectorAuthType::BodyKey {
                     api_key: "invalid_key".to_string().into(),
@@ -1529,6 +1538,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1650,6 +1660,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
@@ -1760,6 +1771,7 @@ mod tests {
                 },
                 vault_headers: None,
                 connector_response_headers: None,
+                raw_connector_request: None,
             },
             connector_auth_type: ConnectorAuthType::BodyKey {
                 api_key: "dummy_api_key".to_string().into(),
