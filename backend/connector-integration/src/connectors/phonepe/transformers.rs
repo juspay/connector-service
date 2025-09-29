@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use base64::Engine;
 use common_enums;
 use common_utils::{
@@ -126,8 +124,8 @@ pub struct PhonepeResponseData {
     merchant_id: String,
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
-    #[serde(rename = "transactionId")]
-    transaction_id: String,
+    #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
+    transaction_id: Option<String>,
     #[serde(rename = "instrumentResponse", skip_serializing_if = "Option::is_none")]
     instrument_response: Option<PhonepeInstrumentResponse>,
     #[serde(rename = "responseCode", skip_serializing_if = "Option::is_none")]
@@ -508,58 +506,25 @@ impl<
                     let (redirect_form, connector_metadata) =
                         match instrument_response.instrument_type.as_str() {
                             instrument_type if instrument_type == constants::UPI_INTENT => {
-                                if let Some(intent_url) = &instrument_response.intent_url {
-                                    (
-                                        Some(RedirectForm::Uri {
-                                            uri: intent_url.clone(),
-                                        }),
-                                        None,
-                                    )
-                                } else {
-                                    (None, None)
-                                }
+                                let redirect_form = instrument_response
+                                    .intent_url
+                                    .as_ref()
+                                    .map(|url| RedirectForm::Uri { uri: url.clone() });
+                                (redirect_form, None)
                             }
                             instrument_type if instrument_type == constants::UPI_QR => {
-                                match (
-                                    &instrument_response.intent_url,
-                                    &instrument_response.qr_data,
-                                ) {
-                                    (Some(intent_url), Some(qr_data)) => {
-                                        let mut metadata = HashMap::new();
-                                        metadata.insert(
-                                            "qr_data".to_string(),
-                                            serde_json::Value::String(qr_data.clone()),
-                                        );
-                                        (
-                                            Some(RedirectForm::Uri {
-                                                uri: intent_url.clone(),
-                                            }),
-                                            Some(serde_json::Value::Object(
-                                                serde_json::Map::from_iter(metadata),
-                                            )),
-                                        )
-                                    }
-                                    (Some(intent_url), None) => (
-                                        Some(RedirectForm::Uri {
-                                            uri: intent_url.clone(),
-                                        }),
-                                        None,
-                                    ),
-                                    (None, Some(qr_data)) => {
-                                        let mut metadata = HashMap::new();
-                                        metadata.insert(
-                                            "qr_data".to_string(),
-                                            serde_json::Value::String(qr_data.clone()),
-                                        );
-                                        (
-                                            None,
-                                            Some(serde_json::Value::Object(
-                                                serde_json::Map::from_iter(metadata),
-                                            )),
-                                        )
-                                    }
-                                    (None, None) => (None, None),
-                                }
+                                let redirect_form = instrument_response
+                                    .intent_url
+                                    .as_ref()
+                                    .map(|url| RedirectForm::Uri { uri: url.clone() });
+
+                                let connector_metadata =
+                                    instrument_response.qr_data.as_ref().map(|qr| {
+                                        serde_json::json!({
+                                            "qr_data": qr
+                                        })
+                                    });
+                                (redirect_form, connector_metadata)
                             }
                             _ => (None, None),
                         };
@@ -567,7 +532,9 @@ impl<
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id.clone(),
+                                data.transaction_id
+                                    .clone()
+                                    .unwrap_or(data.merchant_transaction_id.clone()),
                             ),
                             redirection_data: redirect_form.map(Box::new),
                             mandate_reference: None,
@@ -590,7 +557,9 @@ impl<
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id.clone(),
+                                data.transaction_id
+                                    .clone()
+                                    .unwrap_or(data.merchant_transaction_id.clone()),
                             ),
                             redirection_data: None,
                             mandate_reference: None,
