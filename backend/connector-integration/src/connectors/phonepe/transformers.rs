@@ -126,7 +126,7 @@ pub struct PhonepeResponseData {
     merchant_id: String,
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
-    #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "transactionId")]
     transaction_id: String,
     #[serde(rename = "instrumentResponse", skip_serializing_if = "Option::is_none")]
     instrument_response: Option<PhonepeInstrumentResponse>,
@@ -207,9 +207,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::try_from(
-            &router_data.connector_auth_type
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = wrapper
@@ -355,9 +353,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::try_from(
-            &router_data.connector_auth_type
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
         // Use amount converter to get proper amount in minor units
         let amount_in_minor_units = item
@@ -524,7 +520,10 @@ impl<
                                 }
                             }
                             instrument_type if instrument_type == constants::UPI_QR => {
-                                match (&instrument_response.intent_url, &instrument_response.qr_data) {
+                                match (
+                                    &instrument_response.intent_url,
+                                    &instrument_response.qr_data,
+                                ) {
                                     (Some(intent_url), Some(qr_data)) => {
                                         let mut metadata = HashMap::new();
                                         metadata.insert(
@@ -552,9 +551,12 @@ impl<
                                             "qr_data".to_string(),
                                             serde_json::Value::String(qr_data.clone()),
                                         );
-                                        (None, Some(serde_json::Value::Object(
-                                            serde_json::Map::from_iter(metadata),
-                                        )))
+                                        (
+                                            None,
+                                            Some(serde_json::Value::Object(
+                                                serde_json::Map::from_iter(metadata),
+                                            )),
+                                        )
                                     }
                                     (None, None) => (None, None),
                                 }
@@ -565,8 +567,7 @@ impl<
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id
-                                    .clone(),
+                                data.transaction_id.clone(),
                             ),
                             redirection_data: redirect_form.map(Box::new),
                             mandate_reference: None,
@@ -589,8 +590,7 @@ impl<
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id
-                                    .clone(),
+                                data.transaction_id.clone(),
                             ),
                             redirection_data: None,
                             mandate_reference: None,
@@ -747,12 +747,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = &wrapper.router_data;
-        let auth = PhonepeAuthType::try_from(
-            &router_data.connector_auth_type
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
         let merchant_transaction_id = &router_data
-            .resource_common_data.connector_request_reference_id;
+            .resource_common_data
+            .connector_request_reference_id;
 
         // Generate checksum for status API
         let api_path = format!(
@@ -795,12 +794,11 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         let router_data = item.router_data;
-        let auth = PhonepeAuthType::try_from(
-            &router_data.connector_auth_type
-        )?;
+        let auth = PhonepeAuthType::try_from(&router_data.connector_auth_type)?;
 
         let merchant_transaction_id = &router_data
-            .resource_common_data.connector_request_reference_id;
+            .resource_common_data
+            .connector_request_reference_id;
 
         // Generate checksum for status API
         let api_path = format!(
@@ -860,9 +858,7 @@ impl
 
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                transaction_id.clone(),
-                            ),
+                            resource_id: ResponseId::ConnectorTransactionId(transaction_id.clone()),
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
