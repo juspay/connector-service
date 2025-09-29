@@ -211,9 +211,11 @@ pub struct WorldpayRefundSyncRequest {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayRefundSyncResponse {
-    pub outcome: String,
+    pub last_event: String,
+    #[serde(rename = "_actions")]
+    pub actions: Option<serde_json::Value>,
     #[serde(rename = "_links")]
-    pub links: WorldpayLinks,
+    pub links: Option<WorldpayLinks>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -536,15 +538,31 @@ impl
             RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
         >,
     ) -> Result<Self, Self::Error> {
-        let refund_status = match item.response.outcome.as_str() {
-            "sentForRefund" | "sentForPartialRefund" => RefundStatus::Pending,
-            "refunded" => RefundStatus::Success,
-            "refused" | "failed" => RefundStatus::Failure,
-            _ => RefundStatus::Pending,
+        let refund_status = match item.response.last_event.as_str() {
+            "Authorized" => RefundStatus::Pending, // Payment is authorized but not yet refunded
+            "Refunded" | "PartiallyRefunded" => RefundStatus::Success,
+            "RefundFailed" | "Declined" | "Refused" => RefundStatus::Failure,
+            "Settled" => {
+                // Check if refund actions are available to determine if refund is possible
+                if let Some(actions) = &item.response.actions {
+                    if actions.get("refundPayment").is_some() || actions.get("partiallyRefundPayment").is_some() {
+                        RefundStatus::Pending // Refund can still be processed
+                    } else {
+                        RefundStatus::Failure // No refund actions available
+                    }
+                } else {
+                    RefundStatus::Pending
+                }
+            },
+            _ => RefundStatus::Pending, // Default to pending for unknown states
         };
 
-        let connector_refund_id = extract_transaction_id(&item.response.links.self_link.href)
-            .unwrap_or_else(|| "unknown".to_string());
+        let connector_refund_id = if let Some(links) = &item.response.links {
+            extract_transaction_id(&links.self_link.href)
+                .unwrap_or_else(|| item.router_data.request.connector_refund_id.clone())
+        } else {
+            item.router_data.request.connector_refund_id.clone()
+        };
 
         let mut router_data = item.router_data;
         router_data.response = Ok(RefundsResponseData {
