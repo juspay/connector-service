@@ -1,6 +1,6 @@
 use crate::utils;
 use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
-use common_enums::{enums, Currency};
+use common_enums::{enums, Currency, RoutableConnectors};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -63,7 +63,6 @@ impl TryFrom<&ConnectorAuthType> for TrustpayAuthType {
 
 const STATUS: char = 'Y';
 const CLIENT_CREDENTIAL: &str = "client_credentials";
-const TRUSTPAY: &str = "trustpay";
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TrustpayPaymentMethod {
     #[serde(rename = "EPS")]
@@ -1606,7 +1605,7 @@ pub(crate) fn get_apple_pay_session(
                         ),
                         total: apple_pay_init_result.total.into(),
                     }),
-                    connector: TRUSTPAY.to_string(),
+                    connector: RoutableConnectors::Trustpay,
                     delayed_session_token: true,
                     sdk_next_action: {
                         payment_method_data::SdkNextAction {
@@ -1648,7 +1647,7 @@ pub(crate) fn get_google_pay_session(
             session_token: Some(SessionToken::GooglePay(Box::new(
                 payment_method_data::GpaySessionTokenResponse::GooglePaySession(
                     payment_method_data::GooglePaySessionResponse {
-                        connector: TRUSTPAY.to_string(),
+                        connector: RoutableConnectors::Trustpay,
                         delayed_session_token: true,
                         sdk_next_action: {
                             payment_method_data::SdkNextAction {

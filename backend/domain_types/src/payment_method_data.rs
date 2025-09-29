@@ -1,7 +1,9 @@
 use std::fmt::Debug;
 
 use base64::Engine;
-use common_enums::{CardNetwork, CountryAlpha2, RegulatedName, SamsungPayCardBrand};
+use common_enums::{
+    CardNetwork, CountryAlpha2, RegulatedName, RoutableConnectors, SamsungPayCardBrand,
+};
 use common_utils::{
     ext_traits::OptionExt, new_types::MaskedBankAccount, pii::UpiVpaMaskingStrategy, Email,
     ValidationError,
@@ -1163,7 +1165,7 @@ pub struct GooglePayThirdPartySdk {
     /// Identifier for the delayed session response
     pub delayed_session_token: bool,
     /// The name of the connector
-    pub connector: String,
+    pub connector: RoutableConnectors,
     /// The next action for the sdk (ex: calling confirm or sync call)
     pub sdk_next_action: SdkNextAction,
 }
@@ -1178,7 +1180,7 @@ pub struct ApplepaySessionTokenResponse {
     /// Payment request object for Apple Pay
     pub payment_request_data: Option<ApplePayPaymentRequest>,
     /// The session token is w.r.t this connector
-    pub connector: String,
+    pub connector: RoutableConnectors,
     /// Identifier for the delayed session response
     pub delayed_session_token: bool,
     /// The next action for the sdk (ex: calling confirm or sync call)
@@ -1248,7 +1250,7 @@ pub struct GooglePaySessionResponse {
     /// Identifier for the delayed session response
     pub delayed_session_token: bool,
     /// The name of the connector
-    pub connector: String,
+    pub connector: RoutableConnectors,
     /// The next action for the sdk (ex: calling confirm or sync call)
     pub sdk_next_action: SdkNextAction,
     /// Secrets for sdk display and payment
