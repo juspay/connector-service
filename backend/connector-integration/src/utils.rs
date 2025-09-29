@@ -5,7 +5,7 @@ use domain_types::{
     router_data::ErrorResponse, router_response_types::Response,
 };
 use error_stack::{Report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, Secret};
+use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
 use serde_json::Value;
 pub use xml_utils::preprocess_xml_response_bytes;
 
@@ -122,4 +122,16 @@ pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
         | common_enums::RefundStatus::Pending
         | common_enums::RefundStatus::Success => false,
     }
+}
+
+pub fn get_token_expiry_month_year_2_digit_with_delimiter(
+    month: hyperswitch_masking::Secret<String>,
+    year: hyperswitch_masking::Secret<String>,
+) -> hyperswitch_masking::Secret<String> {
+    let year_2_digit = if year.peek().len() == 4 {
+        hyperswitch_masking::Secret::new(year.peek().chars().skip(2).collect::<String>())
+    } else {
+        year
+    };
+    hyperswitch_masking::Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()))
 }

@@ -1,6 +1,6 @@
 use crate::utils;
 use crate::{connectors::trustpay::TrustpayRouterData, types::ResponseRouterData};
-use common_enums::enums;
+use common_enums::{enums, Currency};
 use common_utils::{
     consts::{NO_ERROR_CODE, NO_ERROR_MESSAGE},
     errors::CustomResult,
@@ -61,6 +61,9 @@ impl TryFrom<&ConnectorAuthType> for TrustpayAuthType {
     }
 }
 
+const STATUS: char = 'Y';
+const CLIENT_CREDENTIAL: &str = "client_credentials";
+const TRUSTPAY: &str = "trustpay";
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TrustpayPaymentMethod {
     #[serde(rename = "EPS")]
@@ -653,12 +656,8 @@ impl<
             PaymentMethodData::NetworkToken(ref token_data) => {
                 let month = token_data.get_network_token_expiry_month();
                 let year = token_data.get_network_token_expiry_year();
-                let year_2_digit = if year.peek().len() == 4 {
-                    Secret::new(year.peek().chars().skip(2).collect::<String>())
-                } else {
-                    year
-                };
-                let expiry_date = Secret::new(format!("{}/{}", month.peek(), year_2_digit.peek()));
+                let expiry_date =
+                    utils::get_token_expiry_month_year_2_digit_with_delimiter(month, year);
                 Ok(Self::NetworkTokenPaymentRequest(Box::new(
                     PaymentRequestNetworkToken {
                         amount,
@@ -666,11 +665,11 @@ impl<
                         pan: token_data.get_network_token(),
                         expiry_date,
                         redirect_url: item.router_data.request.get_router_return_url()?,
-                        enrollment_status: 'Y', // Set to 'Y' as network provider not providing this value in response
+                        enrollment_status: STATUS,
                         eci: token_data.eci.clone().ok_or_else(|| {
                             errors::ConnectorError::MissingRequiredField { field_name: "eci" }
                         })?,
-                        authentication_status: 'Y', // Set to 'Y' since presence of token_cryptogram is already validated
+                        authentication_status: STATUS,
                         verification_id: token_data.get_cryptogram().ok_or_else(|| {
                             errors::ConnectorError::MissingRequiredField {
                                 field_name: "verification_id",
@@ -819,19 +818,16 @@ fn get_transaction_status(
     if let Some(payment_status) = payment_status {
         let (is_failed, failure_message) = is_payment_failed(&payment_status);
         if is_failed {
-            return Ok((
+            Ok((
                 enums::AttemptStatus::Failure,
                 Some(failure_message.to_string()),
-            ));
+            ))
+        } else if is_payment_successful(&payment_status)? {
+            Ok((enums::AttemptStatus::Charged, None))
+        } else {
+            let pending_status = get_pending_status_based_on_redirect_url(redirect_url);
+            Ok((pending_status, None))
         }
-
-        if is_payment_successful(&payment_status)? {
-            return Ok((enums::AttemptStatus::Charged, None));
-        }
-
-        let pending_status = get_pending_status_based_on_redirect_url(redirect_url);
-
-        Ok((pending_status, None))
     } else {
         Ok((enums::AttemptStatus::AuthenticationPending, None))
     }
@@ -953,7 +949,7 @@ fn handle_cards_response(
     ),
     errors::ConnectorError,
 > {
-    let (status, msg) = get_transaction_status(
+    let (status, message) = get_transaction_status(
         response.payment_status.to_owned(),
         response.redirect_url.to_owned(),
     )?;
@@ -964,13 +960,15 @@ fn handle_cards_response(
         method: Method::Post,
         form_fields,
     });
-    let error = if msg.is_some() {
+    let error = if message.is_some() {
         Some(ErrorResponse {
             code: response
                 .payment_status
                 .unwrap_or_else(|| NO_ERROR_CODE.to_string()),
-            message: msg.clone().unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: msg,
+            message: message
+                .clone()
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            reason: message,
             status_code,
             attempt_status: None,
             connector_transaction_id: Some(response.instance_id.clone()),
@@ -1250,7 +1248,7 @@ impl<
         >,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            grant_type: "client_credentials".to_string(),
+            grant_type: CLIENT_CREDENTIAL.to_string(),
         })
     }
 }
@@ -1342,7 +1340,7 @@ impl
 #[serde(rename_all = "camelCase")]
 pub struct TrustpayCreateIntentRequest {
     pub amount: StringMajorUnit,
-    pub currency: String,
+    pub currency: Currency,
     // If true, Apple Pay will be initialized
     pub init_apple_pay: Option<bool>,
     // If true, Google pay will be initialized
@@ -1397,7 +1395,6 @@ impl<
             .as_ref()
             .map(|pmt| matches!(pmt, enums::PaymentMethodType::GooglePay));
 
-        let currency = item.router_data.request.currency;
         let amount = item
             .connector
             .amount_converter
@@ -1409,7 +1406,7 @@ impl<
 
         Ok(Self {
             amount,
-            currency: currency.to_string(),
+            currency: item.router_data.request.currency,
             init_apple_pay: is_apple_pay,
             init_google_pay: is_google_pay,
             reference: item
@@ -1609,7 +1606,7 @@ pub(crate) fn get_apple_pay_session(
                         ),
                         total: apple_pay_init_result.total.into(),
                     }),
-                    connector: "trustpay".to_string(),
+                    connector: TRUSTPAY.to_string(),
                     delayed_session_token: true,
                     sdk_next_action: {
                         payment_method_data::SdkNextAction {
@@ -1651,7 +1648,7 @@ pub(crate) fn get_google_pay_session(
             session_token: Some(SessionToken::GooglePay(Box::new(
                 payment_method_data::GpaySessionTokenResponse::GooglePaySession(
                     payment_method_data::GooglePaySessionResponse {
-                        connector: "trustpay".to_string(),
+                        connector: TRUSTPAY.to_string(),
                         delayed_session_token: true,
                         sdk_next_action: {
                             payment_method_data::SdkNextAction {
@@ -1902,12 +1899,14 @@ fn handle_cards_refund_response(
     response: CardsRefundResponse,
     status_code: u16,
 ) -> CustomResult<(Option<ErrorResponse>, RefundsResponseData), errors::ConnectorError> {
-    let (refund_status, msg) = get_refund_status(&response.payment_status)?;
-    let error = if msg.is_some() {
+    let (refund_status, message) = get_refund_status(&response.payment_status)?;
+    let error = if message.is_some() {
         Some(ErrorResponse {
             code: response.payment_status,
-            message: msg.clone().unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
-            reason: msg,
+            message: message
+                .clone()
+                .unwrap_or_else(|| NO_ERROR_MESSAGE.to_string()),
+            reason: message,
             status_code,
             attempt_status: None,
             connector_transaction_id: None,
@@ -1970,13 +1969,14 @@ fn handle_bank_redirects_refund_response(
     response: BankRedirectRefundResponse,
     status_code: u16,
 ) -> (Option<ErrorResponse>, RefundsResponseData) {
-    let (refund_status, msg) = get_refund_status_from_result_info(response.result_info.result_code);
-    let error = if msg.is_some() {
+    let (refund_status, message) =
+        get_refund_status_from_result_info(response.result_info.result_code);
+    let error = if message.is_some() {
         Some(ErrorResponse {
             code: response.result_info.result_code.to_string(),
             // message vary for the same code, so relying on code alone as it is unique
             message: response.result_info.result_code.to_string(),
-            reason: msg.map(|message| message.to_string()),
+            reason: message.map(|message| message.to_string()),
             status_code,
             attempt_status: None,
             connector_transaction_id: None,
@@ -2053,6 +2053,9 @@ fn handle_bank_redirects_refund_sync_error_response(
     });
     //unreachable case as we are sending error as Some()
     let refund_response_data = RefundsResponseData {
+        // Initially set to empty string as the connector refund ID is not available
+        // until the refund request is processed by the connector. This will be
+        // populated with the actual connector-assigned refund ID in the response handler.
         connector_refund_id: "".to_string(),
         refund_status: enums::RefundStatus::Failure,
         status_code,
