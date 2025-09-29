@@ -127,7 +127,7 @@ pub struct PhonepeResponseData {
     #[serde(rename = "merchantTransactionId")]
     merchant_transaction_id: String,
     #[serde(rename = "transactionId", skip_serializing_if = "Option::is_none")]
-    transaction_id: Option<String>,
+    transaction_id: String,
     #[serde(rename = "instrumentResponse", skip_serializing_if = "Option::is_none")]
     instrument_response: Option<PhonepeInstrumentResponse>,
     #[serde(rename = "responseCode", skip_serializing_if = "Option::is_none")]
@@ -233,6 +233,11 @@ impl<
                 UpiData::UpiIntent(_) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_INTENT.to_string(),
                     target_app: None, // Could be extracted from payment method details if needed
+                    vpa: None,
+                },
+                UpiData::UpiQr(_) => PhonepePaymentInstrument {
+                    instrument_type: constants::UPI_QR.to_string(),
+                    target_app: None,
                     vpa: None,
                 },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
@@ -378,6 +383,11 @@ impl<
                     target_app: None, // Could be extracted from payment method details if needed
                     vpa: None,
                 },
+                UpiData::UpiQr(_) => PhonepePaymentInstrument {
+                    instrument_type: constants::UPI_QR.to_string(),
+                    target_app: None,
+                    vpa: None,
+                },
                 UpiData::UpiCollect(collect_data) => PhonepePaymentInstrument {
                     instrument_type: constants::UPI_COLLECT.to_string(),
                     target_app: None,
@@ -514,21 +524,39 @@ impl<
                                 }
                             }
                             instrument_type if instrument_type == constants::UPI_QR => {
-                                if let Some(qr_data) = &instrument_response.qr_data {
-                                    // For QR, return the QR data in metadata
-                                    let mut metadata = HashMap::new();
-                                    metadata.insert(
-                                        "qr_data".to_string(),
-                                        serde_json::Value::String(qr_data.clone()),
-                                    );
-                                    (
+                                match (&instrument_response.intent_url, &instrument_response.qr_data) {
+                                    (Some(intent_url), Some(qr_data)) => {
+                                        let mut metadata = HashMap::new();
+                                        metadata.insert(
+                                            "qr_data".to_string(),
+                                            serde_json::Value::String(qr_data.clone()),
+                                        );
+                                        (
+                                            Some(RedirectForm::Uri {
+                                                uri: intent_url.clone(),
+                                            }),
+                                            Some(serde_json::Value::Object(
+                                                serde_json::Map::from_iter(metadata),
+                                            )),
+                                        )
+                                    }
+                                    (Some(intent_url), None) => (
+                                        Some(RedirectForm::Uri {
+                                            uri: intent_url.clone(),
+                                        }),
                                         None,
-                                        Some(serde_json::Value::Object(
+                                    ),
+                                    (None, Some(qr_data)) => {
+                                        let mut metadata = HashMap::new();
+                                        metadata.insert(
+                                            "qr_data".to_string(),
+                                            serde_json::Value::String(qr_data.clone()),
+                                        );
+                                        (None, Some(serde_json::Value::Object(
                                             serde_json::Map::from_iter(metadata),
-                                        )),
-                                    )
-                                } else {
-                                    (None, None)
+                                        )))
+                                    }
+                                    (None, None) => (None, None),
                                 }
                             }
                             _ => (None, None),
@@ -538,8 +566,7 @@ impl<
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
                                 data.transaction_id
-                                    .clone()
-                                    .unwrap_or(data.merchant_transaction_id.clone()),
+                                    .clone(),
                             ),
                             redirection_data: redirect_form.map(Box::new),
                             mandate_reference: None,
@@ -562,7 +589,8 @@ impl<
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                data.merchant_transaction_id.clone(),
+                                data.transaction_id
+                                    .clone(),
                             ),
                             redirection_data: None,
                             mandate_reference: None,
@@ -723,11 +751,8 @@ impl<
             &router_data.connector_auth_type
         )?;
 
-        let merchant_transaction_id = router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let merchant_transaction_id = &router_data
+            .resource_common_data.connector_request_reference_id;
 
         // Generate checksum for status API
         let api_path = format!(
@@ -739,7 +764,7 @@ impl<
         let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
-            merchant_transaction_id,
+            merchant_transaction_id: merchant_transaction_id.clone(),
             checksum,
         })
     }
@@ -774,11 +799,8 @@ impl<
             &router_data.connector_auth_type
         )?;
 
-        let merchant_transaction_id = router_data
-            .request
-            .connector_transaction_id
-            .get_connector_transaction_id()
-            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+        let merchant_transaction_id = &router_data
+            .resource_common_data.connector_request_reference_id;
 
         // Generate checksum for status API
         let api_path = format!(
@@ -790,7 +812,7 @@ impl<
         let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
 
         Ok(Self {
-            merchant_transaction_id,
+            merchant_transaction_id: merchant_transaction_id.clone(),
             checksum,
         })
     }
@@ -839,12 +861,12 @@ impl
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
                             resource_id: ResponseId::ConnectorTransactionId(
-                                merchant_transaction_id.clone(),
+                                transaction_id.clone(),
                             ),
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
-                            network_txn_id: Some(transaction_id.clone()),
+                            network_txn_id: None,
                             connector_response_reference_id: Some(merchant_transaction_id.clone()),
                             incremental_authorization_allowed: None,
                             status_code: item.http_code,

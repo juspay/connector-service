@@ -256,10 +256,9 @@ impl<
                     ))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
-                    // UpiQr is not yet implemented, fallback to UpiIntent
                     Ok(PaymentMethodData::Upi(
-                        crate::payment_method_data::UpiData::UpiIntent(
-                            crate::payment_method_data::UpiIntentData {},
+                        crate::payment_method_data::UpiData::UpiQr(
+                            crate::payment_method_data::UpiQrData {},
                         ),
                     ))
                 }

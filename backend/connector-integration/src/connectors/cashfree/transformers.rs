@@ -258,7 +258,7 @@ fn get_cashfree_payment_method_data<
                         cardless_emi: None,
                     })
                 }
-                domain_types::payment_method_data::UpiData::UpiIntent(_) => {
+                domain_types::payment_method_data::UpiData::UpiIntent(_) | domain_types::payment_method_data::UpiData::UpiQr(_) => {
                     // Intent flow: channel = "link", no UPI ID needed
                     Ok(CashfreePaymentMethod {
                         upi: Some(CashfreeUpiDetails {
