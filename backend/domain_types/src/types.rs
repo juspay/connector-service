@@ -2514,9 +2514,11 @@ pub fn generate_payment_sync_response(
                 .unwrap_or_default();
             Ok(PaymentServiceGetResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(
-                        grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
-                    ),
+                    id_type: Some(if let Some(txn_id) = e.connector_transaction_id {
+                        grpc_api_types::payments::identifier::IdType::Id(txn_id)
+                    } else {
+                        grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())
+                    }),
                 }),
                 mandate_reference: None,
                 status: status as i32,

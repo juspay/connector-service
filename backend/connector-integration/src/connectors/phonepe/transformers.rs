@@ -531,11 +531,10 @@ impl<
 
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id
-                                    .clone()
-                                    .unwrap_or(data.merchant_transaction_id.clone()),
-                            ),
+                            resource_id: match &data.transaction_id {
+                                Some(txn_id) => ResponseId::ConnectorTransactionId(txn_id.clone()),
+                                None => ResponseId::NoResponseId,
+                            },
                             redirection_data: redirect_form.map(Box::new),
                             mandate_reference: None,
                             connector_metadata,
@@ -556,11 +555,10 @@ impl<
                     // Success but no instrument response
                     Ok(Self {
                         response: Ok(PaymentsResponseData::TransactionResponse {
-                            resource_id: ResponseId::ConnectorTransactionId(
-                                data.transaction_id
-                                    .clone()
-                                    .unwrap_or(data.merchant_transaction_id.clone()),
-                            ),
+                            resource_id: match &data.transaction_id {
+                                Some(txn_id) => ResponseId::ConnectorTransactionId(txn_id.clone()),
+                                None => ResponseId::NoResponseId,
+                            },
                             redirection_data: None,
                             mandate_reference: None,
                             connector_metadata: None,
@@ -851,7 +849,7 @@ impl
                             reason: None,
                             status_code: item.http_code,
                             attempt_status: Some(common_enums::AttemptStatus::Failure),
-                            connector_transaction_id: None,
+                            connector_transaction_id: data.transaction_id.clone(),
                             network_decline_code: None,
                             network_advice_code: None,
                             network_error_message: None,
@@ -877,7 +875,10 @@ impl
                     reason: None,
                     status_code: item.http_code,
                     attempt_status,
-                    connector_transaction_id: None,
+                    connector_transaction_id: response
+                        .data
+                        .as_ref()
+                        .and_then(|data| data.transaction_id.clone()),
                     network_decline_code: None,
                     network_advice_code: None,
                     network_error_message: None,
