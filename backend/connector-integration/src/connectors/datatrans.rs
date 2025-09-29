@@ -112,6 +112,7 @@ impl<
             + Serialize,
     > connector_types::PaymentVoidV2 for Datatrans<T>
 {
+    // V2 implementation is provided via ConnectorIntegrationV2<Void, ...>
 }
 impl<
         T: PaymentMethodDataTypes
@@ -122,6 +123,7 @@ impl<
             + Serialize,
     > connector_types::RefundSyncV2 for Datatrans<T>
 {
+    // V2 implementation is provided via ConnectorIntegrationV2<RSync, ...>
 }
 impl<
         T: PaymentMethodDataTypes
@@ -132,6 +134,7 @@ impl<
             + Serialize,
     > connector_types::RefundV2 for Datatrans<T>
 {
+    // V2 implementation is provided via ConnectorIntegrationV2<Refund, ...>
 }
 impl<
         T: PaymentMethodDataTypes
@@ -140,8 +143,9 @@ impl<
             + std::marker::Send
             + 'static
             + Serialize,
-    > connector_types::PaymentCapture for Datatrans<T>
+    > connector_types::PaymentCaptureV2 for Datatrans<T>
 {
+    // V2 implementation is provided via ConnectorIntegrationV2<Capture, ...>
 }
 impl<
         T: PaymentMethodDataTypes

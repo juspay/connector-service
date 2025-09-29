@@ -481,3 +481,13 @@ ai_generate_test.md
 fetch_connector_file.sh
 fetch_connector_transformers.sh
 temp_instruction.txt
+
+.vscode-test
+evals/*
+connectorErrorFixGuide.md
+connectorImplementationGuide.md
+ai_generate_test.md
+fetch_connector_file.sh
+fetch_connector_transformers.sh
+temp_instruction.txt
+xyne_instruction_*.txt
