@@ -186,10 +186,10 @@ pub struct WorldpaySyncRequest {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpaySyncResponse {
-    pub outcome: String,
-    pub transaction_reference: String,
+    #[serde(rename = "lastEvent")]
+    pub last_event: String,
     #[serde(rename = "_links")]
-    pub links: WorldpayLinks,
+    pub links: Option<WorldpayLinks>,
     #[serde(rename = "_actions")]
     pub actions: Option<WorldpayActions>,
 }
@@ -421,26 +421,34 @@ impl
     fn try_from(
         item: ResponseRouterData<WorldpaySyncResponse, RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>>,
     ) -> Result<Self, Self::Error> {
-        let status = match item.response.outcome.as_str() {
-            "authorized" => AttemptStatus::Charged,
-            "sentForSettlement" => AttemptStatus::Charged,
-            "refused" => AttemptStatus::Failure,
-            "sentForCancellation" => AttemptStatus::Voided,
+        let status = match item.response.last_event.as_str() {
+            "Authorized" => AttemptStatus::Authorized,
+            "Sent for Settlement" => AttemptStatus::Charged,
+            "Sent for Cancellation" => AttemptStatus::Voided,
+            "Refused" => AttemptStatus::Failure,
+            "Sent for Refund" => AttemptStatus::Charged, // Successful refund
+            "Sent for Partial Refund" => AttemptStatus::PartialCharged,
             _ => AttemptStatus::Pending,
         };
 
-        let connector_transaction_id = extract_transaction_id(&item.response.links.self_link.href)
-            .unwrap_or_else(|| item.response.transaction_reference.clone());
+        // Extract transaction ID from URL if links are available, otherwise use the connector_transaction_id from request
+        let connector_transaction_id = item.response.links
+            .as_ref()
+            .and_then(|links| extract_transaction_id(&links.self_link.href))
+            .unwrap_or_else(|| {
+                item.router_data.request.get_connector_transaction_id()
+                    .unwrap_or_else(|_| "unknown".to_string())
+            });
 
         let mut router_data = item.router_data;
         router_data.resource_common_data.status = status;
         router_data.response = Ok(PaymentsResponseData::TransactionResponse {
-            resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id),
+            resource_id: ResponseId::ConnectorTransactionId(connector_transaction_id.clone()),
             redirection_data: None,
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(item.response.transaction_reference),
+            connector_response_reference_id: Some(connector_transaction_id),
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         });
