@@ -486,18 +486,6 @@ impl<
         }
     }
 
-    fn get_api_tag(
-        &self,
-        _req: &RouterDataV2<
-            Authorize,
-            PaymentFlowData,
-            PaymentsAuthorizeData<T>,
-            PaymentsResponseData,
-        >,
-    ) -> Option<String> {
-        Some("GW_INIT_INTENT".to_string())
-    }
-
     fn get_error_response_v2(
         &self,
         res: Response,
@@ -715,18 +703,6 @@ impl<
 
         RouterDataV2::foreign_try_from((response, data.clone(), res.status_code, false))
             .change_context(errors::ConnectorError::ResponseHandlingFailed)
-    }
-
-    fn get_api_tag(
-        &self,
-        _req: &RouterDataV2<
-            CreateOrder,
-            PaymentFlowData,
-            PaymentCreateOrderData,
-            PaymentCreateOrderResponse,
-        >,
-    ) -> Option<String> {
-        Some("GW_CREATE_ORDER".to_string())
     }
 
     fn get_error_response_v2(
