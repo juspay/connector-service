@@ -4,7 +4,7 @@ use common_utils::metadata::MaskedMetadata;
 
 use crate::{
     configs,
-    error::{ResultExtGrpc},
+    error::ResultExtGrpc,
     utils::{get_metadata_payload, MetadataPayload},
 };
 
