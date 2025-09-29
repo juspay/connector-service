@@ -44,6 +44,7 @@ volt.base_url = "https://api.volt.io/"
 bluecode.base_url = "https://app.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business.cryptopay.me/"
 helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://api.dlocal.com/"
 rapyd.base_url = "https://api.rapyd.net"
 
 # Generic Events Configuration
