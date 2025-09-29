@@ -54,6 +54,7 @@ braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
 helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://sandbox.dlocal.com/"
 
 # Generic Events Configuration
 [events]
