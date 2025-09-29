@@ -289,7 +289,19 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
             let connector_tx_id = req.request.get_connector_transaction_id()?;
-            Ok(format!("{}api/payments/{}/settlements", self.connector_base_url_payments(req), connector_tx_id))
+            let base_url = self.connector_base_url_payments(req);
+            
+            // Determine if this is a full or partial capture
+            // In UCS, captures are always for a specific amount, so we check if it's a multiple capture
+            let is_full_capture = !req.request.is_multiple_capture();
+            
+            if is_full_capture {
+                // Full settlement endpoint (requires empty body)
+                Ok(format!("{}api/payments/{}/settlements", base_url, connector_tx_id))
+            } else {
+                // Partial settlement endpoint (requires complex body)
+                Ok(format!("{}api/payments/{}/partialSettlements", base_url, connector_tx_id))
+            }
         }
     }
 );

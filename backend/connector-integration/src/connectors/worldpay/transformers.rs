@@ -152,15 +152,30 @@ pub struct WorldpayPaymentResponse {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct WorldpayCaptureRequest {
-    pub value: Option<WorldpayValue>,
+#[serde(untagged)]
+pub enum WorldpayCaptureRequest {
+    FullSettlement {},
+    PartialSettlement {
+        #[serde(rename = "reference")]
+        reference: String,
+        value: WorldpayValue,
+        sequence: Option<WorldpaySequence>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldpaySequence {
+    pub number: i32,
+    pub total: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorldpayCaptureResponse {
     pub outcome: String,
-    pub transaction_reference: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub transaction_reference: Option<String>,
     #[serde(rename = "_links")]
     pub links: WorldpayLinks,
 }
@@ -323,13 +338,32 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
     fn try_from(
         item: super::WorldpayRouterData<RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>, T>,
     ) -> Result<Self, Self::Error> {
-        let item = &item.router_data;
-        Ok(Self {
-            value: Some(WorldpayValue {
-                currency: item.request.currency.to_string(),
-                amount: item.request.minor_amount_to_capture,
-            }),
-        })
+        let router_data = &item.router_data;
+        
+        // Determine if this is a full or partial capture
+        // In UCS, captures are always for a specific amount, so we check if it's a multiple capture
+        let is_full_capture = !router_data.request.is_multiple_capture();
+        
+        if is_full_capture {
+            // Full settlement requires empty request body
+            Ok(WorldpayCaptureRequest::FullSettlement {})
+        } else {
+            // Partial settlement requires complex request body
+            Ok(WorldpayCaptureRequest::PartialSettlement {
+                reference: format!("capture-{}-{}", 
+                    router_data.request.get_connector_transaction_id().unwrap_or_else(|_| "unknown".to_string()),
+                    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs()
+                ),
+                value: WorldpayValue {
+                    currency: router_data.request.currency.to_string(),
+                    amount: router_data.request.minor_amount_to_capture,
+                },
+                sequence: Some(WorldpaySequence {
+                    number: 1,
+                    total: 1,
+                }),
+            })
+        }
     }
 }
 
@@ -347,8 +381,9 @@ impl
             _ => AttemptStatus::Pending,
         };
 
+        // Extract transaction ID from URL or use transaction reference if available
         let connector_transaction_id = extract_transaction_id(&item.response.links.self_link.href)
-            .unwrap_or_else(|| item.response.transaction_reference.clone());
+            .unwrap_or_else(|| item.response.transaction_reference.clone().unwrap_or_else(|| "unknown".to_string()));
 
         let mut router_data = item.router_data;
         router_data.resource_common_data.status = status;
@@ -358,7 +393,7 @@ impl
             mandate_reference: None,
             connector_metadata: None,
             network_txn_id: None,
-            connector_response_reference_id: Some(item.response.transaction_reference),
+            connector_response_reference_id: item.response.transaction_reference,
             incremental_authorization_allowed: None,
             status_code: item.http_code,
         });
