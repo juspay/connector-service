@@ -196,7 +196,7 @@ pub struct Event {
     pub lineage_ids: lineage::LineageIds<'static>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FlowName {
     Authorize,
     Refund,

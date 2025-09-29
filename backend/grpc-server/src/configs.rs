@@ -16,6 +16,8 @@ pub struct Config {
     #[serde(default)]
     pub test: TestConfig,
     #[serde(default)]
+    pub api_tags: ApiTagConfig,
+    #[serde(default)]
     pub events: EventConfig,
     #[serde(default)]
     pub lineage: LineageConfig,
@@ -93,6 +95,43 @@ impl Default for TestConfig {
             mock_server_url: std::env::var("MOCK_SERVER_URL_V2").ok(),
         }
     }
+}
+
+#[derive(Clone, serde::Deserialize, Debug)]
+pub struct ApiTagConfig {
+    #[serde(default = "default_api_tags")]
+    pub tags: std::collections::HashMap<common_utils::events::FlowName, String>,
+}
+
+impl Default for ApiTagConfig {
+    fn default() -> Self {
+        Self {
+            tags: default_api_tags(),
+        }
+    }
+}
+
+impl ApiTagConfig {
+    /// Get the API tag for a specific flow
+    pub fn get_tag_for_flow(&self, flow_name: common_utils::events::FlowName) -> Option<String> {
+        self.tags.get(&flow_name).cloned()
+    }
+}
+
+fn default_api_tags() -> std::collections::HashMap<common_utils::events::FlowName, String> {
+    let mut tags = std::collections::HashMap::new();
+
+    // Load from environment variables or use defaults
+    tags.insert(
+        common_utils::events::FlowName::Authorize,
+        std::env::var("API_TAG_AUTHORIZE").unwrap_or_else(|_| "GW_INIT_INTENT".to_string()),
+    );
+    tags.insert(
+        common_utils::events::FlowName::CreateOrder,
+        std::env::var("API_TAG_CREATE_ORDER").unwrap_or_else(|_| "GW_CREATE_ORDER".to_string()),
+    );
+
+    tags
 }
 
 impl Config {

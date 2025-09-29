@@ -501,6 +501,7 @@ macro_rules! implement_connector_operation {
                 $all_keys_required,
                 event_params,
                 None, // TODO: Add test context support for macro-generated calls
+                None, // TODO: Add API tag support for macro-generated calls
             )
             .await
             .switch()
