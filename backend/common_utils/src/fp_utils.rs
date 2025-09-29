@@ -44,3 +44,8 @@ pub fn generate_id_with_default_len(prefix: &str) -> String {
     let len: usize = ID_LENGTH;
     format!("{}_{}", prefix, nanoid::nanoid!(len, &ALPHABETS))
 }
+
+#[inline]
+pub fn generate_id(length: usize, prefix: &str) -> String {
+    format!("{}_{}", prefix, nanoid::nanoid!(length, &ALPHABETS))
+}

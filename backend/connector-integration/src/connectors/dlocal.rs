@@ -1,9 +1,12 @@
 pub mod transformers;
 
-use std::fmt::Debug;
-
-use common_enums::CurrencyUnit;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt};
+use common_utils::{
+    crypto::{self, SignMessage},
+    date_time,
+    errors::CustomResult,
+    ext_traits::ByteSliceExt,
+    types::MinorUnit,
+};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -27,189 +30,239 @@ use domain_types::{
     router_response_types::Response,
     types::Connectors,
 };
-use hyperswitch_masking::{Mask, Maskable};
+use error_stack::ResultExt;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
+use std::fmt::Debug;
 use transformers::{
-    self as volt, VoltAuthUpdateRequest, VoltAuthUpdateResponse, VoltPaymentsRequest,
-    VoltPaymentsResponse, VoltPsyncRequest, VoltPsyncResponse,
+    self as dlocal, DlocalPaymentsCaptureRequest, DlocalPaymentsRequest, DlocalPaymentsResponse,
+    DlocalPaymentsResponse as DlocalPaymentsSyncResponse,
+    DlocalPaymentsResponse as DlocalPaymentsCaptureResponse,
+    DlocalPaymentsResponse as DlocalPaymentsVoidResponse, DlocalRefundRequest, RefundResponse,
+    RefundResponse as RefundSyncResponse,
 };
 
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
-
-use error_stack::ResultExt;
+const VERSION: &str = "2.1";
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ConnectorServiceTrait<T> for Volt<T>
+    connector_types::ConnectorServiceTrait<T> for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthorizeV2<T> for Volt<T>
+    connector_types::PaymentAuthorizeV2<T> for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSyncV2 for Volt<T>
+    connector_types::PaymentSyncV2 for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentVoidV2 for Volt<T>
+    connector_types::PaymentVoidV2 for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundSyncV2 for Volt<T>
+    connector_types::RefundSyncV2 for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RefundV2 for Volt<T>
+    connector_types::RefundV2 for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentCapture for Volt<T>
+    connector_types::PaymentCapture for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::ValidationTrait for Volt<T>
-{
-    fn should_do_access_token(&self) -> bool {
-        true
-    }
-}
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentOrderCreate for Volt<T>
+    connector_types::ValidationTrait for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SetupMandateV2<T> for Volt<T>
+    connector_types::PaymentOrderCreate for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::RepeatPaymentV2 for Volt<T>
+    connector_types::SetupMandateV2<T> for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::AcceptDispute for Volt<T>
+    connector_types::RepeatPaymentV2 for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::SubmitEvidenceV2 for Volt<T>
+    connector_types::AcceptDispute for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::DisputeDefend for Volt<T>
+    connector_types::SubmitEvidenceV2 for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::IncomingWebhook for Volt<T>
+    connector_types::DisputeDefend for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentSessionToken for Volt<T>
+    connector_types::IncomingWebhook for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAccessToken for Volt<T>
+    connector_types::PaymentSessionToken for Dlocal<T>
 {
 }
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentTokenV2<T> for Volt<T>
+    connector_types::PaymentTokenV2<T> for Dlocal<T>
 {
 }
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPreAuthenticateV2<T> for Volt<T>
+    connector_types::PaymentAccessToken for Dlocal<T>
 {
 }
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentAuthenticateV2<T> for Volt<T>
+    connector_types::PaymentPreAuthenticateV2<T> for Dlocal<T>
 {
 }
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    connector_types::PaymentPostAuthenticateV2<T> for Volt<T>
+    connector_types::PaymentAuthenticateV2<T> for Dlocal<T>
+{
+}
+impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
+    connector_types::PaymentPostAuthenticateV2<T> for Dlocal<T>
 {
 }
 
 pub(crate) mod headers {
-    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
     pub(crate) const AUTHORIZATION: &str = "Authorization";
+    pub(crate) const CONTENT_TYPE: &str = "Content-Type";
+    pub(crate) const X_DATE: &str = "X-Date";
+    pub(crate) const X_LOGIN: &str = "X-Login";
+    pub(crate) const X_TRANS_KEY: &str = "X-Trans-Key";
+    pub(crate) const X_VERSION: &str = "X-Version";
 }
 
 macros::create_all_prerequisites!(
-    connector_name: Volt,
+    connector_name: Dlocal,
     generic_type: T,
     api: [
         (
-            flow: CreateAccessToken,
-            request_body: VoltAuthUpdateRequest,
-            response_body: VoltAuthUpdateResponse,
-            router_data: RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ),
-        (
             flow: Authorize,
-            request_body: VoltPaymentsRequest,
-            response_body: VoltPaymentsResponse,
+            request_body: DlocalPaymentsRequest<T>,
+            response_body: DlocalPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            request_body: VoltPsyncRequest,
-            response_body: VoltPsyncResponse,
+            response_body: DlocalPaymentsSyncResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: DlocalRefundRequest,
+            response_body: RefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            response_body: RefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: DlocalPaymentsCaptureRequest,
+            response_body: DlocalPaymentsCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Void,
+            response_body: DlocalPaymentsVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         )
     ],
-    amount_converters: [],
+    amount_converters: [
+        amount_converter: MinorUnit
+    ],
     member_functions: {
-        pub fn build_headers<F, Req, Res>(
+        pub fn build_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
+            req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError>
         where
-            Self: ConnectorIntegrationV2<F, PaymentFlowData, Req, Res>,
+            Self: ConnectorIntegrationV2<F, FCD, Req, Res>,
         {
-            let mut header = vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/json".to_string().into(),
-            )];
+            let date = date_time::date_as_yyyymmddthhmmssmmmz()
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?;
+            let auth = dlocal::DlocalAuthType::try_from(&req.connector_auth_type)?;
 
-            // Add Bearer token for access token authentication
-            let access_token = req.resource_common_data
-                .get_access_token()
-                .change_context(errors::ConnectorError::FailedToObtainAuthType)?;
-            let auth_header = (
-                headers::AUTHORIZATION.to_string(),
-                format!("Bearer {access_token}").into_masked(),
+            let request_body = match self.get_request_body(req)? {
+                Some(dlocal_req) => dlocal_req.get_inner_value().peek().to_owned(),
+                None => String::new(),
+            };
+
+            let sign_req: String = format!(
+                "{}{}{}",
+                auth.x_login.peek(),
+                date,
+                request_body
             );
-            header.push(auth_header);
-
-            Ok(header)
+            let authz = crypto::HmacSha256::sign_message(
+                &crypto::HmacSha256,
+                auth.secret.peek().as_bytes(),
+                sign_req.as_bytes(),
+            )
+            .change_context(errors::ConnectorError::RequestEncodingFailed)
+            .attach_printable("Failed to sign the message")?;
+            let auth_string: String = format!("V2-HMAC-SHA256, Signature: {}", hex::encode(authz));
+            let headers = vec![
+                (
+                    headers::AUTHORIZATION.to_string(),
+                    auth_string.into_masked(),
+                ),
+                (headers::X_LOGIN.to_string(), auth.x_login.into_masked()),
+                (
+                    headers::X_TRANS_KEY.to_string(),
+                    auth.x_trans_key.into_masked(),
+                ),
+                (headers::X_VERSION.to_string(), VERSION.to_string().into()),
+                (headers::X_DATE.to_string(), date.into()),
+                (
+                    headers::CONTENT_TYPE.to_string(),
+                    self.get_content_type().to_string().into(),
+                ),
+            ];
+            Ok(headers)
         }
 
-        pub fn connector_base_url<F, Req, Res>(
+        pub fn connector_base_url_payments<'a, F, Req, Res>(
             &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.volt.base_url.to_string()
+            req: &'a RouterDataV2<F, PaymentFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.dlocal.base_url
+        }
+
+        pub fn connector_base_url_refunds<'a, F, Req, Res>(
+            &self,
+            req: &'a RouterDataV2<F, RefundFlowData, Req, Res>,
+        ) -> &'a str {
+            &req.resource_common_data.connectors.dlocal.base_url
         }
     }
 );
 
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
-    for Volt<T>
+    for Dlocal<T>
 {
     fn id(&self) -> &'static str {
-        "volt"
+        "dlocal"
     }
 
-    fn get_currency_unit(&self) -> CurrencyUnit {
-        CurrencyUnit::Minor
+    fn get_currency_unit(&self) -> common_enums::CurrencyUnit {
+        common_enums::CurrencyUnit::Minor
     }
 
     fn common_get_content_type(&self) -> &'static str {
@@ -217,7 +270,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 
     fn base_url<'a>(&self, connectors: &'a Connectors) -> &'a str {
-        &connectors.volt.base_url
+        connectors.dlocal.base_url.as_ref()
     }
 
     fn build_error_response(
@@ -225,27 +278,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
         res: Response,
         event_builder: Option<&mut ConnectorEvent>,
     ) -> CustomResult<ErrorResponse, errors::ConnectorError> {
-        let response: volt::VoltErrorResponse = res
+        let response: dlocal::DlocalErrorResponse = res
             .response
-            .parse_struct("VoltErrorResponse")
+            .parse_struct("Dlocal ErrorResponse")
             .change_context(errors::ConnectorError::ResponseDeserializationFailed)?;
 
         with_error_response_body!(event_builder, response);
 
-        let reason = match &response.exception.error_list {
-            Some(error_list) => error_list
-                .iter()
-                .map(|error| error.message.clone())
-                .collect::<Vec<String>>()
-                .join(" & "),
-            None => response.exception.message.clone(),
-        };
-
         Ok(ErrorResponse {
             status_code: res.status_code,
-            code: response.exception.message.to_string(),
-            message: response.exception.message.clone(),
-            reason: Some(reason),
+            code: response.code.to_string(),
+            message: response.message,
+            reason: response.param,
             attempt_status: None,
             connector_transaction_id: None,
             network_advice_code: None,
@@ -257,9 +301,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Volt,
-    curl_request: Json(VoltPaymentsRequest),
-    curl_response: VoltPaymentsResponse,
+    connector: Dlocal,
+    curl_request: Json(DlocalPaymentsRequest),
+    curl_response: DlocalPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -278,49 +322,15 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}v2/payments"))
+            Ok(format!("{}secure_payments", self.connector_base_url_payments(req)))
         }
     }
 );
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Volt,
-    curl_request: FormUrlEncoded(VoltAuthUpdateRequest),
-    curl_response: VoltAuthUpdateResponse,
-    flow_name: CreateAccessToken,
-    resource_common_data: PaymentFlowData,
-    flow_request: AccessTokenRequestData,
-    flow_response: AccessTokenResponseData,
-    http_method: Post,
-    generic_type: T,
-    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
-        fn get_headers(
-            &self,
-            _req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-            Ok(vec![(
-                headers::CONTENT_TYPE.to_string(),
-                "application/x-www-form-urlencoded".to_string().into(),
-            )])
-        }
-        fn get_url(
-            &self,
-            req: &RouterDataV2<CreateAccessToken, PaymentFlowData, AccessTokenRequestData, AccessTokenResponseData>,
-        ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
-            Ok(format!("{base_url}oauth"))
-        }
-    }
-);
-
-macros::macro_connector_implementation!(
-    connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: Volt,
-    curl_request: Json(VoltPsyncRequest),
-    curl_response: VoltPsyncResponse,
+    connector: Dlocal,
+    curl_response: DlocalPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -339,65 +349,137 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let base_url = self.connector_base_url(req);
-            let connector_payment_id = req
-                .request
-                .connector_transaction_id
-                .get_connector_transaction_id()
-                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
-            Ok(format!("{base_url}payments/{connector_payment_id}"))
+            let sync_data = dlocal::DlocalPaymentsSyncRequest::try_from(req)?;
+            Ok(format!(
+                "{}payments/{}/status",
+                self.connector_base_url_payments(req),
+                sync_data.authz_id,
+            ))
         }
     }
 );
 
-// Stub implementations for unsupported flows (required by macro system)
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
-    for Volt<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Dlocal,
+    curl_request: Json(DlocalRefundRequest),
+    curl_response: RefundResponse,
+    flow_name: Refund,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundsData,
+    flow_response: RefundsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}refunds", self.connector_base_url_refunds(req)))
+        }
+    }
+);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>
-    for Volt<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Dlocal,
+    curl_response: RefundResponse,
+    flow_name: RSync,
+    resource_common_data: RefundFlowData,
+    flow_request: RefundSyncData,
+    flow_response: RefundsResponseData,
+    http_method: Get,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let sync_data = dlocal::DlocalRefundsSyncRequest::try_from(req)?;
+            Ok(format!(
+                "{}refunds/{}/status",
+                self.connector_base_url_refunds(req),
+                sync_data.refund_id,
+            ))
+        }
+    }
+);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<Refund, RefundFlowData, RefundsData, RefundsResponseData> for Volt<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Dlocal,
+    curl_request: Json(DlocalPaymentsCaptureRequest),
+    curl_response: DlocalPaymentsResponse,
+    flow_name: Capture,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsCaptureData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            Ok(format!("{}payments", self.connector_base_url_payments(req)))
+        }
+    }
+);
 
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    > ConnectorIntegrationV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>
-    for Volt<T>
-{
-}
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Dlocal,
+    curl_response: DlocalPaymentsResponse,
+    flow_name: Void,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentVoidData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let cancel_data = dlocal::DlocalPaymentsCancelRequest::try_from(req)?;
+            Ok(format!(
+                "{}payments/{}/cancel",
+                self.connector_base_url_payments(req),
+                cancel_data.cancel_id
+            ))
+        }
+    }
+);
 
+// Stub implementations for unsupported flows
 impl<
         T: PaymentMethodDataTypes
             + std::fmt::Debug
@@ -411,7 +493,7 @@ impl<
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -424,7 +506,7 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>
-    for Volt<T>
+    for Dlocal<T>
 {
 }
 
@@ -436,7 +518,7 @@ impl<
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>
-    for Volt<T>
+    for Dlocal<T>
 {
 }
 
@@ -448,7 +530,7 @@ impl<
             + 'static
             + Serialize,
     > ConnectorIntegrationV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>
-    for Volt<T>
+    for Dlocal<T>
 {
 }
 
@@ -465,7 +547,7 @@ impl<
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -478,7 +560,7 @@ impl<
             + Serialize,
     >
     ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Volt<T>
+    for Dlocal<T>
 {
 }
 
@@ -495,7 +577,7 @@ impl<
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -512,16 +594,17 @@ impl<
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
+
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<
         PreAuthenticate,
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -531,7 +614,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -541,7 +624,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -552,7 +635,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthorizeData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -562,7 +645,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsSyncData,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -572,7 +655,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsCaptureData,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -582,7 +665,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentVoidData,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -592,7 +675,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundsData,
         RefundsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -602,7 +685,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         RefundFlowData,
         RefundSyncData,
         RefundsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -612,7 +695,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SetupMandateRequestData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -622,7 +705,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         AcceptDisputeData,
         DisputeResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -632,7 +715,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         SubmitEvidenceData,
         DisputeResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -642,7 +725,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         DisputeFlowData,
         DisputeDefendData,
         DisputeResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -652,7 +735,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentCreateOrderData,
         PaymentCreateOrderResponse,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -662,7 +745,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         RepeatPaymentData,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -672,17 +755,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         SessionTokenRequestData,
         SessionTokenResponseData,
-    > for Volt<T>
-{
-}
-
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    interfaces::verification::SourceVerification<
-        CreateAccessToken,
-        PaymentFlowData,
-        AccessTokenRequestData,
-        AccessTokenResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -692,7 +765,41 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentMethodTokenizationData<T>,
         PaymentMethodTokenResponse,
-    > for Volt<T>
+    > for Dlocal<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Dlocal<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    interfaces::verification::SourceVerification<
+        CreateAccessToken,
+        PaymentFlowData,
+        AccessTokenRequestData,
+        AccessTokenResponseData,
+    > for Dlocal<T>
 {
 }
 
@@ -702,7 +809,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPreAuthenticateData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -712,7 +819,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsAuthenticateData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
 
@@ -722,6 +829,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         PaymentFlowData,
         PaymentsPostAuthenticateData<T>,
         PaymentsResponseData,
-    > for Volt<T>
+    > for Dlocal<T>
 {
 }
