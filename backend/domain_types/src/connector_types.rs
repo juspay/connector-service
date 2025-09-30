@@ -66,6 +66,7 @@ pub enum ConnectorEnum {
     Cryptopay,
     Helcim,
     Dlocal,
+    Placetopay,
     Rapyd,
 }
 
@@ -99,6 +100,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Cryptopay => Ok(Self::Cryptopay),
             grpc_api_types::payments::Connector::Helcim => Ok(Self::Helcim),
             grpc_api_types::payments::Connector::Dlocal => Ok(Self::Dlocal),
+            grpc_api_types::payments::Connector::Placetopay => Ok(Self::Placetopay),
             grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {

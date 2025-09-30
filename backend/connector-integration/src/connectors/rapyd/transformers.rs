@@ -3,8 +3,8 @@ use domain_types::{
     connector_flow::{Authorize, Capture},
     connector_types::{
         PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData,
-        RefundsResponseData, ResponseId,
+        PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData, RefundsResponseData,
+        ResponseId,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -833,7 +833,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_payment_amount,
+                item.router_data.request.minor_refund_amount,
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::AmountConversionFailed)?;
@@ -887,56 +887,8 @@ pub struct RefundResponseData {
     pub failure_reason: Option<String>,
 }
 
-impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
-    for RouterDataV2<F, RefundFlowData, RefundsData, RefundsResponseData>
-{
-    type Error = error_stack::Report<ConnectorError>;
-    fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
-        let (_connector_refund_id, _refund_status, response_result) = match &item.response.data {
-            Some(data) => (
-                data.id.clone(),
-                common_enums::RefundStatus::from(data.status.clone()),
-                Ok(RefundsResponseData {
-                    connector_refund_id: data.id.clone(),
-                    refund_status: common_enums::RefundStatus::from(data.status.clone()),
-                    status_code: item.http_code,
-                }),
-            ),
-            None => {
-                // If no data, still provide a proper refund ID from the response
-                let refund_id = item
-                    .response
-                    .status
-                    .operation_id
-                    .clone()
-                    .unwrap_or_else(|| format!("refund_error_{}", item.response.status.error_code));
-                (
-                    refund_id.clone(),
-                    common_enums::RefundStatus::Failure,
-                    Err(ErrorResponse {
-                        code: item.response.status.error_code.clone(),
-                        status_code: item.http_code,
-                        message: item.response.status.status.clone().unwrap_or_default(),
-                        reason: item.response.status.message.clone(),
-                        attempt_status: None,
-                        connector_transaction_id: None,
-                        network_advice_code: None,
-                        network_decline_code: None,
-                        network_error_message: None,
-                    }),
-                )
-            }
-        };
-
-        Ok(Self {
-            response: response_result,
-            ..item.router_data
-        })
-    }
-}
-
-impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
-    for RouterDataV2<F, RefundFlowData, RefundSyncData, RefundsResponseData>
+impl<F, T> TryFrom<ResponseRouterData<RefundResponse, Self>>
+    for RouterDataV2<F, RefundFlowData, T, RefundsResponseData>
 {
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(item: ResponseRouterData<RefundResponse, Self>) -> Result<Self, Self::Error> {
