@@ -6193,6 +6193,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.21.7",
  "blake3",
  "bytes",
  "chrono",
@@ -6218,6 +6219,7 @@ dependencies = [
  "strum",
  "thiserror 1.0.69",
  "time",
+ "tonic 0.13.1",
  "tracing",
  "tracing-kafka",
  "ucs_common_enums",

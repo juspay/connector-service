@@ -45,6 +45,7 @@ bluecode.base_url = "https://app.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business.cryptopay.me/"
 helcim.base_url = "https://api.helcim.com/"
 dlocal.base_url = "https://api.dlocal.com/"
+placetopay.base_url = "https://checkout.placetopay.com/rest/gateway"
 trustpay.base_url = "https://tpgw.trustpay.eu/"
 trustpay.base_url_bank_redirects = "https://aapi.trustpay.eu/"
 
@@ -54,3 +55,6 @@ enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
+
+[unmasked_headers]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]

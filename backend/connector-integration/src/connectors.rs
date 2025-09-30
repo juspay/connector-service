@@ -68,5 +68,8 @@ pub use self::dlocal::Dlocal;
 pub mod helcim;
 pub use self::helcim::Helcim;
 
+pub mod placetopay;
+pub use self::placetopay::Placetopay;
+
 pub mod trustpay;
 pub use self::trustpay::Trustpay;

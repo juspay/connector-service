@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
     global_id::{
@@ -219,6 +218,7 @@ pub struct Event {
     pub status_code: Option<i32>,
     pub request_data: Option<MaskedSerdeValue>,
     pub response_data: Option<MaskedSerdeValue>,
+    pub headers: HashMap<String, String>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, MaskedSerdeValue>,
     #[serde(flatten)]
