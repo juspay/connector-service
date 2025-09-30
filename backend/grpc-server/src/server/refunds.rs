@@ -22,13 +22,15 @@ use grpc_api_types::payments::{
 use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
-    implement_connector_operation, utils,
+    implement_connector_operation,
+    request::RequestData,
+    utils,
 };
 // Helper trait for refund operations
 trait RefundOperationsInternal {
     async fn internal_get(
         &self,
-        request: tonic::Request<RefundServiceGetRequest>,
+        request: RequestData<RefundServiceGetRequest>,
     ) -> Result<tonic::Response<RefundResponse>, tonic::Status>;
 }
 
@@ -91,7 +93,7 @@ impl RefundService for Refunds {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::Rsync,
-            |request, _metadata_payload| async move { self.internal_get(request).await },
+            |request_data| async move { self.internal_get(request_data).await },
         )
         .await
     }
@@ -129,10 +131,10 @@ impl RefundService for Refunds {
             &service_name,
             self.config.clone(),
             common_utils::events::FlowName::IncomingWebhook,
-            |request, metadata_payload| async move {
-                let connector = metadata_payload.connector;
-                let connector_auth_details = metadata_payload.connector_auth_type;
-                let payload = request.into_inner();
+            |request_data| async move {
+                let payload = request_data.payload;
+                let connector = request_data.extracted_metadata.connector;
+                let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
 
                 let request_details = payload
                     .request_details
