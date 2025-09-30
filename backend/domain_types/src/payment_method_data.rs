@@ -298,8 +298,12 @@ pub enum VoucherData {
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UpiData {
+    /// UPI Collect - Customer approves a collect request sent to their UPI app
     UpiCollect(UpiCollectData),
+    /// UPI Intent - Customer is redirected to their UPI app with a pre-filled payment request
     UpiIntent(UpiIntentData),
+    /// UPI QR - Unique QR generated per txn
+    UpiQr(UpiQrData),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -310,6 +314,9 @@ pub struct UpiCollectData {
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct UpiIntentData {}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct UpiQrData {}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RealTimePaymentData {
