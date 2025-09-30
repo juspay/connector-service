@@ -55,7 +55,7 @@ impl EventPublisher {
             .build()
             .map_err(|e| {
                 error_stack::Report::new(EventPublisherError::KafkaWriterInitializationFailed)
-                    .attach_printable(format!("KafkaWriter build failed: {}", e))
+                    .attach_printable(format!("KafkaWriter build failed: {e}"))
                     .attach_printable(format!(
                         "Brokers: {:?}, Topic: {}",
                         config.brokers, config.topic
@@ -111,13 +111,13 @@ impl EventPublisher {
             .map_err(|e| {
                 let event_json = serde_json::to_string(&event).unwrap_or_default();
                 error_stack::Report::new(EventPublisherError::EventPublishFailed)
-                    .attach_printable(format!("Kafka publish failed: {}", e))
+                    .attach_printable(format!("Kafka publish failed: {e}"))
                     .attach_printable(format!(
                         "Topic: {}, Event size: {} bytes",
                         self.config.topic,
                         event_bytes.len()
                     ))
-                    .attach_printable(format!("Failed event: {}", event_json))
+                    .attach_printable(format!("Failed event: {event_json}"))
             })?;
 
         let event_json = serde_json::to_string(&event).unwrap_or_default();
