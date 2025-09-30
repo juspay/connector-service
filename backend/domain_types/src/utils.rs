@@ -5,8 +5,9 @@ use std::{
 
 use base64::Engine;
 use common_enums::{CurrencyUnit, PaymentMethodType};
-use common_utils::{consts, AmountConvertor, CustomResult, MinorUnit};
+use common_utils::{consts, metadata::MaskedMetadata, AmountConvertor, CustomResult, MinorUnit};
 use error_stack::{report, Result, ResultExt};
+use hyperswitch_masking::ExposeInterface;
 use regex::Regex;
 use serde::Serialize;
 use serde_json::Value;
@@ -361,9 +362,9 @@ static CARD_REGEX: LazyLock<HashMap<CardIssuer, core::result::Result<Regex, rege
 
 /// Helper function for extracting merchant ID from metadata
 pub fn extract_merchant_id_from_metadata(
-    metadata: &tonic::metadata::MetadataMap,
+    metadata: &MaskedMetadata,
 ) -> Result<common_utils::id_type::MerchantId, ApplicationErrorResponse> {
-    let merchant_id_str = metadata
+    let merchant_id_secret = metadata
         .get(common_utils::consts::X_MERCHANT_ID)
         .ok_or_else(|| {
             ApplicationErrorResponse::BadRequest(ApiError {
@@ -372,16 +373,9 @@ pub fn extract_merchant_id_from_metadata(
                 error_message: "Missing merchant ID in request metadata".to_owned(),
                 error_object: None,
             })
-        })?
-        .to_str()
-        .map_err(|e| {
-            ApplicationErrorResponse::BadRequest(ApiError {
-                sub_code: "INVALID_MERCHANT_ID".to_owned(),
-                error_identifier: 400,
-                error_message: format!("Invalid merchant ID in request metadata: {e}"),
-                error_object: None,
-            })
         })?;
+
+    let merchant_id_str = merchant_id_secret.expose();
 
     Ok(merchant_id_str
         .parse::<common_utils::id_type::MerchantId>()
