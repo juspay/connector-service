@@ -1157,6 +1157,7 @@ pub struct AuthorizedotnetRefundCardDetails {
     expiration_date: Secret<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 enum AuthorizedotnetRefundPaymentDetails<T: PaymentMethodDataTypes> {

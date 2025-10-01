@@ -732,11 +732,11 @@ macro_rules! create_all_prerequisites {
                     pub $converter_name: &'static (dyn common_utils::types::AmountConvertor<Output = $amount_unit> + Sync),
                 )*
                 $(
-                    [<$flow_name:snake>]: &'static (dyn BridgeRequestResponse<
+                    [<$flow_name:snake>]: &'static dyn BridgeRequestResponse<
                         RequestBody = crate::connectors::macros::create_all_prerequisites_resolve_request_body_type!($(request_body: $flow_request $(<$generic_param>)?,)? generic_type: $generic_type),
                         ResponseBody = $flow_response,
                         ConnectorInputData = [<$connector RouterData>]<$router_data_type, $generic_type>,
-                    >),
+                    >,
                 )*
             }
 
