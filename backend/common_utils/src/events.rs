@@ -43,6 +43,10 @@ impl MaskedSerdeValue {
             })
             .ok()
     }
+
+    pub fn inner(&self) -> &serde_json::Value {
+        &self.inner
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
