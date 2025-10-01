@@ -2600,6 +2600,13 @@ pub fn generate_payment_authenticate_response<T: PaymentMethodDataTypes>(
                             .get("ds_transaction_id")
                             .and_then(|v| v.as_str())
                             .map(|s| s.to_string()),
+                        challenge_code: None,
+                        challenge_cancel: None,
+                        challenge_code_reason: None,
+                        acs_trans_id: None,
+                        message_extension: None,
+                        created_at: None,
+                        authentication_type: None,
                     }
                 }),
                 status: grpc_status.into(),
@@ -2805,6 +2812,13 @@ pub fn generate_payment_post_authenticate_response<T: PaymentMethodDataTypes>(
                             .get("ds_transaction_id")
                             .and_then(|v| v.as_str())
                             .map(|s| s.to_string()),
+                        challenge_code: None,
+                        challenge_cancel: None,
+                        challenge_code_reason: None,
+                        acs_trans_id: None,
+                        message_extension: None,
+                        created_at: None,
+                        authentication_type: None,
                     }
                 }),
                 incremental_authorization_allowed: None,

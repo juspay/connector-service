@@ -345,6 +345,7 @@ impl<
                     | WalletData::AliPayRedirect(_)
                     | WalletData::AliPayHkRedirect(_)
                     | WalletData::AmazonPayRedirect(_)
+                    | WalletData::BluecodeRedirect {}
                     | WalletData::MomoRedirect(_)
                     | WalletData::KakaoPayRedirect(_)
                     | WalletData::GoPayRedirect(_)
@@ -3124,6 +3125,7 @@ impl<
                         | WalletData::AliPayRedirect(_)
                         | WalletData::AliPayHkRedirect(_)
                         | WalletData::AmazonPayRedirect(_)
+                        | WalletData::BluecodeRedirect {}
                         | WalletData::MomoRedirect(_)
                         | WalletData::KakaoPayRedirect(_)
                         | WalletData::GoPayRedirect(_)
@@ -4417,12 +4419,6 @@ impl<
             })?
             .expose();
         let order_information = OrderInformation { amount_details };
-        let device_information = item
-            .router_data
-            .request
-            .browser_info
-            .as_ref()
-            .map(CybersourceDeviceInformation::from_browser_info);
 
         Ok(Self {
             payment_information,
@@ -4432,7 +4428,6 @@ impl<
                     authentication_transaction_id: transaction_id,
                 },
             order_information,
-            device_information,
         })
     }
 }
@@ -4682,7 +4677,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data.request.minor_amount.unwrap(),
+                item.router_data.request.amount,
                 item.router_data.request.currency.unwrap(),
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;
@@ -4728,13 +4723,6 @@ impl<
             amount_details,
             bill_to: Some(bill_to),
         };
-        let device_information = item
-            .router_data
-            .request
-            .browser_info
-            .as_ref()
-            .map(CybersourceDeviceInformation::from_browser_info);
-        println!("The device info is {:?}", device_information);
 
         Ok(Self {
             payment_information,
@@ -4743,13 +4731,15 @@ impl<
                 return_url: item
                     .router_data
                     .request
-                    .complete_authorize_url
+                    .continue_redirection_url
                     .clone()
-                    .ok_or_else(utils::missing_field_err("complete_authorize_url"))?,
+                    .ok_or(errors::ConnectorError::MissingRequiredField {
+                        field_name: "continue_redirection_url",
+                    })?
+                    .to_string(),
                 reference_id,
             },
             order_information,
-            device_information,
         })
     }
 }
