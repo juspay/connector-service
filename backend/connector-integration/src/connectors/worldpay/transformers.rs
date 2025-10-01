@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use common_enums::{AttemptStatus, RefundStatus};
+use common_enums::{AttemptStatus, CaptureMethod, RefundStatus};
 use common_utils::types::MinorUnit;
 use domain_types::{
     connector_flow::{Authorize, Capture, PSync, Refund, RSync},
@@ -97,11 +97,19 @@ pub struct WorldpayNarrative {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct WorldpaySettlement {
+    pub auto: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WorldpayInstruction<T: PaymentMethodDataTypes> {
     pub method: String,
     pub payment_instrument: WorldpayPaymentInstrument<T>,
     pub narrative: WorldpayNarrative,
     pub value: WorldpayValue,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settlement: Option<WorldpaySettlement>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -279,6 +287,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
                             currency: item.request.currency.to_string(),
                             amount: item.request.minor_amount,
                         },
+                        settlement: if item.request.capture_method == Some(CaptureMethod::Automatic) {
+                            Some(WorldpaySettlement { auto: true })
+                        } else {
+                            None
+                        },
                     },
                 })
             }
@@ -307,7 +320,7 @@ impl<T: PaymentMethodDataTypes>
         >,
     ) -> Result<Self, Self::Error> {
         let status = match item.response.outcome.as_str() {
-            "authorized" => AttemptStatus::Charged,
+            "authorized" => AttemptStatus::Authorized,
             "sentForSettlement" => AttemptStatus::Charged,
             "refused" => AttemptStatus::Failure,
             "3dsDeviceDataRequired" | "3dsChallenged" => AttemptStatus::AuthenticationPending,
