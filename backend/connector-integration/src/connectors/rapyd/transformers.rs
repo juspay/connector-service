@@ -16,7 +16,6 @@ use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
 use serde::Deserialize;
 use serde::Serialize;
-use serde::Serializer;
 use std::fmt::Debug;
 use url::Url;
 
@@ -144,15 +143,6 @@ impl TryFrom<&ConnectorAuthType> for RapydAuthType {
     }
 }
 
-fn serialize_amount_as_integer<S>(amount: &FloatMajorUnit, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    // Convert FloatMajorUnit to integer for Rapyd compatibility
-    let value = amount.0 as i64;
-    serializer.serialize_i64(value)
-}
-
 #[derive(Default, Debug, Serialize)]
 pub struct RapydPaymentsRequest<
     T: PaymentMethodDataTypes
@@ -162,7 +152,6 @@ pub struct RapydPaymentsRequest<
         + 'static
         + Serialize,
 > {
-    #[serde(serialize_with = "serialize_amount_as_integer")]
     pub amount: FloatMajorUnit,
     pub currency: common_enums::Currency,
     pub payment_method: PaymentMethod<T>,
@@ -471,23 +460,9 @@ pub struct ResponseData {
     pub failure_message: Option<String>,
 }
 
-fn serialize_optional_amount_as_integer<S>(
-    amount: &Option<FloatMajorUnit>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match amount {
-        Some(amt) => serialize_amount_as_integer(amt, serializer),
-        None => serializer.serialize_none(),
-    }
-}
-
 // Capture Request
 #[derive(Debug, Serialize, Clone)]
 pub struct CaptureRequest {
-    #[serde(serialize_with = "serialize_optional_amount_as_integer")]
     amount: Option<FloatMajorUnit>,
     receipt_email: Option<Secret<String>>,
     statement_descriptor: Option<String>,
@@ -535,7 +510,6 @@ impl<
 #[derive(Default, Debug, Serialize)]
 pub struct RapydRefundRequest {
     pub payment: String,
-    #[serde(serialize_with = "serialize_optional_amount_as_integer")]
     pub amount: Option<FloatMajorUnit>,
     pub currency: Option<common_enums::Currency>,
 }
