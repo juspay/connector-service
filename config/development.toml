@@ -56,6 +56,7 @@ cryptopay.base_url = "https://business-sandbox.cryptopay.me"
 helcim.base_url = "https://api.helcim.com/"
 dlocal.base_url = "https://sandbox.dlocal.com/"
 placetopay.base_url = "https://test.placetopay.com/rest/gateway"
+rapyd.base_url = "https://sandboxapi.rapyd.net"
 
 # Generic Events Configuration
 [events]

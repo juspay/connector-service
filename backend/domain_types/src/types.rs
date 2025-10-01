@@ -116,6 +116,7 @@ pub struct Connectors {
     pub helcim: ConnectorParams,
     pub dlocal: ConnectorParams,
     pub placetopay: ConnectorParams,
+    pub rapyd: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
