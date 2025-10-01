@@ -63,6 +63,9 @@ impl TryFrom<&ConnectorAuthType> for TrustpayAuthType {
 
 const STATUS: char = 'Y';
 const CLIENT_CREDENTIAL: &str = "client_credentials";
+const CHALLENGE_WINDOW: &str = "1";
+const PAYMENT_TYPE: &str = "Plain";
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub enum TrustpayPaymentMethod {
     #[serde(rename = "EPS")]
@@ -394,9 +397,9 @@ fn get_card_request_data<
             browser_java_enabled: browser_info.get_java_enabled()?.to_string(),
             browser_java_script_enabled: browser_info.get_java_script_enabled()?.to_string(),
             browser_screen_color_depth: browser_info.get_color_depth()?.to_string(),
-            browser_challenge_window: "1".to_string(),
+            browser_challenge_window: CHALLENGE_WINDOW.to_string(),
             payment_action: None,
-            payment_type: "Plain".to_string(),
+            payment_type: PAYMENT_TYPE.to_string(),
             descriptor: item.request.statement_descriptor.clone(),
         },
     )))

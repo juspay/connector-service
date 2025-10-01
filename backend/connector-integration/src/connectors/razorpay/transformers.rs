@@ -1501,7 +1501,8 @@ impl<
                     .to_string();
                 ("collect", Some(vpa))
             }
-            PaymentMethodData::Upi(UpiData::UpiIntent(_)) => ("intent", None),
+            PaymentMethodData::Upi(UpiData::UpiIntent(_))
+            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => ("intent", None),
             _ => ("collect", None), // Default fallback
         };
 
