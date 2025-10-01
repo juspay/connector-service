@@ -1,7 +1,7 @@
 pub mod transformers;
 
 use base64::Engine;
-use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, StringMinorUnit};
+use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, FloatMajorUnit};
 use domain_types::{
     connector_flow::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
@@ -32,6 +32,7 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use rand::distributions::{Alphanumeric, DistString};
+use ring::hmac;
 use serde::Serialize;
 use std::fmt::Debug;
 use transformers::{
@@ -50,7 +51,7 @@ pub(crate) mod headers {
 }
 
 pub const BASE64_ENGINE_URL_SAFE: base64::engine::GeneralPurpose =
-    base64::engine::general_purpose::STANDARD;
+    base64::engine::general_purpose::URL_SAFE;
 
 // Trait implementations with generic type parameters
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
@@ -283,7 +284,7 @@ macros::create_all_prerequisites!(
         )
     ],
     amount_converters: [
-        amount_converter: StringMinorUnit
+        amount_converter: FloatMajorUnit
     ],
     member_functions: {
         pub fn build_headers<F, FCD, Req, Res>(
@@ -343,22 +344,19 @@ macros::create_all_prerequisites!(
             salt: &str,
         ) -> CustomResult<String, errors::ConnectorError> {
             let RapydAuthType {
-                access_key,
-                secret_key,
-            } = auth;
-            let to_sign = format!(
-                "{http_method}{url_path}{salt}{timestamp}{}{}{}",
-                access_key.peek(),
-                secret_key.peek(),
-                body
-            );
-
-            let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, secret_key.peek().as_bytes());
-            let tag = ring::hmac::sign(&key, to_sign.as_bytes());
-            let hmac_sign = hex::encode(tag);
-            let signature_value = BASE64_ENGINE_URL_SAFE.encode(hmac_sign);
-
-            Ok(signature_value)
+            access_key,
+            secret_key,
+        } = auth;
+        let to_sign = format!(
+            "{http_method}{url_path}{salt}{timestamp}{}{}{body}",
+            access_key.peek(),
+            secret_key.peek()
+        );
+        let key = hmac::Key::new(hmac::HMAC_SHA256, secret_key.peek().as_bytes());
+        let tag = hmac::sign(&key, to_sign.as_bytes());
+        let hmac_sign = hex::encode(tag);
+        let signature_value = BASE64_ENGINE_URL_SAFE.encode(hmac_sign);
+        Ok(signature_value)
         }
     }
 );
