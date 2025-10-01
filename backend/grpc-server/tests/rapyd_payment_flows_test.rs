@@ -93,31 +93,12 @@ fn add_rapyd_metadata<T>(request: &mut Request<T>) {
 
 // Helper function to extract transaction ID from response
 fn extract_transaction_id(response: &PaymentServiceAuthorizeResponse) -> String {
-    // First try to get the transaction ID from transaction_id field
     match &response.transaction_id {
-        Some(id) => match &id.id_type {
-            Some(id_type) => match id_type {
-                IdType::Id(id) => id.clone(),
-                IdType::EncodedData(id) => id.clone(),
-                _ => format!("unknown_id_type_{}", get_timestamp()),
-            },
-            None => format!("no_id_type_{}", get_timestamp()),
+        Some(id) => match id.id_type.as_ref().unwrap() {
+            IdType::Id(id) => id.clone(),
+            _ => panic!("Expected connector transaction ID"),
         },
-        None => {
-            // Fallback to response_ref_id if transaction_id is not available
-            if let Some(ref_id) = &response.response_ref_id {
-                match &ref_id.id_type {
-                    Some(id_type) => match id_type {
-                        IdType::Id(id) => id.clone(),
-                        IdType::EncodedData(id) => id.clone(),
-                        _ => format!("unknown_ref_id_{}", get_timestamp()),
-                    },
-                    None => format!("no_ref_id_type_{}", get_timestamp()),
-                }
-            } else {
-                format!("no_transaction_id_{}", get_timestamp())
-            }
-        }
+        None => panic!("Resource ID is None"),
     }
 }
 
