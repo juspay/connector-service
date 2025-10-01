@@ -286,10 +286,11 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            let connector_transaction_id = match &req.request.connector_transaction_id {
-                ResponseId::ConnectorTransactionId(id) => id,
-                _ => return Err(errors::ConnectorError::MissingConnectorTransactionID.into())
-            };
+            let connector_transaction_id = req
+                .request
+                .connector_transaction_id
+                .get_connector_transaction_id()
+                .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
             Ok(format!(
                 "{}/transactions/{}/confirm",
                 self.connector_base_url_payments(req),
