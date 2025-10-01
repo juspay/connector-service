@@ -265,6 +265,18 @@ impl<
         })
     }
 
+    fn get_api_tag(
+        &self,
+        req: &domain_types::router_data_v2::RouterDataV2<
+            CreateOrder,
+            PaymentFlowData,
+            PaymentCreateOrderData,
+            PaymentCreateOrderResponse,
+        >,
+    ) -> Option<String> {
+        req.resource_common_data.api_tag.clone()
+    }
+
     fn get_error_response_v2(
         &self,
         res: Response,
@@ -459,6 +471,18 @@ impl<
                 .change_context(errors::ConnectorError::ResponseHandlingFailed)
             }
         }
+    }
+
+    fn get_api_tag(
+        &self,
+        req: &domain_types::router_data_v2::RouterDataV2<
+            Authorize,
+            PaymentFlowData,
+            PaymentsAuthorizeData<T>,
+            PaymentsResponseData,
+        >,
+    ) -> Option<String> {
+        req.resource_common_data.api_tag.clone()
     }
 
     fn get_error_response_v2(

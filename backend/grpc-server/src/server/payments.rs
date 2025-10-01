@@ -241,6 +241,13 @@ impl Payments {
             payment_flow_data
         };
 
+        // Get API tag for Authorize flow and set it in payment_flow_data
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::Authorize);
+        let payment_flow_data = payment_flow_data.set_api_tag(api_tag.clone());
+
         // This duplicate session token check has been removed - the session token handling is already done above
 
         // Create connector request data
@@ -285,12 +292,6 @@ impl Payments {
             lineage_ids,
             reference_id,
         };
-
-        // Get API tag for Authorize flow
-        let api_tag = self
-            .config
-            .api_tags
-            .get_tag_for_flow(events::FlowName::Authorize);
 
         let response = execute_connector_processing_step(
             &self.config.proxy,
@@ -422,6 +423,13 @@ impl Payments {
             webhook_url: payload.webhook_url.clone(),
         };
 
+        // Get API tag for CreateOrder flow and set it in payment_flow_data
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::CreateOrder);
+        let payment_flow_data = payment_flow_data.clone().set_api_tag(api_tag.clone());
+
         let order_router_data = RouterDataV2::<
             CreateOrder,
             PaymentFlowData,
@@ -429,7 +437,7 @@ impl Payments {
             PaymentCreateOrderResponse,
         > {
             flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
+            resource_common_data: payment_flow_data,
             connector_auth_type: connector_auth_details,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
@@ -458,12 +466,6 @@ impl Payments {
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
         };
-
-        // Get API tag for CreateOrder flow
-        let api_tag = self
-            .config
-            .api_tags
-            .get_tag_for_flow(events::FlowName::CreateOrder);
 
         let response = execute_connector_processing_step(
             &self.config.proxy,
@@ -539,6 +541,13 @@ impl Payments {
             webhook_url: payload.webhook_url.clone(),
         };
 
+        // Get API tag for CreateOrder flow (setup mandate) and set it in payment_flow_data
+        let api_tag = self
+            .config
+            .api_tags
+            .get_tag_for_flow(events::FlowName::CreateOrder);
+        let payment_flow_data = payment_flow_data.clone().set_api_tag(api_tag.clone());
+
         let order_router_data = RouterDataV2::<
             CreateOrder,
             PaymentFlowData,
@@ -546,7 +555,7 @@ impl Payments {
             PaymentCreateOrderResponse,
         > {
             flow: std::marker::PhantomData,
-            resource_common_data: payment_flow_data.clone(),
+            resource_common_data: payment_flow_data,
             connector_auth_type: connector_auth_details,
             request: order_create_data,
             response: Err(ErrorResponse::default()),
@@ -564,12 +573,6 @@ impl Payments {
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
         };
-
-        // Get API tag for CreateOrder flow (setup mandate)
-        let api_tag = self
-            .config
-            .api_tags
-            .get_tag_for_flow(events::FlowName::CreateOrder);
 
         let response = execute_connector_processing_step(
             &self.config.proxy,
@@ -1290,7 +1293,15 @@ impl PaymentService for Payments {
                     } else {
                         None
                     };
-                    let payment_flow_data = payment_flow_data.set_order_reference_id(order_id);
+                    let payment_flow_data = payment_flow_data
+                        .set_order_reference_id(order_id);
+
+                    // Get API tag for SetupMandate flow and set it in payment_flow_data
+                    let api_tag = self
+                        .config
+                        .api_tags
+                        .get_tag_for_flow(events::FlowName::SetupMandate);
+                    let payment_flow_data = payment_flow_data.set_api_tag(api_tag.clone());
 
                     let setup_mandate_request_data =
                         SetupMandateRequestData::foreign_try_from(payload.clone())
@@ -1321,12 +1332,6 @@ impl PaymentService for Payments {
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
                     };
-
-                    // Get API tag for SetupMandate flow
-                    let api_tag = self
-                        .config
-                        .api_tags
-                        .get_tag_for_flow(events::FlowName::SetupMandate);
 
                     let response = execute_connector_processing_step(
                         &self.config.proxy,

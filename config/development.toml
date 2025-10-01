@@ -21,7 +21,7 @@ type = "grpc"
 
 [metrics]
 host = "127.0.0.1"
-port = 8081
+port = 8080
 
 [proxy]
 # http_url = "http proxy url"                   # Proxy all HTTP traffic via this proxy
@@ -34,11 +34,29 @@ enabled = false
 mock_server_url = "http://localhost:3000"
 
 [api_tags.tags]
+# Payment Flow API Tags
 Authorize = "GW_INIT_INTENT"
 CreateOrder = "GW_CREATE_ORDER"
 SetupMandate = "GW_SETUP_MANDATE"
 RepeatPayment = "GW_REPEAT_PAYMENT"
 CreateSessionToken = "GW_SESSION_TOKEN"
+Capture = "GW_CAPTURE"
+Void = "GW_VOID"
+Refund = "GW_REFUND"
+
+# Sync Flow API Tags
+Psync = "GW_PSYNC"
+Rsync = "GW_RSYNC"
+Dsync = "GW_DSYNC"
+
+# Dispute Flow API Tags
+AcceptDispute = "GW_ACCEPT_DISPUTE"
+SubmitEvidence = "GW_SUBMIT_EVIDENCE"
+DefendDispute = "GW_DEFEND_DISPUTE"
+
+# Webhook and Other Flow API Tags
+IncomingWebhook = "GW_INCOMING_WEBHOOK"
+Unknown = "GW_UNKNOWN"
 
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"
