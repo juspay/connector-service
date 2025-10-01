@@ -255,10 +255,9 @@ impl<
                     ))
                 }
                 grpc_api_types::payments::payment_method::PaymentMethod::UpiQr(_upi_qr) => {
-                    // UpiQr is not yet implemented, fallback to UpiIntent
                     Ok(PaymentMethodData::Upi(
-                        crate::payment_method_data::UpiData::UpiIntent(
-                            crate::payment_method_data::UpiIntentData {},
+                        crate::payment_method_data::UpiData::UpiQr(
+                            crate::payment_method_data::UpiQrData {},
                         ),
                     ))
                 }
@@ -2498,9 +2497,11 @@ pub fn generate_payment_sync_response(
                 .unwrap_or_default();
             Ok(PaymentServiceGetResponse {
                 transaction_id: Some(grpc_api_types::payments::Identifier {
-                    id_type: Some(
-                        grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(()),
-                    ),
+                    id_type: Some(if let Some(txn_id) = e.connector_transaction_id {
+                        grpc_api_types::payments::identifier::IdType::Id(txn_id)
+                    } else {
+                        grpc_api_types::payments::identifier::IdType::NoResponseIdMarker(())
+                    }),
                 }),
                 mandate_reference: None,
                 status: status as i32,
