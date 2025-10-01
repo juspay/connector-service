@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use base64::Engine;
 use common_enums::AttemptStatus;
 use common_utils::{
-    crypto::{HmacSha512, SignMessage},
+    crypto::{self, VerifySignature},
     errors::CustomResult,
     ext_traits::ByteSliceExt,
     types::StringMajorUnit,
@@ -183,30 +183,61 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     fn verify_webhook_source(
         &self,
         request: RequestDetails,
-        connector_webhook_secrets: Option<ConnectorWebhookSecrets>,
+        connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
-        let connector_webhook_secrets = match connector_webhook_secrets {
+        let algorithm = crypto::HmacSha512;
+
+        let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => return Ok(false),
+            None => {
+                tracing::warn!(
+                    target: "noon_webhook",
+                    "Missing webhook secret for Noon webhook verification - verification failed but continuing processing"
+                );
+                return Ok(false);
+            }
         };
 
-        let expected_signature =
-            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
+        let signature = match self
+            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
+        {
+            Ok(sig) => sig,
+            Err(error) => {
+                tracing::warn!(
+                    target: "noon_webhook",
+                    "Failed to get webhook source verification signature for Noon: {} - verification failed but continuing processing",
+                    error
+                );
+                return Ok(false);
+            }
+        };
 
-        let message =
-            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
+        let message = match self
+            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
+        {
+            Ok(msg) => msg,
+            Err(error) => {
+                tracing::warn!(
+                    target: "noon_webhook",
+                    "Failed to get webhook source verification message for Noon: {} - verification failed but continuing processing",
+                    error
+                );
+                return Ok(false);
+            }
+        };
 
-        let crypto_algorithm = HmacSha512;
-        let computed_signature = crypto_algorithm
-            .sign_message(&connector_webhook_secrets.secret, &message)
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
-            .map_err(|err| {
-                tracing::error!(target: "noon_webhook", "Failed to compute HMAC-SHA512 signature: {:?}", err);
-                err
-            })?;
-
-        Ok(computed_signature == expected_signature)
+        match algorithm.verify_signature(&connector_webhook_secrets.secret, &signature, &message) {
+            Ok(is_verified) => Ok(is_verified),
+            Err(error) => {
+                tracing::warn!(
+                    target: "noon_webhook",
+                    "Failed to verify webhook signature for Noon: {} - verification failed but continuing processing",
+                    error
+                );
+                Ok(false)
+            }
+        }
     }
 
     fn process_payment_webhook(
@@ -218,9 +249,9 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
-        let resource: transformers::NoonWebhookObject = request
+        let resource: transformers::NoonWebhookBody = request
             .body
-            .parse_struct("NoonWebhookObject")
+            .parse_struct("NoonWebhookBody")
             .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
 
         let status = common_enums::AttemptStatus::from(resource.order_status);
