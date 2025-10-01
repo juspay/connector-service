@@ -46,6 +46,7 @@ cryptopay.base_url = "https://business.cryptopay.me/"
 helcim.base_url = "https://api.helcim.com/"
 dlocal.base_url = "https://api.dlocal.com/"
 placetopay.base_url = "https://checkout.placetopay.com/rest/gateway"
+rapyd.base_url = "https://api.rapyd.net"
 
 # Generic Events Configuration
 [events]
