@@ -68,5 +68,11 @@ pub use self::dlocal::Dlocal;
 pub mod helcim;
 pub use self::helcim::Helcim;
 
+pub mod placetopay;
+pub use self::placetopay::Placetopay;
+
+pub mod rapyd;
+pub use self::rapyd::Rapyd;
+
 pub mod cybersource;
 pub use self::cybersource::Cybersource;
