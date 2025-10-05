@@ -117,6 +117,7 @@ pub struct Connectors {
     pub dlocal: ConnectorParams,
     pub placetopay: ConnectorParams,
     pub rapyd: ConnectorParams,
+    pub aci: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -1070,6 +1071,7 @@ impl<
         // Extract merchant_account_id from metadata before moving it
         let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
 
+        let customer_acceptance = value.customer_acceptance.clone();
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
@@ -1122,6 +1124,9 @@ impl<
             order_category: value.order_category,
             session_token: None,
             access_token: value.access_token,
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
             enrolled_for_3ds: false,
             related_transaction_id: None,
             payment_experience: None,
