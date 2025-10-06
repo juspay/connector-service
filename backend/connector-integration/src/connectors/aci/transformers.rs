@@ -478,7 +478,7 @@ impl<
     fn try_from(
         (card_data, card_holder_name): (Card<T>, Option<Secret<String>>),
     ) -> Result<Self, Self::Error> {
-        let card_expiry_year = utils::get_expiry_year_4_digit(&card_data.card_exp_year)?;
+        let card_expiry_year = card_data.get_expiry_year_4_digit();
 
         let payment_brand = get_aci_payment_brand(card_data.card_network, false).ok();
 
@@ -1291,7 +1291,7 @@ impl<
                 let details = PaymentDetails::AciCard(Box::new(CardDetails {
                     card_number: card_data.card_number.clone(),
                     card_expiry_month: card_data.card_exp_month.clone(),
-                    card_expiry_year: utils::get_expiry_year_4_digit(&card_data.card_exp_year)?,
+                    card_expiry_year: card_data.get_expiry_year_4_digit(),
                     card_cvv: card_data.card_cvc.clone(),
                     card_holder: card_data.card_holder_name.clone().ok_or(
                         errors::ConnectorError::MissingRequiredField {

@@ -4,8 +4,8 @@ use domain_types::{
     connector_types::PaymentsAuthorizeData, errors, payment_method_data::PaymentMethodDataTypes,
     router_data::ErrorResponse, router_response_types::Response,
 };
-use error_stack::{report, Report, ResultExt};
-use hyperswitch_masking::{ExposeInterface, PeekInterface, Secret};
+use error_stack::{Report, ResultExt};
+use hyperswitch_masking::{ExposeInterface, Secret};
 use serde_json::Value;
 pub use xml_utils::preprocess_xml_response_bytes;
 
@@ -121,19 +121,5 @@ pub fn is_refund_failure(status: enums::RefundStatus) -> bool {
         common_enums::RefundStatus::ManualReview
         | common_enums::RefundStatus::Pending
         | common_enums::RefundStatus::Success => false,
-    }
-}
-
-pub fn get_expiry_year_4_digit(
-    year_yy: &Secret<String>,
-) -> Result<Secret<String>, error_stack::Report<errors::ConnectorError>> {
-    let year_str = year_yy.peek();
-    if year_str.len() == 2 && year_str.chars().all(char::is_numeric) {
-        Ok(Secret::new(format!("20{year_str}")))
-    } else if year_str.len() == 4 && year_str.chars().all(char::is_numeric) {
-        Ok(year_yy.clone())
-    } else {
-        Err(report!(errors::ConnectorError::RequestEncodingFailed))
-            .attach_printable("Invalid card expiry year format: expected YY or YYYY")
     }
 }
