@@ -6,74 +6,9 @@ use std::{
 
 use aes::{Aes128, Aes192, Aes256};
 
-// PayTM API Constants
-pub mod constants {
-    // PayTM API versions and identifiers
-    pub const API_VERSION: &str = "v2";
-    pub const CHANNEL_ID: &str = "WEB";
-
-    // Request types
-    pub const REQUEST_TYPE_PAYMENT: &str = "Payment";
-    pub const REQUEST_TYPE_NATIVE: &str = "NATIVE";
-
-    // UPI specific constants
-    pub const PAYMENT_MODE_UPI: &str = "UPI";
-    pub const UPI_CHANNEL_UPIPUSH: &str = "UPIPUSH";
-    pub const PAYMENT_FLOW_NONE: &str = "NONE";
-    pub const AUTH_MODE_DEBIT_PIN: &str = "DEBIT_PIN";
-    pub const AUTH_MODE_OTP: &str = "otp";
-
-    // Response codes
-    pub const SUCCESS_CODE: &str = "0000";
-    pub const DUPLICATE_CODE: &str = "0002";
-    pub const QR_SUCCESS_CODE: &str = "QR_0001";
-
-    // PSync specific constants
-    pub const TXN_SUCCESS_CODE: &str = "01";
-    pub const TXN_FAILURE_CODE: &str = "227";
-    pub const WALLET_INSUFFICIENT_CODE: &str = "235";
-    pub const INVALID_UPI_CODE: &str = "295";
-    pub const NO_RECORD_FOUND_CODE: &str = "331";
-    pub const INVALID_ORDER_ID_CODE: &str = "334";
-    pub const INVALID_MID_CODE: &str = "335";
-    pub const PENDING_CODE: &str = "400";
-    pub const BANK_DECLINED_CODE: &str = "401";
-    pub const PENDING_BANK_CONFIRM_CODE: &str = "402";
-    pub const SERVER_DOWN_CODE: &str = "501";
-    pub const TXN_FAILED_CODE: &str = "810";
-    pub const ACCOUNT_BLOCKED_CODE: &str = "843";
-    pub const MOBILE_CHANGED_CODE: &str = "820";
-    pub const MANDATE_GAP_CODE: &str = "267";
-
-    // Transaction types for PSync
-    pub const TXN_TYPE_PREAUTH: &str = "PREAUTH";
-    pub const TXN_TYPE_CAPTURE: &str = "CAPTURE";
-    pub const TXN_TYPE_RELEASE: &str = "RELEASE";
-    pub const TXN_TYPE_WITHDRAW: &str = "WITHDRAW";
-
-    // Default values
-    pub const DEFAULT_CUSTOMER_ID: &str = "guest";
-    pub const DEFAULT_CALLBACK_URL: &str = "https://default-callback.com";
-
-    // Error messages
-    pub const ERROR_INVALID_VPA: &str = "Invalid UPI VPA format";
-    pub const ERROR_SALT_GENERATION: &str = "Failed to generate random salt";
-    pub const ERROR_AES_128_ENCRYPTION: &str = "AES-128 encryption failed";
-    pub const ERROR_AES_192_ENCRYPTION: &str = "AES-192 encryption failed";
-    pub const ERROR_AES_256_ENCRYPTION: &str = "AES-256 encryption failed";
-
-    // HTTP constants
-    pub const CONTENT_TYPE_JSON: &str = "application/json";
-    pub const CONTENT_TYPE_HEADER: &str = "Content-Type";
-
-    // AES encryption constants (from PayTM Haskell implementation)
-    pub const PAYTM_IV: &[u8; 16] = b"@@@@&&&&####$$$$";
-    pub const SALT_LENGTH: usize = 3;
-    pub const AES_BUFFER_PADDING: usize = 16;
-    pub const AES_128_KEY_LENGTH: usize = 16;
-    pub const AES_192_KEY_LENGTH: usize = 24;
-    pub const AES_256_KEY_LENGTH: usize = 32;
-}
+// Import constants from separate module
+pub mod constants;
+use constants::*;
 use base64::{engine::general_purpose, Engine};
 use cbc::{
     cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},

@@ -29,7 +29,7 @@ use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent, verification,
 };
-use paytm::constants;
+use transformers::constants;
 use serde::Serialize;
 use transformers as paytm;
 
