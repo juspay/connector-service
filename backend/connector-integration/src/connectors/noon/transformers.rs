@@ -1006,30 +1006,6 @@ pub struct NoonWebhookObject {
     pub order_id: u64,
 }
 
-impl From<NoonPaymentStatus> for common_enums::AttemptStatus {
-    fn from(status: NoonPaymentStatus) -> Self {
-        match status {
-            NoonPaymentStatus::Authorized => Self::Authorized,
-            NoonPaymentStatus::Captured
-            | NoonPaymentStatus::PartiallyCaptured
-            | NoonPaymentStatus::PartiallyRefunded
-            | NoonPaymentStatus::Refunded => Self::Charged,
-            NoonPaymentStatus::Reversed | NoonPaymentStatus::PartiallyReversed => Self::Voided,
-            NoonPaymentStatus::Cancelled | NoonPaymentStatus::Expired => Self::AuthenticationFailed,
-            NoonPaymentStatus::ThreeDsEnrollInitiated | NoonPaymentStatus::ThreeDsEnrollChecked => {
-                Self::AuthenticationPending
-            }
-            NoonPaymentStatus::ThreeDsResultVerified => Self::AuthenticationSuccessful,
-            NoonPaymentStatus::Failed | NoonPaymentStatus::Rejected => Self::Failure,
-            NoonPaymentStatus::Pending | NoonPaymentStatus::MarkedForReview => Self::Pending,
-            NoonPaymentStatus::Initiated
-            | NoonPaymentStatus::PaymentInfoAdded
-            | NoonPaymentStatus::Authenticated => Self::Started,
-            NoonPaymentStatus::Locked => Self::Unresolved,
-        }
-    }
-}
-
 /// This from will ensure that webhook body would be properly parsed into PSync response
 impl From<NoonWebhookObject> for NoonPaymentsResponse {
     fn from(value: NoonWebhookObject) -> Self {

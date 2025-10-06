@@ -22,8 +22,8 @@ use domain_types::{
         PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, RequestDetails, ResponseId, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -206,38 +206,24 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
     fn process_payment_webhook(
         &self,
-        request: RequestDetails,
+        _request: RequestDetails,
         _connector_webhook_secret: Option<ConnectorWebhookSecrets>,
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<
         domain_types::connector_types::WebhookDetailsResponse,
         error_stack::Report<domain_types::errors::ConnectorError>,
     > {
-        let request_body_copy = request.body.clone();
-        let webhook_body: transformers::NoonWebhookObject = request
-            .body
-            .parse_struct("NoonWebhookResponse")
-            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
-            .attach_printable_lazy(|| "Failed to parse Noon payment webhook body structure")?;
-
-        let transaction_id = webhook_body.order_id;
-
-        let status: common_enums::AttemptStatus =
-            common_enums::AttemptStatus::from(webhook_body.order_status);
-
         Ok(domain_types::connector_types::WebhookDetailsResponse {
-            resource_id: Some(ResponseId::ConnectorTransactionId(
-                transaction_id.clone().to_string(),
-            )),
-            status,
-            status_code: 200,
-            connector_response_reference_id: Some(transaction_id.to_string()),
+            resource_id: None,
+            status: common_enums::AttemptStatus::Unknown,
+            connector_response_reference_id: None,
             error_code: None,
             error_message: None,
-            raw_connector_response: Some(String::from_utf8_lossy(&request_body_copy).to_string()),
+            raw_connector_response: None,
+            status_code: 200,
             response_headers: None,
             mandate_reference: None,
-            transformation_status: common_enums::WebhookTransformationStatus::Complete,
+            transformation_status: common_enums::WebhookTransformationStatus::Incomplete,
         })
     }
 
