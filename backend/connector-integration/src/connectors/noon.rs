@@ -190,54 +190,18 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 
         let connector_webhook_secrets = match connector_webhook_secret {
             Some(secrets) => secrets,
-            None => {
-                tracing::warn!(
-                    target: "noon_webhook",
-                    "Missing webhook secret for Noon webhook verification - verification failed but continuing processing"
-                );
-                return Ok(false);
-            }
+            None => Err(domain_types::errors::ConnectorError::WebhookSourceVerificationFailed)?,
         };
 
-        let signature = match self
-            .get_webhook_source_verification_signature(&request, &connector_webhook_secrets)
-        {
-            Ok(sig) => sig,
-            Err(error) => {
-                tracing::warn!(
-                    target: "noon_webhook",
-                    "Failed to get webhook source verification signature for Noon: {} - verification failed but continuing processing",
-                    error
-                );
-                return Ok(false);
-            }
-        };
+        let signature =
+            self.get_webhook_source_verification_signature(&request, &connector_webhook_secrets)?;
 
-        let message = match self
-            .get_webhook_source_verification_message(&request, &connector_webhook_secrets)
-        {
-            Ok(msg) => msg,
-            Err(error) => {
-                tracing::warn!(
-                    target: "noon_webhook",
-                    "Failed to get webhook source verification message for Noon: {} - verification failed but continuing processing",
-                    error
-                );
-                return Ok(false);
-            }
-        };
+        let message =
+            self.get_webhook_source_verification_message(&request, &connector_webhook_secrets)?;
 
-        match algorithm.verify_signature(&connector_webhook_secrets.secret, &signature, &message) {
-            Ok(is_verified) => Ok(is_verified),
-            Err(error) => {
-                tracing::warn!(
-                    target: "noon_webhook",
-                    "Failed to verify webhook signature for Noon: {} - verification failed but continuing processing",
-                    error
-                );
-                Ok(false)
-            }
-        }
+        algorithm
+            .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
+            .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
     }
 
     fn process_payment_webhook(
