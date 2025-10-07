@@ -126,7 +126,7 @@ impl<
 
                 let exp_date = format!("{}{}", 
                     card_data.card_exp_month.peek(),
-                    card_data.card_exp_year.peek()
+                    &card_data.card_exp_year.peek()[2..]
                 );
 
                 let worldpay_card = WorldpayvantivCardData {
@@ -528,6 +528,7 @@ impl<T: PaymentMethodDataTypes> From<PaymentMethodData<T>> for OrderSource {
 #[serde(rename_all = "camelCase")]
 pub struct BillToAddress {
     pub name: Option<Secret<String>>,
+    #[serde(rename="companyName")]
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
@@ -543,6 +544,7 @@ pub struct BillToAddress {
 #[serde(rename_all = "camelCase")]
 pub struct ShipToAddress {
     pub name: Option<Secret<String>>,
+    #[serde(rename="companyName")]
     pub company: Option<String>,
     pub address_line1: Option<Secret<String>>,
     pub address_line2: Option<Secret<String>>,
@@ -1471,7 +1473,7 @@ where
 
             let exp_date = format!("{}{}", 
                 card_data.card_exp_month.peek(),
-                card_data.card_exp_year.peek()
+                &card_data.card_exp_year.peek()[2..]
             );
 
             let worldpay_card = WorldpayvantivCardData {
