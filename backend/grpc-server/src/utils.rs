@@ -1,7 +1,9 @@
 use std::{str::FromStr, sync::Arc};
 
 use common_utils::{
-    consts::{self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2},
+    consts::{
+        self, X_API_KEY, X_API_SECRET, X_AUTH, X_AUTH_KEY_MAP, X_KEY1, X_KEY2, X_SHADOW_MODE,
+    },
     errors::CustomResult,
     events::{Event, FlowName, MaskedSerdeValue},
     lineage::LineageIds,
@@ -143,6 +145,7 @@ pub struct MetadataPayload {
     pub lineage_ids: LineageIds<'static>,
     pub connector_auth_type: ConnectorAuthType,
     pub reference_id: Option<String>,
+    pub shadow_mode: bool,
 }
 
 pub fn get_metadata_payload(
@@ -163,6 +166,7 @@ pub fn get_metadata_payload(
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
     let connector_auth_type = auth_from_metadata(metadata)?;
     let reference_id = reference_id_from_metadata(metadata)?;
+    let shadow_mode = shadow_mode_from_metadata(metadata);
     Ok(MetadataPayload {
         tenant_id,
         request_id,
@@ -171,6 +175,7 @@ pub fn get_metadata_payload(
         lineage_ids,
         connector_auth_type,
         reference_id,
+        shadow_mode,
     })
 }
 
@@ -231,6 +236,14 @@ pub fn reference_id_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<Option<String>, ApplicationErrorResponse> {
     parse_optional_metadata(metadata, consts::X_REFERENCE_ID).map(|s| s.map(|s| s.to_string()))
+}
+
+pub fn shadow_mode_from_metadata(metadata: &metadata::MetadataMap) -> bool {
+    parse_optional_metadata(metadata, X_SHADOW_MODE)
+        .ok()
+        .flatten()
+        .map(|value| value.to_lowercase() == "true")
+        .unwrap_or(false)
 }
 
 pub fn auth_from_metadata(
@@ -560,6 +573,7 @@ macro_rules! implement_connector_operation {
                 request_id: &request_id,
                 lineage_ids: &metadata_payload.lineage_ids,
                 reference_id: &metadata_payload.reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
             let response_result = external_services::service::execute_connector_processing_step(
                 &self.config.proxy,

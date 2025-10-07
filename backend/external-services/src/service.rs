@@ -107,6 +107,7 @@ pub struct EventProcessingParams<'a> {
     pub request_id: &'a str,
     pub lineage_ids: &'a lineage::LineageIds<'a>,
     pub reference_id: &'a Option<String>,
+    pub shadow_mode: bool,
 }
 
 #[tracing::instrument(
@@ -202,23 +203,25 @@ where
                 None => updated_router_data,
             };
             connector_request = connector_request.map(|mut req| {
-                req.add_header(
-                    consts::X_REQUEST_ID,
-                    Maskable::Masked(Secret::new(event_params.request_id.to_string())),
-                );
-                req.add_header(
-                    consts::X_SOURCE,
-                    Maskable::Masked(Secret::new(consts::X_CONNECTOR_SERVICE.to_string())),
-                );
-                req.add_header(
-                    consts::X_FLOW,
-                    Maskable::Masked(Secret::new(event_params.flow_name.to_string())),
-                );
+                if event_params.shadow_mode {
+                    req.add_header(
+                        consts::X_REQUEST_ID,
+                        Maskable::Masked(Secret::new(event_params.request_id.to_string())),
+                    );
+                    req.add_header(
+                        consts::X_SOURCE,
+                        Maskable::Masked(Secret::new(consts::X_CONNECTOR_SERVICE.to_string())),
+                    );
+                    req.add_header(
+                        consts::X_FLOW,
+                        Maskable::Masked(Secret::new(event_params.flow_name.to_string())),
+                    );
 
-                req.add_header(
-                    consts::X_CONNECTOR,
-                    Maskable::Masked(Secret::new(event_params.connector_name.to_string())),
-                );
+                    req.add_header(
+                        consts::X_CONNECTOR,
+                        Maskable::Masked(Secret::new(event_params.connector_name.to_string())),
+                    );
+                }
                 req
             });
             let headers = connector_request

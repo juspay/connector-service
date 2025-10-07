@@ -47,6 +47,8 @@ pub const X_SOURCE: &str = "x-source";
 pub const X_CONNECTOR_SERVICE: &str = "connector-service";
 
 pub const X_FLOW: &str = "x-flow";
+/// Header key for shadow mode
+pub const X_SHADOW_MODE: &str = "x-shadow-mode";
 
 // =============================================================================
 // Authentication Headers (Internal)
