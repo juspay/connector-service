@@ -3474,7 +3474,7 @@ impl
     ForeignTryFrom<(
         grpc_api_types::payments::PaymentServiceVoidPostCaptureRequest,
         Connectors,
-        &tonic::metadata::MetadataMap,
+        &MaskedMetadata,
     )> for PaymentFlowData
 {
     type Error = ApplicationErrorResponse;
@@ -3483,7 +3483,7 @@ impl
         (value, connectors, metadata): (
             grpc_api_types::payments::PaymentServiceVoidPostCaptureRequest,
             Connectors,
-            &tonic::metadata::MetadataMap,
+            &MaskedMetadata,
         ),
     ) -> Result<Self, error_stack::Report<Self::Error>> {
         // For void post capture operations, address information is typically not available or required
@@ -3526,6 +3526,7 @@ impl
             external_latency: None,
             connectors,
             raw_connector_response: None,
+            raw_connector_request: None,
             connector_response_headers: None,
             vault_headers: None,
         })

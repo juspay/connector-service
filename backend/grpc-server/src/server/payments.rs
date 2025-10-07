@@ -47,7 +47,7 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse, WebhookTransformationStatus,
+    PaymentServiceVoidResponse, PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse, RefundResponse, WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
@@ -132,7 +132,7 @@ trait PaymentOperationsInternal {
 
     async fn internal_void_post_capture(
         &self,
-        request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
+        request: RequestData<PaymentServiceVoidPostCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status>;
 
     async fn internal_refund(
@@ -1713,7 +1713,19 @@ impl PaymentService for Payments {
         &self,
         request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status> {
-        self.internal_void_post_capture(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::VoidPostCapture,
+            |request_data| async move { self.internal_void_post_capture(request_data).await },
+        )
+        .await
     }
 
     #[tracing::instrument(

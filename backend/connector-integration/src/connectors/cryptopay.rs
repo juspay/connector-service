@@ -17,14 +17,14 @@ use domain_types::{
         Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateConnectorCustomer,
         CreateOrder, CreateSessionToken, DefendDispute, PSync, PaymentMethodToken,
         PostAuthenticate, PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        SubmitEvidence, Void, VoidPC,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, ConnectorCustomerData,
         ConnectorCustomerResponse, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, EventType, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCancelPostCaptureData, PaymentsCaptureData,
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
@@ -52,7 +52,7 @@ use domain_types::errors;
 use domain_types::router_response_types::Response;
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
-    events::connector_api_logs::ConnectorEvent,
+    events::connector_api_logs::ConnectorEvent, verification::SourceVerification,
 };
 
 use hyperswitch_masking::{Mask, Maskable, PeekInterface};
@@ -192,6 +192,39 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentSessionToken for Cryptopay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentVoidPostCaptureV2 for Cryptopay<T>
+{
+}
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > ConnectorIntegrationV2<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Cryptopay<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > SourceVerification<VoidPC, PaymentFlowData, PaymentsCancelPostCaptureData, PaymentsResponseData>
+    for Cryptopay<T>
 {
 }
 
