@@ -82,7 +82,7 @@ use transformers::{
 };
 
 use super::macros;
-use crate::{types::ResponseRouterData, utils, with_error_response_body};
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 pub(crate) mod headers {
     pub(crate) const CONTENT_TYPE: &str = "Content-Type";
@@ -334,46 +334,46 @@ macros::create_all_prerequisites!(
             http_method: Method,
         ) -> CustomResult<String, errors::ConnectorError> {
             let cybersource::CybersourceAuthType {
-                api_key,
-                merchant_account,
-                api_secret,
-            } = auth;
-            let is_post_method = matches!(http_method, Method::Post);
-            let is_patch_method = matches!(http_method, Method::Patch);
-            let is_delete_method = matches!(http_method, Method::Delete);
-            let digest_str = if is_post_method || is_patch_method {
-                "digest "
-            } else {
-                ""
-            };
-            let headers = format!("host date (request-target) {digest_str}v-c-merchant-id");
-            let request_target = if is_post_method {
-                format!("(request-target): post {resource}\ndigest: SHA-256={payload}\n")
-            } else if is_patch_method {
-                format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n")
-            } else if is_delete_method {
-                format!("(request-target): delete {resource}\n")
-            } else {
-                format!("(request-target): get {resource}\n")
-            };
-            let signature_string = format!(
-                "host: {host}\ndate: {date}\n{request_target}v-c-merchant-id: {}",
-                merchant_account.peek()
-            );
-            let key_value = BASE64_ENGINE
-                .decode(api_secret.expose())
-                .change_context(errors::ConnectorError::InvalidConnectorConfig {
-                    config: "connector_account_details.api_secret",
-                })?;
-            let key = hmac::Key::new(hmac::HMAC_SHA256, &key_value);
-            let signature_value =
-                BASE64_ENGINE.encode(hmac::sign(&key, signature_string.as_bytes()).as_ref());
-            let signature_header = format!(
-                r#"keyid="{}", algorithm="HmacSHA256", headers="{headers}", signature="{signature_value}""#,
-                api_key.peek()
-            );
+            api_key,
+            merchant_account,
+            api_secret,
+        } = auth;
+        let is_post_method = matches!(http_method, Method::Post);
+        let is_patch_method = matches!(http_method, Method::Patch);
+        let is_delete_method = matches!(http_method, Method::Delete);
+        let digest_str = if is_post_method || is_patch_method {
+            "digest "
+        } else {
+            ""
+        };
+        let headers = format!("host date (request-target) {digest_str}v-c-merchant-id");
+        let request_target = if is_post_method {
+            format!("(request-target): post {resource}\ndigest: SHA-256={payload}\n")
+        } else if is_patch_method {
+            format!("(request-target): patch {resource}\ndigest: SHA-256={payload}\n")
+        } else if is_delete_method {
+            format!("(request-target): delete {resource}\n")
+        } else {
+            format!("(request-target): get {resource}\n")
+        };
+        let signature_string = format!(
+            "host: {host}\ndate: {date}\n{request_target}v-c-merchant-id: {}",
+            merchant_account.peek()
+        );
+        let key_value = BASE64_ENGINE
+            .decode(api_secret.expose())
+            .change_context(errors::ConnectorError::InvalidConnectorConfig {
+                config: "connector_account_details.api_secret",
+            })?;
+        let key = hmac::Key::new(hmac::HMAC_SHA256, &key_value);
+        let signature_value =
+            BASE64_ENGINE.encode(hmac::sign(&key, signature_string.as_bytes()).as_ref());
+        let signature_header = format!(
+            r#"keyid="{}", algorithm="HmacSHA256", headers="{headers}", signature="{signature_value}""#,
+            api_key.peek()
+        );
 
-            Ok(signature_header)
+        Ok(signature_header)
         }
     }
 );
@@ -508,11 +508,15 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
                     network_error_message: None,
                 })
             }
-            Err(_) => {
+            Err(error_msg) => {
                 if let Some(event) = event_builder {
                     event.set_error(serde_json::json!({"error": res.response.escape_ascii().to_string(), "status_code": res.status_code}))
-                }
-                utils::handle_json_response_deserialization_failure(res, "cybersource")
+                };
+                tracing::error!(deserialization_error =? error_msg);
+                domain_types::utils::handle_json_response_deserialization_failure(
+                    res,
+                    "cybersource",
+                )
             }
         }
     }

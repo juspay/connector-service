@@ -177,6 +177,7 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     authentication_data: None,
+                    customer_acceptance: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -324,6 +325,7 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     authentication_data: None,
+                    customer_acceptance: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_01".to_string(),
@@ -445,6 +447,7 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     authentication_data: None,
+                    customer_acceptance: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_02".to_string(),
@@ -611,6 +614,7 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     authentication_data: None,
+                    customer_acceptance: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_00".to_string(),
@@ -918,6 +922,7 @@ mod tests {
                 all_keys_required: None,
                 access_token: None,
                 authentication_data: None,
+                customer_acceptance: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1095,6 +1100,7 @@ mod tests {
                 all_keys_required: None,
                 access_token: None,
                 authentication_data: None,
+                customer_acceptance: None,
             },
             response: Err(ErrorResponse {
                 code: "HE_00".to_string(),
@@ -1456,6 +1462,7 @@ mod tests {
                     all_keys_required: None,
                     access_token: None,
                     authentication_data: None,
+                    customer_acceptance: None,
                 },
                 response: Err(ErrorResponse {
                     code: "HE_INVALID".to_string(),

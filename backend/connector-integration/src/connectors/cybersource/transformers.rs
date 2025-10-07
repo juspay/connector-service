@@ -971,13 +971,7 @@ impl<
             .request
             .setup_future_usage
             == Some(common_enums::FutureUsage::OffSession)
-        // && (item.router_data.resource_common_data.customer_acceptance.is_some()
-        // || item
-        //     .router_data
-        //     .request
-        //     .setup_mandate_details
-        //     .clone()
-        //     .is_some_and(|mandate_details| mandate_details.customer_acceptance.is_some()))
+            && (item.router_data.request.customer_acceptance.is_some())
         {
             (
                 Some(vec![CybersourceActionsList::TokenCreate]),
@@ -4159,7 +4153,7 @@ impl<
                     status: common_enums::AttemptStatus::AuthenticationPending,
                     ..item.router_data.resource_common_data
                 },
-                response: Ok(PaymentsResponseData::TransactionResponse {
+                response: Ok(PaymentsResponseData::PreAuthenticateResponse {
                     resource_id: ResponseId::NoResponseId,
                     redirection_data: Some(Box::new(RedirectForm::CybersourceAuthSetup {
                         access_token: info_response
@@ -4172,16 +4166,13 @@ impl<
                             .consumer_authentication_information
                             .reference_id,
                     })),
-                    mandate_reference: None,
                     connector_metadata: None,
-                    network_txn_id: None,
                     connector_response_reference_id: Some(
                         info_response
                             .client_reference_information
                             .code
                             .unwrap_or(info_response.id.clone()),
                     ),
-                    incremental_authorization_allowed: None,
                     status_code: item.http_code,
                 }),
                 ..item.router_data
