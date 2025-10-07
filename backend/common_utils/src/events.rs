@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::{
     global_id::{
@@ -43,6 +42,10 @@ impl MaskedSerdeValue {
                 );
             })
             .ok()
+    }
+
+    pub fn inner(&self) -> &serde_json::Value {
+        &self.inner
     }
 }
 
@@ -219,6 +222,7 @@ pub struct Event {
     pub status_code: Option<i32>,
     pub request_data: Option<MaskedSerdeValue>,
     pub response_data: Option<MaskedSerdeValue>,
+    pub headers: HashMap<String, String>,
     #[serde(flatten)]
     pub additional_fields: HashMap<String, MaskedSerdeValue>,
     #[serde(flatten)]
@@ -259,6 +263,9 @@ pub enum FlowName {
     CreateSessionToken,
     CreateAccessToken,
     PaymentMethodToken,
+    PreAuthenticate,
+    Authenticate,
+    PostAuthenticate,
     Unknown,
 }
 
@@ -282,6 +289,9 @@ impl FlowName {
             Self::PaymentMethodToken => "PaymentMethodToken",
             Self::CreateSessionToken => "CreateSessionToken",
             Self::CreateAccessToken => "CreateAccessToken",
+            Self::PreAuthenticate => "PreAuthenticate",
+            Self::Authenticate => "Authenticate",
+            Self::PostAuthenticate => "PostAuthenticate",
             Self::Unknown => "Unknown",
         }
     }

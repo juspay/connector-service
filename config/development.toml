@@ -52,6 +52,10 @@ mifinity.base_url = "https://demo.mifinity.com/"
 braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
+helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://sandbox.dlocal.com/"
+placetopay.base_url = "https://test.placetopay.com/rest/gateway"
+rapyd.base_url = "https://sandboxapi.rapyd.net"
 
 # Generic Events Configuration
 [events]
@@ -85,3 +89,6 @@ field_prefix = "lineage_"
 "category" = "OUTGOING_API"
 "message.req_type" = "EXTERNAL"
 "message.log_type" = "API_CALL"
+
+[unmasked_headers]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]

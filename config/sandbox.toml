@@ -44,6 +44,10 @@ braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
 volt.base_url = "https://api.sandbox.volt.io/"
 bluecode.base_url = "https://dev.eorder.reloadhero.com/"
 cryptopay.base_url = "https://business-sandbox.cryptopay.me"
+helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://sandbox.dlocal.com/"
+placetopay.base_url = "https://test.placetopay.com/rest/gateway"
+rapyd.base_url = "https://sandboxapi.rapyd.net"
 
 # Generic Events Configuration
 [events]
@@ -51,3 +55,6 @@ enabled = false
 brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
+
+[unmasked_headers]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]

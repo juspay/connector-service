@@ -165,10 +165,7 @@ impl Env {
             |_| default_env,
             |v| {
                 Self::deserialize(v.into_deserializer()).unwrap_or_else(|err: serde_json::Error| {
-                    panic!(
-                        "Invalid value found in environment variable {}: {}",
-                        env_key, err
-                    )
+                    panic!("Invalid value found in environment variable {env_key}: {err}")
                 })
             },
         );

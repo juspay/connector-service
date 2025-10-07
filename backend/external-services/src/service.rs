@@ -227,6 +227,11 @@ where
                 .unwrap_or_default();
             tracing::info!(?headers, "headers of connector request");
 
+            let event_headers: HashMap<String, String> = headers
+                .iter()
+                .map(|(k, v)| (k.clone(), format!("{v:?}")))
+                .collect();
+
             let masked_headers = headers
                 .iter()
                 .fold(serde_json::Map::new(), |mut acc, (k, v)| {
@@ -418,6 +423,7 @@ where
                                             "connector_response",
                                         )
                                     }),
+                                    headers: event_headers,
                                     additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
                                 };
@@ -453,6 +459,7 @@ where
                                             "connector_error_response",
                                         )
                                     }),
+                                    headers: event_headers,
                                     additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
                                 };
@@ -484,6 +491,7 @@ where
                                     status_code: None,
                                     request_data: masked_request_data.clone(),
                                     response_data: None,
+                                    headers: event_headers,
                                     additional_fields: HashMap::new(),
                                     lineage_ids: event_params.lineage_ids.to_owned(),
                                 };

@@ -55,7 +55,7 @@ impl EventPublisher {
             .build()
             .map_err(|e| {
                 error_stack::Report::new(EventPublisherError::KafkaWriterInitializationFailed)
-                    .attach_printable(format!("KafkaWriter build failed: {}", e))
+                    .attach_printable(format!("KafkaWriter build failed: {e}"))
                     .attach_printable(format!(
                         "Brokers: {:?}, Topic: {}",
                         config.brokers, config.topic
@@ -77,13 +77,25 @@ impl EventPublisher {
         topic: &str,
         partition_key_field: &str,
     ) -> CustomResult<(), EventPublisherError> {
+        let metadata = OwnedHeaders::new();
+        self.publish_event_with_metadata(event, topic, partition_key_field, metadata)
+    }
+
+    /// Publishes a single event to Kafka with custom metadata.
+    pub fn publish_event_with_metadata(
+        &self,
+        event: serde_json::Value,
+        topic: &str,
+        partition_key_field: &str,
+        metadata: OwnedHeaders,
+    ) -> CustomResult<(), EventPublisherError> {
         tracing::debug!(
             topic = %topic,
             partition_key_field = %partition_key_field,
             "Starting event publication to Kafka"
         );
 
-        let mut headers: OwnedHeaders = OwnedHeaders::new();
+        let mut headers = metadata;
 
         let key = if let Some(partition_key_value) =
             event.get(partition_key_field).and_then(|v| v.as_str())
@@ -111,13 +123,13 @@ impl EventPublisher {
             .map_err(|e| {
                 let event_json = serde_json::to_string(&event).unwrap_or_default();
                 error_stack::Report::new(EventPublisherError::EventPublishFailed)
-                    .attach_printable(format!("Kafka publish failed: {}", e))
+                    .attach_printable(format!("Kafka publish failed: {e}"))
                     .attach_printable(format!(
                         "Topic: {}, Event size: {} bytes",
                         self.config.topic,
                         event_bytes.len()
                     ))
-                    .attach_printable(format!("Failed event: {}", event_json))
+                    .attach_printable(format!("Failed event: {event_json}"))
             })?;
 
         let event_json = serde_json::to_string(&event).unwrap_or_default();
@@ -134,9 +146,42 @@ impl EventPublisher {
         base_event: Event,
         config: &EventConfig,
     ) -> CustomResult<(), EventPublisherError> {
+        let metadata = self.build_kafka_metadata(&base_event);
         let processed_event = self.process_event(&base_event)?;
 
-        self.publish_event(processed_event, &config.topic, &config.partition_key_field)
+        self.publish_event_with_metadata(
+            processed_event,
+            &config.topic,
+            &config.partition_key_field,
+            metadata,
+        )
+    }
+
+    fn build_kafka_metadata(&self, event: &Event) -> OwnedHeaders {
+        let mut headers = OwnedHeaders::new();
+
+        // Add lineage headers from Event.lineage_ids
+        for (key, value) in event.lineage_ids.inner() {
+            headers = headers.insert(Header {
+                key: &key,
+                value: Some(value.as_bytes()),
+            });
+        }
+
+        let ref_id_option = event
+            .additional_fields
+            .get("reference_id")
+            .and_then(|ref_id_value| ref_id_value.inner().as_str());
+
+        // Add reference_id from Event.additional_fields
+        if let Some(ref_id_str) = ref_id_option {
+            headers = headers.insert(Header {
+                key: "reference_id",
+                value: Some(ref_id_str.as_bytes()),
+            });
+        }
+
+        headers
     }
 
     fn process_event(&self, event: &Event) -> CustomResult<serde_json::Value, EventPublisherError> {
