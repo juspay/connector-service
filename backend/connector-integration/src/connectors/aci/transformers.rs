@@ -1200,9 +1200,7 @@ fn get_recurring_type<
         T,
     >,
 ) -> Option<AciRecurringType> {
-    if item.router_data.request.mandate_id.is_some() {
-        Some(AciRecurringType::Repeated)
-    } else if item.router_data.request.customer_acceptance.is_some()
+    if item.router_data.request.customer_acceptance.is_some()
         && item.router_data.request.setup_future_usage
             == Some(common_enums::FutureUsage::OffSession)
     {
