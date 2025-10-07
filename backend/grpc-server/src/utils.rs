@@ -182,7 +182,7 @@ pub fn get_metadata_payload(
 pub fn connector_from_metadata(
     metadata: &metadata::MetadataMap,
 ) -> CustomResult<connector_types::ConnectorEnum, ApplicationErrorResponse> {
-    parse_metadata(metadata, consts::X_CONNECTOR).and_then(|inner| {
+    parse_metadata(metadata, consts::X_CONNECTOR_NAME).and_then(|inner| {
         connector_types::ConnectorEnum::from_str(inner).map_err(|e| {
             Report::new(ApplicationErrorResponse::BadRequest(ApiError {
                 sub_code: "INVALID_CONNECTOR".to_string(),

@@ -209,16 +209,16 @@ where
                         Maskable::Masked(Secret::new(event_params.request_id.to_string())),
                     );
                     req.add_header(
-                        consts::X_SOURCE,
+                        consts::X_SOURCE_NAME,
                         Maskable::Masked(Secret::new(consts::X_CONNECTOR_SERVICE.to_string())),
                     );
                     req.add_header(
-                        consts::X_FLOW,
+                        consts::X_FLOW_NAME,
                         Maskable::Masked(Secret::new(event_params.flow_name.to_string())),
                     );
 
                     req.add_header(
-                        consts::X_CONNECTOR,
+                        consts::X_CONNECTOR_NAME,
                         Maskable::Masked(Secret::new(event_params.connector_name.to_string())),
                     );
                 }
