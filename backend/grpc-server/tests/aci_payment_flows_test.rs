@@ -19,10 +19,11 @@ use grpc_api_types::{
         card_payment_method_type, identifier::IdType, payment_method,
         payment_service_client::PaymentServiceClient, AcceptanceType, Address, AuthenticationType,
         BrowserInformation, CaptureMethod, CardDetails, CardPaymentMethodType, CountryAlpha2,
-        Currency, CustomerAcceptance, FutureUsage, Identifier, PaymentAddress, PaymentMethod,
-        PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
+        Currency, CustomerAcceptance, FutureUsage, Identifier, MandateReference, PaymentAddress,
+        PaymentMethod, PaymentServiceAuthorizeRequest, PaymentServiceAuthorizeResponse,
         PaymentServiceCaptureRequest, PaymentServiceGetRequest, PaymentServiceRefundRequest,
-        PaymentServiceRegisterRequest, PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
+        PaymentServiceRegisterRequest, PaymentServiceRepeatEverythingRequest,
+        PaymentServiceVoidRequest, PaymentStatus, RefundStatus,
     },
 };
 use hyperswitch_masking::Secret;
@@ -335,6 +336,41 @@ fn create_register_request() -> PaymentServiceRegisterRequest {
         }),
         metadata: HashMap::new(),
         ..Default::default()
+    }
+}
+
+// Helper function to create a repeat payment request (matching your JSON format)
+#[allow(clippy::field_reassign_with_default)]
+fn create_repeat_payment_request(mandate_id: &str) -> PaymentServiceRepeatEverythingRequest {
+    let mandate_reference = MandateReference {
+        mandate_id: Some(mandate_id.to_string()),
+    };
+
+    // Create metadata matching your JSON format
+    let mut metadata = HashMap::new();
+    metadata.insert("order_type".to_string(), "recurring".to_string());
+    metadata.insert(
+        "customer_note".to_string(),
+        "Monthly subscription payment".to_string(),
+    );
+
+    PaymentServiceRepeatEverythingRequest {
+        request_ref_id: Some(Identifier {
+            id_type: Some(IdType::Id(format!("mandate_{}", get_timestamp()))),
+        }),
+        mandate_reference: Some(mandate_reference),
+        amount: TEST_AMOUNT,
+        currency: i32::from(Currency::Usd),
+        minor_amount: TEST_AMOUNT,
+        merchant_order_reference_id: Some(format!("repeat_order_{}", get_timestamp())),
+        metadata,
+        access_token: None,
+        webhook_url: Some("https://your-webhook-url.com/payments/webhook".to_string()),
+        capture_method: None,
+        email: None,
+        browser_info: None,
+        test_mode: None,
+        payment_method_type: None,
     }
 }
 
@@ -681,6 +717,58 @@ async fn test_register() {
         assert!(
             response.error_message.is_none() || response.error_message.as_ref().unwrap().is_empty(),
             "No error message should be present for successful register"
+        );
+    });
+}
+
+// Test repeat payment (MIT) flow using previously created mandate
+#[tokio::test]
+async fn test_repeat_everything() {
+    grpc_test!(client, PaymentServiceClient<Channel>, {
+        tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+        // First, create a mandate using register
+        let register_request = create_register_request();
+
+        let mut register_grpc_request = Request::new(register_request);
+        add_aci_metadata(&mut register_grpc_request);
+
+        let register_response = client
+            .register(register_grpc_request)
+            .await
+            .expect("gRPC register call failed")
+            .into_inner();
+
+        // Verify we got a mandate reference
+        assert!(
+            register_response.mandate_reference.is_some(),
+            "Mandate reference should be present"
+        );
+
+        let mandate_id = register_response
+            .mandate_reference
+            .as_ref()
+            .unwrap()
+            .mandate_id
+            .as_ref()
+            .expect("Mandate ID should be present");
+
+        // Now perform a repeat payment using the mandate
+        let repeat_request = create_repeat_payment_request(mandate_id);
+
+        let mut repeat_grpc_request = Request::new(repeat_request);
+        add_aci_metadata(&mut repeat_grpc_request);
+
+        // Send the repeat payment request
+        let repeat_response = client
+            .repeat_everything(repeat_grpc_request)
+            .await
+            .expect("gRPC repeat_everything call failed")
+            .into_inner();
+
+        // Verify the response
+        assert!(
+            repeat_response.transaction_id.is_some(),
+            "Transaction ID should be present"
         );
     });
 }
