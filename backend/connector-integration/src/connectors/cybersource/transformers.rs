@@ -3547,10 +3547,7 @@ impl<
             .connector
             .amount_converter
             .convert(
-                item.router_data
-                    .resource_common_data
-                    .minor_amount_captured
-                    .unwrap(),
+                item.router_data.request.minor_amount_to_capture,
                 item.router_data.request.currency,
             )
             .change_context(ConnectorError::RequestEncodingFailed)?;

@@ -268,7 +268,12 @@ macros::create_all_prerequisites!(
             .chars()
             .skip(base_url.len() - 1)
             .collect();
-        let sha256 = self.generate_digest(cybersource_req.ok_or(errors::ConnectorError::RequestEncodingFailed)?.get_inner_value().expose().as_bytes());
+        let sha256 = self.generate_digest(
+            cybersource_req
+                .map(|req| req.get_inner_value().expose())
+                .unwrap_or_default()
+                .as_bytes()
+        );
         let http_method = self.get_http_method();
         let signature = self.generate_signature(
             auth,
@@ -747,9 +752,13 @@ macros::macro_connector_implementation!(
             req: &RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
 
-        let connector_payment_id = req.request.connector_transaction_id.clone();
+        let connector_payment_id = req
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
         Ok(format!(
-            "{}pts/v2/payments/{:?}/captures",
+            "{}pts/v2/payments/{}/captures",
             self.connector_base_url_payments(req),
             connector_payment_id,
         ))
