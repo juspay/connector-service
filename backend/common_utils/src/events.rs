@@ -242,6 +242,8 @@ impl Event {
     }
 }
 
+#[derive(strum::Display)]
+#[strum(serialize_all = "snake_case")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FlowName {
     Authorize,
