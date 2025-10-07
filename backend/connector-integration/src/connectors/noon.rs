@@ -127,11 +127,13 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: noon::NoonWebhookSignature = request
             .body
             .parse_struct("NoonWebhookSignature")
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for noon")?;
         let signature = webhook_body.signature;
         BASE64_ENGINE
             .decode(signature)
             .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for noon")
     }
 
     fn get_webhook_source_verification_message(
@@ -204,6 +206,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         algorithm
             .verify_signature(&connector_webhook_secrets.secret, &signature, &message)
             .change_context(errors::ConnectorError::WebhookSourceVerificationFailed)
+            .attach_printable("Noon webhook signature verification failed")
     }
 
     fn process_payment_webhook(
@@ -237,7 +240,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let resource: noon::NoonWebhookObject = request
             .body
             .parse_struct("NoonWebhookObject")
-            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)?;
+            .change_context(errors::ConnectorError::WebhookResourceObjectNotFound)
+            .attach_printable("Failed to parse webhook resource object from Noon webhook body")?;
 
         Ok(Box::new(noon::NoonPaymentsResponse::from(resource)))
     }
