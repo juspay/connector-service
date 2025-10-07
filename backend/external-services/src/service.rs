@@ -774,6 +774,17 @@ fn get_base_client(
     .clone())
 }
 
+fn load_custom_ca_certificate_from_content(
+    mut client_builder: reqwest::ClientBuilder,
+    cert_content: &str,
+) -> CustomResult<reqwest::ClientBuilder, ApiClientError> {
+    let certificate = reqwest::Certificate::from_pem(cert_content.as_bytes())
+        .change_context(ApiClientError::InvalidProxyConfiguration)
+        .attach_printable("Failed to parse certificate PEM from provided content")?;
+    client_builder = client_builder.add_root_certificate(certificate);
+    Ok(client_builder)
+}
+
 fn get_client_builder(
     proxy_config: &Proxy,
     should_bypass_proxy: bool,
@@ -788,6 +799,16 @@ fn get_client_builder(
 
     if should_bypass_proxy {
         return Ok(client_builder);
+    }
+
+    // Attach MITM certificate if enabled
+    if proxy_config.mitm_proxy_enabled {
+        if let Some(cert_content) = &proxy_config.mitm_ca_cert {
+            if !cert_content.trim().is_empty() {
+                client_builder =
+                    load_custom_ca_certificate_from_content(client_builder, cert_content.trim())?;
+            }
+        }
     }
 
     // Proxy all HTTPS traffic through the configured HTTPS proxy
