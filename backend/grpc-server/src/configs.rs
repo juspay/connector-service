@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use common_utils::{consts, events::EventConfig};
+use common_utils::{consts, events::EventConfig, metadata::HeaderMaskingConfig};
 use domain_types::types::{Connectors, Proxy};
 
 use crate::{error::ConfigurationError, logger::config::Log};
@@ -17,6 +17,8 @@ pub struct Config {
     pub events: EventConfig,
     #[serde(default)]
     pub lineage: LineageConfig,
+    #[serde(default)]
+    pub unmasked_headers: HeaderMaskingConfig,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
@@ -41,17 +43,14 @@ fn default_lineage_prefix() -> String {
 
 #[derive(Clone, serde::Deserialize, Debug)]
 pub struct Common {
-    pub environment: String,
+    pub environment: consts::Env,
 }
 
 impl Common {
     pub fn validate(&self) -> Result<(), config::ConfigError> {
-        match self.environment.as_str() {
-            "development" | "production" => Ok(()),
-            _ => Err(config::ConfigError::Message(format!(
-                "Invalid environment '{}'. Must be 'development' or 'production'",
-                self.environment
-            ))),
+        let Self { environment } = self;
+        match environment {
+            consts::Env::Development | consts::Env::Production | consts::Env::Sandbox => Ok(()),
         }
     }
 }
@@ -94,7 +93,7 @@ impl Config {
         let config = Self::builder(&env)?
             .add_source(config::File::from(config_path).required(false))
             .add_source(
-                config::Environment::with_prefix("CS")
+                config::Environment::with_prefix(consts::ENV_PREFIX)
                     .try_parsing(true)
                     .separator("__")
                     .list_separator(",")
@@ -102,7 +101,8 @@ impl Config {
                     .with_list_parse_key("redis.cluster_urls")
                     .with_list_parse_key("database.tenants")
                     .with_list_parse_key("log.kafka.brokers")
-                    .with_list_parse_key("events.brokers"),
+                    .with_list_parse_key("events.brokers")
+                    .with_list_parse_key("unmasked_headers.keys"),
             )
             .build()?;
 

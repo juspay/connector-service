@@ -952,6 +952,7 @@ pub enum PaymentMethodType {
     AmazonPay,
     ApplePay,
     Atome,
+    Bluecode,
     Bacs,
     BancontactCard,
     Becs,
@@ -1556,6 +1557,7 @@ pub enum RoutableConnectors {
     // Amazonpay,
     Archipel,
     Authorizedotnet,
+    Bluecode,
     Bankofamerica,
     Barclaycard,
     Billwerk,
@@ -1714,4 +1716,18 @@ pub enum ProductType {
     Ride,
     Event,
     Accommodation,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WebhookTransformationStatus {
+    /// Transformation completed successfully, no further action needed
+    Complete,
+    /// Transformation incomplete, requires second call for final status
+    Incomplete,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CallConnectorAction {
+    Trigger,
+    HandleResponse(Vec<u8>),
 }

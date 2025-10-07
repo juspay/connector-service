@@ -462,9 +462,13 @@ impl<
             .and_then(|info| info.get_user_agent().ok())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
 
-        let referer = browser_info_opt
-            .and_then(|info| info.accept_header.clone())
-            .unwrap_or_default();
+        let referer = item
+            .router_data
+            .request
+            .browser_info
+            .as_ref()
+            .and_then(|info| info.get_referer().ok())
+            .unwrap_or_else(|| "https://example.com".to_string());
 
         Ok(RazorpayPaymentRequest {
             amount,
@@ -1496,7 +1500,8 @@ impl<
                     .to_string();
                 ("collect", Some(vpa))
             }
-            PaymentMethodData::Upi(UpiData::UpiIntent(_)) => ("intent", None),
+            PaymentMethodData::Upi(UpiData::UpiIntent(_))
+            | PaymentMethodData::Upi(UpiData::UpiQr(_)) => ("intent", None),
             _ => ("collect", None), // Default fallback
         };
 
@@ -1557,7 +1562,13 @@ impl<
                 .get_ip_address_as_optional()
                 .map(|ip| Secret::new(ip.expose()))
                 .unwrap_or_else(|| Secret::new("127.0.0.1".to_string())),
-            referer: "https://example.com".to_string(),
+            referer: item
+                .router_data
+                .request
+                .browser_info
+                .as_ref()
+                .and_then(|info| info.get_referer().ok())
+                .unwrap_or_else(|| "https://example.com".to_string()),
             user_agent: item
                 .router_data
                 .request

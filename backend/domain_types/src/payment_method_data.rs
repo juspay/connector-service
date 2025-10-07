@@ -69,7 +69,8 @@ impl PaymentMethodDataTypes for VaultTokenHolder {
     type Inner = String; //Token
 }
 
-impl Card<DefaultPCIHolder> {
+// Generic implementation for all Card<T> types
+impl<T: PaymentMethodDataTypes> Card<T> {
     pub fn get_card_expiry_year_2_digit(
         &self,
     ) -> Result<Secret<String>, crate::errors::ConnectorError> {
@@ -81,9 +82,7 @@ impl Card<DefaultPCIHolder> {
                 .to_string(),
         ))
     }
-    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
-        get_card_issuer(self.card_number.peek())
-    }
+
     pub fn get_card_expiry_month_year_2_digit_with_delimiter(
         &self,
         delimiter: String,
@@ -95,6 +94,12 @@ impl Card<DefaultPCIHolder> {
             delimiter,
             year.peek()
         )))
+    }
+}
+
+impl Card<DefaultPCIHolder> {
+    pub fn get_card_issuer(&self) -> Result<CardIssuer, Error> {
+        get_card_issuer(self.card_number.peek())
     }
     pub fn get_expiry_date_as_yyyymm(&self, delimiter: &str) -> Secret<String> {
         let year = self.get_expiry_year_4_digit();
@@ -293,8 +298,12 @@ pub enum VoucherData {
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UpiData {
+    /// UPI Collect - Customer approves a collect request sent to their UPI app
     UpiCollect(UpiCollectData),
+    /// UPI Intent - Customer is redirected to their UPI app with a pre-filled payment request
     UpiIntent(UpiIntentData),
+    /// UPI QR - Unique QR generated per txn
+    UpiQr(UpiQrData),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -305,6 +314,9 @@ pub struct UpiCollectData {
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct UpiIntentData {}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+pub struct UpiQrData {}
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub enum RealTimePaymentData {
@@ -475,6 +487,7 @@ pub enum WalletData {
     AliPayQr(Box<AliPayQr>),
     AliPayRedirect(AliPayRedirection),
     AliPayHkRedirect(AliPayHkRedirection),
+    BluecodeRedirect {},
     AmazonPayRedirect(Box<AmazonPayRedirectData>),
     MomoRedirect(MomoRedirection),
     KakaoPayRedirect(KakaoPayRedirection),

@@ -27,7 +27,6 @@ use grpc_api_types::payments::{
     DisputeServiceTransformRequest, DisputeServiceTransformResponse, WebhookEventType,
     WebhookResponseContent,
 };
-use hyperswitch_masking::ErasedMaskSerialize;
 use interfaces::connector_integration_v2::BoxedConnectorIntegrationV2;
 use tracing::info;
 
@@ -35,14 +34,15 @@ use crate::{
     configs::Config,
     error::{IntoGrpcStatus, ReportSwitchExt, ResultExtGrpc},
     implement_connector_operation,
-    utils::{self, grpc_logging_wrapper},
+    request::RequestData,
+    utils::{grpc_logging_wrapper, MetadataPayload},
 };
 
 // Helper trait for dispute operations
 trait DisputeOperationsInternal {
     async fn internal_defend(
         &self,
-        request: tonic::Request<DisputeDefendRequest>,
+        request: RequestData<DisputeDefendRequest>,
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status>;
 }
 
@@ -99,23 +99,25 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            common_utils::events::FlowName::SubmitEvidence,
+            |request_data| {
                 let service_name = service_name.clone();
                 async move {
-                    let payload = request.into_inner();
-                    let utils::MetadataPayload {
+                    let payload = request_data.payload;
+                    let MetadataPayload {
                         connector,
                         request_id,
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        shadow_mode,
                         ..
-                    } = metadata_payload;
+                    } = request_data.extracted_metadata;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
 
@@ -136,8 +138,6 @@ impl DisputeService for Disputes {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let connector_auth_details = connector_auth_type;
-
                     let router_data: RouterDataV2<
                         SubmitEvidence,
                         DisputeFlowData,
@@ -146,7 +146,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type: connector_auth_details,
+                        connector_auth_type,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -155,12 +155,10 @@ impl DisputeService for Disputes {
                         service_name: &service_name,
                         flow_name: common_utils::events::FlowName::SubmitEvidence,
                         event_config: &self.config.events,
-                        raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
@@ -170,6 +168,7 @@ impl DisputeService for Disputes {
                         None,
                         event_params,
                         None,
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -216,13 +215,14 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
-            |request, _metadata_payload| async {
-                let _payload = request.into_inner();
+            common_utils::events::FlowName::Dsync,
+            |request_data| async {
+                let _payload = request_data.payload;
                 let response = DisputeResponse {
                     ..Default::default()
                 };
@@ -257,7 +257,19 @@ impl DisputeService for Disputes {
         &self,
         request: tonic::Request<DisputeDefendRequest>,
     ) -> Result<tonic::Response<DisputeDefendResponse>, tonic::Status> {
-        self.internal_defend(request).await
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "DisputeService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            common_utils::events::FlowName::DefendDispute,
+            |request_data| async move { self.internal_defend(request_data).await },
+        )
+        .await
     }
 
     #[tracing::instrument(
@@ -290,23 +302,25 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            common_utils::events::FlowName::AcceptDispute,
+            |request_data| {
                 let service_name = service_name.clone();
                 async move {
-                    let payload = request.into_inner();
-                    let utils::MetadataPayload {
+                    let payload = request_data.payload;
+                    let MetadataPayload {
                         connector,
                         request_id,
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        shadow_mode,
                         ..
-                    } = metadata_payload;
+                    } = request_data.extracted_metadata;
 
                     let connector_data: ConnectorData<DefaultPCIHolder> =
                         ConnectorData::get_connector_by_name(&connector);
@@ -328,8 +342,6 @@ impl DisputeService for Disputes {
                     ))
                     .map_err(|e| e.into_grpc_status())?;
 
-                    let connector_auth_details = connector_auth_type;
-
                     let router_data: RouterDataV2<
                         Accept,
                         DisputeFlowData,
@@ -338,7 +350,7 @@ impl DisputeService for Disputes {
                     > = RouterDataV2 {
                         flow: std::marker::PhantomData,
                         resource_common_data: dispute_flow_data,
-                        connector_auth_type: connector_auth_details,
+                        connector_auth_type,
                         request: dispute_data,
                         response: Err(ErrorResponse::default()),
                     };
@@ -348,12 +360,10 @@ impl DisputeService for Disputes {
                         service_name: &service_name,
                         flow_name: common_utils::events::FlowName::AcceptDispute,
                         event_config: &self.config.events,
-                        raw_request_data: Some(common_utils::pii::SecretSerdeValue::new(
-                            payload.masked_serialize().unwrap_or_default(),
-                        )),
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
@@ -363,6 +373,7 @@ impl DisputeService for Disputes {
                         None,
                         event_params,
                         None,
+                        common_enums::CallConnectorAction::Trigger,
                     )
                     .await
                     .switch()
@@ -407,16 +418,17 @@ impl DisputeService for Disputes {
             .extensions()
             .get::<String>()
             .cloned()
-            .unwrap_or_else(|| "unknown_service".to_string());
+            .unwrap_or_else(|| "DisputeService".to_string());
         grpc_logging_wrapper(
             request,
             &service_name,
             self.config.clone(),
-            |request, metadata_payload| {
+            common_utils::events::FlowName::IncomingWebhook,
+            |request_data| {
                 async move {
-                    let connector = metadata_payload.connector;
-                    let connector_auth_details = metadata_payload.connector_auth_type;
-                    let payload = request.into_inner();
+                    let connector = request_data.extracted_metadata.connector;
+                    let connector_auth_details = request_data.extracted_metadata.connector_auth_type;
+                    let payload = request_data.payload;
                     let request_details = payload
                         .request_details
                         .map(domain_types::connector_types::RequestDetails::foreign_try_from)

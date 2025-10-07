@@ -1,19 +1,22 @@
 pub mod transformers;
 
+use std::fmt::Debug;
+
 use base64::Engine;
 use common_enums::{enums, CurrencyUnit};
 use common_utils::{errors::CustomResult, ext_traits::ByteSliceExt, types::StringMajorUnit};
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
-        DefendDispute, PSync, PaymentMethodToken, RSync, Refund, RepeatPayment, SetupMandate,
-        SubmitEvidence, Void,
+        Accept, Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder,
+        CreateSessionToken, DefendDispute, PSync, PaymentMethodToken, PostAuthenticate,
+        PreAuthenticate, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
         DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
         PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData,
+        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
         RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
         SetupMandateRequestData, SubmitEvidenceData,
@@ -32,7 +35,6 @@ use interfaces::{
     events::connector_api_logs::ConnectorEvent,
 };
 use serde::Serialize;
-use std::fmt::Debug;
 
 pub const BASE64_ENGINE: base64::engine::GeneralPurpose = base64::engine::general_purpose::STANDARD;
 
@@ -217,6 +219,40 @@ impl<
             + 'static
             + Serialize,
     > connector_types::PaymentTokenV2<T> for Payu<T>
+{
+}
+
+// Authentication trait implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPreAuthenticateV2<T> for Payu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentAuthenticateV2<T> for Payu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    > connector_types::PaymentPostAuthenticateV2<T> for Payu<T>
 {
 }
 
@@ -846,4 +882,76 @@ impl_source_verification_stub!(
     PaymentFlowData,
     PaymentMethodTokenizationData<T>,
     PaymentMethodTokenResponse
+);
+
+// Authentication flow implementations
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PreAuthenticate,
+        PaymentFlowData,
+        PaymentsPreAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        Authenticate,
+        PaymentFlowData,
+        PaymentsAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payu<T>
+{
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    ConnectorIntegrationV2<
+        PostAuthenticate,
+        PaymentFlowData,
+        PaymentsPostAuthenticateData<T>,
+        PaymentsResponseData,
+    > for Payu<T>
+{
+}
+
+// Authentication source verification stubs
+impl_source_verification_stub!(
+    PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData
+);
+impl_source_verification_stub!(
+    PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData
 );
