@@ -115,6 +115,7 @@ impl DisputeService for Disputes {
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        shadow_mode,
                         ..
                     } = request_data.extracted_metadata;
                     let connector_data: ConnectorData<DefaultPCIHolder> =
@@ -157,6 +158,7 @@ impl DisputeService for Disputes {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
@@ -316,6 +318,7 @@ impl DisputeService for Disputes {
                         lineage_ids,
                         connector_auth_type,
                         reference_id,
+                        shadow_mode,
                         ..
                     } = request_data.extracted_metadata;
 
@@ -360,6 +363,7 @@ impl DisputeService for Disputes {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &reference_id,
+                        shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(

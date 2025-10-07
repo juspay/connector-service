@@ -68,6 +68,7 @@ struct EventParams<'a> {
     request_id: &'a str,
     lineage_ids: &'a lineage::LineageIds<'a>,
     reference_id: &'a Option<String>,
+    shadow_mode: bool,
 }
 
 /// Helper function for converting CardDetails to TokenData with structured types
@@ -223,6 +224,7 @@ impl Payments {
                 request_id,
                 lineage_ids,
                 reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
 
             let order_id = self
@@ -252,6 +254,7 @@ impl Payments {
                 request_id,
                 lineage_ids,
                 reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
 
             let payment_session_data = self
@@ -301,6 +304,7 @@ impl Payments {
                         request_id,
                         lineage_ids,
                         reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let access_token_data = self
@@ -340,6 +344,7 @@ impl Payments {
                 request_id,
                 lineage_ids,
                 reference_id,
+                shadow_mode: metadata_payload.shadow_mode,
             };
             let payment_method_token_data = self
                 .handle_payment_session_token(
@@ -397,6 +402,7 @@ impl Payments {
             request_id,
             lineage_ids,
             reference_id,
+            shadow_mode: metadata_payload.shadow_mode,
         };
 
         // Execute connector processing
@@ -554,6 +560,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         // Execute connector processing
@@ -656,6 +663,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         // Execute connector processing
@@ -749,6 +757,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         // Execute connector processing
@@ -864,6 +873,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
 
         let response = external_services::service::execute_connector_processing_step(
@@ -999,6 +1009,7 @@ impl Payments {
             request_id: event_params.request_id,
             lineage_ids: event_params.lineage_ids,
             reference_id: event_params.reference_id,
+            shadow_mode: event_params.shadow_mode,
         };
         let response = external_services::service::execute_connector_processing_step(
             &self.config.proxy,
@@ -1374,6 +1385,7 @@ impl PaymentService for Payments {
                                     request_id,
                                     lineage_ids,
                                     reference_id,
+                                    shadow_mode: metadata_payload.shadow_mode,
                                 };
 
                                 let access_token_data = self
@@ -1433,6 +1445,7 @@ impl PaymentService for Payments {
                         request_id: &metadata_payload.request_id,
                         lineage_ids: &metadata_payload.lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let consume_or_trigger_flow = match payload.handle_response {
@@ -1863,6 +1876,7 @@ impl PaymentService for Payments {
                             request_id: &request_id,
                             lineage_ids: &lineage_ids,
                             reference_id: &metadata_payload.reference_id,
+                            shadow_mode: metadata_payload.shadow_mode,
                         };
 
                         Some(
@@ -1908,6 +1922,7 @@ impl PaymentService for Payments {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
@@ -2026,6 +2041,7 @@ impl PaymentService for Payments {
                         request_id: &request_id,
                         lineage_ids: &lineage_ids,
                         reference_id: &metadata_payload.reference_id,
+                        shadow_mode: metadata_payload.shadow_mode,
                     };
 
                     let response = external_services::service::execute_connector_processing_step(
