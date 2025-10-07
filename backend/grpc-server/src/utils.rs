@@ -156,13 +156,6 @@ pub fn get_metadata_payload(
     let merchant_id = merchant_id_from_metadata(metadata)?;
     let tenant_id = tenant_id_from_metadata(metadata)?;
     let request_id = request_id_from_metadata(metadata)?;
-    tracing::info!(
-        "Extracted Metadata - tenant_id: {}, request_id: {}, merchant_id: {}, connector: {}",
-        tenant_id,
-        request_id,
-        merchant_id,
-        connector
-    );
     let lineage_ids = extract_lineage_fields_from_metadata(metadata, &server_config.lineage);
     let connector_auth_type = auth_from_metadata(metadata)?;
     let reference_id = reference_id_from_metadata(metadata)?;
