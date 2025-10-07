@@ -142,7 +142,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let webhook_body: noon::NoonWebhookBody = request
             .body
             .parse_struct("NoonWebhookBody")
-            .change_context(errors::ConnectorError::WebhookSignatureNotFound)?;
+            .change_context(errors::ConnectorError::WebhookSignatureNotFound)
+            .attach_printable("Missing incoming webhook signature for noon")?;
         let message = format!(
             "{},{},{},{},{}",
             webhook_body.order_id,
@@ -163,7 +164,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
         let details: noon::NoonWebhookEvent = request
             .body
             .parse_struct("NoonWebhookEvent")
-            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)?;
+            .change_context(errors::ConnectorError::WebhookEventTypeNotFound)
+            .attach_printable("Failed to parse webhook event type from Noon webhook body")?;
 
         Ok(match &details.event_type {
             noon::NoonWebhookEventTypes::Sale | noon::NoonWebhookEventTypes::Capture => {
