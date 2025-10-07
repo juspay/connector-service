@@ -133,6 +133,8 @@ pub struct Proxy {
     pub https_url: Option<String>,
     pub idle_pool_connection_timeout: Option<u64>,
     pub bypass_proxy_urls: Vec<String>,
+    pub mitm_proxy_enabled: bool,
+    pub mitm_ca_cert: Option<String>,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
