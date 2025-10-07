@@ -1,10 +1,10 @@
 use common_utils::{request::Method, CustomerId, Email, StringMajorUnit};
 use domain_types::{
-    connector_flow::{Authorize, Capture, Refund, SetupMandate, Void},
+    connector_flow::{Authorize, Capture, Refund, RepeatPayment, SetupMandate, Void},
     connector_types::{
         MandateIds, MandateReference, PaymentFlowData, PaymentVoidData, PaymentsAuthorizeData,
         PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData, RefundFlowData, RefundsData,
-        RefundsResponseData, ResponseId, SetupMandateRequestData,
+        RefundsResponseData, RepeatPaymentData, ResponseId, SetupMandateRequestData,
     },
     errors::{self, ConnectorError},
     payment_method_data::{
@@ -41,6 +41,12 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> GetC
 }
 
 impl GetCaptureMethod for PaymentsSyncData {
+    fn get_capture_method(&self) -> Option<common_enums::CaptureMethod> {
+        self.capture_method
+    }
+}
+
+impl GetCaptureMethod for RepeatPaymentData {
     fn get_capture_method(&self) -> Option<common_enums::CaptureMethod> {
         self.capture_method
     }
@@ -2016,4 +2022,88 @@ pub struct AciWebhookNotification {
     pub event_type: AciWebhookEventType,
     pub action: Option<AciWebhookAction>,
     pub payload: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AciRepeatPaymentRequest<
+    T: PaymentMethodDataTypes
+        + std::fmt::Debug
+        + std::marker::Sync
+        + std::marker::Send
+        + 'static
+        + Serialize,
+> {
+    #[serde(flatten)]
+    pub txn_details: TransactionDetails,
+    #[serde(flatten)]
+    pub payment_method: PaymentDetails<T>,
+    #[serde(flatten)]
+    pub instruction: Option<Instruction>,
+    pub shopper_result_url: Option<String>,
+    #[serde(rename = "customParameters[3DS2_enrolled]")]
+    pub three_ds_two_enrolled: Option<bool>,
+    pub recurring_type: Option<AciRecurringType>,
+}
+
+impl<
+        T: PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + Serialize,
+    >
+    TryFrom<
+        AciRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    > for AciRepeatPaymentRequest<T>
+{
+    type Error = Error;
+    fn try_from(
+        item: AciRouterData<
+            RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let auth = AciAuthType::try_from(&item.router_data.connector_auth_type)?;
+        let amount = item
+            .connector
+            .amount_converter
+            .convert(
+                item.router_data.request.minor_amount,
+                item.router_data.request.currency,
+            )
+            .change_context(ConnectorError::AmountConversionFailed)?;
+        let payment_type = if item.router_data.request.is_auto_capture()? {
+            AciPaymentType::Debit
+        } else {
+            AciPaymentType::Preauthorization
+        };
+
+        let instruction = Some(Instruction {
+            mode: InstructionMode::Repeated,
+            transaction_type: InstructionType::Unscheduled,
+            source: InstructionSource::MerchantInitiatedTransaction,
+            create_registration: None,
+        });
+        let txn_details = TransactionDetails {
+            entity_id: auth.entity_id,
+            amount,
+            currency: item.router_data.request.currency.to_string(),
+            payment_type,
+        };
+        let recurring_type = Some(AciRecurringType::Repeated);
+
+        Ok(Self {
+            txn_details,
+            payment_method: PaymentDetails::Mandate,
+            instruction,
+            shopper_result_url: item.router_data.resource_common_data.return_url.clone(),
+            three_ds_two_enrolled: None,
+            recurring_type,
+        })
+    }
 }

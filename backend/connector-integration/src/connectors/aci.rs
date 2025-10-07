@@ -10,13 +10,14 @@ use domain_types::{
     },
     connector_types::{
         AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData,
-        RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData, SubmitEvidenceData,
+        DisputeFlowData, DisputeResponseData, MandateReferenceId, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
+        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -38,8 +39,9 @@ use std::fmt::Debug;
 use transformers::{
     self as aci, AciCancelRequest, AciCaptureRequest, AciCaptureResponse, AciMandateRequest,
     AciMandateResponse, AciPaymentsRequest, AciPaymentsResponse,
-    AciPaymentsResponse as AciPaymentsSyncResponse, AciRefundRequest, AciRefundResponse,
-    AciVoidResponse,
+    AciPaymentsResponse as AciPaymentsSyncResponse,
+    AciPaymentsResponse as AciRepeatPaymentResponse, AciRefundRequest, AciRefundResponse,
+    AciRepeatPaymentRequest, AciVoidResponse,
 };
 
 use super::macros;
@@ -244,6 +246,12 @@ macros::create_all_prerequisites!(
             request_body: AciRefundRequest,
             response_body: AciRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: AciRepeatPaymentRequest<T>,
+            response_body: AciRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         )
     ],
     amount_converters: [
@@ -278,6 +286,32 @@ macros::create_all_prerequisites!(
         ) -> &'a str {
             &req.resource_common_data.connectors.aci.base_url
         }
+
+        pub fn extract_mandate_id(
+            &self,
+            mandate_reference: &MandateReferenceId,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            match mandate_reference {
+                MandateReferenceId::ConnectorMandateId(connector_mandate_ref) => connector_mandate_ref
+                    .get_connector_mandate_id()
+                    .ok_or_else(|| {
+                        error_stack::report!(errors::ConnectorError::MissingRequiredField {
+                            field_name: "connector_mandate_id"
+                        })
+                    }),
+                MandateReferenceId::NetworkMandateId(_) => {
+                    Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                        "Network mandate ID not supported for repeat payments in aci"
+                            .to_string(),
+                    )))
+                }
+                MandateReferenceId::NetworkTokenWithNTI(_) => {
+                    Err(error_stack::report!(errors::ConnectorError::NotImplemented(
+                        "Network token with NTI not supported for aci".to_string(),
+                    )))
+                }
+            }
+        }
     }
 );
 
@@ -304,14 +338,7 @@ macros::macro_connector_implementation!(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<String, errors::ConnectorError> {
-            match req.request.connector_mandate_id() {
-            Some(mandate_id) => Ok(format!(
-                "{}v1/registrations/{}/payments",
-                self.connector_base_url_payments(req),
-                mandate_id
-            )),
-            _ => Ok(format!("{}{}", self.connector_base_url_payments(req), "v1/payments")),
-        }
+             Ok(format!("{}{}", self.connector_base_url_payments(req), "v1/payments"))
         }
     }
 );
@@ -477,6 +504,36 @@ macros::macro_connector_implementation!(
             self.connector_base_url_refunds(req),
             connector_payment_id,
         ))
+        }
+    }
+);
+
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Aci,
+    curl_request: FormUrlEncoded(AciRepeatPaymentRequest<T>),
+    curl_response: AciRepeatPaymentResponse,
+    flow_name: RepeatPayment,
+    resource_common_data: PaymentFlowData,
+    flow_request: RepeatPaymentData,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+
+        fn get_url(
+            &self,
+            req: &RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            let mandate_id = self.extract_mandate_id(&req.request.mandate_reference)?;
+             Ok(format!("{}v1/registrations/{}/payments",self.connector_base_url_payments(req),mandate_id))
         }
     }
 );
@@ -696,11 +753,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
-impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
-    ConnectorIntegrationV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>
-    for Aci<T>
-{
-}
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     interfaces::verification::SourceVerification<
         CreateSessionToken,
