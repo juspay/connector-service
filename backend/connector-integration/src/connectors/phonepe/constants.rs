@@ -1,10 +1,10 @@
 //! Constants for PhonePe connector
 
 // ===== API ENDPOINTS =====
-pub const API_PAY_ENDPOINT: &str = "/v3/debit";
-pub const API_STATUS_ENDPOINT: &str = "/v3/transaction/:mid/:tid/status";
-pub const API_V4_PAY_ENDPOINT: &str = "/v4/debit";
-pub const API_V4_STATUS_ENDPOINT: &str = "/v4/transaction/:mid/:tid/status";
+pub const API_PAY_ENDPOINT: &str = "v3/debit";
+pub const API_STATUS_ENDPOINT: &str = "v3/transaction/:mid/:tid/status";
+pub const API_V4_PAY_ENDPOINT: &str = "v4/debit";
+pub const API_V4_STATUS_ENDPOINT: &str = "v4/transaction/:mid/:tid/status";
 
 // ===== UPI INSTRUMENT TYPES =====
 pub const UPI_INTENT: &str = "UPI_INTENT";
