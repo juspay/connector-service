@@ -432,7 +432,7 @@ impl<T> TryFrom<&ConnectorRouterData<&router_request_types::PaymentsSyncData>> f
         Ok(Self {
             fe_session_id: transaction_id.clone(),
             txn_ref_no: transaction_id.clone(),
-            txn_date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+            txn_date: "2024-01-01".to_string(), // TODO: Use proper date
             request: "SYNC".to_string(),
             merchant_id: "merchant".to_string(),
             hash,
@@ -460,7 +460,7 @@ impl<T> TryFrom<&ConnectorRouterData<&router_request_types::RefundsData>> for Ai
         Ok(Self {
             fe_session_id: transaction_id.clone(),
             txn_id: transaction_id.clone(),
-            txn_date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+            txn_date: "2024-01-01".to_string(), // TODO: Use proper date
             request: "REFUND".to_string(),
             merchant_id: "merchant".to_string(),
             hash,
@@ -536,7 +536,7 @@ impl<T> TryFrom<&ConnectorRouterData<&router_request_types::RefundSyncData>> for
         Ok(Self {
             fe_session_id: transaction_id.clone(),
             txn_ref_no: transaction_id.clone(),
-            txn_date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+            txn_date: "2024-01-01".to_string(), // TODO: Use proper date
             request: "REFUND_SYNC".to_string(),
             merchant_id: "merchant".to_string(),
             hash,
