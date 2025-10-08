@@ -324,7 +324,7 @@ TryFrom<
         let vpa = item.router_data.request.payment_method_data
             .as_ref()
             .and_then(|pm| pm.upi.as_ref())
-            .and_then(|upi| upi_data.vpa.clone())
+            .and_then(|upi| upi.vpa.clone())
             .unwrap_or_else(|| "default@vpa".to_string());
 
         Ok(Self {
