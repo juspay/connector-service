@@ -7,8 +7,7 @@ use std::{
 use aes::{Aes128, Aes192, Aes256};
 
 // Import constants from separate module
-pub mod constants;
-use constants::*;
+use super::constants::*;
 use base64::{engine::general_purpose, Engine};
 use cbc::{
     cipher::{block_padding::Pkcs7, BlockEncryptMut, KeyIvInit},
