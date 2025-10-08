@@ -347,7 +347,8 @@ impl<
                 .clone()
                 .map(|id| id.get_string_repr().to_string()),
             amount: MinorUnit::new(
-                amount_in_minor_units.get_amount_as_i64()
+                amount_in_minor_units.parse::<i64>()
+                    .change_context(errors::ConnectorError::RequestEncodingFailed)?
             ),
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
