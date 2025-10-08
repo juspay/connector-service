@@ -22,16 +22,25 @@ use domain_types::{
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
-    router_data_v2::{ConnectorRouterData, RouterDataV2},
-    types as domain_types,
+    router_data::{ConnectorAuthType, ErrorResponse},
+    router_data_v2::RouterDataV2,
+    router_response_types::Response,
+    types::Connectors,
 };
-
-use hyperswitch_domain_models::{
+use error_stack::ResultExt;
+use hyperswitch_masking::{Mask, Maskable, PeekInterface, Secret};
+use interfaces::{
     api::ConnectorCommon,
-    router_request_types::{self, ResponseId},
-    router_response_types::{self, RedirectForm},
-    services::{self, ConnectorIntegrationV2},
+    connector_integration_v2::ConnectorIntegrationV2,
+    connector_types,
+    events::connector_api_logs::ConnectorEvent,
+    verification::{ConnectorSourceVerificationSecrets, SourceVerification},
 };
+use serde::Serialize;
+use transformers::{self as airtelmoney, AirtelMoneyPaymentsRequest, AirtelMoneyPaymentsResponse};
+
+use super::macros;
+use crate::{types::ResponseRouterData, with_error_response_body};
 
 use crate::utils;
 
