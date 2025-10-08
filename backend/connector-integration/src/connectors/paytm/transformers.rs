@@ -1247,6 +1247,57 @@ impl
     }
 }
 
+// Stub types for unimplemented flows (mandatory for compilation)
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmVoidRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundSyncRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCreateOrderRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRepeatPaymentRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSubmitEvidenceResponse;
+
 // Authorize response transformation
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
@@ -1369,6 +1420,57 @@ impl<
     }
 }
 
+// Stub types for unimplemented flows (mandatory for compilation)
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmVoidRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundSyncRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCreateOrderRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRepeatPaymentRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSubmitEvidenceResponse;
+
 // PSync response transformation
 impl
     TryFrom<
@@ -1463,3 +1565,54 @@ impl
         Ok(router_data)
     }
 }
+
+// Stub types for unimplemented flows (mandatory for compilation)
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmVoidRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundSyncRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCreateOrderRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRepeatPaymentRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSubmitEvidenceResponse;
