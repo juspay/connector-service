@@ -280,7 +280,7 @@ impl<
             mer_app_data: "{}".to_string(),
             mer_txn_id: transaction_id,
             mer_data_field: None,
-            txn_date: Some(utils::date_now()),
+            txn_date: Some(chrono::Utc::now().format("%Y%m%d").to_string()),
             txn_amt_known: true,
             charge_later: false,
             cust_email: email,
