@@ -346,7 +346,10 @@ impl<
                 .customer_id
                 .clone()
                 .map(|id| id.get_string_repr().to_string()),
-            amount: amount_in_minor_units,
+            amount: MinorUnit::from_major_unit_as_i64(
+            amount_in_minor_units.parse::<f64>()
+                .change_context(errors::ConnectorError::RequestEncodingFailed)?
+        ),
             callback_url: router_data.request.get_webhook_url()?,
             mobile_number,
             payment_instrument,
