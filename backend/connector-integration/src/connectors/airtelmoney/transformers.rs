@@ -361,9 +361,9 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
         match response.response {
             AirtelMoneyResponseData::ValidResponse(valid_resp) => {
                 let status = match response.status.as_str() {
-                    "SUCCESS" => domain_types::enums::AttemptStatus::Charged,
-                    "PENDING" => domain_types::enums::AttemptStatus::Pending,
-                    _ => domain_types::enums::AttemptStatus::Failure,
+                    "SUCCESS" => AttemptStatus::Charged,
+                    "PENDING" => AttemptStatus::Pending,
+                    _ => AttemptStatus::Failure,
                 };
 
                 Ok(Self {
