@@ -11,8 +11,6 @@ use domain_types::{
     errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::RouterDataV2,
-    router_request_types::{self, PaymentsAuthorizeData, PaymentsSyncData, RefundsData},
-    router_response_types::{self, PaymentsResponseData, RefundsResponseData},
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::Secret;
@@ -150,145 +148,6 @@ pub struct NameType {
     pub last: String,
 }
 
-// Sync Request
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyPaymentsSyncRequest {
-    pub fe_session_id: String,
-    pub txn_ref_no: String,
-    pub txn_date: String,
-    pub request: String,
-    pub merchant_id: String,
-    pub hash: String,
-    pub lang_id: String,
-    pub amount: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub refund_ref_no: Option<String>,
-}
-
-// Refund Request
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyRefundRequest {
-    pub fe_session_id: String,
-    pub txn_id: String,
-    pub txn_date: String,
-    pub request: String,
-    pub merchant_id: String,
-    pub hash: String,
-    pub refund_ref_no: String,
-    pub amount: String,
-}
-
-// Refund Response
-#[derive(Debug, Clone, Deserialize)]
-pub struct AirtelMoneyRefundResponse {
-    pub code: i32,
-    pub status: String,
-    pub response: AirtelMoneyRefundResponseData,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged)]
-pub enum AirtelMoneyRefundResponseData {
-    ValidRefund(AirtelMoneyValidRefund),
-    ErrorRefund(AirtelMoneyErrorRefund),
-    InvalidRefund(AirtelMoneyInvalidRefund),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AirtelMoneyValidRefund {
-    pub txn_id: String,
-    pub amount: String,
-    pub status: String,
-    pub txn_date: String,
-    pub merchant_id: String,
-    pub fe_session_id: String,
-    pub hash: String,
-    pub message_text: String,
-    pub code: String,
-    pub error_code: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AirtelMoneyErrorRefund {
-    pub status: String,
-    pub merchant_id: String,
-    pub fe_session_id: String,
-    pub hash: String,
-    pub message_text: String,
-    pub code: String,
-    pub error_code: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AirtelMoneyInvalidRefund {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub hash: Option<String>,
-    pub message_text: String,
-    pub code: String,
-    pub error_code: String,
-}
-
-// Refund Sync Request
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyRefundSyncRequest {
-    pub fe_session_id: String,
-    pub txn_ref_no: String,
-    pub txn_date: String,
-    pub request: String,
-    pub merchant_id: String,
-    pub hash: String,
-    pub lang_id: String,
-    pub amount: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub refund_ref_no: Option<String>,
-}
-
-// Stub types for unimplemented flows
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyVoidRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneyVoidResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyCaptureRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneyCaptureResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyCreateOrderRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneyCreateOrderResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneySessionTokenRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneySessionTokenResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneySetupMandateRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneySetupMandateResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyRepeatPaymentRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneyRepeatPaymentResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyAcceptDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneyAcceptDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneyDefendDisputeRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneyDefendDisputeResponse;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct AirtelMoneySubmitEvidenceRequest;
-#[derive(Debug, Clone)]
-pub struct AirtelMoneySubmitEvidenceResponse;
-
 // Transformer implementations
 
 impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>> for AirtelMoneyPaymentsRequest {
@@ -296,7 +155,6 @@ impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<
 
     fn try_from(item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let amount = item.amount.get_amount_as_string();
-        let currency = item.request.currency.to_string();
         
         // Extract customer ID
         let customer_id = item.resource_common_data.get_customer_id()?;
@@ -306,26 +164,6 @@ impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<
         let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
-        
-        // Extract return URL
-        let return_url = item.request.get_router_return_url()?;
-        
-        // Extract email
-        let email = item.request.email.clone();
-        
-        // Extract IP address
-        let ip_address = item.request.get_ip_address_as_optional()
-            .map(|ip| ip.expose())
-            .unwrap_or_else(|| "127.0.0.1".to_string());
-        
-        // Extract user agent
-        let user_agent = item.request.browser_info
-            .as_ref()
-            .and_then(|info| info.user_agent.clone())
-            .unwrap_or_else(|| "Mozilla/5.0".to_string());
-        
-        // Check if test mode
-        let is_test = item.resource_common_data.test_mode.unwrap_or(false);
         
         // Generate hash (simplified - in real implementation this would use proper hashing)
         let hash = format!("hash_{}", transaction_id);
@@ -354,68 +192,7 @@ impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<
     }
 }
 
-impl<T> TryFrom<AirtelMoneyPaymentsResponse> for PaymentsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(response: AirtelMoneyPaymentsResponse) -> Result<Self, Self::Error> {
-        match response.response {
-            AirtelMoneyResponseData::ValidResponse(valid_resp) => {
-                let status = match response.status.as_str() {
-                    "SUCCESS" => AttemptStatus::Charged,
-                    "PENDING" => AttemptStatus::Pending,
-                    _ => AttemptStatus::Failure,
-                };
-
-                Ok(Self {
-                    status,
-                    amount_received: valid_resp.data.avl_balance.as_ref()
-                        .and_then(|balance| balance.parse::<f64>().ok())
-                        .map(|amt| MinorUnit::from_major_unit_as_i64(amt)),
-                    connector_transaction_id: valid_resp.data.fe_session_id.map(ResponseId::ConnectorTransactionId),
-                    error: None,
-                    redirection_data: if valid_resp.data.redirection_needed {
-                        Some(RedirectForm {
-                            url: valid_resp.data.redirect_url.unwrap_or_default(),
-                            method: HttpMethod::Get,
-                            form_fields: std::collections::HashMap::new(),
-                        })
-                    } else {
-                        None
-                    },
-                    network_txn_id: valid_resp.data.amp_txn_id,
-                    connector_response: response,
-                    ..Default::default()
-                })
-            }
-            AirtelMoneyResponseData::ErrorResponse(error_resp) => {
-                Ok(Self {
-                    status: AttemptStatus::Failure,
-                    error: Some(ConnectorError::from(
-                        ConnectorErrorType::UnexpectedResponseError(
-                            error_resp.meta.error_msg,
-                        ),
-                    )),
-                    connector_response: response,
-                    ..Default::default()
-                })
-            }
-            AirtelMoneyResponseData::RedirectResponse(redirect_resp) => {
-                Ok(Self {
-                    status: AttemptStatus::AuthenticationPending,
-                    redirection_data: Some(RedirectForm {
-                        url: redirect_resp.redirection_link,
-                        method: HttpMethod::Get,
-                        form_fields: std::collections::HashMap::new(),
-                    }),
-                    connector_response: response,
-                    ..Default::default()
-                })
-            }
-        }
-    }
-}
-
-impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for AirtelMoneyPaymentsSyncRequest {
+impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for AirtelMoneyPaymentsRequest {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
@@ -430,20 +207,30 @@ impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, Payments
         let hash = format!("hash_{}", transaction_id);
         
         Ok(Self {
-            fe_session_id: transaction_id.clone(),
-            txn_ref_no: transaction_id.clone(),
-            txn_date: "2024-01-01".to_string(), // TODO: Use proper date
-            request: "SYNC".to_string(),
-            merchant_id: "merchant".to_string(),
+            channel: "APP".to_string(),
             hash,
-            lang_id: "en".to_string(),
-            amount,
+            fe_session_id: transaction_id.clone(),
+            ver: Some("1.0".to_string()),
+            end_channel: Some("WEB".to_string()),
+            payment_ref_no: Some(transaction_id),
+            amount: Some(amount),
+            cust_alias: None,
+            otp: None,
+            verification_token: None,
+            auth_value: None,
+            consent: None,
+            txn_ref_no: Some(transaction_id.clone()),
+            request: Some("SYNC".to_string()),
+            merchant_id: Some("merchant".to_string()),
+            txn_date: Some("2024-01-01".to_string()),
             refund_ref_no: None,
+            lang_id: Some("en".to_string()),
+            txn_id: None,
         })
     }
 }
 
-impl<T> TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for AirtelMoneyRefundRequest {
+impl<T> TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for AirtelMoneyPaymentsRequest {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> Result<Self, Self::Error> {
@@ -458,68 +245,30 @@ impl<T> TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsRespon
         let hash = format!("hash_{}", transaction_id);
         
         Ok(Self {
-            fe_session_id: transaction_id.clone(),
-            txn_id: transaction_id.clone(),
-            txn_date: "2024-01-01".to_string(), // TODO: Use proper date
-            request: "REFUND".to_string(),
-            merchant_id: "merchant".to_string(),
+            channel: "APP".to_string(),
             hash,
-            refund_ref_no: format!("refund_{}", transaction_id),
-            amount,
+            fe_session_id: transaction_id.clone(),
+            ver: Some("1.0".to_string()),
+            end_channel: Some("WEB".to_string()),
+            payment_ref_no: Some(transaction_id.clone()),
+            amount: Some(amount),
+            cust_alias: None,
+            otp: None,
+            verification_token: None,
+            auth_value: None,
+            consent: None,
+            txn_ref_no: None,
+            request: Some("REFUND".to_string()),
+            merchant_id: Some("merchant".to_string()),
+            txn_date: Some("2024-01-01".to_string()),
+            refund_ref_no: Some(format!("refund_{}", transaction_id)),
+            lang_id: Some("en".to_string()),
+            txn_id: Some(transaction_id),
         })
     }
 }
 
-impl<T> TryFrom<AirtelMoneyRefundResponse> for RefundsResponseData {
-    type Error = error_stack::Report<ConnectorError>;
-
-    fn try_from(response: AirtelMoneyRefundResponse) -> Result<Self, Self::Error> {
-        match response.response {
-            AirtelMoneyRefundResponseData::ValidRefund(valid_refund) => {
-                let status = match valid_refund.status.as_str() {
-                    "SUCCESS" => RefundStatus::Success,
-                    "PENDING" => RefundStatus::Pending,
-                    _ => RefundStatus::Failure,
-                };
-
-                Ok(Self {
-                    connector_refund_id: valid_refund.txn_id,
-                    status,
-                    amount: valid_refund.amount.parse::<f64>().ok()
-                        .map(|amt| MinorUnit::from_major_unit_as_i64(amt)),
-                    connector_response: response,
-                    ..Default::default()
-                })
-            }
-            AirtelMoneyRefundResponseData::ErrorRefund(error_refund) => {
-                Ok(Self {
-                    status: RefundStatus::Failure,
-                    error: Some(ConnectorError::from(
-                        ConnectorErrorType::UnexpectedResponseError(
-                            error_refund.message_text,
-                        ),
-                    )),
-                    connector_response: response,
-                    ..Default::default()
-                })
-            }
-            AirtelMoneyRefundResponseData::InvalidRefund(invalid_refund) => {
-                Ok(Self {
-                    status: RefundStatus::Failure,
-                    error: Some(ConnectorError::from(
-                        ConnectorErrorType::UnexpectedResponseError(
-                            invalid_refund.message_text,
-                        ),
-                    )),
-                    connector_response: response,
-                    ..Default::default()
-                })
-            }
-        }
-    }
-}
-
-impl<T> TryFrom<&RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResponseData>> for AirtelMoneyRefundSyncRequest {
+impl<T> TryFrom<&RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResponseData>> for AirtelMoneyPaymentsRequest {
     type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(item: &RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
@@ -534,15 +283,25 @@ impl<T> TryFrom<&RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResp
         let hash = format!("hash_{}", transaction_id);
         
         Ok(Self {
-            fe_session_id: transaction_id.clone(),
-            txn_ref_no: transaction_id.clone(),
-            txn_date: "2024-01-01".to_string(), // TODO: Use proper date
-            request: "REFUND_SYNC".to_string(),
-            merchant_id: "merchant".to_string(),
+            channel: "APP".to_string(),
             hash,
-            lang_id: "en".to_string(),
-            amount,
+            fe_session_id: transaction_id.clone(),
+            ver: Some("1.0".to_string()),
+            end_channel: Some("WEB".to_string()),
+            payment_ref_no: Some(transaction_id.clone()),
+            amount: Some(amount),
+            cust_alias: None,
+            otp: None,
+            verification_token: None,
+            auth_value: None,
+            consent: None,
+            txn_ref_no: Some(transaction_id.clone()),
+            request: Some("REFUND_SYNC".to_string()),
+            merchant_id: Some("merchant".to_string()),
+            txn_date: Some("2024-01-01".to_string()),
             refund_ref_no: Some(format!("refund_{}", transaction_id)),
+            lang_id: Some("en".to_string()),
+            txn_id: Some(transaction_id),
         })
     }
 }
