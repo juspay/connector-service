@@ -135,7 +135,7 @@ macros::create_all_prerequisites!(
     amount_converters: [
         amount_converter: StringMinorUnit
     ],
-    member_functions: {{
+    member_functions: {
         fn get_api_tag(&self) -> &'static str {
             "PayZapp"
         }
