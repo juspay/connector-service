@@ -401,7 +401,7 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
             }
             AirtelMoneyResponseData::RedirectResponse(redirect_resp) => {
                 Ok(Self {
-                    status: domain_types::enums::AttemptStatus::AuthenticationPending,
+                    status: AttemptStatus::AuthenticationPending,
                     redirection_data: Some(RedirectForm {
                         url: redirect_resp.redirection_link,
                         method: HttpMethod::Get,
