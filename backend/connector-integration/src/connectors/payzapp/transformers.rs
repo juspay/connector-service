@@ -312,7 +312,7 @@ impl<T> TryFrom<PayZappPaymentsResponse> for PaymentsResponseData {
             currency: None,
             connector_transaction_id: response.wibmo_txn_id,
             error_message: response.res_desc,
-            redirect: Some(RedirectForm {
+            redirect: Some(RedirectForm::Form {
                 url: response.data_pick_up_code.unwrap_or_default(),
                 method: Method::Get,
                 form_body: None,
