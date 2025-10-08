@@ -376,7 +376,7 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
                     redirection_data: if valid_resp.data.redirection_needed {
                         Some(RedirectForm {
                             url: valid_resp.data.redirect_url.unwrap_or_default(),
-                            method: domain_types::enums::HttpMethod::Get,
+                            method: HttpMethod::Get,
                             form_fields: std::collections::HashMap::new(),
                         })
                     } else {
@@ -404,7 +404,7 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
                     status: domain_types::enums::AttemptStatus::AuthenticationPending,
                     redirection_data: Some(RedirectForm {
                         url: redirect_resp.redirection_link,
-                        method: domain_types::enums::HttpMethod::Get,
+                        method: HttpMethod::Get,
                         form_fields: std::collections::HashMap::new(),
                     }),
                     connector_response: response,
