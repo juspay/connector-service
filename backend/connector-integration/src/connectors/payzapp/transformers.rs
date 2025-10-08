@@ -380,7 +380,7 @@ impl<
                 txn_amount: amount,
                 txn_currency: currency,
                 mer_txn_id: transaction_id,
-                txn_date: utils::date_now(),
+                txn_date: chrono::Utc::now().format("%Y%m%d").to_string(),
                 txn_amt_known: true,
                 charge_later: false,
             },
