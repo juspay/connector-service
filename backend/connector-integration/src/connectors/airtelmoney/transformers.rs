@@ -7,11 +7,11 @@ use common_utils::{
     types::{self, MinorUnit},
 };
 use domain_types::{
-    connector_types::{HttpMethod, RedirectForm},
-    errors::{ConnectorError, ConnectorErrorType},
+    connector_types::{HttpMethod, RedirectForm, ResponseId},
+    errors::ConnectorError,
     payment_method_data::PaymentMethodDataTypes,
-    router_data_v2::{ConnectorRouterData, RouterDataV2},
-    router_request_types::{self, ResponseId},
+    router_data_v2::RouterDataV2,
+    router_request_types::{self, PaymentsAuthorizeData, PaymentsSyncData, RefundsData},
     router_response_types::{self, PaymentsResponseData, RefundsResponseData},
 };
 use error_stack::ResultExt;
@@ -291,41 +291,41 @@ pub struct AirtelMoneySubmitEvidenceResponse;
 
 // Transformer implementations
 
-impl<T> TryFrom<&ConnectorRouterData<&router_request_types::PaymentsAuthorizeData<T>>> for AirtelMoneyPaymentsRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<&RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>> for AirtelMoneyPaymentsRequest {
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorRouterData<&router_request_types::PaymentsAuthorizeData<T>>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let amount = item.amount.get_amount_as_string();
-        let currency = item.router_data.request.currency.to_string();
+        let currency = item.request.currency.to_string();
         
         // Extract customer ID
-        let customer_id = item.router_data.resource_common_data.get_customer_id()?;
+        let customer_id = item.resource_common_data.get_customer_id()?;
         let customer_id_string = customer_id.get_string_repr();
         
         // Extract transaction ID
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
         
         // Extract return URL
-        let return_url = item.router_data.request.get_router_return_url()?;
+        let return_url = item.request.get_router_return_url()?;
         
         // Extract email
-        let email = item.router_data.request.email.clone();
+        let email = item.request.email.clone();
         
         // Extract IP address
-        let ip_address = item.router_data.request.get_ip_address_as_optional()
+        let ip_address = item.request.get_ip_address_as_optional()
             .map(|ip| ip.expose())
             .unwrap_or_else(|| "127.0.0.1".to_string());
         
         // Extract user agent
-        let user_agent = item.router_data.request.browser_info
+        let user_agent = item.request.browser_info
             .as_ref()
             .and_then(|info| info.user_agent.clone())
             .unwrap_or_else(|| "Mozilla/5.0".to_string());
         
         // Check if test mode
-        let is_test = item.router_data.resource_common_data.test_mode.unwrap_or(false);
+        let is_test = item.resource_common_data.test_mode.unwrap_or(false);
         
         // Generate hash (simplified - in real implementation this would use proper hashing)
         let hash = format!("hash_{}", transaction_id);
@@ -354,8 +354,8 @@ impl<T> TryFrom<&ConnectorRouterData<&router_request_types::PaymentsAuthorizeDat
     }
 }
 
-impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::PaymentsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<AirtelMoneyPaymentsResponse> for PaymentsResponseData {
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: AirtelMoneyPaymentsResponse) -> Result<Self, Self::Error> {
         match response.response {
@@ -371,7 +371,7 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
                     amount_received: valid_resp.data.avl_balance.as_ref()
                         .and_then(|balance| balance.parse::<f64>().ok())
                         .map(|amt| MinorUnit::from_major_unit_as_i64(amt)),
-                    connector_transaction_id: valid_resp.data.fe_session_id,
+                    connector_transaction_id: valid_resp.data.fe_session_id.map(ResponseId::ConnectorTransactionId),
                     error: None,
                     redirection_data: if valid_resp.data.redirection_needed {
                         Some(RedirectForm {
@@ -415,16 +415,16 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
     }
 }
 
-impl<T> TryFrom<&ConnectorRouterData<&router_request_types::PaymentsSyncData>> for AirtelMoneyPaymentsSyncRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<&RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>> for AirtelMoneyPaymentsSyncRequest {
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorRouterData<&router_request_types::PaymentsSyncData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> Result<Self, Self::Error> {
         let amount = item.amount.get_amount_as_string();
         
         // Extract transaction ID
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
         
         // Generate hash (simplified)
         let hash = format!("hash_{}", transaction_id);
@@ -443,16 +443,16 @@ impl<T> TryFrom<&ConnectorRouterData<&router_request_types::PaymentsSyncData>> f
     }
 }
 
-impl<T> TryFrom<&ConnectorRouterData<&router_request_types::RefundsData>> for AirtelMoneyRefundRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<&RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>> for AirtelMoneyRefundRequest {
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorRouterData<&router_request_types::RefundsData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>) -> Result<Self, Self::Error> {
         let amount = item.amount.get_amount_as_string();
         
         // Extract transaction ID
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
         
         // Generate hash (simplified)
         let hash = format!("hash_{}", transaction_id);
@@ -470,8 +470,8 @@ impl<T> TryFrom<&ConnectorRouterData<&router_request_types::RefundsData>> for Ai
     }
 }
 
-impl<T> TryFrom<AirtelMoneyRefundResponse> for router_response_types::RefundsResponseData {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<AirtelMoneyRefundResponse> for RefundsResponseData {
+    type Error = error_stack::Report<ConnectorError>;
 
     fn try_from(response: AirtelMoneyRefundResponse) -> Result<Self, Self::Error> {
         match response.response {
@@ -483,7 +483,7 @@ impl<T> TryFrom<AirtelMoneyRefundResponse> for router_response_types::RefundsRes
                 };
 
                 Ok(Self {
-                    refund_id: Some(valid_refund.txn_id),
+                    connector_refund_id: valid_refund.txn_id,
                     status,
                     amount: valid_refund.amount.parse::<f64>().ok()
                         .map(|amt| MinorUnit::from_major_unit_as_i64(amt)),
@@ -519,16 +519,16 @@ impl<T> TryFrom<AirtelMoneyRefundResponse> for router_response_types::RefundsRes
     }
 }
 
-impl<T> TryFrom<&ConnectorRouterData<&router_request_types::RefundSyncData>> for AirtelMoneyRefundSyncRequest {
-    type Error = error_stack::Report<errors::ConnectorError>;
+impl<T> TryFrom<&RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResponseData>> for AirtelMoneyRefundSyncRequest {
+    type Error = error_stack::Report<ConnectorError>;
 
-    fn try_from(item: &ConnectorRouterData<&router_request_types::RefundSyncData>) -> Result<Self, Self::Error> {
+    fn try_from(item: &RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResponseData>) -> Result<Self, Self::Error> {
         let amount = item.amount.get_amount_as_string();
         
         // Extract transaction ID
-        let transaction_id = item.router_data.request.connector_transaction_id
+        let transaction_id = item.connector_transaction_id
             .get_connector_transaction_id()
-            .map_err(|_e| errors::ConnectorError::RequestEncodingFailed)?;
+            .map_err(|_e| ConnectorError::RequestEncodingFailed)?;
         
         // Generate hash (simplified)
         let hash = format!("hash_{}", transaction_id);
