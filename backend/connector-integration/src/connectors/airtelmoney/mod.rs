@@ -6,7 +6,6 @@ use common_utils::{
     errors::CustomResult,
     request::RequestContent,
     types::{self, StringMinorUnit},
-};
 use domain_types::{
     connector_flow::{Authorize, PSync, RSync, Refund},
     connector_types::{
