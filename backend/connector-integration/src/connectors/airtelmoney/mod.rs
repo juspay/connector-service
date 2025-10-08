@@ -291,7 +291,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         airtelmoney::constants::get_base_url()
     }
 
-    fn get_auth_header(&self, _auth_type: &domain_types::ConnectorAuthType) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
+    fn get_auth_header(&self, _auth_type: &ConnectorAuthType) -> CustomResult<Vec<(String, String)>, errors::ConnectorError> {
         Ok(vec![])
     }
 }
