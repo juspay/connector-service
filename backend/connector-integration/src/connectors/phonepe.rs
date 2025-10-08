@@ -375,7 +375,7 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // MANDATORY: Implement ConnectorSpecifications trait
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
-    connector_types::ConnectorSpecifications for Phonepe<T>
+    domain_types::connector_types::ConnectorSpecifications for Phonepe<T>
 {
     fn get_supported_payment_methods(
         &self,
