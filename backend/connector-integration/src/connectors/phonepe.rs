@@ -164,7 +164,7 @@ macros::create_all_prerequisites!(
 
         fn build_auth_headers<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
             Ok(vec![
                 (
