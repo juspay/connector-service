@@ -221,11 +221,12 @@ impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData
 impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
 // Main connector implementation using macros
+// Main connector implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: airtelmoney,
-    curl_request: Json(airtelmoney::AirtelMoneyPaymentsRequest),
-    curl_response: airtelmoney::AirtelMoneyPaymentsResponse,
+    connector: AirtelMoney,
+    curl_request: Json(AirtelMoneyPaymentsRequest),
+    curl_response: AirtelMoneyPaymentsResponse,
     flow_name: Authorize,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsAuthorizeData<T>,
@@ -233,18 +234,18 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
-    other_functions: {{
+    other_functions: {
         fn get_content_type(&self) -> &'static str {
             "application/json"
         }
-    }}
+    }
 );
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: airtelmoney,
-    curl_request: Json(airtelmoney::AirtelMoneyPaymentsSyncRequest),
-    curl_response: airtelmoney::AirtelMoneyPaymentsResponse,
+    connector: AirtelMoney,
+    curl_request: Json(AirtelMoneyPaymentsSyncRequest),
+    curl_response: AirtelMoneyPaymentsResponse,
     flow_name: PSync,
     resource_common_data: PaymentFlowData,
     flow_request: PaymentsSyncData,
@@ -252,18 +253,18 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
-    other_functions: {{
+    other_functions: {
         fn get_content_type(&self) -> &'static str {
             "application/json"
         }
-    }}
+    }
 );
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: airtelmoney,
-    curl_request: Json(airtelmoney::AirtelMoneyRefundRequest),
-    curl_response: airtelmoney::AirtelMoneyRefundResponse,
+    connector: AirtelMoney,
+    curl_request: Json(AirtelMoneyRefundRequest),
+    curl_response: AirtelMoneyRefundResponse,
     flow_name: Refund,
     resource_common_data: RefundFlowData,
     flow_request: RefundsData,
@@ -271,18 +272,18 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
-    other_functions: {{
+    other_functions: {
         fn get_content_type(&self) -> &'static str {
             "application/json"
         }
-    }}
+    }
 );
 
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
-    connector: airtelmoney,
-    curl_request: Json(airtelmoney::AirtelMoneyRefundSyncRequest),
-    curl_response: airtelmoney::AirtelMoneyRefundResponse,
+    connector: AirtelMoney,
+    curl_request: Json(AirtelMoneyRefundSyncRequest),
+    curl_response: AirtelMoneyRefundResponse,
     flow_name: RSync,
     resource_common_data: RefundSyncData,
     flow_request: RefundSyncData,
@@ -290,11 +291,11 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
-    other_functions: {{
+    other_functions: {
         fn get_content_type(&self) -> &'static str {
             "application/json"
         }
-    }}
+    }
 );
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
