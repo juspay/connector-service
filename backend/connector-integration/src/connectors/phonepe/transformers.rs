@@ -775,6 +775,64 @@ fn generate_phonepe_checksum(
 
 // ===== SYNC REQUEST BUILDING =====
 
+// TryFrom implementation for owned PhonepeRouterData wrapper (sync)
+impl<
+        T: domain_types::payment_method_data::PaymentMethodDataTypes
+            + std::fmt::Debug
+            + std::marker::Sync
+            + std::marker::Send
+            + 'static
+            + serde::Serialize,
+    >
+    TryFrom<
+        PhonepeRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    > for PhonepeSyncRequest
+{
+    type Error = Error;
+
+    fn try_from(
+        wrapper: PhonepeRouterData<
+            RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+            T,
+        >,
+    ) -> Result<Self, Self::Error> {
+        let router_data = &wrapper.router_data;
+        let auth = PhonepeAuthType::from_auth_type_and_merchant_id(
+            &router_data.connector_auth_type,
+            Secret::new(
+                router_data
+                    .resource_common_data
+                    .merchant_id
+                    .get_string_repr()
+                    .to_string(),
+            ),
+        )?;
+
+        let merchant_transaction_id = router_data
+            .request
+            .connector_transaction_id
+            .get_connector_transaction_id()
+            .change_context(errors::ConnectorError::MissingConnectorTransactionID)?;
+
+        // Generate checksum for status API
+        let api_path = format!(
+            "/{}/{}/{}",
+            constants::API_STATUS_ENDPOINT,
+            auth.merchant_id.peek(),
+            merchant_transaction_id
+        );
+        let checksum = generate_phonepe_sync_checksum(&api_path, &auth.salt_key, &auth.key_index)?;
+
+        Ok(Self {
+            merchant_transaction_id,
+            checksum,
+        })
+    }
+}
+
 // TryFrom implementation for borrowed PhonepeRouterData wrapper (sync header generation)
 impl<
         T: domain_types::payment_method_data::PaymentMethodDataTypes
