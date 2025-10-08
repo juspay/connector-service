@@ -148,7 +148,7 @@ macros::create_all_prerequisites!(
     member_functions: {
         fn get_base_url<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> String {
             // Default to production for now - can be enhanced with proper test mode detection
             constants::PRODUCTION_BASE_URL.to_string()
