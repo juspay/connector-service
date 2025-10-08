@@ -150,26 +150,16 @@ macros::create_all_prerequisites!(
             &self,
             req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> String {
-            // Use test mode from resource_common_data
-            let is_test_mode = req.resource_common_data.test_mode.unwrap_or(false);
-            if is_test_mode {
-                constants::SANDBOX_BASE_URL.to_string()
-            } else {
-                constants::PRODUCTION_BASE_URL.to_string()
-            }
+            // Default to production for now - can be enhanced with proper test mode detection
+            constants::PRODUCTION_BASE_URL.to_string()
         }
 
         fn get_v2_base_url<F, FCD, Req, Res>(
             &self,
-            req: &RouterDataV2<F, FCD, Req, Res>,
+            _req: &RouterDataV2<F, FCD, Req, Res>,
         ) -> String {
-            // Use test mode from resource_common_data
-            let is_test_mode = req.resource_common_data.test_mode.unwrap_or(false);
-            if is_test_mode {
-                constants::V2_SANDBOX_BASE_URL.to_string()
-            } else {
-                constants::V2_PRODUCTION_BASE_URL.to_string()
-            }
+            // Default to production for now - can be enhanced with proper test mode detection
+            constants::V2_PRODUCTION_BASE_URL.to_string()
         }
 
         fn build_auth_headers<F, FCD, Req, Res>(
