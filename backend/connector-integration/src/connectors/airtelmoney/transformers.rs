@@ -1,22 +1,20 @@
 // AirtelMoney Transformers - Request/Response Data Structures
 
+use common_enums::{AttemptStatus, RefundStatus};
 use common_utils::{
     errors::CustomResult,
     ext_traits::BytesExt,
     types::{self, MinorUnit},
 };
 use domain_types::{
-    errors,
+    connector_types::{HttpMethod, RedirectForm},
+    errors::{ConnectorError, ConnectorErrorType},
     payment_method_data::PaymentMethodDataTypes,
     router_data_v2::{ConnectorRouterData, RouterDataV2},
-    types as domain_types,
+    router_request_types::{self, ResponseId},
+    router_response_types::{self, PaymentsResponseData, RefundsResponseData},
 };
 use error_stack::ResultExt;
-use hyperswitch_domain_models::{
-    payments::PaymentAddress,
-    router_request_types::{self, ResponseId},
-    router_response_types::{self, RedirectForm},
-};
 use hyperswitch_masking::Secret;
 use serde::{Deserialize, Serialize};
 
