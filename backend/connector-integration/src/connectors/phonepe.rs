@@ -394,6 +394,10 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 
 // MANDATORY: Implement all connector_types traits (even for unused flows)
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    connector_types::PaymentAuthorizeV2<T> for Phonepe<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
+    connector_types::PaymentSyncV2 for Phonepe<T> {}
+impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
     connector_types::ConnectorServiceTrait<T> for Phonepe<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
     connector_types::PaymentSessionToken for Phonepe<T> {}
