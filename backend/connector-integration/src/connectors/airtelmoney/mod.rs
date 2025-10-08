@@ -61,96 +61,96 @@ impl<T> AirtelMoney<T> {
 use crate::utils;
 
 macros::create_all_prerequisites!(
-    connector_name: airtelmoney,
+    connector_name: AirtelMoney,
     generic_type: T,
     api: [
         (
             flow: Authorize,
-            request_body: airtelmoney::AirtelMoneyPaymentsRequest,
-            response_body: airtelmoney::AirtelMoneyPaymentsResponse,
+            request_body: AirtelMoneyPaymentsRequest,
+            response_body: AirtelMoneyPaymentsResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
         (
             flow: PSync,
-            request_body: airtelmoney::AirtelMoneyPaymentsSyncRequest,
-            response_body: airtelmoney::AirtelMoneyPaymentsResponse,
+            request_body: AirtelMoneyPaymentsSyncRequest,
+            response_body: AirtelMoneyPaymentsResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
         ),
         (
             flow: RSync,
-            request_body: airtelmoney::AirtelMoneyRefundSyncRequest,
-            response_body: airtelmoney::AirtelMoneyRefundResponse,
+            request_body: AirtelMoneyRefundSyncRequest,
+            response_body: AirtelMoneyRefundResponse,
             router_data: RouterDataV2<RSync, RefundSyncData, RefundSyncData, RefundsResponseData>,
         ),
         (
             flow: Refund,
-            request_body: airtelmoney::AirtelMoneyRefundRequest,
-            response_body: airtelmoney::AirtelMoneyRefundResponse,
+            request_body: AirtelMoneyRefundRequest,
+            response_body: AirtelMoneyRefundResponse,
             router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
         ),
         (
             flow: Void,
-            request_body: airtelmoney::AirtelMoneyVoidRequest,
-            response_body: airtelmoney::AirtelMoneyVoidResponse,
+            request_body: AirtelMoneyVoidRequest,
+            response_body: AirtelMoneyVoidResponse,
             router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
         ),
         (
             flow: Capture,
-            request_body: airtelmoney::AirtelMoneyCaptureRequest,
-            response_body: airtelmoney::AirtelMoneyCaptureResponse,
+            request_body: AirtelMoneyCaptureRequest,
+            response_body: AirtelMoneyCaptureResponse,
             router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
         ),
         (
             flow: CreateOrder,
-            request_body: airtelmoney::AirtelMoneyCreateOrderRequest,
-            response_body: airtelmoney::AirtelMoneyCreateOrderResponse,
+            request_body: AirtelMoneyCreateOrderRequest,
+            response_body: AirtelMoneyCreateOrderResponse,
             router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
         ),
         (
             flow: CreateSessionToken,
-            request_body: airtelmoney::AirtelMoneySessionTokenRequest,
-            response_body: airtelmoney::AirtelMoneySessionTokenResponse,
+            request_body: AirtelMoneySessionTokenRequest,
+            response_body: AirtelMoneySessionTokenResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
         (
             flow: SetupMandate,
-            request_body: airtelmoney::AirtelMoneySetupMandateRequest,
-            response_body: airtelmoney::AirtelMoneySetupMandateResponse,
+            request_body: AirtelMoneySetupMandateRequest,
+            response_body: AirtelMoneySetupMandateResponse,
             router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData>,
         ),
         (
             flow: RepeatPayment,
-            request_body: airtelmoney::AirtelMoneyRepeatPaymentRequest,
-            response_body: airtelmoney::AirtelMoneyRepeatPaymentResponse,
+            request_body: AirtelMoneyRepeatPaymentRequest,
+            response_body: AirtelMoneyRepeatPaymentResponse,
             router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
         ),
         (
             flow: Accept,
-            request_body: airtelmoney::AirtelMoneyAcceptDisputeRequest,
-            response_body: airtelmoney::AirtelMoneyAcceptDisputeResponse,
+            request_body: AirtelMoneyAcceptDisputeRequest,
+            response_body: AirtelMoneyAcceptDisputeResponse,
             router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
         ),
         (
             flow: DefendDispute,
-            request_body: airtelmoney::AirtelMoneyDefendDisputeRequest,
-            response_body: airtelmoney::AirtelMoneyDefendDisputeResponse,
+            request_body: AirtelMoneyDefendDisputeRequest,
+            response_body: AirtelMoneyDefendDisputeResponse,
             router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
         ),
         (
             flow: SubmitEvidence,
-            request_body: airtelmoney::AirtelMoneySubmitEvidenceRequest,
-            response_body: airtelmoney::AirtelMoneySubmitEvidenceResponse,
+            request_body: AirtelMoneySubmitEvidenceRequest,
+            response_body: AirtelMoneySubmitEvidenceResponse,
             router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         )
     ],
     amount_converters: [
         amount_converter: StringMinorUnit
     ],
-    member_functions: {{
+    member_functions: {
         fn get_api_tag(&self) -> &'static str {
             "airtelmoney"
         }
-    }}
+    }
 );
 
 // Implement connector traits for all flows
