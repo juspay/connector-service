@@ -493,7 +493,7 @@ impl<T> TryFrom<AirtelMoneyRefundResponse> for router_response_types::RefundsRes
             }
             AirtelMoneyRefundResponseData::ErrorRefund(error_refund) => {
                 Ok(Self {
-                    status: domain_types::enums::RefundStatus::Failure,
+                    status: RefundStatus::Failure,
                     error: Some(ConnectorError::from(
                         ConnectorErrorType::UnexpectedResponseError(
                             error_refund.message_text,
@@ -505,7 +505,7 @@ impl<T> TryFrom<AirtelMoneyRefundResponse> for router_response_types::RefundsRes
             }
             AirtelMoneyRefundResponseData::InvalidRefund(invalid_refund) => {
                 Ok(Self {
-                    status: domain_types::enums::RefundStatus::Failure,
+                    status: RefundStatus::Failure,
                     error: Some(ConnectorError::from(
                         ConnectorErrorType::UnexpectedResponseError(
                             invalid_refund.message_text,
