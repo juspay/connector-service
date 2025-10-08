@@ -139,25 +139,25 @@ macros::create_all_prerequisites!(
 
 // Implement connector traits for all flows
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentOrderCreate for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentOrderCreate for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentSessionToken for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentSessionToken for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentVoidV2 for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentVoidV2 for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentCaptureV2 for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentCaptureV2 for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentRefundV2 for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentRefundV2 for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::RefundSyncV2 for airtelmoney::AirtelMoney<T> {}
+    connector_types::RefundSyncV2 for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentSetupMandate for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentSetupMandate for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::PaymentRepeatPayment for airtelmoney::AirtelMoney<T> {}
+    connector_types::PaymentRepeatPayment for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::DisputeAccept for airtelmoney::AirtelMoney<T> {}
+    connector_types::DisputeAccept for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::DisputeDefend for airtelmoney::AirtelMoney<T> {}
+    connector_types::DisputeDefend for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
     connector_types::DisputeSubmitEvidence for airtelmoney::AirtelMoney<T> {}
 
