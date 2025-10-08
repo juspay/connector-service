@@ -389,7 +389,7 @@ impl<T> TryFrom<AirtelMoneyPaymentsResponse> for router_response_types::Payments
             }
             AirtelMoneyResponseData::ErrorResponse(error_resp) => {
                 Ok(Self {
-                    status: domain_types::enums::AttemptStatus::Failure,
+                    status: AttemptStatus::Failure,
                     error: Some(domain_types::errors::ConnectorError::from(
                         domain_types::errors::ConnectorErrorType::UnexpectedResponseError(
                             error_resp.meta.error_msg,
