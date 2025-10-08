@@ -3,19 +3,24 @@ pub mod transformers;
 use std::fmt::Debug;
 
 use common_enums::AttemptStatus;
-use common_utils::{errors::CustomResult, ext_traits::BytesExt, types::StringMajorUnit};
+use common_utils::{
+    errors::CustomResult,
+    ext_traits::BytesExt,
+    request::RequestContent,
+    types::{AmountConvertor, StringMajorUnit},
+};
 use domain_types::{
     connector_flow::{
         Accept, Authorize, Capture, CreateOrder, CreateSessionToken, DefendDispute, PSync, RSync,
         Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void,
     },
     connector_types::{
-        AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
+        AcceptDisputeData, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
         PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
-        SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData,
+        RequestDetails, ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
+        SubmitEvidenceData, DisputeDefendData,
     },
     errors,
     payment_method_data::PaymentMethodDataTypes,
@@ -34,45 +39,105 @@ use serde::Serialize;
 use transformers as paytm;
 
 use self::transformers::{
-    PaytmAuthorizeRequest, PaytmInitiateTxnRequest, PaytmInitiateTxnResponse,
+    PaytmInitiateTxnRequest, PaytmInitiateTxnResponse, PaytmAuthorizeRequest, 
     PaytmProcessTxnResponse, PaytmTransactionStatusRequest, PaytmTransactionStatusResponse,
 };
+
 use crate::{connectors::macros, types::ResponseRouterData};
 
-// Define connector prerequisites using macros - following the exact pattern from other connectors
+// MANDATORY: Use UCS v2 macro framework - NO manual implementations allowed
+// Create all prerequisites using the mandatory macro
 macros::create_all_prerequisites!(
     connector_name: Paytm,
     generic_type: T,
     api: [
+        // CreateSessionToken flow - Paytm initiate transaction
         (
             flow: CreateSessionToken,
             request_body: PaytmInitiateTxnRequest,
             response_body: PaytmInitiateTxnResponse,
             router_data: RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
         ),
+        // Authorize flow - UPI payment processing
         (
             flow: Authorize,
             request_body: PaytmAuthorizeRequest,
             response_body: PaytmProcessTxnResponse,
             router_data: RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ),
+        // PSync flow - Payment status synchronization
         (
             flow: PSync,
             request_body: PaytmTransactionStatusRequest,
             response_body: PaytmTransactionStatusResponse,
             router_data: RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
+        ),
+        // Stub types for all other flows (mandatory for compilation)
+        (
+            flow: Void,
+            request_body: PaytmVoidRequest,
+            response_body: PaytmVoidResponse,
+            router_data: RouterDataV2<Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData>,
+        ),
+        (
+            flow: Capture,
+            request_body: PaytmCaptureRequest,
+            response_body: PaytmCaptureResponse,
+            router_data: RouterDataV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>,
+        ),
+        (
+            flow: Refund,
+            request_body: PaytmRefundRequest,
+            response_body: PaytmRefundResponse,
+            router_data: RouterDataV2<Refund, RefundFlowData, RefundsData, RefundsResponseData>,
+        ),
+        (
+            flow: RSync,
+            request_body: PaytmRefundSyncRequest,
+            response_body: PaytmRefundSyncResponse,
+            router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: CreateOrder,
+            request_body: PaytmCreateOrderRequest,
+            response_body: PaytmCreateOrderResponse,
+            router_data: RouterDataV2<CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse>,
+        ),
+        (
+            flow: SetupMandate,
+            request_body: PaytmSetupMandateRequest,
+            response_body: PaytmSetupMandateResponse,
+            router_data: RouterDataV2<SetupMandate, PaymentFlowData, SetupMandateRequestData<T>, PaymentsResponseData>,
+        ),
+        (
+            flow: RepeatPayment,
+            request_body: PaytmRepeatPaymentRequest,
+            response_body: PaytmRepeatPaymentResponse,
+            router_data: RouterDataV2<RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData>,
+        ),
+        (
+            flow: Accept,
+            request_body: PaytmAcceptDisputeRequest,
+            response_body: PaytmAcceptDisputeResponse,
+            router_data: RouterDataV2<Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData>,
+        ),
+        (
+            flow: DefendDispute,
+            request_body: PaytmDefendDisputeRequest,
+            response_body: PaytmDefendDisputeResponse,
+            router_data: RouterDataV2<DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData>,
+        ),
+        (
+            flow: SubmitEvidence,
+            request_body: PaytmSubmitEvidenceRequest,
+            response_body: PaytmSubmitEvidenceResponse,
+            router_data: RouterDataV2<SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData>,
         )
     ],
-    amount_converters: [amount_converter: StringMajorUnit],
-    member_functions: {
-        pub fn connector_base_url<F, Req, Res>(
-            &self,
-            req: &RouterDataV2<F, PaymentFlowData, Req, Res>,
-        ) -> String {
-            req.resource_common_data.connectors.paytm.base_url.to_string()
-        }
-
-
+    amount_converters: [
+        amount_converter: StringMajorUnit  // Paytm expects amounts in major units as strings
+    ],
+    member_functions: {{
         fn get_attempt_status_from_http_code(status_code: u16) -> AttemptStatus {
             match status_code {
                 500..=599 => AttemptStatus::Pending, // 5xx errors should be pending for retry
@@ -85,7 +150,7 @@ macros::create_all_prerequisites!(
             res: Response,
             event_builder: Option<&mut ConnectorEvent>,
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
-            // First try to parse as session token error response format
+            // Try to parse as session token error response format
             if let Ok(session_error_response) = res
                 .response
                 .parse_struct::<paytm::PaytmSessionTokenErrorResponse>("PaytmSessionTokenErrorResponse")
@@ -185,9 +250,10 @@ macros::create_all_prerequisites!(
                 network_error_message: None,
             })
         }
-    }
+    }}
 );
 
+// Validation trait implementation
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ValidationTrait for Paytm<T>
 {
@@ -200,7 +266,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     }
 }
 
-// Service trait implementations with generic type parameters
+// MANDATORY: Use macro for all trait implementations - NO manual code
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::ConnectorServiceTrait<T> for Paytm<T>
 {
@@ -220,6 +286,8 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentSyncV2 for Paytm<T>
 {
 }
+
+// Stub implementations for all other flows (mandatory for compilation)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     connector_types::PaymentOrderCreate for Paytm<T>
 {
@@ -265,6 +333,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// ConnectorCommon implementation
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> ConnectorCommon
     for Paytm<T>
 {
@@ -299,7 +368,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize> Conn
     }
 }
 
-// SourceVerification implementations for all flows
+// SourceVerification implementations for all flows (mandatory)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     verification::SourceVerification<
         Authorize,
@@ -383,7 +452,6 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     > for Paytm<T>
 {
 }
-
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     verification::SourceVerification<
         CreateOrder,
@@ -403,6 +471,7 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
 {
 }
 
+// MANDATORY: Use macro_connector_implementation for all implemented flows
 // CreateSessionToken flow implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -416,7 +485,7 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
+    other_functions: {{
         fn get_headers(
             &self,
             req: &RouterDataV2<CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData>,
@@ -446,7 +515,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
-    }
+    }}
 );
 
 // Authorize flow implementation using macros
@@ -462,12 +531,11 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
+    other_functions: {{
         fn get_headers(
             &self,
             req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>,
         ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
-
             let headers = self.get_auth_header(&req.connector_auth_type)?;
             Ok(headers)
         }
@@ -493,7 +561,7 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
-    }
+    }}
 );
 
 // PSync flow implementation using macros
@@ -509,7 +577,7 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
-    other_functions: {
+    other_functions: {{
         fn get_headers(
             &self,
             req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>,
@@ -533,10 +601,10 @@ macros::macro_connector_implementation!(
         ) -> CustomResult<domain_types::router_data::ErrorResponse, errors::ConnectorError> {
             self.build_custom_error_response(res, event_builder)
         }
-    }
+    }}
 );
 
-// Empty implementations for flows not yet implemented
+// Empty implementations for flows not yet implemented (mandatory for compilation)
 impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     ConnectorIntegrationV2<Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData>
     for Paytm<T>
@@ -594,3 +662,54 @@ impl<T: PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize>
     for Paytm<T>
 {
 }
+
+// Stub types for all unimplemented flows (mandatory for compilation)
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmVoidRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmVoidResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCaptureRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCaptureResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRefundSyncRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRefundSyncResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmCreateOrderRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmCreateOrderResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSetupMandateRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSetupMandateResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmRepeatPaymentRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmRepeatPaymentResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmAcceptDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmAcceptDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmDefendDisputeRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmDefendDisputeResponse;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PaytmSubmitEvidenceRequest;
+#[derive(Debug, Clone)]
+pub struct PaytmSubmitEvidenceResponse;
