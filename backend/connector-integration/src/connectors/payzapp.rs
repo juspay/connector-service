@@ -157,7 +157,7 @@ macros::create_all_prerequisites!(
                 "https://api.wibmo.com".to_string()
             }
         }
-    }}
+    }
 );
 
 // MANDATORY: Use macro_connector_implementation for Authorize flow
@@ -173,12 +173,12 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {{
+    other_functions: {
         fn get_url(&self, req: &RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
             let base_url = self.get_base_url(req);
             Ok(format!("{}/payment/merchant/init", base_url))
         }
-    }}
+    }
 );
 
 // MANDATORY: Use macro_connector_implementation for PSync flow
@@ -194,7 +194,7 @@ macros::macro_connector_implementation!(
     http_method: Post,
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize],
-    other_functions: {{
+    other_functions: {
         fn get_url(&self, req: &RouterDataV2<PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData>) -> CustomResult<String, errors::ConnectorError> {
             let is_test = req.resource_common_data.test_mode.unwrap_or(false);
             let base_url = if is_test {
@@ -204,7 +204,7 @@ macros::macro_connector_implementation!(
             };
             Ok(format!("{}/v2/in/txn/iap/wpay/enquiry", base_url))
         }
-    }}
+    }
 );
 
 // MANDATORY: Implement all connector_types traits even for unused flows
@@ -215,9 +215,9 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
     connector_types::PaymentVoidV2 for PayZapp<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
-    connector_types::PaymentCaptureV2 for PayZapp<T> {}
+    connector_types::PaymentCapture for PayZapp<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
-    connector_types::PaymentRefundV2 for PayZapp<T> {}
+    connector_types::PaymentRefund for PayZapp<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
     connector_types::RefundSyncV2 for PayZapp<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
@@ -229,19 +229,11 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
     connector_types::DefendDispute for PayZapp<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
-    connector_types::SubmitEvidence for PayZapp<T> {}
+    connector_types::SubmitEvidenceV2 for PayZapp<T> {}
 
 // MANDATORY: Implement ConnectorCommon trait
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + Serialize> 
     ConnectorCommon for PayZapp<T> {
-    fn get_id(&self) -> &'static str {
-        "payzapp"
-    }
-
-    fn get_content_type(&self) -> &'static str {
-        "application/json"
-    }
-
     fn build_error_response(
         &self,
         res: Response,
@@ -263,21 +255,6 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
         })
     }
 }
-
-// MANDATORY: Add source verification stubs for ALL flows
-macros::impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
-macros::impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
-macros::impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-macros::impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-macros::impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-macros::impl_source_verification_stub!(RSync, RefundFlowData, RefundSyncData, RefundsResponseData);
-macros::impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
-macros::impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
-macros::impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData);
-macros::impl_source_verification_stub!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
-macros::impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
-macros::impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
-macros::impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
 // MANDATORY: Add not-implemented flow handlers for all unimplemented flows
 macro_rules! impl_not_implemented_flow {
