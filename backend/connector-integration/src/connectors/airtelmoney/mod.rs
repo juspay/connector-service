@@ -42,24 +42,6 @@ use transformers::{self as airtelmoney, AirtelMoneyPaymentsRequest, AirtelMoneyP
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
-pub struct AirtelMoney<T> {
-    amount_converter: &'static (dyn common_utils::types::AmountConverterTrait<Output = String> + Sync),
-    connector_name: &'static str,
-    payment_method_data: std::marker::PhantomData<T>,
-}
-
-impl<T> AirtelMoney<T> {
-    pub fn new() -> Self {
-        Self {
-            amount_converter: &common_utils::types::StringMinorUnit,
-            connector_name: "airtelmoney",
-            payment_method_data: std::marker::PhantomData,
-        }
-    }
-}
-
-use crate::utils;
-
 macros::create_all_prerequisites!(
     connector_name: AirtelMoney,
     generic_type: T,
@@ -175,13 +157,13 @@ impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::mark
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
     connector_types::DisputeDefend for AirtelMoney<T> {}
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    connector_types::DisputeSubmitEvidence for airtelmoney::AirtelMoney<T> {}
+    connector_types::DisputeSubmitEvidence for AirtelMoney<T> {}
 
 // Macro for not implemented flows
 macro_rules! impl_not_implemented_flow {
     ($flow:ty, $common_data:ty, $req:ty, $resp:ty) => {
         impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize>
-            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for airtelmoney::AirtelMoney<T>
+            ConnectorIntegrationV2<$flow, $common_data, $req, $resp> for AirtelMoney<T>
         {
             fn build_request_v2(
                 &self,
@@ -205,22 +187,6 @@ impl_not_implemented_flow!(Accept, DisputeFlowData, AcceptDisputeData, DisputeRe
 impl_not_implemented_flow!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
 impl_not_implemented_flow!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
 
-// Source verification stubs for all flows
-impl_source_verification_stub!(Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData);
-impl_source_verification_stub!(PSync, PaymentFlowData, PaymentsSyncData, PaymentsResponseData);
-impl_source_verification_stub!(RSync, RefundSyncData, RefundSyncData, RefundsResponseData);
-impl_source_verification_stub!(Refund, RefundFlowData, RefundsData, RefundsResponseData);
-impl_source_verification_stub!(Void, PaymentFlowData, PaymentVoidData, PaymentsResponseData);
-impl_source_verification_stub!(Capture, PaymentFlowData, PaymentsCaptureData, PaymentsResponseData);
-impl_source_verification_stub!(CreateOrder, PaymentFlowData, PaymentCreateOrderData, PaymentCreateOrderResponse);
-impl_source_verification_stub!(CreateSessionToken, PaymentFlowData, SessionTokenRequestData, SessionTokenResponseData);
-impl_source_verification_stub!(SetupMandate, PaymentFlowData, SetupMandateRequestData, PaymentsResponseData);
-impl_source_verification_stub!(RepeatPayment, PaymentFlowData, RepeatPaymentData, PaymentsResponseData);
-impl_source_verification_stub!(Accept, DisputeFlowData, AcceptDisputeData, DisputeResponseData);
-impl_source_verification_stub!(DefendDispute, DisputeFlowData, DisputeDefendData, DisputeResponseData);
-impl_source_verification_stub!(SubmitEvidence, DisputeFlowData, SubmitEvidenceData, DisputeResponseData);
-
-// Main connector implementation using macros
 // Main connector implementation using macros
 macros::macro_connector_implementation!(
     connector_default_implementations: [get_content_type, get_error_response_v2],
@@ -235,9 +201,6 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
     other_functions: {
-        fn get_content_type(&self) -> &'static str {
-            "application/json"
-        }
     }
 );
 
@@ -254,9 +217,6 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
     other_functions: {
-        fn get_content_type(&self) -> &'static str {
-            "application/json"
-        }
     }
 );
 
@@ -273,9 +233,6 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
     other_functions: {
-        fn get_content_type(&self) -> &'static str {
-            "application/json"
-        }
     }
 );
 
@@ -292,14 +249,11 @@ macros::macro_connector_implementation!(
     generic_type: T,
     [PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize],
     other_functions: {
-        fn get_content_type(&self) -> &'static str {
-            "application/json"
-        }
     }
 );
 
 impl<T: PaymentMethodDataTypes + std::fmt::Debug + std::marker::Sync + std::marker::Send + 'static + serde::Serialize> 
-    ConnectorCommon for airtelmoney::AirtelMoney<T> {
+    ConnectorCommon for AirtelMoney<T> {
     fn get_id(&self) -> &'static str {
         "airtelmoney"
     }
