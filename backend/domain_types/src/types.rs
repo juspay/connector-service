@@ -117,6 +117,7 @@ pub struct Connectors {
     pub dlocal: ConnectorParams,
     pub placetopay: ConnectorParams,
     pub rapyd: ConnectorParams,
+    pub aci: ConnectorParams,
     pub trustpay: ConnectorParamsWithMoreUrls,
 }
 
@@ -141,6 +142,8 @@ pub struct Proxy {
     pub https_url: Option<String>,
     pub idle_pool_connection_timeout: Option<u64>,
     pub bypass_proxy_urls: Vec<String>,
+    pub mitm_proxy_enabled: bool,
+    pub mitm_ca_cert: Option<String>,
 }
 
 impl ForeignTryFrom<grpc_api_types::payments::CaptureMethod> for common_enums::CaptureMethod {
@@ -1079,6 +1082,7 @@ impl<
         // Extract merchant_account_id from metadata before moving it
         let merchant_account_id = value.metadata.get("merchant_account_id").cloned();
 
+        let customer_acceptance = value.customer_acceptance.clone();
         Ok(Self {
             capture_method: Some(common_enums::CaptureMethod::foreign_try_from(
                 value.capture_method(),
@@ -1131,6 +1135,9 @@ impl<
             order_category: value.order_category,
             session_token: None,
             access_token: value.access_token,
+            customer_acceptance: customer_acceptance
+                .map(mandates::CustomerAcceptance::foreign_try_from)
+                .transpose()?,
             enrolled_for_3ds: false,
             related_transaction_id: None,
             payment_experience: None,

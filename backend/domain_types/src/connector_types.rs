@@ -68,6 +68,7 @@ pub enum ConnectorEnum {
     Dlocal,
     Placetopay,
     Rapyd,
+    Aci,
     Trustpay,
 }
 
@@ -103,6 +104,7 @@ impl ForeignTryFrom<grpc_api_types::payments::Connector> for ConnectorEnum {
             grpc_api_types::payments::Connector::Dlocal => Ok(Self::Dlocal),
             grpc_api_types::payments::Connector::Placetopay => Ok(Self::Placetopay),
             grpc_api_types::payments::Connector::Rapyd => Ok(Self::Rapyd),
+            grpc_api_types::payments::Connector::Aci => Ok(Self::Aci),
             grpc_api_types::payments::Connector::Trustpay => Ok(Self::Trustpay),
             grpc_api_types::payments::Connector::Unspecified => {
                 Err(ApplicationErrorResponse::BadRequest(ApiError {
@@ -850,6 +852,7 @@ pub struct PaymentsAuthorizeData<T: PaymentMethodDataTypes> {
     pub order_category: Option<String>,
     pub session_token: Option<String>,
     pub access_token: Option<String>,
+    pub customer_acceptance: Option<CustomerAcceptance>,
     pub enrolled_for_3ds: bool,
     pub related_transaction_id: Option<String>,
     pub payment_experience: Option<common_enums::PaymentExperience>,

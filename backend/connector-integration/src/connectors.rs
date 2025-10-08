@@ -74,5 +74,8 @@ pub use self::placetopay::Placetopay;
 pub mod rapyd;
 pub use self::rapyd::Rapyd;
 
+pub mod aci;
+pub use self::aci::Aci;
+
 pub mod trustpay;
 pub use self::trustpay::Trustpay;

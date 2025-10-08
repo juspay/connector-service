@@ -706,78 +706,190 @@ impl<
     }
 }
 
-fn is_payment_failed(payment_status: &str) -> (bool, &'static str) {
-    match payment_status {
-        "100.100.600" => (true, "Empty CVV for VISA, MASTER not allowed"),
-        "100.350.100" => (true, "Referenced session is rejected (no action possible)"),
-        "100.380.401" => (true, "User authentication failed"),
-        "100.380.501" => (true, "Risk management transaction timeout"),
-        "100.390.103" => (true, "PARes validation failed - problem with signature"),
-        "100.390.105" => (
-            true,
-            "Transaction rejected because of technical error in 3DSecure system",
-        ),
-        "100.390.111" => (
-            true,
-            "Communication error to VISA/Mastercard Directory Server",
-        ),
-        "100.390.112" => (true, "Technical error in 3D system"),
-        "100.390.115" => (true, "Authentication failed due to invalid message format"),
-        "100.390.118" => (true, "Authentication failed due to suspected fraud"),
-        "100.400.304" => (true, "Invalid input data"),
-        "100.550.312" => (true, "Amount is outside allowed ticket size boundaries"),
-        "200.300.404" => (true, "Invalid or missing parameter"),
-        "300.100.100" => (
-            true,
-            "Transaction declined (additional customer authentication required)",
-        ),
-        "400.001.301" => (true, "Card not enrolled in 3DS"),
-        "400.001.600" => (true, "Authentication error"),
-        "400.001.601" => (true, "Transaction declined (auth. declined)"),
-        "400.001.602" => (true, "Invalid transaction"),
-        "400.001.603" => (true, "Invalid transaction"),
-        "400.003.600" => (true, "No description available."),
-        "700.400.200" => (
-            true,
-            "Cannot refund (refund volume exceeded or tx reversed or invalid workflow)",
-        ),
-        "700.500.001" => (true, "Referenced session contains too many transactions"),
-        "700.500.003" => (true, "Test accounts not allowed in production"),
-        "800.100.100" => (true, "Transaction declined for unknown reason"),
-        "800.100.151" => (true, "Transaction declined (invalid card)"),
-        "800.100.152" => (true, "Transaction declined by authorization system"),
-        "800.100.153" => (true, "Transaction declined (invalid CVV)"),
-        "800.100.155" => (true, "Transaction declined (amount exceeds credit)"),
-        "800.100.157" => (true, "Transaction declined (wrong expiry date)"),
-        "800.100.158" => (true, "transaction declined (suspecting manipulation)"),
-        "800.100.160" => (true, "transaction declined (card blocked)"),
-        "800.100.162" => (true, "Transaction declined (limit exceeded)"),
-        "800.100.163" => (
-            true,
-            "Transaction declined (maximum transaction frequency exceeded)",
-        ),
-        "800.100.165" => (true, "Transaction declined (card lost)"),
-        "800.100.168" => (true, "Transaction declined (restricted card)"),
-        "800.100.170" => (true, "Transaction declined (transaction not permitted)"),
-        "800.100.171" => (true, "transaction declined (pick up card)"),
-        "800.100.172" => (true, "Transaction declined (account blocked)"),
-        "800.100.190" => (true, "Transaction declined (invalid configuration data)"),
-        "800.100.202" => (true, "Account Closed"),
-        "800.100.203" => (true, "Insufficient Funds"),
-        "800.120.100" => (true, "Rejected by throttling"),
-        "800.300.102" => (true, "Country blacklisted"),
-        "800.300.401" => (true, "Bin blacklisted"),
-        "800.700.100" => (
-            true,
-            "Transaction for the same session is currently being processed, please try again later",
-        ),
-        "900.100.100" => (
-            true,
-            "Unexpected communication error with connector/acquirer",
-        ),
-        "900.100.300" => (true, "Timeout, uncertain result"),
-        _ => (false, ""),
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TrustpayPaymentStatusCode {
+    // CVV and card validation errors
+    EmptyCvvNotAllowed,
+
+    // Authentication and session errors
+    SessionRejected,
+    UserAuthenticationFailed,
+    RiskManagementTimeout,
+    PaResValidationFailed,
+    ThreeDSecureSystemError,
+    DirectoryServerError,
+    ThreeDSystemError,
+    AuthenticationInvalidFormat,
+    AuthenticationSuspectedFraud,
+
+    // Input and parameter errors
+    InvalidInputData,
+    AmountOutsideBoundaries,
+    InvalidOrMissingParameter,
+
+    // Transaction decline reasons
+    AdditionalAuthRequired,
+    CardNotEnrolledIn3DS,
+    AuthenticationError,
+    TransactionDeclinedAuth,
+    InvalidTransaction1,
+    InvalidTransaction2,
+    NoDescription,
+
+    // Refund errors
+    CannotRefund,
+    TooManyTransactions,
+    TestAccountsNotAllowed,
+
+    // General decline reasons
+    DeclinedUnknownReason,
+    DeclinedInvalidCard,
+    DeclinedByAuthSystem,
+    DeclinedInvalidCvv,
+    DeclinedExceedsCredit,
+    DeclinedWrongExpiry,
+    DeclinedSuspectingManipulation,
+    DeclinedCardBlocked,
+    DeclinedLimitExceeded,
+    DeclinedFrequencyExceeded,
+    DeclinedCardLost,
+    DeclinedRestrictedCard,
+    DeclinedNotPermitted,
+    DeclinedPickUpCard,
+    DeclinedAccountBlocked,
+    DeclinedInvalidConfig,
+    AccountClosed,
+    InsufficientFunds,
+    RejectedByThrottling,
+    CountryBlacklisted,
+    BinBlacklisted,
+    SessionBeingProcessed,
+
+    // Communication errors
+    CommunicationError,
+    TimeoutUncertainResult,
+
+    // Success or other status
+    Unknown,
+}
+
+impl TrustpayPaymentStatusCode {
+    pub fn error_message(&self) -> &'static str {
+        match self {
+            Self::EmptyCvvNotAllowed => "Empty CVV for VISA, MASTER not allowed",
+            Self::SessionRejected => "Referenced session is rejected (no action possible)",
+            Self::UserAuthenticationFailed => "User authentication failed",
+            Self::RiskManagementTimeout => "Risk management transaction timeout",
+            Self::PaResValidationFailed => "PARes validation failed - problem with signature",
+            Self::ThreeDSecureSystemError => "Transaction rejected because of technical error in 3DSecure system",
+            Self::DirectoryServerError => "Communication error to VISA/Mastercard Directory Server",
+            Self::ThreeDSystemError => "Technical error in 3D system",
+            Self::AuthenticationInvalidFormat => "Authentication failed due to invalid message format",
+            Self::AuthenticationSuspectedFraud => "Authentication failed due to suspected fraud",
+            Self::InvalidInputData => "Invalid input data",
+            Self::AmountOutsideBoundaries => "Amount is outside allowed ticket size boundaries",
+            Self::InvalidOrMissingParameter => "Invalid or missing parameter",
+            Self::AdditionalAuthRequired => "Transaction declined (additional customer authentication required)",
+            Self::CardNotEnrolledIn3DS => "Card not enrolled in 3DS",
+            Self::AuthenticationError => "Authentication error",
+            Self::TransactionDeclinedAuth => "Transaction declined (auth. declined)",
+            Self::InvalidTransaction1 => "Invalid transaction",
+            Self::InvalidTransaction2 => "Invalid transaction",
+            Self::NoDescription => "No description available.",
+            Self::CannotRefund => "Cannot refund (refund volume exceeded or tx reversed or invalid workflow)",
+            Self::TooManyTransactions => "Referenced session contains too many transactions",
+            Self::TestAccountsNotAllowed => "Test accounts not allowed in production",
+            Self::DeclinedUnknownReason => "Transaction declined for unknown reason",
+            Self::DeclinedInvalidCard => "Transaction declined (invalid card)",
+            Self::DeclinedByAuthSystem => "Transaction declined by authorization system",
+            Self::DeclinedInvalidCvv => "Transaction declined (invalid CVV)",
+            Self::DeclinedExceedsCredit => "Transaction declined (amount exceeds credit)",
+            Self::DeclinedWrongExpiry => "Transaction declined (wrong expiry date)",
+            Self::DeclinedSuspectingManipulation => "transaction declined (suspecting manipulation)",
+            Self::DeclinedCardBlocked => "transaction declined (card blocked)",
+            Self::DeclinedLimitExceeded => "Transaction declined (limit exceeded)",
+            Self::DeclinedFrequencyExceeded => "Transaction declined (maximum transaction frequency exceeded)",
+            Self::DeclinedCardLost => "Transaction declined (card lost)",
+            Self::DeclinedRestrictedCard => "Transaction declined (restricted card)",
+            Self::DeclinedNotPermitted => "Transaction declined (transaction not permitted)",
+            Self::DeclinedPickUpCard => "transaction declined (pick up card)",
+            Self::DeclinedAccountBlocked => "Transaction declined (account blocked)",
+            Self::DeclinedInvalidConfig => "Transaction declined (invalid configuration data)",
+            Self::AccountClosed => "Account Closed",
+            Self::InsufficientFunds => "Insufficient Funds",
+            Self::RejectedByThrottling => "Rejected by throttling",
+            Self::CountryBlacklisted => "Country blacklisted",
+            Self::BinBlacklisted => "Bin blacklisted",
+            Self::SessionBeingProcessed => "Transaction for the same session is currently being processed, please try again later",
+            Self::CommunicationError => "Unexpected communication error with connector/acquirer",
+            Self::TimeoutUncertainResult => "Timeout, uncertain result",
+            Self::Unknown => "",
+        }
     }
+
+    pub fn is_failure(&self) -> bool {
+        !matches!(self, Self::Unknown)
+    }
+}
+
+impl From<&str> for TrustpayPaymentStatusCode {
+    fn from(status_code: &str) -> Self {
+        match status_code {
+            "100.100.600" => Self::EmptyCvvNotAllowed,
+            "100.350.100" => Self::SessionRejected,
+            "100.380.401" => Self::UserAuthenticationFailed,
+            "100.380.501" => Self::RiskManagementTimeout,
+            "100.390.103" => Self::PaResValidationFailed,
+            "100.390.105" => Self::ThreeDSecureSystemError,
+            "100.390.111" => Self::DirectoryServerError,
+            "100.390.112" => Self::ThreeDSystemError,
+            "100.390.115" => Self::AuthenticationInvalidFormat,
+            "100.390.118" => Self::AuthenticationSuspectedFraud,
+            "100.400.304" => Self::InvalidInputData,
+            "100.550.312" => Self::AmountOutsideBoundaries,
+            "200.300.404" => Self::InvalidOrMissingParameter,
+            "300.100.100" => Self::AdditionalAuthRequired,
+            "400.001.301" => Self::CardNotEnrolledIn3DS,
+            "400.001.600" => Self::AuthenticationError,
+            "400.001.601" => Self::TransactionDeclinedAuth,
+            "400.001.602" => Self::InvalidTransaction1,
+            "400.001.603" => Self::InvalidTransaction2,
+            "400.003.600" => Self::NoDescription,
+            "700.400.200" => Self::CannotRefund,
+            "700.500.001" => Self::TooManyTransactions,
+            "700.500.003" => Self::TestAccountsNotAllowed,
+            "800.100.100" => Self::DeclinedUnknownReason,
+            "800.100.151" => Self::DeclinedInvalidCard,
+            "800.100.152" => Self::DeclinedByAuthSystem,
+            "800.100.153" => Self::DeclinedInvalidCvv,
+            "800.100.155" => Self::DeclinedExceedsCredit,
+            "800.100.157" => Self::DeclinedWrongExpiry,
+            "800.100.158" => Self::DeclinedSuspectingManipulation,
+            "800.100.160" => Self::DeclinedCardBlocked,
+            "800.100.162" => Self::DeclinedLimitExceeded,
+            "800.100.163" => Self::DeclinedFrequencyExceeded,
+            "800.100.165" => Self::DeclinedCardLost,
+            "800.100.168" => Self::DeclinedRestrictedCard,
+            "800.100.170" => Self::DeclinedNotPermitted,
+            "800.100.171" => Self::DeclinedPickUpCard,
+            "800.100.172" => Self::DeclinedAccountBlocked,
+            "800.100.190" => Self::DeclinedInvalidConfig,
+            "800.100.202" => Self::AccountClosed,
+            "800.100.203" => Self::InsufficientFunds,
+            "800.120.100" => Self::RejectedByThrottling,
+            "800.300.102" => Self::CountryBlacklisted,
+            "800.300.401" => Self::BinBlacklisted,
+            "800.700.100" => Self::SessionBeingProcessed,
+            "900.100.100" => Self::CommunicationError,
+            "900.100.300" => Self::TimeoutUncertainResult,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+fn is_payment_failed(payment_status: &str) -> (bool, &'static str) {
+    let status_code = TrustpayPaymentStatusCode::from(payment_status);
+    (status_code.is_failure(), status_code.error_message())
 }
 
 fn is_payment_successful(payment_status: &str) -> CustomResult<bool, errors::ConnectorError> {

@@ -97,6 +97,14 @@ impl<T: PaymentMethodDataTypes> Card<T> {
             year.peek()
         )))
     }
+
+    pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
+        let mut year = self.card_exp_year.peek().clone();
+        if year.len() == 2 {
+            year = format!("20{year}");
+        }
+        Secret::new(year)
+    }
 }
 
 impl Card<DefaultPCIHolder> {
@@ -120,13 +128,6 @@ impl Card<DefaultPCIHolder> {
             delimiter,
             year.peek()
         ))
-    }
-    pub fn get_expiry_year_4_digit(&self) -> Secret<String> {
-        let mut year = self.card_exp_year.peek().clone();
-        if year.len() == 2 {
-            year = format!("20{year}");
-        }
-        Secret::new(year)
     }
     pub fn get_expiry_date_as_yymm(&self) -> Result<Secret<String>, crate::errors::ConnectorError> {
         let year = self.get_card_expiry_year_2_digit()?.expose();
