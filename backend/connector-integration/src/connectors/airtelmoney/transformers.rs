@@ -477,9 +477,9 @@ impl<T> TryFrom<AirtelMoneyRefundResponse> for router_response_types::RefundsRes
         match response.response {
             AirtelMoneyRefundResponseData::ValidRefund(valid_refund) => {
                 let status = match valid_refund.status.as_str() {
-                    "SUCCESS" => domain_types::enums::RefundStatus::Success,
-                    "PENDING" => domain_types::enums::RefundStatus::Pending,
-                    _ => domain_types::enums::RefundStatus::Failure,
+                    "SUCCESS" => RefundStatus::Success,
+                    "PENDING" => RefundStatus::Pending,
+                    _ => RefundStatus::Failure,
                 };
 
                 Ok(Self {
