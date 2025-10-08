@@ -42,6 +42,22 @@ use transformers::{self as airtelmoney, AirtelMoneyPaymentsRequest, AirtelMoneyP
 use super::macros;
 use crate::{types::ResponseRouterData, with_error_response_body};
 
+pub struct AirtelMoney<T> {
+    amount_converter: &'static (dyn common_utils::types::AmountConverterTrait<Output = String> + Sync),
+    connector_name: &'static str,
+    payment_method_data: std::marker::PhantomData<T>,
+}
+
+impl<T> AirtelMoney<T> {
+    pub fn new() -> Self {
+        Self {
+            amount_converter: &common_utils::types::StringMinorUnit,
+            connector_name: "airtelmoney",
+            payment_method_data: std::marker::PhantomData,
+        }
+    }
+}
+
 use crate::utils;
 
 macros::create_all_prerequisites!(
