@@ -118,6 +118,7 @@ pub struct Connectors {
     pub placetopay: ConnectorParams,
     pub rapyd: ConnectorParams,
     pub aci: ConnectorParams,
+    pub finix: ConnectorParams,
 }
 
 #[derive(Clone, serde::Deserialize, Debug, Default)]
