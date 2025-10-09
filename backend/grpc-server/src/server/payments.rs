@@ -9,7 +9,7 @@ use domain_types::{
     connector_flow::{
         Authenticate, Authorize, Capture, CreateAccessToken, CreateOrder, CreateSessionToken,
         PSync, PaymentMethodToken, PostAuthenticate, PreAuthenticate, Refund, RepeatPayment,
-        SetupMandate, Void,
+        SetupMandate, Void, VoidPC,
     },
     connector_types::{
         AccessTokenRequestData, AccessTokenResponseData, ConnectorResponseHeaders,
@@ -19,7 +19,7 @@ use domain_types::{
         PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
         PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundsData,
         RefundsResponseData, RepeatPaymentData, SessionTokenRequestData, SessionTokenResponseData,
-        SetupMandateRequestData,
+        SetupMandateRequestData, PaymentsCancelPostCaptureData,
     },
     errors::{ApiError, ApplicationErrorResponse},
     payment_method_data::{DefaultPCIHolder, PaymentMethodDataTypes, VaultTokenHolder},
@@ -29,7 +29,7 @@ use domain_types::{
     types::{
         generate_payment_capture_response, generate_payment_sync_response,
         generate_payment_void_response, generate_refund_response, generate_repeat_payment_response,
-        generate_setup_mandate_response,
+        generate_setup_mandate_response, generate_payment_void_post_capture_response,
     },
     utils::{ForeignFrom, ForeignTryFrom},
 };
@@ -46,7 +46,7 @@ use grpc_api_types::payments::{
     PaymentServiceRegisterRequest, PaymentServiceRegisterResponse,
     PaymentServiceRepeatEverythingRequest, PaymentServiceRepeatEverythingResponse,
     PaymentServiceTransformRequest, PaymentServiceTransformResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse, WebhookTransformationStatus,
+    PaymentServiceVoidResponse, PaymentServiceVoidPostCaptureRequest, PaymentServiceVoidPostCaptureResponse, RefundResponse, WebhookTransformationStatus,
 };
 use hyperswitch_masking::ExposeInterface;
 use injector::{TokenData, VaultConnectors};
@@ -128,6 +128,11 @@ trait PaymentOperationsInternal {
         &self,
         request: RequestData<PaymentServiceVoidRequest>,
     ) -> Result<tonic::Response<PaymentServiceVoidResponse>, tonic::Status>;
+
+    async fn internal_void_post_capture(
+        &self,
+        request: RequestData<PaymentServiceVoidPostCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status>;
 
     async fn internal_refund(
         &self,
@@ -1140,6 +1145,21 @@ impl PaymentOperationsInternal for Payments {
         generate_response_fn: generate_payment_post_authenticate_response,
         all_keys_required: None
     );
+
+    implement_connector_operation!(
+        fn_name: internal_void_post_capture,
+        log_prefix: "PAYMENT_VOID_POST_CAPTURE",
+        request_type: PaymentServiceVoidPostCaptureRequest,
+        response_type: PaymentServiceVoidPostCaptureResponse,
+        flow_marker: VoidPC,
+        resource_common_data_type: PaymentFlowData,
+        request_data_type: PaymentsCancelPostCaptureData,
+        response_data_type: PaymentsResponseData,
+        request_data_constructor: PaymentsCancelPostCaptureData::foreign_try_from,
+        common_flow_data_constructor: PaymentFlowData::foreign_try_from,
+        generate_response_fn: generate_payment_void_post_capture_response,
+        all_keys_required: None
+    );
 }
 
 #[tonic::async_trait]
@@ -1515,6 +1535,46 @@ impl PaymentService for Payments {
             self.config.clone(),
             FlowName::Void,
             |request_data| async move { self.internal_void_payment(request_data).await },
+        )
+        .await
+    }
+
+    #[tracing::instrument(
+        name = "payment_void_post_capture",
+        fields(
+            name = common_utils::consts::NAME,
+            service_name = common_utils::consts::PAYMENT_SERVICE_NAME,
+            service_method = FlowName::VoidPostCapture.as_str(),
+            request_body = tracing::field::Empty,
+            response_body = tracing::field::Empty,
+            error_message = tracing::field::Empty,
+            merchant_id = tracing::field::Empty,
+            gateway = tracing::field::Empty,
+            request_id = tracing::field::Empty,
+            status_code = tracing::field::Empty,
+            message_ = "Golden Log Line (incoming)",
+            response_time = tracing::field::Empty,
+            tenant_id = tracing::field::Empty,
+            flow = FlowName::VoidPostCapture.as_str(),
+            flow_specific_fields.status = tracing::field::Empty,
+        )
+        skip(self, request)
+    )]
+    async fn void_post_capture(
+        &self,
+        request: tonic::Request<PaymentServiceVoidPostCaptureRequest>,
+    ) -> Result<tonic::Response<PaymentServiceVoidPostCaptureResponse>, tonic::Status> {
+        let service_name = request
+            .extensions()
+            .get::<String>()
+            .cloned()
+            .unwrap_or_else(|| "PaymentService".to_string());
+        grpc_logging_wrapper(
+            request,
+            &service_name,
+            self.config.clone(),
+            FlowName::VoidPostCapture,
+            |request_data| async move { self.internal_void_post_capture(request_data).await },
         )
         .await
     }

@@ -49,6 +49,8 @@ dlocal.base_url = "https://api.dlocal.com/"
 placetopay.base_url = "https://checkout.placetopay.com/rest/gateway"
 rapyd.base_url = "https://api.rapyd.net"
 aci.base_url = "https://eu-prod.oppwa.com/"
+worldpayvantiv.base_url = "https://www.testvantivcnp.com/sandbox/new/sandbox/communicator/online"
+worldpayvantiv.secondary_base_url = "https://www.testvantivcnp.com/sandbox"
 
 # Generic Events Configuration
 [events]
