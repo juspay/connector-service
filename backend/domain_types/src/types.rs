@@ -1120,7 +1120,7 @@ impl<
             statement_descriptor: None,
 
             router_return_url: value.return_url,
-            complete_authorize_url: None,
+            complete_authorize_url: value.complete_authorize_url,
             setup_future_usage: None,
             mandate_id: None,
             off_session: value.off_session,
@@ -5486,7 +5486,16 @@ impl
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                    serde_json::from_str::<serde_json::Value>(json_string)
+                        .map(Secret::new)
+                        .map_err(|e| {
+                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: format!("Failed to parse connector_meta_data: {}", e),
+                                error_object: None,
+                            }))
+                        })
                 }).transpose()?
             },
             amount_captured: None,
@@ -5561,7 +5570,16 @@ impl
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                    serde_json::from_str::<serde_json::Value>(json_string)
+                        .map(Secret::new)
+                        .map_err(|e| {
+                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: format!("Failed to parse connector_meta_data: {}", e),
+                                error_object: None,
+                            }))
+                        })
                 }).transpose()?
             },
             amount_captured: None,
@@ -5636,7 +5654,16 @@ impl
             return_url: value.return_url.clone(),
             connector_meta_data: {
                 value.metadata.get("connector_meta_data").map(|json_string| {
-                    Ok::<Secret<serde_json::Value>, error_stack::Report<ApplicationErrorResponse>>(Secret::new(serde_json::Value::String(json_string.clone())))
+                    serde_json::from_str::<serde_json::Value>(json_string)
+                        .map(Secret::new)
+                        .map_err(|e| {
+                            error_stack::Report::new(ApplicationErrorResponse::BadRequest(ApiError {
+                                sub_code: "INVALID_CONNECTOR_METADATA".to_owned(),
+                                error_identifier: 400,
+                                error_message: format!("Failed to parse connector_meta_data: {}", e),
+                                error_object: None,
+                            }))
+                        })
                 }).transpose()?
             },
             amount_captured: None,
