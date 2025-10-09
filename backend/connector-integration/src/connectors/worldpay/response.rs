@@ -84,6 +84,9 @@ pub struct Advice {
 pub struct ThreeDsResponse {
     pub outcome: String,
     pub issuer_response: IssuerResponse,
+    pub version: Option<String>,
+    pub eci: Option<String>,
+    pub applied: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -98,6 +101,7 @@ pub struct ThreeDsChallengedResponse {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AuthenticationResponse {
     pub version: String,
+    pub eci: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -479,3 +483,4 @@ pub type WorldpayCaptureResponse = WorldpayPaymentsResponse;
 pub type WorldpayVoidResponse = WorldpayPaymentsResponse;
 pub type WorldpayRefundResponse = WorldpayPaymentsResponse;
 pub type WorldpayRefundSyncResponse = WorldpayEventResponse;
+pub type WorldpayAuthenticateResponse = WorldpayPaymentsResponse;

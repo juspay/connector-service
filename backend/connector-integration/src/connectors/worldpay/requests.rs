@@ -382,3 +382,12 @@ pub struct WorldpayCompleteAuthorizationRequest {
 
 pub(super) const THREE_DS_MODE: &str = "always";
 pub(super) const THREE_DS_TYPE: &str = "integrated";
+
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldpayAuthenticateRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_reference: Option<String>,
+}
+
