@@ -455,6 +455,7 @@ enum Connector {
   PHONEPE = 91;
   CASHFREE = 92;
   PAYTM = 93;
+  BLUECODE = 94;
 }
 
 // Payment method types.
@@ -828,8 +829,8 @@ enum CountryAlpha2 {
 // Represents a physical address with contact information.
 message Address {
   // Personal Information
-  optional string first_name = 1;
-  optional string last_name = 2;
+  optional SecretString first_name = 1;
+  optional SecretString last_name = 2;
   
   // Address Details
   optional SecretString line1 = 3;
@@ -852,7 +853,16 @@ message AccessToken {
   string token = 1;
   
   // Expiration timestamp of the token (seconds since epoch).
-  int64 expires_in_seconds = 2;
+  optional int64 expires_in_seconds = 2;
+  
+  // Token type (e.g., "Bearer", "Basic").
+  optional string token_type = 3;
+}
+
+// State data to be sent back to Hyperswitch for storage
+message ConnectorState {
+  // Access token obtained from connector
+  optional AccessToken access_token = 1;
 }
 
 // Additional authentication data, typically from 3DS.
@@ -911,6 +921,7 @@ message BrowserInformation {
   optional string accept_header = 9;
   optional string user_agent = 10;
   optional string accept_language = 14;
+  optional string referer = 15;
   
   // Device Information
   optional string ip_address = 8;
@@ -1014,6 +1025,14 @@ message WebhookSecrets {
   optional string additional_secret = 2;
 }
 
+message IncompleteTransformationResponse {
+  // The resource object bytes that should be sent in PSync call
+  bytes resource_object = 1;
+  
+  // Reason why transformation is incomplete
+  string reason = 2;
+}
+
 // Content of a webhook response, can be one of several types.
 message WebhookResponseContent {
   oneof content {
@@ -1025,6 +1044,9 @@ message WebhookResponseContent {
     
     // Content if the webhook is for a dispute synchronization.
     DisputeResponse disputes_response = 3;
+
+    // Content if the payment webhook transformation is incomplete and requires psync call.
+    IncompleteTransformationResponse incomplete_transformation = 4;
   }
 }
 
@@ -1118,7 +1140,7 @@ message PaymentServiceAuthorizeRequest {
   optional string complete_authorize_url = 19; // URL to complete authorization
   
   // Session and Token Information
-  optional AccessToken access_token = 20; // Access token for secure communication
+  optional string access_token = 20; // Access token for secure communication
   optional string session_token = 21; // Session token, if applicable
   
   // Order Details
@@ -1162,8 +1184,14 @@ message PaymentServiceAuthorizeResponse {
   // Metadata
   map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
   
+  // State Information
+  optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
+  
   // Raw Response
   optional string raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 14; // Raw request from the connector for debugging
 }
 
 // Request message for synchronizing payment status.
@@ -1173,6 +1201,15 @@ message PaymentServiceGetRequest {
   
   // Reference
   optional Identifier request_ref_id = 2; // Renamed from connector_request_reference_id
+
+  // Session and Token Information
+  optional string access_token = 3; // Access token for secure communication
+
+  // Capture Settings
+  optional CaptureMethod capture_method = 8; // Method for capturing the payment
+
+  // Body of the response.
+  optional bytes handle_response = 4;
 }
 
 // Response message for a payment status synchronization.
@@ -1215,8 +1252,14 @@ message PaymentServiceGetResponse {
   optional string merchant_order_reference_id = 23; // Merchant's internal reference ID
   map<string, string> metadata = 24; // Additional metadata from the connector
   
+  // State Information
+  optional ConnectorState state = 28; // State data for access token storage and other connector-specific state
+
   // Raw Response
   optional string raw_connector_response = 25; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 29; // Raw request to the connector for debugging
 }
 
 // Request message for voiding a payment.
@@ -1231,6 +1274,9 @@ message PaymentServiceVoidRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
+
+  // Session and Token Information
+  optional string access_token = 6; // Access token for secure communication
 }
 
 // Response message for a payment void operation.
@@ -1247,6 +1293,12 @@ message PaymentServiceVoidResponse {
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from connector_response_reference_id
+
+  // State Information
+  optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for capturing a payment.
@@ -1267,6 +1319,9 @@ message PaymentServiceCaptureRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 7; // Browser information, if relevant
+
+  // Session and Token Information
+  optional string access_token = 8; // Access token for secure communication
 }
 
 // Response message for a payment capture operation.
@@ -1283,6 +1338,12 @@ message PaymentServiceCaptureResponse {
   
   // Reference
   optional Identifier response_ref_id = 5; // Renamed from response_reference_id
+
+  // State Information
+  optional ConnectorState state = 8; // State data for access token storage and other connector-specific state
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for processing a refund.
@@ -1311,6 +1372,9 @@ message PaymentServiceRefundRequest {
   
   // Browser Information
   optional BrowserInformation browser_info = 15; // Browser information, if relevant
+
+  // Session and Token Information
+  optional string access_token = 16; // Access token for secure communication
 }
 
 // Response message for a refund operation (unified for both Create and Get).
@@ -1349,8 +1413,14 @@ message RefundResponse {
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
   
+  // State Information
+  optional ConnectorState state = 24; // State data for access token storage and other connector-specific state
+
   // Raw Response
   optional string raw_connector_response = 21; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 25; // Raw request to the connector for debugging
 }
 
 // Request message for creating a dispute.
@@ -1359,6 +1429,9 @@ message PaymentServiceDisputeRequest {
   Identifier request_ref_id = 1; // Reference ID for tracking
   Identifier transaction_id = 2; // Transaction ID to raise the dispute for
   string dispute_id = 3; // Connector's unique identifier
+
+  // Session and Token Information
+  optional string access_token = 4; // Access token for secure communication
 }
 
 // Response message for dispute operations (unified for both Create and Get).
@@ -1393,6 +1466,9 @@ message DisputeResponse {
   
   // Reference
   optional Identifier response_ref_id = 17; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 20; // Raw request to the connector for debugging
 }
 
 // Request message for setting up a mandate.
@@ -1427,7 +1503,7 @@ message PaymentServiceRegisterRequest {
   optional string complete_authorize_url = 15; // URL to complete authorization
   
   // Session and Token Information
-  optional AccessToken access_token = 16; // Access token for secure communication
+  optional string access_token = 16; // Access token for secure communication
   optional string session_token = 17; // Session token, if applicable
   
   // Order Details
@@ -1470,6 +1546,12 @@ message PaymentServiceRegisterResponse {
   
   // Authorization Details
   optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+  
+  // State Information
+  optional ConnectorState state = 12; // State data for access token storage and other connector-specific state
+
+  // Raw Request
+  optional string raw_connector_request = 13; // Raw request to the connector for debugging
 }
 
 // Request message for repeat payment (MIT - Merchant Initiated Transaction).
@@ -1496,6 +1578,9 @@ message PaymentServiceRepeatEverythingRequest {
   // Customer Information
   optional SecretString email = 12; // Email address of the customer
 
+  // Session and Token Information
+  optional string access_token = 20; // Access token for secure communication
+
   // Browser Information
   optional BrowserInformation browser_info = 13; // Browser information, if relevant
 
@@ -1519,8 +1604,219 @@ message PaymentServiceRepeatEverythingResponse {
   optional string network_txn_id = 5; // Transaction ID from the payment network
   optional Identifier response_ref_id = 6; // Reference ID from the connector response
   
+  // State Information
+  optional ConnectorState state = 10; // State data for access token storage and other connector-specific state
+  
   // Raw Response
   optional string raw_connector_response = 7; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 11; // Raw request to the connector for debugging
+}
+
+// -------------------------
+// 3DS Authentication Flow Messages
+// -------------------------
+
+// Request message for pre-authentication step
+message PaymentServicePreAuthenticateRequest {
+  // Payment Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  
+  // Payment Method
+  PaymentMethod payment_method = 5; // Payment method to be used
+  
+  // Customer Information
+  optional SecretString email = 6; // Email address of the customer
+  optional string customer_name = 7; // Name of the customer
+  
+  // Address Information
+  PaymentAddress address = 8; // Billing and shipping address details
+  
+  // Authentication Details
+  bool enrolled_for_3ds = 9; // Indicates if the customer is enrolled for 3D Secure
+  
+  // Metadata
+  map<string, string> metadata = 10; // Additional metadata for the connector
+  
+  // URLs for Redirection
+  optional string return_url = 11; // URL to redirect after authentication
+  optional string continue_redirection_url = 12; // URL to complete authorization
+  
+  // Session and Token Information
+  optional string access_token = 13; // Access token for secure communication
+  
+  // Contextual Information
+  optional BrowserInformation browser_info = 14; // Information about the customer's browser
+}
+
+// Response message for pre-authentication step
+message PaymentServicePreAuthenticateResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the pre-authentication attempt
+  optional string error_code = 3; // Error code if the pre-authentication failed
+  optional string error_message = 4; // Error message if the pre-authentication failed
+  uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
+  
+  // Redirection and Transaction Details
+  optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
+  optional string network_txn_id = 6; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
+  
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
+  
+  // State Information
+  optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
+  
+  // Raw Response
+  optional string raw_connector_response = 9; // Raw response from the connector for debugging
+}
+
+// Request message for authentication step
+message PaymentServiceAuthenticateRequest {
+  // Payment Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  
+  // Payment Method
+  PaymentMethod payment_method = 5; // Payment method to be used
+  
+  // Customer Information
+  optional SecretString email = 6; // Email address of the customer
+  optional string customer_name = 7; // Name of the customer
+  
+  // Address Information
+  PaymentAddress address = 8; // Billing and shipping address details
+  
+  // Authentication Details
+  optional AuthenticationData authentication_data = 9; // Additional authentication data from previous steps
+  
+  // Metadata
+  map<string, string> metadata = 10; // Additional metadata for the connector
+  
+  // URLs for Redirection
+  optional string return_url = 11; // URL to redirect after authentication
+  optional string continue_redirection_url = 12; // URL to complete authorization
+  
+  // Session and Token Information
+  optional string access_token = 13; // Access token for secure communication
+  
+  // Contextual Information
+  optional BrowserInformation browser_info = 14; // Information about the customer's browser
+}
+
+// Response message for authentication step
+message PaymentServiceAuthenticateResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the authentication attempt
+  optional string error_code = 3; // Error code if the authentication failed
+  optional string error_message = 4; // Error message if the authentication failed
+  uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
+  
+  // Redirection and Transaction Details
+  optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
+  optional string network_txn_id = 6; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
+  
+  // Authentication Results
+  optional AuthenticationData authentication_data = 8; // Authentication data from the connector
+  
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
+  
+  // State Information
+  optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
+  
+  // Raw Response
+  optional string raw_connector_response = 9; // Raw response from the connector for debugging
+}
+
+// Request message for post-authentication step
+message PaymentServicePostAuthenticateRequest {
+  // Payment Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Amount Information
+  int64 amount = 2; // The amount for the payment in major currency units
+  Currency currency = 3; // The currency for the payment, in ISO 4217 three-letter code
+  int64 minor_amount = 4; // The minor amount for the payment (e.g., cents)
+  
+  // Payment Method
+  PaymentMethod payment_method = 5; // Payment method to be used
+  
+  // Customer Information
+  optional SecretString email = 6; // Email address of the customer
+  optional string customer_name = 7; // Name of the customer
+  
+  // Address Information
+  PaymentAddress address = 8; // Billing and shipping address details
+  
+  // Authentication Details
+  optional AuthenticationData authentication_data = 9; // Authentication data from previous steps
+  
+  // Metadata
+  map<string, string> metadata = 10; // Additional metadata for the connector
+  
+  // URLs for Redirection
+  optional string return_url = 11; // URL to redirect after authentication
+  optional string continue_redirection_url = 12; // URL to complete authorization
+  
+  // Session and Token Information
+  optional string access_token = 13; // Access token for secure communication
+  
+  // Contextual Information
+  optional BrowserInformation browser_info = 14; // Information about the customer's browser
+}
+
+// Response message for post-authentication step
+message PaymentServicePostAuthenticateResponse {
+  // Identification
+  Identifier transaction_id = 1; // Identifier for the resource created
+  
+  // Status Information
+  PaymentStatus status = 2; // Status of the post-authentication attempt
+  optional string error_code = 3; // Error code if the post-authentication failed
+  optional string error_message = 4; // Error message if the post-authentication failed
+  uint32 status_code = 10; // HTTP status code from the connector
+  map<string, string> response_headers = 11; // Optional HTTP response headers from the connector
+  
+  // Redirection and Transaction Details
+  optional RedirectForm redirection_data = 5; // Data for redirecting the customer's browser
+  optional string network_txn_id = 6; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 7; // Response reference ID for tracking
+  
+  // Authentication Results
+  optional AuthenticationData authentication_data = 8; // Final authentication data
+  
+  // Authorization Details
+  optional bool incremental_authorization_allowed = 9; // Indicates if incremental authorization is allowed
+  
+  // Metadata
+  map<string, string> connector_metadata = 12; // Connector-specific metadata for the transaction
+  
+  // State Information
+  optional ConnectorState state = 13; // State data for access token storage and other connector-specific state
+  
+  // Raw Response
+  optional string raw_connector_response = 14; // Raw response from the connector for debugging
 }
 
 // Request message for PaymentService.Transform RPC
@@ -1533,6 +1829,16 @@ message PaymentServiceTransformRequest {
   
   // Security
   optional WebhookSecrets webhook_secrets = 3; // Secrets for verifying authenticity
+
+  // Session and Token Information
+  optional string access_token = 4; // Access token for secure communication
+}
+
+// Status of webhook transformation process
+enum WebhookTransformationStatus {
+  WEBHOOK_TRANSFORMATION_STATUS_UNSPECIFIED = 0; // Default value
+  COMPLETE = 1;     // Transformation completed successfully
+  INCOMPLETE = 2;   // Transformation incomplete, requires psync call
 }
 
 // Response message for PaymentService.Transform RPC
@@ -1548,6 +1854,9 @@ message PaymentServiceTransformResponse {
   
   // Reference
   optional Identifier response_ref_id = 4; // Response reference ID for tracking
+
+  // Transformation Status
+  WebhookTransformationStatus transformation_status = 5; // Status of the webhook transformation
 }
 
 // -------------------------
@@ -1566,6 +1875,12 @@ message RefundServiceGetRequest {
 
   // Browser Information
   optional BrowserInformation browser_info = 5; // Information about the customer's browser
+
+  // Session and Token Information
+  optional string access_token = 6; // Access token for secure communication
+
+// Metadata
+  map<string, string> refund_metadata = 7; // Metadata specific to the refund sync  
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -1601,6 +1916,9 @@ message PaymentServiceRefundResponse {
   optional string merchant_order_reference_id = 18; // Merchant's internal reference ID
   map<string, string> metadata = 19; // Additional metadata from the connector
   map<string, string> refund_metadata = 20; // Refund-specific metadata from the connector
+
+  // State Information
+  optional ConnectorState state = 21; // State data for access token storage and other connector-specific state
 }
 
 // Legacy alias for backward compatibility - use RefundResponse instead
@@ -1700,6 +2018,9 @@ message DisputeServiceSubmitEvidenceResponse {
   
   // Reference
   optional Identifier response_ref_id = 7; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 10; // Raw request to the connector for debugging
 }
 
 // Request message for retrieving dispute information.
@@ -1831,6 +2152,9 @@ message DisputeDefendResponse {
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // Request message for accepting a dispute.
@@ -1856,6 +2180,9 @@ message AcceptDisputeResponse {
   
   // Reference
   optional Identifier response_ref_id = 6; // Response reference ID for tracking
+
+  // Raw Request
+  optional string raw_connector_request = 9; // Raw request to the connector for debugging
 }
 
 // ============================================================================

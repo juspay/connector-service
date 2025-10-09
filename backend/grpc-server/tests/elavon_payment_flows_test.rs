@@ -218,7 +218,10 @@ fn create_payment_sync_request(transaction_id: &str) -> PaymentServiceGetRequest
         request_ref_id: Some(Identifier {
             id_type: Some(IdType::Id(format!("elavon_sync_{}", get_timestamp()))),
         }), // Some(format!("elavon_sync_{}", get_timestamp())),
-            // all_keys_required: Some(false),
+        // all_keys_required: Some(false),
+        capture_method: None,
+        handle_response: None,
+        access_token: None,
     }
 }
 
@@ -277,6 +280,7 @@ fn create_payment_capture_request(transaction_id: &str) -> PaymentServiceCapture
         metadata: HashMap::new(),
         request_ref_id: None,
         browser_info: None,
+        access_token: None,
     }
 }
 
@@ -360,6 +364,7 @@ fn create_refund_request(transaction_id: &str) -> PaymentServiceRefundRequest {
         merchant_account_id: None,
         capture_method: None,
         request_ref_id: None, // all_keys_required: Some(false),
+        access_token: None,
     }
 }
 
@@ -373,6 +378,8 @@ fn create_refund_sync_request(transaction_id: &str, refund_id: &str) -> RefundSe
         refund_reason: None,
         browser_info: None,
         request_ref_id: None, // all_keys_required: None,
+        refund_metadata: HashMap::new(),
+        access_token: None,
     }
 }
 

@@ -313,6 +313,8 @@ impl From<PaymentAuthorizationError> for PaymentServiceAuthorizeResponse {
             response_headers: std::collections::HashMap::new(),
             connector_metadata: std::collections::HashMap::new(),
             raw_connector_response: None,
+            raw_connector_request: None,
+            state: None,
         }
     }
 }

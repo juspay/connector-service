@@ -6,7 +6,9 @@ pub mod errors;
 pub mod ext_traits;
 pub mod fp_utils;
 pub mod id_type;
+pub mod lineage;
 pub mod macros;
+pub mod metadata;
 pub mod new_types;
 pub mod pii;
 pub mod request;
@@ -15,16 +17,14 @@ pub mod types;
 pub use errors::{CustomResult, EventPublisherError, ParsingError, ValidationError};
 #[cfg(feature = "kafka")]
 pub use event_publisher::{emit_event_with_config, init_event_publisher};
+
 #[cfg(not(feature = "kafka"))]
 pub fn init_event_publisher(_config: &events::EventConfig) -> CustomResult<(), ()> {
     Ok(())
 }
 #[cfg(not(feature = "kafka"))]
-pub async fn emit_event_with_config(
-    _event: events::Event,
-    _config: &events::EventConfig,
-) -> CustomResult<bool, ()> {
-    Ok(false)
+pub fn emit_event_with_config(_event: events::Event, _config: &events::EventConfig) {
+    // No-op when kafka feature is disabled
 }
 
 pub use global_id::{CellId, GlobalPaymentId};

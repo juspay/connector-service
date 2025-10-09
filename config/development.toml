@@ -24,10 +24,9 @@ host = "127.0.0.1"
 port = 8080
 
 [proxy]
-# http_url = "http proxy url"                   # Proxy all HTTP traffic via this proxy
-# https_url = "https proxy url"                 # Proxy all HTTPS traffic via this proxy
-idle_pool_connection_timeout = 90               # Timeout for idle pool connections (defaults to 90s)
-bypass_proxy_urls = ["localhost", "local"]
+idle_pool_connection_timeout = 90
+bypass_proxy_urls = []
+mitm_proxy_enabled = false
 
 [connectors]
 adyen.base_url = "https://checkout-test.adyen.com/"
@@ -45,10 +44,19 @@ fiuu.base_url = "https://sandbox.merchant.razer.com/"
 payu.base_url = "https://test.payu.in/"
 paytm.base_url = "https://securegw-stage.paytm.in/"
 cashtocode.base_url = "https://cluster05.api-test.cashtocode.com"
+bluecode.base_url = "https://dev.eorder.reloadhero.com/"
 novalnet.base_url = "https://payport.novalnet.de/v2"
 nexinets.base_url = "https://apitest.payengine.de/v1"
 noon.base_url = "https://api-test.noonpayments.com/"
 mifinity.base_url = "https://demo.mifinity.com/"
+braintree.base_url = "https://payments.sandbox.braintree-api.com/graphql"
+volt.base_url = "https://api.sandbox.volt.io/"
+cryptopay.base_url = "https://business-sandbox.cryptopay.me"
+helcim.base_url = "https://api.helcim.com/"
+dlocal.base_url = "https://sandbox.dlocal.com/"
+placetopay.base_url = "https://test.placetopay.com/rest/gateway"
+rapyd.base_url = "https://sandboxapi.rapyd.net"
+aci.base_url = "https://eu-test.oppwa.com/"
 
 # Generic Events Configuration
 [events]
@@ -57,18 +65,24 @@ brokers = ["localhost:9092"]
 topic = "audit-trail-events"
 partition_key_field = "request_id"
 
+[lineage]
+enabled = true
+header_name = "x-lineage-ids"
+field_prefix = "lineage_"
+
 # Euler-compatible configuration
 [events.transformations]
 "gateway" = "connector"
 "action" = "flow_type"
 "entity" = "flow_type"
-"message.latency" = "latency"
+"message.latency" = "latency_ms"
 "message.request_time" = "timestamp"
 "message.res_code" = "status_code"
 "message.url" = "url"
 "message.stage" = "stage"
 "message.req_body" = "connector_request_data"
 "message.res_body" = "connector_response_data"
+"udf_txn_uuid" = "reference_id"
 
 [events.static_values]
 "hostname" = "connector-service"
@@ -77,6 +91,5 @@ partition_key_field = "request_id"
 "message.req_type" = "EXTERNAL"
 "message.log_type" = "API_CALL"
 
-[events.extractions]
-"udf_txn_uuid" = "req.metadata.udf_txn_uuid"
-"x-request-id" = "req.metadata.x-request-id"
+[unmasked_headers]
+keys = ["x-request-id","x-merchant-id","x-lineage-ids","x-reference-id","x-connector","x-tenant-id"]

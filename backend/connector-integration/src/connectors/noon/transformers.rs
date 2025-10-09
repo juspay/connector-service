@@ -15,14 +15,13 @@ use domain_types::{
     router_data::{ConnectorAuthType, ErrorResponse},
     router_data_v2::RouterDataV2,
     router_response_types::RedirectForm,
-    utils,
 };
 use error_stack::ResultExt;
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::{Deserialize, Serialize};
 
 use super::NoonRouterData;
-use crate::types::ResponseRouterData;
+use crate::{types::ResponseRouterData, utils};
 
 // These needs to be accepted from SDK, need to be done after 1.0.0 stability as API contract will change
 const GOOGLEPAY_API_VERSION_MINOR: u8 = 0;
@@ -114,17 +113,6 @@ impl NoonOrderNvp {
             })
             .collect();
         Self { inner }
-    }
-}
-
-fn is_refund_failure(status: enums::RefundStatus) -> bool {
-    match status {
-        common_enums::RefundStatus::Failure | common_enums::RefundStatus::TransactionFailure => {
-            true
-        }
-        common_enums::RefundStatus::ManualReview
-        | common_enums::RefundStatus::Pending
-        | common_enums::RefundStatus::Success => false,
     }
 }
 
@@ -384,6 +372,7 @@ impl<
                         | WalletData::CashappQr(_)
                         | WalletData::SwishQr(_)
                         | WalletData::Mifinity(_)
+                        | WalletData::BluecodeRedirect { .. }
                         | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),
                         )),
@@ -879,7 +868,7 @@ impl<F> TryFrom<ResponseRouterData<RefundResponse, Self>>
         let response = &item.response;
         let refund_status =
             enums::RefundStatus::from(response.result.transaction.status.to_owned());
-        let response = if is_refund_failure(refund_status) {
+        let response = if utils::is_refund_failure(refund_status) {
             Err(ErrorResponse {
                 status_code: item.http_code,
                 code: response.result_code.to_string(),
@@ -943,7 +932,7 @@ impl<F> TryFrom<ResponseRouterData<RefundSyncResponse, Self>>
             .ok_or(errors::ConnectorError::ResponseHandlingFailed)?;
 
         let refund_status = enums::RefundStatus::from(noon_transaction.status.to_owned());
-        let response = if is_refund_failure(refund_status) {
+        let response = if utils::is_refund_failure(refund_status) {
             let response = &item.response;
             Err(ErrorResponse {
                 status_code: item.http_code,
@@ -1187,6 +1176,7 @@ impl<
                         | WalletData::WeChatPayQr(_)
                         | WalletData::CashappQr(_)
                         | WalletData::SwishQr(_)
+                        | WalletData::BluecodeRedirect { .. }
                         | WalletData::Mifinity(_)
                         | WalletData::RevolutPay(_) => Err(errors::ConnectorError::NotImplemented(
                             utils::get_unimplemented_payment_method_error_message("Noon"),

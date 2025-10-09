@@ -5,14 +5,16 @@ use common_utils::{CustomResult, SecretSerdeValue};
 use domain_types::{
     connector_flow,
     connector_types::{
-        AcceptDisputeData, ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData,
-        DisputeFlowData, DisputeResponseData, DisputeWebhookDetailsResponse, EventType,
-        PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
-        RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse, RefundsData,
-        RefundsResponseData, RepeatPaymentData, RequestDetails, SessionTokenRequestData,
-        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
-        WebhookDetailsResponse,
+        AcceptDisputeData, AccessTokenRequestData, AccessTokenResponseData,
+        ConnectorSpecifications, ConnectorWebhookSecrets, DisputeDefendData, DisputeFlowData,
+        DisputeResponseData, DisputeWebhookDetailsResponse, EventType, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData, RefundFlowData,
+        RefundSyncData, RefundWebhookDetailsResponse, RefundsData, RefundsResponseData,
+        RepeatPaymentData, RequestDetails, SessionTokenRequestData, SessionTokenResponseData,
+        SetupMandateRequestData, SubmitEvidenceData, WebhookDetailsResponse,
     },
     payment_method_data::{PaymentMethodData, PaymentMethodDataTypes},
     router_data::ConnectorAuthType,
@@ -29,6 +31,8 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + PaymentSyncV2
     + PaymentOrderCreate
     + PaymentSessionToken
+    + PaymentAccessToken
+    + PaymentTokenV2<T>
     + PaymentVoidV2
     + IncomingWebhook
     + RefundV2
@@ -39,6 +43,9 @@ pub trait ConnectorServiceTrait<T: PaymentMethodDataTypes>:
     + RefundSyncV2
     + DisputeDefend
     + SubmitEvidenceV2
+    + PaymentPreAuthenticateV2<T>
+    + PaymentAuthenticateV2<T>
+    + PaymentPostAuthenticateV2<T>
 {
 }
 
@@ -55,6 +62,14 @@ pub trait ValidationTrait {
     }
 
     fn should_do_session_token(&self) -> bool {
+        false
+    }
+
+    fn should_do_access_token(&self) -> bool {
+        false
+    }
+
+    fn should_do_payment_method_token(&self) -> bool {
         false
     }
 }
@@ -75,6 +90,26 @@ pub trait PaymentSessionToken:
     PaymentFlowData,
     SessionTokenRequestData,
     SessionTokenResponseData,
+>
+{
+}
+
+pub trait PaymentAccessToken:
+    ConnectorIntegrationV2<
+    connector_flow::CreateAccessToken,
+    PaymentFlowData,
+    AccessTokenRequestData,
+    AccessTokenResponseData,
+>
+{
+}
+
+pub trait PaymentTokenV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PaymentMethodToken,
+    PaymentFlowData,
+    PaymentMethodTokenizationData<T>,
+    PaymentMethodTokenResponse,
 >
 {
 }
@@ -169,6 +204,36 @@ pub trait DisputeDefend:
 {
 }
 
+pub trait PaymentPreAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PreAuthenticate,
+    PaymentFlowData,
+    PaymentsPreAuthenticateData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait PaymentAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::Authenticate,
+    PaymentFlowData,
+    PaymentsAuthenticateData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
+pub trait PaymentPostAuthenticateV2<T: PaymentMethodDataTypes>:
+    ConnectorIntegrationV2<
+    connector_flow::PostAuthenticate,
+    PaymentFlowData,
+    PaymentsPostAuthenticateData<T>,
+    PaymentsResponseData,
+>
+{
+}
+
 pub trait IncomingWebhook {
     fn verify_webhook_source(
         &self,
@@ -177,6 +242,24 @@ pub trait IncomingWebhook {
         _connector_account_details: Option<ConnectorAuthType>,
     ) -> Result<bool, error_stack::Report<domain_types::errors::ConnectorError>> {
         Ok(false)
+    }
+
+    /// fn get_webhook_source_verification_signature
+    fn get_webhook_source_verification_signature(
+        &self,
+        _request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Ok(Vec::new())
+    }
+
+    /// fn get_webhook_source_verification_message
+    fn get_webhook_source_verification_message(
+        &self,
+        _request: &RequestDetails,
+        _connector_webhook_secret: &ConnectorWebhookSecrets,
+    ) -> Result<Vec<u8>, error_stack::Report<domain_types::errors::ConnectorError>> {
+        Ok(Vec::new())
     }
 
     fn get_event_type(
@@ -229,6 +312,20 @@ pub trait IncomingWebhook {
     > {
         Err(domain_types::errors::ConnectorError::NotImplemented(
             "process_dispute_webhook".to_string(),
+        )
+        .into())
+    }
+
+    /// fn get_webhook_resource_object
+    fn get_webhook_resource_object(
+        &self,
+        _request: RequestDetails,
+    ) -> Result<
+        Box<dyn hyperswitch_masking::ErasedMaskSerialize>,
+        error_stack::Report<domain_types::errors::ConnectorError>,
+    > {
+        Err(domain_types::errors::ConnectorError::NotImplemented(
+            "get_webhook_resource_object".to_string(),
         )
         .into())
     }
