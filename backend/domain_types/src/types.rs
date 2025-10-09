@@ -14,8 +14,8 @@ use grpc_api_types::payments::{
     AcceptDisputeResponse, ConnectorState, DisputeDefendRequest, DisputeDefendResponse,
     DisputeResponse, DisputeServiceSubmitEvidenceResponse, PaymentServiceAuthorizeRequest,
     PaymentServiceAuthorizeResponse, PaymentServiceCaptureResponse, PaymentServiceGetResponse,
-    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceVoidRequest,
-    PaymentServiceVoidResponse, RefundResponse,
+    PaymentServiceRegisterRequest, PaymentServiceRegisterResponse, PaymentServiceRevokeRequest,
+    PaymentServiceVoidRequest, PaymentServiceVoidResponse, RefundResponse,
 };
 use hyperswitch_masking::{ExposeInterface, Secret};
 use serde::Serialize;
@@ -62,14 +62,15 @@ use crate::{
         AcceptDisputeData, AccessTokenRequestData, ConnectorMandateReferenceId,
         ConnectorResponseHeaders, ContinueRedirectionResponse, DisputeDefendData, DisputeFlowData,
         DisputeResponseData, DisputeWebhookDetailsResponse, MandateReferenceId,
-        MultipleCaptureRequestData, PaymentCreateOrderData, PaymentCreateOrderResponse,
-        PaymentFlowData, PaymentMethodTokenResponse, PaymentMethodTokenizationData,
-        PaymentVoidData, PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
-        PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsResponseData,
-        PaymentsSyncData, RawConnectorRequestResponse, RefundFlowData, RefundSyncData,
-        RefundWebhookDetailsResponse, RefundsData, RefundsResponseData, RepeatPaymentData,
-        ResponseId, SessionTokenRequestData, SessionTokenResponseData, SetupMandateRequestData,
-        SubmitEvidenceData, WebhookDetailsResponse,
+        MandateRevokeRequestData, MultipleCaptureRequestData, PaymentCreateOrderData,
+        PaymentCreateOrderResponse, PaymentFlowData, PaymentMethodTokenResponse,
+        PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
+        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
+        PaymentsPreAuthenticateData, PaymentsResponseData, PaymentsSyncData,
+        RawConnectorRequestResponse, RefundFlowData, RefundSyncData, RefundWebhookDetailsResponse,
+        RefundsData, RefundsResponseData, RepeatPaymentData, ResponseId, SessionTokenRequestData,
+        SessionTokenResponseData, SetupMandateRequestData, SubmitEvidenceData,
+        WebhookDetailsResponse,
     },
     errors::{ApiError, ApplicationErrorResponse},
     mandates::{self, MandateData},
@@ -5654,6 +5655,66 @@ impl
             connector_response_headers: None,
             vault_headers,
             raw_connector_request: None,
+        })
+    }
+}
+
+// Conversion implementations for MandateRevoke flow
+impl ForeignTryFrom<PaymentServiceRevokeRequest> for MandateRevokeRequestData {
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        value: PaymentServiceRevokeRequest,
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        Ok(Self {
+            mandate_id: value.mandate_id,
+            connector_mandate_id: value.connector_mandate_id,
+        })
+    }
+}
+
+impl ForeignTryFrom<(PaymentServiceRevokeRequest, Connectors, &MaskedMetadata)>
+    for PaymentFlowData
+{
+    type Error = ApplicationErrorResponse;
+
+    fn foreign_try_from(
+        (value, connectors, metadata): (PaymentServiceRevokeRequest, Connectors, &MaskedMetadata),
+    ) -> Result<Self, error_stack::Report<Self::Error>> {
+        let merchant_id_from_header = extract_merchant_id_from_metadata(metadata)?;
+
+        Ok(Self {
+            merchant_id: merchant_id_from_header,
+            payment_id: "MANDATE_REVOKE_ID".to_string(),
+            attempt_id: "MANDATE_REVOKE_ATTEMPT_ID".to_string(),
+            status: common_enums::AttemptStatus::Pending,
+            payment_method: common_enums::PaymentMethod::Card, // Default for mandate operations
+            address: payment_address::PaymentAddress::default(),
+            auth_type: common_enums::AuthenticationType::default(),
+            connector_request_reference_id: extract_connector_request_reference_id(
+                &value.request_ref_id,
+            ),
+            customer_id: None,
+            connector_customer: None,
+            description: Some("Mandate revoke operation".to_string()),
+            return_url: None,
+            connector_meta_data: None,
+            amount_captured: None,
+            minor_amount_captured: None,
+            access_token: None,
+            session_token: None,
+            reference_id: None,
+            payment_method_token: None,
+            preprocessing_id: None,
+            connector_api_version: None,
+            test_mode: None,
+            connector_http_status_code: None,
+            external_latency: None,
+            connectors,
+            raw_connector_response: None,
+            raw_connector_request: None,
+            connector_response_headers: None,
+            vault_headers: None,
         })
     }
 }

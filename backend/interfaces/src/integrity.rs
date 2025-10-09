@@ -6,22 +6,23 @@
 use common_utils::errors::IntegrityCheckError;
 // Domain type imports
 use domain_types::connector_types::{
-    AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, PaymentCreateOrderData,
-    PaymentMethodTokenizationData, PaymentVoidData, PaymentsAuthenticateData,
-    PaymentsAuthorizeData, PaymentsCaptureData, PaymentsPostAuthenticateData,
-    PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData, RefundsData, RepeatPaymentData,
-    SessionTokenRequestData, SetupMandateRequestData, SubmitEvidenceData,
+    AcceptDisputeData, AccessTokenRequestData, DisputeDefendData, MandateRevokeRequestData,
+    PaymentCreateOrderData, PaymentMethodTokenizationData, PaymentVoidData,
+    PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+    PaymentsPostAuthenticateData, PaymentsPreAuthenticateData, PaymentsSyncData, RefundSyncData,
+    RefundsData, RepeatPaymentData, SessionTokenRequestData, SetupMandateRequestData,
+    SubmitEvidenceData,
 };
 use domain_types::{
     payment_method_data::PaymentMethodDataTypes,
     router_request_types::{
         AcceptDisputeIntegrityObject, AccessTokenIntegrityObject, AuthenticateIntegrityObject,
         AuthoriseIntegrityObject, CaptureIntegrityObject, CreateOrderIntegrityObject,
-        DefendDisputeIntegrityObject, PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject,
-        PaymentVoidIntegrityObject, PostAuthenticateIntegrityObject,
-        PreAuthenticateIntegrityObject, RefundIntegrityObject, RefundSyncIntegrityObject,
-        RepeatPaymentIntegrityObject, SessionTokenIntegrityObject, SetupMandateIntegrityObject,
-        SubmitEvidenceIntegrityObject,
+        DefendDisputeIntegrityObject, MandateRevokeIntegrityObject,
+        PaymentMethodTokenIntegrityObject, PaymentSynIntegrityObject, PaymentVoidIntegrityObject,
+        PostAuthenticateIntegrityObject, PreAuthenticateIntegrityObject, RefundIntegrityObject,
+        RefundSyncIntegrityObject, RepeatPaymentIntegrityObject, SessionTokenIntegrityObject,
+        SetupMandateIntegrityObject, SubmitEvidenceIntegrityObject,
     },
 };
 
@@ -160,6 +161,7 @@ impl_check_integrity!(RepeatPaymentData);
 impl_check_integrity!(PaymentsAuthenticateData<S>);
 impl_check_integrity!(PaymentsPostAuthenticateData<S>);
 impl_check_integrity!(PaymentsPreAuthenticateData<S>);
+impl_check_integrity!(MandateRevokeRequestData);
 
 // ========================================================================
 // GET INTEGRITY OBJECT IMPLEMENTATIONS
@@ -332,6 +334,18 @@ impl GetIntegrityObject<RepeatPaymentIntegrityObject> for RepeatPaymentData {
                     String::new()
                 }
             },
+        }
+    }
+}
+
+impl GetIntegrityObject<MandateRevokeIntegrityObject> for MandateRevokeRequestData {
+    fn get_response_integrity_object(&self) -> Option<MandateRevokeIntegrityObject> {
+        None // Mandate revoke responses don't have integrity objects
+    }
+
+    fn get_request_integrity_object(&self) -> MandateRevokeIntegrityObject {
+        MandateRevokeIntegrityObject {
+            mandate_id: self.mandate_id.clone(),
         }
     }
 }
@@ -773,6 +787,28 @@ impl FlowIntegrity for RepeatPaymentIntegrityObject {
                 "mandate_reference",
                 &req_integrity_object.mandate_reference,
                 &res_integrity_object.mandate_reference,
+            ));
+        }
+
+        check_integrity_result(mismatched_fields, connector_transaction_id)
+    }
+}
+
+impl FlowIntegrity for MandateRevokeIntegrityObject {
+    type IntegrityObject = Self;
+
+    fn compare(
+        req_integrity_object: Self,
+        res_integrity_object: Self,
+        connector_transaction_id: Option<String>,
+    ) -> Result<(), IntegrityCheckError> {
+        let mut mismatched_fields = Vec::new();
+
+        if req_integrity_object.mandate_id != res_integrity_object.mandate_id {
+            mismatched_fields.push(format_mismatch(
+                "mandate_id",
+                &req_integrity_object.mandate_id,
+                &res_integrity_object.mandate_id,
             ));
         }
 

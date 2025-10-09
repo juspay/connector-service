@@ -89,6 +89,15 @@ enum DisputeStatus {
   DISPUTE_LOST = 7;
 }
 
+// Status of a mandate.
+enum MandateStatus {
+  MANDATE_STATUS_UNSPECIFIED = 0; // Default value
+  ACTIVE = 1;
+  MANDATE_INACTIVE = 2;
+  MANDATE_PENDING = 3;
+  REVOKED = 4;
+}
+
 // Method for capturing a payment.
 enum CaptureMethod {
   CAPTURE_METHOD_UNSPECIFIED = 0; // Default value
@@ -1612,6 +1621,39 @@ message PaymentServiceRepeatEverythingResponse {
 
   // Raw Request
   optional string raw_connector_request = 11; // Raw request to the connector for debugging
+}
+
+// Request message for a mandate revoke operation.
+message PaymentServiceRevokeRequest {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Mandate Details
+  string mandate_id = 2; // Reason for cancelling/voiding the payment
+  optional string connector_mandate_id = 3;
+}
+
+// Response message for a mandate revoke operation.
+message PaymentServiceRevokeResponse {
+  // Identification
+  Identifier request_ref_id = 1; // Reference ID for tracking
+  
+  // Status Information
+  MandateStatus status = 2; // Current status of the mandate
+  optional string error_code = 3; // Error code if the payment failed
+  optional string error_message = 4; // Error message if the payment failed
+  uint32 status_code = 5; // HTTP status code from the connector
+  map<string, string> response_headers = 6; // Optional HTTP response headers from the connector
+
+  // Transaction Details
+  optional string network_txn_id = 7; // Transaction ID from the payment network
+  optional Identifier response_ref_id = 8; // Reference ID from the connector response
+
+  // Raw Response
+  optional string raw_connector_response = 9; // Raw response from the connector for debugging
+
+  // Raw Request
+  optional string raw_connector_request = 10; // Raw request to the connector for debugging
 }
 
 // -------------------------
