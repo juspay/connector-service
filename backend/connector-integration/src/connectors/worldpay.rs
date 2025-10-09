@@ -2,19 +2,20 @@ pub mod transformers;
 pub mod requests;
 pub mod response;
 
-use common_utils::{ 
+use common_utils::{
     errors::CustomResult,
     ext_traits::BytesExt,
     };
 use domain_types::{
     connector_flow::{
-        Accept, Authorize, Capture, CreateOrder, DefendDispute, PSync, RSync, Refund,
-        RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
+        Accept, Authenticate, Authorize, Capture, CreateOrder, DefendDispute,
+        PSync, RSync, Refund, RepeatPayment, SetupMandate, SubmitEvidence, Void, CreateSessionToken,
     },
     connector_types::{
         AcceptDisputeData, DisputeDefendData, DisputeFlowData, DisputeResponseData,
         PaymentCreateOrderData, PaymentCreateOrderResponse, PaymentFlowData, PaymentVoidData,
-        PaymentsAuthorizeData, PaymentsCaptureData, PaymentsResponseData, PaymentsSyncData,
+        PaymentsAuthenticateData, PaymentsAuthorizeData, PaymentsCaptureData,
+        PaymentsResponseData, PaymentsSyncData,
         RefundFlowData, RefundSyncData, RefundsData, RefundsResponseData, RepeatPaymentData,
         SetupMandateRequestData, SubmitEvidenceData, SessionTokenRequestData, SessionTokenResponseData,
     },
@@ -27,17 +28,18 @@ use domain_types::{
 };
 use serde::Serialize;
 use std::fmt::Debug;
-use hyperswitch_masking::{Mask, Maskable};
+use hyperswitch_masking::{Mask, Maskable, PeekInterface};
 use interfaces::{
     api::ConnectorCommon, connector_integration_v2::ConnectorIntegrationV2, connector_types,
     events::connector_api_logs::ConnectorEvent,
 };
 use transformers::{self as worldpay};
-use self::requests::{WorldpayPaymentsRequest, WorldpayCaptureRequest, WorldpayRefundRequest};
+use self::requests::{WorldpayAuthenticateRequest, WorldpayPaymentsRequest, WorldpayCaptureRequest, WorldpayRefundRequest};
 use self::response::{
     WorldpayErrorResponse,
-    WorldpayAuthorizeResponse, WorldpaySyncResponse, WorldpayCaptureResponse,
-    WorldpayVoidResponse, WorldpayRefundResponse, WorldpayRefundSyncResponse
+    WorldpayAuthenticateResponse, WorldpayAuthorizeResponse, WorldpaySyncResponse,
+    WorldpayCaptureResponse, WorldpayVoidResponse, WorldpayRefundResponse,
+    WorldpayRefundSyncResponse
 };
 
 use super::macros;
@@ -174,6 +176,12 @@ macros::create_all_prerequisites!(
             flow: RSync,
             response_body: WorldpayRefundSyncResponse,
             router_data: RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponseData>,
+        ),
+        (
+            flow: Authenticate,
+            request_body: WorldpayAuthenticateRequest,
+            response_body: WorldpayAuthenticateResponse,
+            router_data: RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
         )
     ],
     amount_converters: [],
@@ -472,6 +480,75 @@ macros::macro_connector_implementation!(
     }
 );
 
+macros::macro_connector_implementation!(
+    connector_default_implementations: [get_content_type, get_error_response_v2],
+    connector: Worldpay,
+    curl_request: Json(WorldpayAuthenticateRequest),
+    curl_response: WorldpayAuthenticateResponse,
+    flow_name: Authenticate,
+    resource_common_data: PaymentFlowData,
+    flow_request: PaymentsAuthenticateData<T>,
+    flow_response: PaymentsResponseData,
+    http_method: Post,
+    generic_type: T,
+    [PaymentMethodDataTypes + Debug + Sync + Send + 'static + Serialize],
+    other_functions: {
+        fn get_headers(
+            &self,
+            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<Vec<(String, Maskable<String>)>, errors::ConnectorError> {
+            self.build_headers(req)
+        }
+        fn get_url(
+            &self,
+            req: &RouterDataV2<Authenticate, PaymentFlowData, PaymentsAuthenticateData<T>, PaymentsResponseData>,
+        ) -> CustomResult<String, errors::ConnectorError> {
+            // Extract metadata object from connector_meta_data
+            let metadata_obj = req
+                .resource_common_data
+                .connector_meta_data
+                .as_ref()
+                .and_then(|metadata| metadata.peek().as_object())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data",
+                })?;
+
+            // Extract linkData
+            let link_data = metadata_obj
+                .get("link_data")
+                .and_then(|value| value.as_str())
+                .ok_or(errors::ConnectorError::MissingRequiredField {
+                    field_name: "connector_meta_data.link_data",
+                })?;
+
+            // Select endpoint based on 3ds_stage from metadata (primary) or payment status (fallback)
+            let endpoint = metadata_obj
+                .get("3ds_stage")
+                .and_then(|value| value.as_str())
+                .map(|stage| match stage {
+                    "ddc" => "3dsDeviceData",
+                    "challenge" => "3dsChallenges",
+                    _ => "3dsDeviceData", // Default to DDC for unknown stages
+                })
+                .unwrap_or_else(|| {
+                    // Fallback to status-based selection for stateful environments
+                    match req.resource_common_data.status {
+                        common_enums::AttemptStatus::DeviceDataCollectionPending
+                        | common_enums::AttemptStatus::Pending => "3dsDeviceData",
+                        common_enums::AttemptStatus::AuthenticationPending => "3dsChallenges",
+                        _ => "3dsDeviceData", // Default fallback
+                    }
+                });
+
+            Ok(format!(
+                "{}api/payments/{}/{}",
+                self.connector_base_url_payments(req),
+                urlencoding::encode(link_data),
+                endpoint
+            ))
+        }
+    }
+);
 
 // Stub implementations for unsupported flows - removed conflicting ones that are now macro-generated
 
@@ -589,23 +666,6 @@ impl<
         domain_types::connector_flow::PostAuthenticate,
         PaymentFlowData,
         domain_types::connector_types::PaymentsPostAuthenticateData<T>,
-        PaymentsResponseData,
-    > for Worldpay<T>
-{
-}
-
-impl<
-        T: PaymentMethodDataTypes
-            + std::fmt::Debug
-            + std::marker::Sync
-            + std::marker::Send
-            + 'static
-            + Serialize,
-    >
-    ConnectorIntegrationV2<
-        domain_types::connector_flow::Authenticate,
-        PaymentFlowData,
-        domain_types::connector_types::PaymentsAuthenticateData<T>,
         PaymentsResponseData,
     > for Worldpay<T>
 {
