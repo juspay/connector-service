@@ -76,3 +76,6 @@ pub use self::rapyd::Rapyd;
 
 pub mod aci;
 pub use self::aci::Aci;
+
+pub mod worldpay;
+pub use self::worldpay::Worldpay;
