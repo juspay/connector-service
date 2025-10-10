@@ -289,12 +289,7 @@ where
 impl<T> TryFrom<ResponseRouterData<MobikwikPaymentsResponse, Self>>
 for RouterDataV2<Authorize, PaymentFlowData, PaymentsAuthorizeData<T>, PaymentsResponseData>
 where
-    T: domain_types::payment_method_data::PaymentMethodDataTypes
-        + std::fmt::Debug
-        + std::marker::Sync
-        + std::marker::Send
-        + 'static
-        + serde::Serialize,
+    T: serde::Serialize,
 {
     type Error = error_stack::Report<ConnectorError>;
     
