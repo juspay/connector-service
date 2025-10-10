@@ -249,4 +249,5 @@ mod tests {
         }
         _ => panic!("Expected refund webhook"),
     }
+    }
 }
