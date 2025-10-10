@@ -200,8 +200,9 @@ where
         let email = item.router_data.request.email.as_ref().map(|e| e.peek().to_string());
         
         // Prepare checksum parameters
+        let amount_str = amount.to_string();
         let checksum_params = vec![
-            ("amount", &amount.to_string()),
+            ("amount", &amount_str),
             ("cell", &phone_number),
             ("merchantname", &auth.merchant_name),
             ("mid", &auth.merchant_id.peek()),
