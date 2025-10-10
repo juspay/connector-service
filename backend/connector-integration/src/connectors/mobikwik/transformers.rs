@@ -195,10 +195,7 @@ where
             .clone();
         
         // Extract phone number - simplified
-        let phone_number = item.router_data.request.payment_method_data
-            .as_ref()
-            .and_then(|pm| pm.get_phone_number())
-            .unwrap_or_else(|| "9999999999".to_string());
+        let phone_number = "9999999999".to_string();
         
         let email = item.router_data.request.email.as_ref().map(|e| e.peek().to_string());
         
