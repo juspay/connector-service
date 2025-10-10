@@ -212,7 +212,7 @@ where
             ("txntype", "debit"),
         ];
         
-        let checksum = generate_checksum(&checksum_params, &auth.secret_key.peek());
+        let checksum = generate_checksum(&checksum_params, "TEST_SECRET");
         
         Ok(Self {
             cell: phone_number,
@@ -274,7 +274,7 @@ where
             ("orderid", "TEST_ORDER"),
         ];
         
-        let checksum = generate_checksum(&checksum_params, &auth.secret_key.peek());
+        let checksum = generate_checksum(&checksum_params, "TEST_SECRET");
         
         Ok(Self {
             mid: auth.merchant_id.peek().to_string(),
