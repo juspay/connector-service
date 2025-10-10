@@ -273,10 +273,10 @@ impl TryFrom<RouterDataV2<RSync, RefundFlowData, RefundSyncData, RefundsResponse
         let merchant_key = auth.merchant_key.peek();
         let salt = auth.salt.peek();
         
-        let easebuzz_id = item.router_data.request.connector_transaction_id
+        let easebuzz_id = item.request.connector_transaction_id
             .get_connector_transaction_id()
             .map_err(|_| ConnectorError::MissingRequiredField { field_name: "connector_transaction_id" })?;
-        let merchant_refund_id = item.router_data.request.refund_id.clone()
+        let merchant_refund_id = item.request.refund_id.clone()
             .ok_or(ConnectorError::MissingRequiredField { field_name: "refund_id" })?;
         
         // Generate hash - matching Haskell
