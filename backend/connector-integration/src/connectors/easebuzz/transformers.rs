@@ -490,7 +490,7 @@ pub fn get_easebuzz_payment_webhook_details(
             
             Ok((resource_id, status, error_code, error_message))
         }
-        _ => Err(ConnectorError::WebhookBodyDecodingFailed),
+        _ => Err(ConnectorError::WebhookBodyDecodingFailed.into()),
     }
 }
 
@@ -512,7 +512,7 @@ pub fn get_easebuzz_refund_webhook_details(
             
             Ok((connector_refund_id, status, error_code, error_message))
         }
-        _ => Err(ConnectorError::WebhookBodyDecodingFailed),
+        _ => Err(ConnectorError::WebhookBodyDecodingFailed.into()),
     }
 }
 
