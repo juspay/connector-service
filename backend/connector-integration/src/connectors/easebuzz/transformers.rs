@@ -39,12 +39,12 @@ impl EaseBuzzAuthType {
     }
 }
 
-impl TryFrom<&domain_types::ConnectorAuthType> for EaseBuzzAuthType {
+impl TryFrom<&ConnectorAuthType> for EaseBuzzAuthType {
     type Error = error_stack::Report<errors::ConnectorError>;
 
-    fn try_from(auth_type: &domain_types::ConnectorAuthType) -> Result<Self, Self::Error> {
+    fn try_from(auth_type: &ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            domain_types::ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Key {
+            ConnectorAuthType::HeaderKey { api_key } => Ok(Self::Key {
                 api_key: api_key.clone(),
             }),
             _ => Err(errors::ConnectorError::FailedToObtainConnectorAuthType.into()),
