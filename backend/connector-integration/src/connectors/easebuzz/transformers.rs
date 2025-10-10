@@ -37,7 +37,7 @@ impl TryFrom<&domain_types::router_data::ConnectorAuthType> for EaseBuzzAuthType
     type Error = error_stack::Report<ConnectorError>;
     fn try_from(auth_type: &domain_types::router_data::ConnectorAuthType) -> Result<Self, Self::Error> {
         match auth_type {
-            domain_types::router_data::ConnectorAuthType::HeaderKey { api_key, key1 } => {
+            domain_types::router_data::ConnectorAuthType::BodyKey { api_key, key1 } => {
                 let auth = EaseBuzzAuthType {
                     api_key: api_key.peek().clone().into(),
                     merchant_key: key1.peek().clone().into(),
